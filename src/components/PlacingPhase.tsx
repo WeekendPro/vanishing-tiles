@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
 import { Grid } from './Grid'
 import { PieceShape } from './PieceShape'
 import { getRotatedCells } from '../engine/pieces'
@@ -9,7 +10,7 @@ export function PlacingPhase() {
   const {
     selection, grid, heldPiece,
     holdPiece, rotatePiece, clearHeld, placePiece, finishManualPlace,
-  } = useGameStore(s => ({
+  } = useGameStore(useShallow(s => ({
     selection: s.selection,
     grid: s.grid,
     heldPiece: s.heldPiece,
@@ -18,7 +19,7 @@ export function PlacingPhase() {
     clearHeld: s.clearHeld,
     placePiece: s.placePiece,
     finishManualPlace: s.finishManualPlace,
-  }))
+  })))
 
   const [hoverCell, setHoverCell] = useState<[number, number] | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)

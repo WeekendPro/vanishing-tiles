@@ -1,14 +1,15 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
 import { Grid } from './Grid'
 import { ProgressBar } from './ProgressBar'
 
 export function ViewingPhase() {
-  const { endViewing, phaseStartTime, phaseDuration } = useGameStore(s => ({
+  const { endViewing, phaseStartTime, phaseDuration } = useGameStore(useShallow(s => ({
     endViewing: s.endViewing,
     phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
-  }))
+  })))
 
   useEffect(() => {
     const timer = setTimeout(endViewing, phaseDuration)

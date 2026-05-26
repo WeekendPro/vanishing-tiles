@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '../engine/pieces'
 import { PieceShape } from './PieceShape'
 import { ProgressBar } from './ProgressBar'
@@ -9,14 +10,14 @@ export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
     submitSelection, phaseStartTime, phaseDuration,
-  } = useGameStore(s => ({
+  } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
     decrementSelection: s.decrementSelection,
     submitSelection: s.submitSelection,
     phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
-  }))
+  })))
 
   useEffect(() => {
     const timer = setTimeout(submitSelection, phaseDuration)

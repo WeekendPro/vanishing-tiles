@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { PlacingPhase } from './PlacingPhase'
@@ -16,14 +17,14 @@ function Hearts({ count }: { count: number }) {
 }
 
 export function GameShell() {
-  const { phase, round, score, lives, startGame, finishAutoPlace } = useGameStore(s => ({
+  const { phase, round, score, lives, startGame, finishAutoPlace } = useGameStore(useShallow(s => ({
     phase: s.phase,
     round: s.round,
     score: s.score,
     lives: s.lives,
     startGame: s.startGame,
     finishAutoPlace: s.finishAutoPlace,
-  }))
+  })))
 
   useEffect(() => {
     if (phase !== 'auto-placing') return

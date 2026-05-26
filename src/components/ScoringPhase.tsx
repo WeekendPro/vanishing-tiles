@@ -1,14 +1,15 @@
 import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
 
 export function ScoringPhase() {
-  const { roundScore, score, round, nextRound, resetGame, phase } = useGameStore(s => ({
+  const { roundScore, score, round, nextRound, resetGame, phase } = useGameStore(useShallow(s => ({
     roundScore: s.roundScore,
     score: s.score,
     round: s.round,
     nextRound: s.nextRound,
     resetGame: s.resetGame,
     phase: s.phase,
-  }))
+  })))
 
   const isGameOver = phase === 'game-over'
 
