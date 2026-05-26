@@ -77,7 +77,6 @@ function backtrack(
         applyPlacement(grid, cells, anchorRow, anchorCol, 'empty')
       }
     }
-    break // Only try one piece type per empty cell to avoid redundant branching
   }
 
   return false
