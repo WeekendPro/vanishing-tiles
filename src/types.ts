@@ -15,7 +15,7 @@ export interface PieceDefinition {
 
 // ── Grid ────────────────────────────────────────────────────────────────────
 
-export type CellStatus = 'filled' | 'empty' | 'placed'
+export type CellStatus = 'filled' | 'empty' | 'placed' | 'preview'
 
 export interface Cell {
   status: CellStatus
@@ -25,8 +25,8 @@ export interface Cell {
 /** Grid is ROWS × COLS. grid[row][col]. 10 rows, 8 cols. */
 export type Grid = Cell[][]
 
-export const ROWS = 10
-export const COLS = 8
+export const ROWS = 10 as const
+export const COLS = 8 as const
 
 // ── Gap ─────────────────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export interface Gap {
   rotation: Rotation
   anchorRow: number
   anchorCol: number
-  cells: [number, number][]  // absolute [row, col] positions
+  cells: PieceCells  // absolute [row, col] positions
 }
 
 // ── Selection ────────────────────────────────────────────────────────────────
@@ -68,6 +68,7 @@ export interface RoundScore {
 export interface DifficultyConfig {
   viewDuration: number     // ms
   selectDuration: number   // ms
+  placeDuration: number    // ms
   gapCount: number         // number of tetromino gaps placed in the puzzle
   complexity: 'simple' | 'medium' | 'complex'
 }
