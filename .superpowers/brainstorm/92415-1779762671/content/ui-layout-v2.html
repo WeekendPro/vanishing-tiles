@@ -1,0 +1,242 @@
+<h2>UI Layout — All 4 Phases (v2)</h2>
+<p class="subtitle">Click a phase to preview it.</p>
+
+<div style="display:flex; gap:12px; justify-content:center; margin-bottom:20px; flex-wrap:wrap;">
+  <button onclick="showPhase('viewing')" id="btn-viewing" style="padding:8px 16px;border-radius:20px;border:2px solid #00bcd4;background:#1a2a3a;color:#00bcd4;cursor:pointer;font-weight:700;">Viewing</button>
+  <button onclick="showPhase('selecting')" id="btn-selecting" style="padding:8px 16px;border-radius:20px;border:2px solid #66bb6a;background:#1a1a1a;color:#66bb6a;cursor:pointer;font-weight:700;">Selecting</button>
+  <button onclick="showPhase('placing')" id="btn-placing" style="padding:8px 16px;border-radius:20px;border:2px solid #ef5350;background:#1a1a1a;color:#ef5350;cursor:pointer;font-weight:700;">Manual Placing</button>
+  <button onclick="showPhase('scoring')" id="btn-scoring" style="padding:8px 16px;border-radius:20px;border:2px solid #ab47bc;background:#1a1a1a;color:#ab47bc;cursor:pointer;font-weight:700;">Scoring</button>
+</div>
+
+<!-- VIEWING PHASE -->
+<div id="phase-viewing" style="display:flex; flex-direction:column; align-items:center;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+      <div style="color:#aaa; font-size:12px;">Score <span style="color:#f9a825; font-weight:700;">2,400</span></div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span></div>
+    </div>
+    <div style="background:#222; border-radius:4px; height:6px; margin-bottom:16px; overflow:hidden;">
+      <div style="background:#00bcd4; height:6px; width:60%; border-radius:4px;"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(10,28px); gap:2px; margin-bottom:14px;">
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+    </div>
+    <div style="text-align:center; color:#4a6a8a; font-size:12px; letter-spacing:1px;">Memorize the gaps</div>
+  </div>
+</div>
+
+<!-- SELECTING PHASE -->
+<div id="phase-selecting" style="display:none; flex-direction:column; align-items:center;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace; display:flex; flex-direction:column; gap:14px;">
+
+    <!-- 1. Metadata -->
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+        <div style="color:#aaa; font-size:12px;">Score <span style="color:#f9a825; font-weight:700;">2,400</span></div>
+        <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span></div>
+      </div>
+      <div style="background:#222; border-radius:4px; height:6px; overflow:hidden;">
+        <div style="background:#66bb6a; height:6px; width:55%; border-radius:4px;"></div>
+      </div>
+    </div>
+
+    <!-- 2. Selection box -->
+    <div style="background:#1a1f2e; border:1px solid #2a3a4a; border-radius:10px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="color:#aaa; font-size:11px; font-weight:700; letter-spacing:1px;">YOUR SELECTION</span>
+        <span style="color:#555; font-size:10px;">tap selected to decrement</span>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; min-height:44px; align-items:center;">
+        <!-- Locked I-piece: 🔒×2 + 1 free -->
+        <div style="background:#2a1a1a; border:2px solid #ef5350; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;">
+          <div style="display:grid; grid-template-columns:repeat(4,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div>
+          </div>
+          <span style="font-size:10px; color:#ef9090;">🔒×2 +1</span>
+        </div>
+        <!-- Free J-piece: ×1 -->
+        <div style="background:#1a1a2a; border:2px solid #1976d2; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px"></div><div style="width:10px;height:10px"></div>
+            <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div>
+          </div>
+          <span style="font-size:10px; color:#1976d2;">×1</span>
+        </div>
+        <!-- Free T-piece: ×2 -->
+        <div style="background:#1a1a2a; border:2px solid #ab47bc; border-radius:8px; padding:6px 8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div>
+            <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+          </div>
+          <span style="font-size:10px; color:#ab47bc;">×2</span>
+        </div>
+        <div style="color:#333; font-size:20px; margin-left:auto;">✓</div>
+      </div>
+    </div>
+
+    <!-- 3. Piece menu -->
+    <div style="background:#1a1f2e; border:1px solid #2a3a4a; border-radius:10px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="color:#aaa; font-size:11px; font-weight:700; letter-spacing:1px;">PIECES</span>
+        <span style="color:#555; font-size:10px;">tap to increment</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+        <!-- I -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(4,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">I</span>
+        </div>
+        <!-- O -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(2,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div><div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div>
+            <div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div><div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">O</span>
+        </div>
+        <!-- T -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div>
+            <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">T</span>
+        </div>
+        <!-- S -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div>
+            <div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">S</span>
+        </div>
+        <!-- Z -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+            <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">Z</span>
+        </div>
+        <!-- J -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px"></div><div style="width:10px;height:10px"></div>
+            <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">J</span>
+        </div>
+        <!-- L -->
+        <div style="background:#111; border:1px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px;">
+            <div style="width:10px;height:10px"></div><div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div>
+            <div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div>
+          </div>
+          <span style="font-size:9px; color:#555;">L</span>
+        </div>
+        <!-- Done -->
+        <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+          <span style="color:#66bb6a; font-weight:700; font-size:12px;">Done ✓</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MANUAL PLACING PHASE -->
+<div id="phase-placing" style="display:none; flex-direction:column; align-items:center;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+      <div style="color:#aaa; font-size:12px;">Score <span style="color:#f9a825; font-weight:700;">2,400</span></div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#555; font-size:16px;">♥</span></div>
+    </div>
+    <div style="color:#666; font-size:10px; margin-bottom:10px; text-align:center;">Place your pieces — click piece, then click target · R to rotate</div>
+    <div style="display:grid; grid-template-columns:repeat(10,26px); gap:2px; margin-bottom:12px;">
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+    </div>
+    <div style="background:#1a1a2a; border-radius:8px; padding:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div style="font-size:10px; color:#555;">Tray:</div>
+      <div style="background:#1a3a4a; border:2px solid #00bcd4; border-radius:6px; padding:5px; box-shadow:0 0 8px #00bcd480;">
+        <div style="display:grid; grid-template-columns:repeat(4,11px); gap:1px;">
+          <div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div>
+        </div>
+        <div style="font-size:9px; color:#00bcd4; text-align:center; margin-top:2px;">active</div>
+      </div>
+      <div style="background:#1a1a2a; border:1px solid #1976d2; border-radius:6px; padding:5px; opacity:0.6;">
+        <div style="display:grid; grid-template-columns:repeat(3,11px); gap:1px;">
+          <div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px"></div><div style="width:11px;height:11px"></div>
+          <div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCORING PHASE -->
+<div id="phase-scoring" style="display:none; flex-direction:column; align-items:center;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span> complete</div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; background:#1a2a1a; border-radius:8px; padding:10px 14px;">
+        <span style="color:#66bb6a; font-size:13px;">✓ Correct selection</span>
+        <span style="color:#66bb6a; font-weight:700;">+800</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; background:#2a2a1a; border-radius:8px; padding:10px 14px;">
+        <span style="color:#f9a825; font-size:13px;">⚡ Speed bonus</span>
+        <span style="color:#f9a825; font-weight:700;">+240</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; background:#1a2a2a; border-radius:8px; padding:10px 14px;">
+        <span style="color:#00bcd4; font-size:13px;">◆ Efficiency bonus</span>
+        <span style="color:#00bcd4; font-weight:700;">+160</span>
+      </div>
+      <div style="border-top:1px solid #2a2a2a; padding-top:10px; display:flex; justify-content:space-between;">
+        <span style="color:#fff; font-size:15px; font-weight:700;">Round total</span>
+        <span style="color:#fff; font-size:15px; font-weight:700;">+1,200</span>
+      </div>
+    </div>
+    <div style="text-align:center; background:#1a1a2a; border-radius:8px; padding:12px; margin-bottom:14px;">
+      <div style="color:#aaa; font-size:11px; margin-bottom:2px;">Total score</div>
+      <div style="color:#f9a825; font-size:26px; font-weight:700;">3,600</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:8px; padding:10px 28px; display:inline-block; color:#66bb6a; font-weight:700; cursor:pointer; font-size:13px;">Next Round →</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPhase(phase) {
+  ['viewing','selecting','placing','scoring'].forEach(p => {
+    document.getElementById('phase-' + p).style.display = 'none';
+    var btn = document.getElementById('btn-' + p);
+    if (btn) btn.style.opacity = '0.4';
+  });
+  document.getElementById('phase-' + phase).style.display = 'flex';
+  var activeBtn = document.getElementById('btn-' + phase);
+  if (activeBtn) activeBtn.style.opacity = '1';
+}
+showPhase('viewing');
+</script>

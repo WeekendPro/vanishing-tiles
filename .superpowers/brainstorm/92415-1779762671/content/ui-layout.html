@@ -1,0 +1,238 @@
+<h2>UI Layout — All 4 Phases</h2>
+<p class="subtitle">Same screen shell throughout. Only the center content swaps per phase. Click a phase to see its layout.</p>
+
+<div style="display:flex; gap:12px; justify-content:center; margin-bottom:20px; flex-wrap:wrap;">
+  <button onclick="showPhase('viewing')" id="btn-viewing" style="padding:8px 16px;border-radius:20px;border:2px solid #00bcd4;background:#1a2a3a;color:#00bcd4;cursor:pointer;font-weight:700;">Viewing</button>
+  <button onclick="showPhase('selecting')" id="btn-selecting" style="padding:8px 16px;border-radius:20px;border:2px solid #66bb6a;background:#1a1a1a;color:#66bb6a;cursor:pointer;font-weight:700;">Selecting</button>
+  <button onclick="showPhase('placing')" id="btn-placing" style="padding:8px 16px;border-radius:20px;border:2px solid #ef5350;background:#1a1a1a;color:#ef5350;cursor:pointer;font-weight:700;">Manual Placing</button>
+  <button onclick="showPhase('scoring')" id="btn-scoring" style="padding:8px 16px;border-radius:20px;border:2px solid #ab47bc;background:#1a1a1a;color:#ab47bc;cursor:pointer;font-weight:700;">Scoring</button>
+</div>
+
+<!-- VIEWING PHASE -->
+<div id="phase-viewing" style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <!-- Header bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+      <div style="color:#aaa; font-size:12px;">Score <span style="color:#f9a825; font-weight:700;">2,400</span></div>
+      <div style="display:flex; gap:6px;">
+        <span style="color:#ef5350; font-size:16px;">♥</span>
+        <span style="color:#ef5350; font-size:16px;">♥</span>
+        <span style="color:#ef5350; font-size:16px;">♥</span>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div style="background:#222; border-radius:4px; height:6px; margin-bottom:14px; overflow:hidden;">
+      <div style="background:#00bcd4; height:6px; width:60%; border-radius:4px; transition:width 1s;"></div>
+    </div>
+    <!-- Grid -->
+    <div style="display:inline-grid; grid-template-columns:repeat(10,28px); gap:2px; margin:0 auto; display:grid;">
+      <!-- 8 rows of 10 cols, ~70% filled -->
+      <!-- Row 1: all filled -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 2: gap cols 3-6 (I-piece gap) -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 3: all filled -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 4: L-piece gap cols 7-9, row 4-5 -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 5 -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 6: all filled -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 7: S-piece gap -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+      <!-- Row 8 -->
+      <div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div><div style="width:28px;height:28px;background:#3a4a6a;border-radius:3px"></div>
+    </div>
+    <div style="text-align:center; color:#555; font-size:11px; margin-top:10px;">Memorize the gaps — grid hides when the bar runs out</div>
+  </div>
+</div>
+
+<!-- SELECTING PHASE -->
+<div id="phase-selecting" style="display:none; flex-direction:column; align-items:center; gap:12px;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+      <div style="color:#aaa; font-size:12px;">Score <span style="color:#f9a825; font-weight:700;">2,400</span></div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span></div>
+    </div>
+    <!-- Selection timer bar -->
+    <div style="background:#222; border-radius:4px; height:6px; margin-bottom:6px; overflow:hidden;">
+      <div style="background:#66bb6a; height:6px; width:75%; border-radius:4px;"></div>
+    </div>
+    <div style="color:#555; font-size:10px; text-align:right; margin-bottom:12px;">select your pieces</div>
+    <!-- Carry-over notice -->
+    <div style="background:#2a1a1a; border:1px solid #ef5350; border-radius:8px; padding:8px 12px; margin-bottom:12px; font-size:11px; color:#ef9090;">
+      ⚠ Carry-over from last round — these are locked:
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <!-- Locked I-piece -->
+        <div style="background:#1a2a3a; border:2px solid #ef5350; border-radius:6px; padding:5px; opacity:0.8; cursor:not-allowed;">
+          <div style="display:grid; grid-template-columns:repeat(4,12px); gap:1px;">
+            <div style="width:12px;height:12px;background:#00bcd4;border-radius:2px"></div><div style="width:12px;height:12px;background:#00bcd4;border-radius:2px"></div><div style="width:12px;height:12px;background:#00bcd4;border-radius:2px"></div><div style="width:12px;height:12px;background:#00bcd4;border-radius:2px"></div>
+          </div>
+          <div style="font-size:9px; color:#ef5350; text-align:center; margin-top:2px;">🔒</div>
+        </div>
+      </div>
+    </div>
+    <!-- Piece menu -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">
+      <!-- I piece - selected 1 -->
+      <div style="background:#1a2a3a; border:2px solid #00bcd4; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(4,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div><div style="width:10px;height:10px;background:#00bcd4;border-radius:1px"></div>
+        </div>
+        <div style="font-size:10px; color:#00bcd4; margin-top:3px;">×1</div>
+      </div>
+      <!-- O piece -->
+      <div style="background:#1a1a2a; border:2px solid #333; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(2,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div><div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div>
+          <div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div><div style="width:10px;height:10px;background:#f9a825;border-radius:1px"></div>
+        </div>
+        <div style="font-size:10px; color:#555; margin-top:3px;">×0</div>
+      </div>
+      <!-- T piece - selected 1 -->
+      <div style="background:#1a1a2a; border:2px solid #ab47bc; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div>
+          <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ab47bc;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+        </div>
+        <div style="font-size:10px; color:#555; margin-top:3px;">×0</div>
+      </div>
+      <!-- S piece -->
+      <div style="background:#1a1a2a; border:2px solid #333; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div>
+          <div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px;background:#66bb6a;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+        </div>
+        <div style="font-size:10px; color:#555; margin-top:3px;">×0</div>
+      </div>
+      <!-- Z piece -->
+      <div style="background:#1a1a2a; border:2px solid #333; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px"></div>
+          <div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div><div style="width:10px;height:10px;background:#ef5350;border-radius:1px"></div>
+        </div>
+        <div style="font-size:10px; color:#555; margin-top:3px;">×0</div>
+      </div>
+      <!-- J piece -->
+      <div style="background:#1a1a2a; border:2px solid #1565c0; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px"></div><div style="width:10px;height:10px"></div>
+          <div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div><div style="width:10px;height:10px;background:#1976d2;border-radius:1px"></div>
+        </div>
+        <div style="font-size:10px; color:#1976d2; margin-top:3px;">×1</div>
+      </div>
+      <!-- L piece -->
+      <div style="background:#1a1a2a; border:2px solid #333; border-radius:8px; padding:6px; text-align:center; cursor:pointer;">
+        <div style="display:grid; grid-template-columns:repeat(3,10px); gap:1px; margin:0 auto; width:fit-content;">
+          <div style="width:10px;height:10px"></div><div style="width:10px;height:10px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div>
+          <div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div><div style="width:10px;height:10px;background:#ff7043;border-radius:1px"></div>
+        </div>
+        <div style="font-size:10px; color:#555; margin-top:3px;">×0</div>
+      </div>
+      <!-- Confirm button -->
+      <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:8px; padding:6px; text-align:center; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+        <div style="color:#66bb6a; font-size:11px; font-weight:700;">✓ Done</div>
+      </div>
+    </div>
+    <div style="text-align:center; color:#555; font-size:10px;">tap to increment · tap selected to decrement</div>
+  </div>
+</div>
+
+<!-- MANUAL PLACING PHASE -->
+<div id="phase-placing" style="display:none; flex-direction:column; align-items:center; gap:12px;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span></div>
+      <div style="background:#2a1a1a; border:1px solid #ef5350; border-radius:6px; padding:3px 10px; color:#ef5350; font-size:11px; font-weight:700;">✗ Strike 1 of 3</div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#555; font-size:16px;">♥</span></div>
+    </div>
+    <div style="color:#555; font-size:10px; margin-bottom:10px;">Place your pieces manually — click piece, then click target</div>
+    <!-- Grid with gaps -->
+    <div style="display:inline-grid; grid-template-columns:repeat(10,26px); gap:2px; margin-bottom:12px;">
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#1a3a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#1a1f2e;border-radius:3px;border:1px solid #4a5a7a"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+      <div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div><div style="width:26px;height:26px;background:#3a4a6a;border-radius:3px"></div>
+    </div>
+    <!-- Piece tray -->
+    <div style="background:#1a1a2a; border-radius:8px; padding:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div style="font-size:10px; color:#555; margin-right:4px;">Tray:</div>
+      <!-- Selected I piece (active / glowing) -->
+      <div style="background:#1a3a4a; border:2px solid #00bcd4; border-radius:6px; padding:5px; box-shadow:0 0 8px #00bcd480;">
+        <div style="display:grid; grid-template-columns:repeat(4,11px); gap:1px;">
+          <div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div><div style="width:11px;height:11px;background:#00bcd4;border-radius:1px"></div>
+        </div>
+        <div style="font-size:9px; color:#00bcd4; text-align:center;">selected</div>
+      </div>
+      <!-- J piece waiting -->
+      <div style="background:#1a1a2a; border:1px solid #1976d2; border-radius:6px; padding:5px; opacity:0.7;">
+        <div style="display:grid; grid-template-columns:repeat(3,11px); gap:1px;">
+          <div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px"></div><div style="width:11px;height:11px"></div>
+          <div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div><div style="width:11px;height:11px;background:#1976d2;border-radius:1px"></div>
+        </div>
+      </div>
+      <div style="color:#555; font-size:10px; margin-left:4px;">R to rotate</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCORING PHASE -->
+<div id="phase-scoring" style="display:none; flex-direction:column; align-items:center; gap:12px;">
+  <div style="background:#111827; border-radius:16px; padding:20px; width:380px; font-family:monospace;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div style="color:#aaa; font-size:12px;">Round <span style="color:#fff; font-weight:700;">3</span> complete</div>
+      <div style="display:flex; gap:6px;"><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span><span style="color:#ef5350; font-size:16px;">♥</span></div>
+    </div>
+    <!-- Score breakdown -->
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; background:#1a2a1a; border-radius:8px; padding:8px 12px;">
+        <span style="color:#66bb6a; font-size:13px;">✓ Correct selection</span>
+        <span style="color:#66bb6a; font-weight:700;">+800</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; background:#2a2a1a; border-radius:8px; padding:8px 12px;">
+        <span style="color:#f9a825; font-size:13px;">⚡ Speed bonus</span>
+        <span style="color:#f9a825; font-weight:700;">+240</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; background:#1a2a2a; border-radius:8px; padding:8px 12px;">
+        <span style="color:#00bcd4; font-size:13px;">◆ Efficiency bonus</span>
+        <span style="color:#00bcd4; font-weight:700;">+160</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; background:#1a1a2a; border-radius:8px; padding:8px 12px;">
+        <span style="color:#ab47bc; font-size:13px;">▬ Row clears (×2)</span>
+        <span style="color:#ab47bc; font-weight:700;">+400</span>
+      </div>
+      <div style="border-top:1px solid #333; padding-top:8px; display:flex; justify-content:space-between;">
+        <span style="color:#fff; font-size:15px; font-weight:700;">Round total</span>
+        <span style="color:#fff; font-size:15px; font-weight:700;">+1,600</span>
+      </div>
+    </div>
+    <div style="text-align:center; background:#1a2a1a; border-radius:8px; padding:10px;">
+      <div style="color:#aaa; font-size:11px;">Total score</div>
+      <div style="color:#f9a825; font-size:24px; font-weight:700;">4,000</div>
+    </div>
+    <div style="text-align:center; margin-top:12px;">
+      <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:8px; padding:8px 24px; display:inline-block; color:#66bb6a; font-weight:700; cursor:pointer; font-size:13px;">Next Round →</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPhase(phase) {
+  ['viewing','selecting','placing','scoring'].forEach(p => {
+    document.getElementById('phase-' + p).style.display = 'none';
+    var btn = document.getElementById('btn-' + p);
+    if (btn) btn.style.opacity = '0.4';
+  });
+  document.getElementById('phase-' + phase).style.display = 'flex';
+  var activeBtn = document.getElementById('btn-' + phase);
+  if (activeBtn) activeBtn.style.opacity = '1';
+}
+showPhase('viewing');
+</script>

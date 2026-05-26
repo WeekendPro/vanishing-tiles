@@ -1,0 +1,76 @@
+<h2>How should manual piece placement work?</h2>
+<p class="subtitle">This kicks in when your piece selection doesn't perfectly fill the grid. Pick the interaction model that feels best.</p>
+
+<div class="cards" style="gap: 28px; justify-content: center; align-items: flex-start;">
+
+  <!-- Option A: Drag and Drop -->
+  <div class="card" data-choice="drag" onclick="toggleSelect(this)" style="max-width:300px">
+    <div class="card-image" style="padding:20px; background:#1a1a2e; display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <!-- Piece tray -->
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div style="background:#2a2a4a; border:1px solid #6a6aaa; border-radius:6px; padding:8px; display:inline-grid; grid-template-columns:repeat(4,14px); gap:2px;">
+          <div style="width:14px;height:14px;background:#00bcd4;border-radius:2px"></div><div style="width:14px;height:14px;background:#00bcd4;border-radius:2px"></div><div style="width:14px;height:14px;background:#00bcd4;border-radius:2px"></div><div style="width:14px;height:14px;background:#00bcd4;border-radius:2px"></div>
+          <div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div>
+        </div>
+        <div style="color:#888;font-size:18px;">→</div>
+        <div style="background:#2a2a4a; border:1px dashed #6a6aaa; border-radius:6px; padding:8px; display:inline-grid; grid-template-columns:repeat(4,14px); gap:2px;">
+          <div style="width:14px;height:14px;background:#1a3a4a;border-radius:2px;border:1px solid #4a8aaa"></div><div style="width:14px;height:14px;background:#1a3a4a;border-radius:2px;border:1px solid #4a8aaa"></div><div style="width:14px;height:14px;background:#1a3a4a;border-radius:2px;border:1px solid #4a8aaa"></div><div style="width:14px;height:14px;background:#1a3a4a;border-radius:2px;border:1px solid #4a8aaa"></div>
+          <div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div><div style="width:14px;height:14px"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#aaa;">drag piece → drop onto grid gap</div>
+      <!-- Mini grid showing drop highlight -->
+      <div style="display:inline-grid; grid-template-columns:repeat(5,18px); gap:2px;">
+        <div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div>
+        <div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#1a4a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:18px;height:18px;background:#1a4a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:18px;height:18px;background:#1a4a5a;border-radius:3px;border:2px solid #00bcd4"></div><div style="width:18px;height:18px;background:#1a4a5a;border-radius:3px;border:2px solid #00bcd4"></div>
+        <div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#2a2a4a;border-radius:3px;border:1px solid #6a6aaa"></div><div style="width:18px;height:18px;background:#2a2a4a;border-radius:3px;border:1px solid #6a6aaa"></div><div style="width:18px;height:18px;background:#2a2a4a;border-radius:3px;border:1px solid #6a6aaa"></div><div style="width:18px;height:18px;background:#2a2a4a;border-radius:3px;border:1px solid #6a6aaa"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Drag & Drop</h3>
+      <p>Drag a piece from your tray, hover over the grid to see a placement preview, drop to place.</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Intuitive, spatial</li><li>Natural on mobile (touch drag)</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Harder to implement precisely</li><li>Frustrating if hit detection is off</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Click to Select + Click to Place -->
+  <div class="card" data-choice="click" onclick="toggleSelect(this)" style="max-width:300px">
+    <div class="card-image" style="padding:20px; background:#1a1a2e; display:flex; flex-direction:column; align-items:center; gap:16px;">
+      <div style="display:flex; gap:12px; align-items:center;">
+        <!-- Step 1: piece selected -->
+        <div style="text-align:center">
+          <div style="background:#2a2a4a; border:2px solid #e040fb; border-radius:6px; padding:8px; display:inline-grid; grid-template-columns:repeat(2,14px); gap:2px; margin-bottom:4px">
+            <div style="width:14px;height:14px;background:#9c27b0;border-radius:2px"></div><div style="width:14px;height:14px;background:#9c27b0;border-radius:2px"></div>
+            <div style="width:14px;height:14px;background:#9c27b0;border-radius:2px"></div><div style="width:14px;height:14px"></div>
+          </div>
+          <div style="font-size:10px;color:#e040fb;">1. click piece</div>
+        </div>
+        <div style="color:#888;font-size:18px;">→</div>
+        <!-- Step 2: click grid location -->
+        <div style="text-align:center">
+          <div style="display:inline-grid; grid-template-columns:repeat(3,18px); gap:2px; margin-bottom:4px">
+            <div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div>
+            <div style="width:18px;height:18px;background:#2a1a3a;border-radius:3px;border:2px solid #e040fb"></div><div style="width:18px;height:18px;background:#2a1a3a;border-radius:3px;border:2px solid #e040fb"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div>
+            <div style="width:18px;height:18px;background:#2a1a3a;border-radius:3px;border:2px solid #e040fb"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div><div style="width:18px;height:18px;background:#4a4a7a;border-radius:3px"></div>
+          </div>
+          <div style="font-size:10px;color:#e040fb;">2. click target cell</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#aaa;">piece snaps to grid; invalid placements rejected</div>
+    </div>
+    <div class="card-body">
+      <h3>B — Click to Select + Click to Place</h3>
+      <p>Click a piece in your tray to "hold" it, then click the grid cell where it should anchor. Piece snaps into position.</p>
+      <div class="pros-cons" style="margin-top:8px">
+        <div class="pros"><h4>Pros</h4><ul><li>Precise, no accidental drops</li><li>Works equally well on web & mobile</li><li>Simpler to implement</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Two clicks per piece feels slower</li><li>Less physically satisfying</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px;">Either can support piece rotation — worth deciding separately.</p>

@@ -1,0 +1,89 @@
+<h2>Core Game Loop</h2>
+<p class="subtitle">Each round flows through 4 phases. The same loop repeats, getting harder each round.</p>
+
+<div style="display:flex; flex-direction:column; align-items:center; gap:0; margin-top:24px;">
+
+  <!-- Phase 1: VIEWING -->
+  <div style="background:#1a2a3a; border:2px solid #00bcd4; border-radius:12px; padding:18px 32px; text-align:center; width:340px;">
+    <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#00bcd4; margin-bottom:4px;">PHASE 1</div>
+    <div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:6px;">VIEWING</div>
+    <div style="font-size:13px; color:#aaa;">8×10 grid appears, mostly filled.<br>Empty slots are tetromino-shaped gaps.<br>Progress bar counts down (5s at lvl 1).</div>
+  </div>
+
+  <!-- Arrow -->
+  <div style="display:flex; flex-direction:column; align-items:center; color:#555; gap:0;">
+    <div style="width:2px; height:16px; background:#444;"></div>
+    <div style="font-size:18px; color:#666;">▼</div>
+    <div style="font-size:11px; color:#555; margin-top:-4px;">grid hides</div>
+    <div style="width:2px; height:8px; background:#444;"></div>
+  </div>
+
+  <!-- Phase 2: SELECTING -->
+  <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:12px; padding:18px 32px; text-align:center; width:340px;">
+    <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#66bb6a; margin-bottom:4px;">PHASE 2</div>
+    <div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:6px;">SELECTING</div>
+    <div style="font-size:13px; color:#aaa;">Piece menu appears (all 7 tetrominoes).<br>User picks how many of each they need.<br>Progress bar counts down (15s at lvl 1).<br><span style="color:#f9a825;">Speed bonus accrues for unused time.</span></div>
+  </div>
+
+  <!-- Arrow with branch -->
+  <div style="display:flex; flex-direction:column; align-items:center; color:#555; gap:0;">
+    <div style="width:2px; height:16px; background:#444;"></div>
+    <div style="font-size:18px; color:#666;">▼</div>
+    <div style="font-size:11px; color:#555; margin-top:-4px;">timer ends</div>
+    <div style="width:2px; height:8px; background:#444;"></div>
+  </div>
+
+  <!-- Branch: correct vs incorrect -->
+  <div style="display:flex; gap:24px; align-items:flex-start;">
+
+    <!-- Left: correct -->
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <div style="font-size:11px; color:#66bb6a; margin-bottom:4px;">✓ selection fills grid exactly</div>
+      <div style="background:#1a2a1a; border:2px solid #66bb6a; border-radius:12px; padding:14px 20px; text-align:center; width:200px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#66bb6a; margin-bottom:4px;">PHASE 3A</div>
+        <div style="font-size:16px; font-weight:700; color:#fff; margin-bottom:4px;">AUTO-PLACE</div>
+        <div style="font-size:12px; color:#aaa;">Pieces snap into gaps<br>automatically. No penalty.</div>
+      </div>
+    </div>
+
+    <!-- Right: incorrect -->
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <div style="font-size:11px; color:#ef5350; margin-bottom:4px;">✗ selection doesn't fit</div>
+      <div style="background:#2a1a1a; border:2px solid #ef5350; border-radius:12px; padding:14px 20px; text-align:center; width:200px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#ef5350; margin-bottom:4px;">PHASE 3B</div>
+        <div style="font-size:16px; font-weight:700; color:#fff; margin-bottom:4px;">MANUAL PLACE</div>
+        <div style="font-size:12px; color:#aaa;">Grid reappears. Click piece → click cell. Rotation supported. Penalty applied.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Converge arrow -->
+  <div style="display:flex; flex-direction:column; align-items:center; color:#555; margin-top:4px;">
+    <div style="width:2px; height:16px; background:#444;"></div>
+    <div style="font-size:18px; color:#666;">▼</div>
+    <div style="font-size:11px; color:#555; margin-top:-4px;">all pieces placed</div>
+    <div style="width:2px; height:8px; background:#444;"></div>
+  </div>
+
+  <!-- Phase 4: SCORING -->
+  <div style="background:#2a1a2a; border:2px solid #ab47bc; border-radius:12px; padding:18px 32px; text-align:center; width:340px;">
+    <div style="font-size:11px; font-weight:700; letter-spacing:2px; color:#ab47bc; margin-bottom:4px;">PHASE 4</div>
+    <div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:6px;">SCORING</div>
+    <div style="font-size:13px; color:#aaa;">Completed rows flash and clear.<br>Score breakdown shown briefly:<br>
+      <span style="color:#66bb6a;">correctness</span> + <span style="color:#f9a825;">speed bonus</span> + <span style="color:#00bcd4;">efficiency bonus</span> + <span style="color:#ab47bc;">row clears</span>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div style="display:flex; flex-direction:column; align-items:center; color:#555; gap:0;">
+    <div style="width:2px; height:16px; background:#444;"></div>
+    <div style="font-size:18px; color:#666;">▼</div>
+    <div style="width:2px; height:8px; background:#444;"></div>
+  </div>
+
+  <!-- Loop back -->
+  <div style="background:#1e1e2e; border:2px dashed #555; border-radius:12px; padding:12px 32px; text-align:center; width:340px;">
+    <div style="font-size:14px; color:#888;">Next round begins → harder timers, more/complex gaps</div>
+  </div>
+
+</div>
