@@ -1,0 +1,109 @@
+// ── Pieces ──────────────────────────────────────────────────────────────────
+
+export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L' | 'SINGLE'
+
+export type Rotation = 0 | 1 | 2 | 3  // 0=0°, 1=90°, 2=180°, 3=270°
+
+/** Relative [row, col] offsets from the anchor cell (top-left of bounding box) */
+export type PieceCells = [number, number][]
+
+export interface PieceDefinition {
+  type: PieceType
+  color: string         // Tailwind bg class, e.g. 'bg-cyan-400'
+  cells: PieceCells     // canonical (rotation=0) shape
+}
+
+// ── Grid ────────────────────────────────────────────────────────────────────
+
+export type CellStatus = 'filled' | 'empty' | 'placed'
+
+export interface Cell {
+  status: CellStatus
+  pieceType?: PieceType   // which piece occupies this cell (if placed)
+}
+
+/** Grid is ROWS × COLS. grid[row][col]. 10 rows, 8 cols. */
+export type Grid = Cell[][]
+
+export const ROWS = 10
+export const COLS = 8
+
+// ── Gap ─────────────────────────────────────────────────────────────────────
+
+/** A set of cells that form one tetromino-shaped gap in the grid */
+export interface Gap {
+  pieceType: PieceType
+  rotation: Rotation
+  anchorRow: number
+  anchorCol: number
+  cells: [number, number][]  // absolute [row, col] positions
+}
+
+// ── Selection ────────────────────────────────────────────────────────────────
+
+export interface SelectionEntry {
+  pieceType: PieceType
+  lockedCount: number   // carry-overs from previous round — cannot decrement
+  freeCount: number     // freely added this round — can decrement to 0
+}
+
+// ── Carry-overs ─────────────────────────────────────────────────────────────
+
+export interface CarryOver {
+  pieceType: PieceType
+  count: number
+}
+
+// ── Scoring ──────────────────────────────────────────────────────────────────
+
+export interface RoundScore {
+  correctness: number
+  speedBonus: number
+  efficiencyBonus: number
+  total: number
+}
+
+// ── Difficulty ───────────────────────────────────────────────────────────────
+
+export interface DifficultyConfig {
+  viewDuration: number     // ms
+  selectDuration: number   // ms
+  gapCount: number         // number of tetromino gaps placed in the puzzle
+  complexity: 'simple' | 'medium' | 'complex'
+}
+
+// ── Held piece (manual placement) ────────────────────────────────────────────
+
+export interface HeldPiece {
+  pieceType: PieceType
+  rotation: Rotation
+}
+
+// ── Game phases ───────────────────────────────────────────────────────────────
+
+export type GamePhase =
+  | 'idle'
+  | 'viewing'
+  | 'selecting'
+  | 'auto-placing'
+  | 'manual-placing'
+  | 'scoring'
+  | 'game-over'
+
+// ── Full game state ───────────────────────────────────────────────────────────
+
+export interface GameState {
+  phase: GamePhase
+  round: number
+  score: number
+  lives: number               // 3 → 0; reaching 0 = game over
+  grid: Grid
+  gaps: Gap[]                 // gaps placed in current puzzle
+  selection: SelectionEntry[] // current selection cart
+  carryOvers: CarryOver[]     // locked pieces for next round
+  heldPiece: HeldPiece | null // piece currently held for placement
+  phaseStartTime: number      // Date.now() when current phase started
+  phaseDuration: number       // ms; 0 = no timer for this phase
+  roundScore: RoundScore | null
+  difficulty: DifficultyConfig
+}
