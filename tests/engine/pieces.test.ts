@@ -47,10 +47,10 @@ describe('rotateCells', () => {
   })
 
   it('rotating 4 times returns to original (normalized)', () => {
-    const T = PIECE_DEFINITIONS.find(p => p.type === 'T')!
-    let cells = T.cells
+    const original = getRotatedCells('T', 0)
+    let cells = original
     for (let i = 0; i < 4; i++) cells = rotateCells(cells)
-    expect(cells).toEqual(T.cells)
+    expect(cells).toEqual(original)
   })
 })
 
@@ -67,6 +67,11 @@ describe('getRotatedCells', () => {
     const cols = cells1.map(([, c]) => c)
     expect(new Set(cols).size).toBe(1)
   })
+
+  it('T rotated 90° has correct exact coordinates', () => {
+    const cells = getRotatedCells('T', 1)
+    expect(cells).toEqual([[0,1],[1,0],[1,1],[2,1]])
+  })
 })
 
 describe('getAllRotations', () => {
@@ -82,6 +87,26 @@ describe('getAllRotations', () => {
 
   it('T piece has 4 unique rotations', () => {
     const rotations = getAllRotations('T')
+    expect(rotations).toHaveLength(4)
+  })
+
+  it('S piece has 2 unique rotations', () => {
+    const rotations = getAllRotations('S')
+    expect(rotations).toHaveLength(2)
+  })
+
+  it('Z piece has 2 unique rotations', () => {
+    const rotations = getAllRotations('Z')
+    expect(rotations).toHaveLength(2)
+  })
+
+  it('J piece has 4 unique rotations', () => {
+    const rotations = getAllRotations('J')
+    expect(rotations).toHaveLength(4)
+  })
+
+  it('L piece has 4 unique rotations', () => {
+    const rotations = getAllRotations('L')
     expect(rotations).toHaveLength(4)
   })
 
