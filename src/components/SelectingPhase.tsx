@@ -45,7 +45,7 @@ export function SelectingPhase() {
                 key={entry.pieceType}
                 onClick={() => !isLocked && decrementSelection(entry.pieceType)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs
-                  ${entry.lockedCount > 0
+                  ${isLocked
                     ? 'border-red-500 bg-red-950 text-red-300 cursor-not-allowed'
                     : 'border-blue-500 bg-blue-950 text-blue-300 cursor-pointer hover:bg-blue-900'
                   }`}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { Grid } from './Grid'
 import { PieceShape } from './PieceShape'
@@ -20,7 +20,12 @@ export function PlacingPhase() {
     finishManualPlace: s.finishManualPlace,
   }))
 
-  const [hoverCell, _setHoverCell] = useState<[number, number] | null>(null)
+  const [hoverCell, setHoverCell] = useState<[number, number] | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    containerRef.current?.focus()
+  }, [])
 
   const previewCells: [number, number][] = []
   if (heldPiece && hoverCell) {
@@ -49,11 +54,12 @@ export function PlacingPhase() {
       </div>
 
       <div
+        ref={containerRef}
         onKeyDown={e => { if (e.key === 'r' || e.key === 'R') rotatePiece() }}
         tabIndex={0}
         className="outline-none"
       >
-        <Grid onCellClick={handleCellClick} highlightCells={previewCells} />
+        <Grid onCellClick={handleCellClick} onCellHover={(r, c) => setHoverCell([r, c])} highlightCells={previewCells} />
       </div>
 
       {/* Piece tray */}

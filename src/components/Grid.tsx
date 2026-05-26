@@ -4,10 +4,11 @@ import { ROWS, COLS } from '../types'
 
 interface Props {
   onCellClick?: (row: number, col: number) => void
+  onCellHover?: (row: number, col: number) => void
   highlightCells?: [number, number][]
 }
 
-export function Grid({ onCellClick, highlightCells = [] }: Props) {
+export function Grid({ onCellClick, onCellHover, highlightCells = [] }: Props) {
   const grid = useGameStore(s => s.grid)
   const heldPiece = useGameStore(s => s.heldPiece)
   const highlighted = new Set(highlightCells.map(([r, c]) => `${r},${c}`))
@@ -46,6 +47,7 @@ export function Grid({ onCellClick, highlightCells = [] }: Props) {
             key={i}
             className={className}
             onClick={() => onCellClick?.(row, col)}
+            onMouseEnter={() => onCellHover?.(row, col)}
           />
         )
       })}
