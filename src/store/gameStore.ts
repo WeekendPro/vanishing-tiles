@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type {
-  GameState, GamePhase, PieceType, SelectionEntry,
-  DifficultyConfig, RoundScore, HeldPiece, Rotation,
+  GameState, PieceType, SelectionEntry,
+  DifficultyConfig, Rotation,
 } from '../types'
 import { ROWS, COLS } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'

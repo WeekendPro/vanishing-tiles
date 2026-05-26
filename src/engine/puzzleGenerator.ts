@@ -1,4 +1,4 @@
-import type { Grid, Gap, Cell, DifficultyConfig, PieceType, Rotation } from '../types'
+import type { Grid, Gap, Cell, DifficultyConfig, PieceType } from '../types'
 import { ROWS, COLS } from '../types'
 import { getAllRotations } from './pieces'
 
