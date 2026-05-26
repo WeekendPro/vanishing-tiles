@@ -28,6 +28,8 @@ export function Grid({ onCellClick, highlightCells = [] }: Props) {
           className += 'bg-slate-600'
         } else if (cell?.status === 'placed' && cell.pieceType) {
           className += getPieceColor(cell.pieceType)
+        } else if (cell?.status === 'preview') {
+          className += 'bg-blue-400/50 border-2 border-blue-400'
         } else if (isHighlight) {
           className += 'bg-blue-400/50 border-2 border-blue-400'
         } else {
