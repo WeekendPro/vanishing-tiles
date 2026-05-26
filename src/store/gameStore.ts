@@ -201,6 +201,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: 'scoring',
       grid: newGrid,
       score: score + (roundScore?.total ?? 0),
+      carryOvers: [],
     })
   },
 
