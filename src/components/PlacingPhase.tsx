@@ -40,9 +40,6 @@ export function PlacingPhase() {
     }
   }
 
-  const hasEmptyGaps = grid.some(row => row.some(c => c.status === 'empty'))
-  const hasSelectionLeft = selection.some(e => e.lockedCount + e.freeCount > 0)
-
   const handleCellClick = (row: number, col: number) => {
     if (!heldPiece) return
     placePiece(row, col)
@@ -54,52 +51,54 @@ export function PlacingPhase() {
         Place your pieces — click piece to hold · click grid to place · R to rotate
       </div>
 
-      <div
-        ref={containerRef}
-        onKeyDown={e => { if (e.key === 'r' || e.key === 'R') rotatePiece() }}
-        tabIndex={0}
-        className="outline-none"
-      >
-        <Grid onCellClick={handleCellClick} onCellHover={(r, c) => setHoverCell([r, c])} highlightCells={previewCells} />
-      </div>
-
-      {/* Piece tray */}
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 w-full max-w-sm">
-        <p className="text-xs text-gray-600 mb-2">Tray</p>
-        <div className="flex gap-2 flex-wrap">
-          {selection.filter(e => e.lockedCount + e.freeCount > 0).map(entry => {
-            const isHeld = heldPiece?.pieceType === entry.pieceType
-            const rotation: Rotation = isHeld ? (heldPiece?.rotation ?? 0) : 0
-            return (
-              <button
-                key={entry.pieceType}
-                onClick={() => isHeld ? clearHeld() : holdPiece(entry.pieceType, 0)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs
-                  ${isHeld
-                    ? 'border-blue-400 bg-blue-950 shadow-[0_0_8px] shadow-blue-400'
-                    : 'border-gray-600 bg-gray-800 hover:border-gray-400'
-                  }`}
-              >
-                <PieceShape pieceType={entry.pieceType} rotation={rotation} cellSize={13} />
-                <span className="text-[10px] text-gray-400">
-                  {entry.lockedCount > 0 ? `🔒×${entry.lockedCount}` : ''}
-                  {entry.freeCount > 0 ? ` ×${entry.freeCount}` : ''}
-                </span>
-              </button>
-            )
-          })}
+      <div className="inline-flex flex-col gap-3 items-stretch">
+        <div
+          ref={containerRef}
+          onKeyDown={e => { if (e.key === 'r' || e.key === 'R') rotatePiece() }}
+          tabIndex={0}
+          className="outline-none"
+        >
+          <Grid onCellClick={handleCellClick} onCellHover={(r, c) => setHoverCell([r, c])} highlightCells={previewCells} />
         </div>
-        {heldPiece && (
-          <p className="text-xs text-blue-400 mt-2">Press R to rotate · click a gap to place</p>
-        )}
-      </div>
 
-      <button
-        onClick={finishManualPlace}
-        className="px-6 py-2 bg-green-800 border-2 border-green-500 text-green-300 rounded-xl font-bold"
-      >
-        Finish Round →
-      </button>
+        {/* Piece tray */}
+        <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
+          <p className="text-xs text-gray-600 mb-2">Tray</p>
+          <div className="flex gap-2 flex-wrap">
+            {selection.filter(e => e.lockedCount + e.freeCount > 0).map(entry => {
+              const isHeld = heldPiece?.pieceType === entry.pieceType
+              const rotation: Rotation = isHeld ? (heldPiece?.rotation ?? 0) : 0
+              return (
+                <button
+                  key={entry.pieceType}
+                  onClick={() => isHeld ? clearHeld() : holdPiece(entry.pieceType, 0)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs
+                    ${isHeld
+                      ? 'border-blue-400 bg-blue-950 shadow-[0_0_8px] shadow-blue-400'
+                      : 'border-gray-600 bg-gray-800 hover:border-gray-400'
+                    }`}
+                >
+                  <PieceShape pieceType={entry.pieceType} rotation={rotation} cellSize={13} />
+                  <span className="text-[10px] text-gray-400">
+                    {entry.lockedCount > 0 ? `🔒×${entry.lockedCount}` : ''}
+                    {entry.freeCount > 0 ? ` ×${entry.freeCount}` : ''}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {heldPiece && (
+            <p className="text-xs text-blue-400 mt-2">Press R to rotate · click a gap to place</p>
+          )}
+        </div>
+
+        <button
+          onClick={finishManualPlace}
+          className="w-full py-3 bg-green-800 border-2 border-green-500 text-green-300 rounded-xl font-bold"
+        >
+          Finish Round →
+        </button>
+      </div>
     </div>
   )
 }
