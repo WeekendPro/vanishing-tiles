@@ -170,7 +170,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newLives = lives - 1
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * (minPieces / Math.max(selectedPieces, minPieces)))
+      const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
+      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
 
       set({
         phase: newLives <= 0 ? 'game-over' : 'manual-placing',
