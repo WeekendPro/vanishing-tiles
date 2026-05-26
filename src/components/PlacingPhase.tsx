@@ -94,14 +94,12 @@ export function PlacingPhase() {
         )}
       </div>
 
-      {(!hasEmptyGaps || !hasSelectionLeft) && (
-        <button
-          onClick={finishManualPlace}
-          className="px-6 py-2 bg-green-800 border-2 border-green-500 text-green-300 rounded-xl font-bold"
-        >
-          Finish Round →
-        </button>
-      )}
+      <button
+        onClick={finishManualPlace}
+        className="px-6 py-2 bg-green-800 border-2 border-green-500 text-green-300 rounded-xl font-bold"
+      >
+        Finish Round →
+      </button>
     </div>
   )
 }
