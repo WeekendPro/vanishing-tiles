@@ -5,13 +5,15 @@ import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
 import { CelebrationBadge } from './CelebrationBadge'
+import { ScorePanel } from './ScorePanel'
 import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
 
 export function AutoPlacingPhase() {
-  const { selection, solution, applyPlacement } = useGameStore(useShallow(s => ({
+  const { selection, solution, applyPlacement, roundScore } = useGameStore(useShallow(s => ({
     selection: s.selection,
     solution: s._autoPlaceSolution,
     applyPlacement: s.applyPlacement,
+    roundScore: s.roundScore,
   })))
 
   const slots = useMemo(() => expandCartSlots(selection), [selection])
@@ -93,6 +95,8 @@ export function AutoPlacingPhase() {
       <SelectionCart ref={cartRef} slots={slots} consumed={consumed} />
 
       <CelebrationBadge show={false} />
+
+      {roundScore && <ScorePanel roundScore={roundScore} show={false} />}
 
       {flyers && containerRect && (
         <FlyerOverlay
