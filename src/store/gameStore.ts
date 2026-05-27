@@ -42,6 +42,7 @@ interface GameStore extends GameState {
   submitSelection: () => void
   finishAutoPlace: () => void
   applyPlacement: (placement: Placement) => void
+  commitRoundScore: () => void
   placePiece: (row: number, col: number) => void
   finishManualPlace: () => void
   nextRound: () => void
@@ -194,6 +195,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType }
       }
       return { grid: newGrid }
+    })
+  },
+
+  commitRoundScore: () => {
+    set(state => {
+      if (!state.roundScore) return {}
+      return {
+        score: state.score + state.roundScore.total,
+        carryOvers: [],
+      }
     })
   },
 

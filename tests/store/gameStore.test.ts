@@ -167,6 +167,52 @@ describe('applyPlacement', () => {
   })
 })
 
+describe('commitRoundScore', () => {
+  it('adds roundScore.total to running score', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+
+    const before = useGameStore.getState().score
+    const total = useGameStore.getState().roundScore!.total
+
+    act(() => useGameStore.getState().commitRoundScore())
+
+    expect(useGameStore.getState().score).toBe(before + total)
+  })
+
+  it('clears carryOvers', () => {
+    useGameStore.setState({ carryOvers: [{ pieceType: 'I', count: 2 }] })
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    act(() => useGameStore.getState().commitRoundScore())
+
+    expect(useGameStore.getState().carryOvers).toEqual([])
+  })
+
+  it('does not change phase', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    act(() => useGameStore.getState().commitRoundScore())
+
+    expect(useGameStore.getState().phase).toBe('auto-placing')
+  })
+
+  it('is a no-op when roundScore is null', () => {
+    const before = useGameStore.getState().score
+    act(() => useGameStore.getState().commitRoundScore())
+    expect(useGameStore.getState().score).toBe(before)
+  })
+})
+
 describe('DIFFICULTY_TABLE', () => {
   it('round 1 has 5000ms view duration', () => {
     expect(DIFFICULTY_TABLE[0].viewDuration).toBe(5000)
