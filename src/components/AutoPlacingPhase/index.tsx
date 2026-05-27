@@ -6,14 +6,16 @@ import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
 import { CelebrationBadge } from './CelebrationBadge'
 import { ScorePanel } from './ScorePanel'
+import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
 
 export function AutoPlacingPhase() {
-  const { selection, solution, applyPlacement, roundScore } = useGameStore(useShallow(s => ({
+  const { selection, solution, applyPlacement, roundScore, nextRound } = useGameStore(useShallow(s => ({
     selection: s.selection,
     solution: s._autoPlaceSolution,
     applyPlacement: s.applyPlacement,
     roundScore: s.roundScore,
+    nextRound: s.nextRound,
   })))
 
   const slots = useMemo(() => expandCartSlots(selection), [selection])
@@ -97,6 +99,8 @@ export function AutoPlacingPhase() {
       <CelebrationBadge show={false} />
 
       {roundScore && <ScorePanel roundScore={roundScore} show={false} />}
+
+      <NextRoundButton show={false} onClick={nextRound} />
 
       {flyers && containerRect && (
         <FlyerOverlay
