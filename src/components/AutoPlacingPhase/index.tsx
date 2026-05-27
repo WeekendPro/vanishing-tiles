@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/shallow'
 import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
+import { CelebrationBadge } from './CelebrationBadge'
 import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
 
 export function AutoPlacingPhase() {
@@ -90,6 +91,8 @@ export function AutoPlacingPhase() {
         }}
       />
       <SelectionCart ref={cartRef} slots={slots} consumed={consumed} />
+
+      <CelebrationBadge show={false} />
 
       {flyers && containerRect && (
         <FlyerOverlay
