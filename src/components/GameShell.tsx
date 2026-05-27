@@ -2,6 +2,7 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
+import { AutoPlacingPhase } from './AutoPlacingPhase'
 import { PlacingPhase } from './PlacingPhase'
 import { ScoringPhase } from './ScoringPhase'
 
@@ -52,7 +53,7 @@ export function GameShell() {
       <div className="flex-1 flex items-center justify-center p-4">
         {phase === 'viewing'        && <ViewingPhase />}
         {phase === 'selecting'      && <SelectingPhase />}
-        {phase === 'auto-placing'   && <div className="text-gray-500 text-sm">[auto-placing — placeholder]</div>}
+        {phase === 'auto-placing'   && <AutoPlacingPhase />}
         {phase === 'manual-placing' && <PlacingPhase />}
         {(phase === 'scoring' || phase === 'game-over') && <ScoringPhase />}
       </div>
