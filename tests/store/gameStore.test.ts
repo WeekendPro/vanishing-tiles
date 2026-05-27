@@ -127,7 +127,7 @@ describe('scoring', () => {
     act(() => useGameStore.getState().endViewing())
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
     act(() => useGameStore.getState().submitSelection())
-    act(() => useGameStore.getState().finishAutoPlace())
+    // submitSelection already sets roundScore for the auto-place path
     const { roundScore } = useGameStore.getState()
     expect(roundScore?.correctness).toBeGreaterThan(0)
   })

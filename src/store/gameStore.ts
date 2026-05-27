@@ -40,7 +40,6 @@ interface GameStore extends GameState {
   startGame: () => void
   endViewing: () => void
   submitSelection: () => void
-  finishAutoPlace: () => void
   applyPlacement: (placement: Placement) => void
   commitRoundScore: () => void
   placePiece: (row: number, col: number) => void
@@ -205,25 +204,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         score: state.score + state.roundScore.total,
         carryOvers: [],
       }
-    })
-  },
-
-  finishAutoPlace: () => {
-    const { _autoPlaceSolution, grid, roundScore, score } = get()
-    if (!_autoPlaceSolution) return
-
-    const newGrid = grid.map(row => row.map(cell => ({ ...cell })))
-    for (const placement of _autoPlaceSolution) {
-      for (const [r, c] of placement.cells) {
-        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType }
-      }
-    }
-
-    set({
-      phase: 'scoring',
-      grid: newGrid,
-      score: score + (roundScore?.total ?? 0),
-      carryOvers: [],
     })
   },
 

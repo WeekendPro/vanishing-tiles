@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { ViewingPhase } from './ViewingPhase'
@@ -17,20 +16,13 @@ function Hearts({ count }: { count: number }) {
 }
 
 export function GameShell() {
-  const { phase, round, score, lives, startGame, finishAutoPlace } = useGameStore(useShallow(s => ({
+  const { phase, round, score, lives, startGame } = useGameStore(useShallow(s => ({
     phase: s.phase,
     round: s.round,
     score: s.score,
     lives: s.lives,
     startGame: s.startGame,
-    finishAutoPlace: s.finishAutoPlace,
   })))
-
-  useEffect(() => {
-    if (phase !== 'auto-placing') return
-    const timer = setTimeout(finishAutoPlace, 800)
-    return () => clearTimeout(timer)
-  }, [phase, finishAutoPlace])
 
   if (phase === 'idle') {
     return (
@@ -60,9 +52,7 @@ export function GameShell() {
       <div className="flex-1 flex items-center justify-center p-4">
         {phase === 'viewing'        && <ViewingPhase />}
         {phase === 'selecting'      && <SelectingPhase />}
-        {phase === 'auto-placing'   && (
-          <div className="text-green-400 text-xl font-bold animate-pulse">✓ Auto-placing...</div>
-        )}
+        {phase === 'auto-placing'   && <div className="text-gray-500 text-sm">[auto-placing — placeholder]</div>}
         {phase === 'manual-placing' && <PlacingPhase />}
         {(phase === 'scoring' || phase === 'game-over') && <ScoringPhase />}
       </div>
