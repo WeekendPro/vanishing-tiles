@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useCountUp } from '../../hooks/useCountUp'
 import type { RoundScore } from '../../types'
 
@@ -64,12 +64,14 @@ function Row({ icon, label, value, delay, color }: {
 
 /** Wraps useCountUp with an additional render-time delay before starting. */
 function DelayedCountUp({ value, delay }: { value: number; delay: number }) {
+  const reduceMotion = useReducedMotion()
   const [active, setActive] = useState(false)
   useEffect(() => {
+    if (reduceMotion) { setActive(true); return }
     const t = window.setTimeout(() => setActive(true), delay * 1000)
     return () => clearTimeout(t)
-  }, [delay])
-  const animated = useCountUp(active ? value : 0, COUNT_DURATION)
+  }, [delay, reduceMotion])
+  const animated = useCountUp(active ? value : 0, reduceMotion ? 0 : COUNT_DURATION)
   return <>{animated.toLocaleString()}</>
 }
 

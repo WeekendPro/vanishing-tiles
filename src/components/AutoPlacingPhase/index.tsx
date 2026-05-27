@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useReducedMotion } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { Grid } from '../Grid'
@@ -43,9 +44,23 @@ export function AutoPlacingPhase() {
   const [consumed, setConsumed] = useState<ReadonlySet<number>>(new Set())
   const landedCount = useRef(0)
 
+  const reduceMotion = useReducedMotion()
+
+  // Reduced motion: skip the flight. Apply all placements immediately,
+  // then jump straight to the CTA (with the badge + score visible).
+  useEffect(() => {
+    if (!reduceMotion) return
+    if (stage !== 'measuring') return
+    if (!solution) return
+    for (const p of solution) applyPlacement(p)
+    commitRoundScore()
+    setStage('cta')
+  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore])
+
   // Measure and build flyer specs after first render.
   useLayoutEffect(() => {
     if (stage !== 'measuring') return
+    if (reduceMotion) return                     // ← reduced motion handled by useEffect above
     if (!solution || solution.length === 0) {
       // Defensive: no pieces to fly. Skip directly to badge.
       setStage('badge')
@@ -77,7 +92,7 @@ export function AutoPlacingPhase() {
     setContainerRect(rootRef.current.getBoundingClientRect())
     setFlyers(built)
     setStage('flying')
-  }, [stage, solution, placementToSlot])
+  }, [stage, solution, placementToSlot, reduceMotion])
 
   // Dim chips at the moment their flyer launches.
   useEffect(() => {
