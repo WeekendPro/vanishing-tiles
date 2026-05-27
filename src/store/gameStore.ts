@@ -41,6 +41,7 @@ interface GameStore extends GameState {
   endViewing: () => void
   submitSelection: () => void
   finishAutoPlace: () => void
+  applyPlacement: (placement: Placement) => void
   placePiece: (row: number, col: number) => void
   finishManualPlace: () => void
   nextRound: () => void
@@ -184,6 +185,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
       })
     }
+  },
+
+  applyPlacement: (placement) => {
+    set(state => {
+      const newGrid = state.grid.map(row => row.map(cell => ({ ...cell })))
+      for (const [r, c] of placement.cells) {
+        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType }
+      }
+      return { grid: newGrid }
+    })
   },
 
   finishAutoPlace: () => {

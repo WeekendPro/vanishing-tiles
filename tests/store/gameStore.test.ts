@@ -133,6 +133,40 @@ describe('scoring', () => {
   })
 })
 
+describe('applyPlacement', () => {
+  it('marks the placement cells as placed with the piece type', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+
+    const solution = useGameStore.getState()._autoPlaceSolution
+    expect(solution).not.toBeNull()
+    const firstPlacement = solution![0]
+
+    act(() => useGameStore.getState().applyPlacement(firstPlacement))
+
+    const grid = useGameStore.getState().grid
+    for (const [r, c] of firstPlacement.cells) {
+      expect(grid[r][c].status).toBe('placed')
+      expect(grid[r][c].pieceType).toBe(firstPlacement.pieceType)
+    }
+  })
+
+  it('does not change phase', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    const solution = useGameStore.getState()._autoPlaceSolution!
+
+    act(() => useGameStore.getState().applyPlacement(solution[0]))
+    expect(useGameStore.getState().phase).toBe('auto-placing')
+  })
+})
+
 describe('DIFFICULTY_TABLE', () => {
   it('round 1 has 5000ms view duration', () => {
     expect(DIFFICULTY_TABLE[0].viewDuration).toBe(5000)
