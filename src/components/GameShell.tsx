@@ -36,7 +36,7 @@ export function GameShell() {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">Gap Memory</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">Mind The Gap</h1>
           <p className="text-gray-400 mb-8">Memorize the gaps. Fill them fast.</p>
           <button
             onClick={startGame}

@@ -1,4 +1,4 @@
-# Gap Memory — Project Context
+# Mind The Gap — Project Context
 
 A memory-and-speed puzzle game. The web POC is complete and playable. The eventual goal is a React Native mobile app published to the Apple App Store.
 
