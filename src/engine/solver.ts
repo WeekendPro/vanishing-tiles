@@ -9,6 +9,12 @@ export interface SolveResult {
 
 type PieceCount = Partial<Record<PieceType, number>>
 
+/** Max wall-clock time bestFit's search may run before returning the best
+ *  packing found so far. Prevents the branch-and-bound from freezing the UI
+ *  on the large 12×12 board with high gap counts. Small inputs finish long
+ *  before this fires, so their results stay optimal. */
+const BEST_FIT_BUDGET_MS = 100
+
 function cloneGrid(grid: Grid): Grid {
   return grid.map(row => row.map(cell => ({ ...cell })))
 }
@@ -98,6 +104,10 @@ export function bestFit(pieceCount: PieceCount, grid: Grid): BestFitResult {
   let currentFilled = 0
   let currentPieces = 0
 
+  const deadline = performance.now() + BEST_FIT_BUDGET_MS
+  let aborted = false
+  let nodes = 0
+
   function record(): void {
     if (currentFilled > bestFilled ||
         (currentFilled === bestFilled && currentPieces < bestPieces)) {
@@ -108,6 +118,8 @@ export function bestFit(pieceCount: PieceCount, grid: Grid): BestFitResult {
   }
 
   function search(): void {
+    if (aborted) return
+    if ((++nodes & 0x7ff) === 0 && performance.now() > deadline) { aborted = true; return }
     const empty = findFirstEmpty(workGrid)
     if (!empty) { record(); return }
 

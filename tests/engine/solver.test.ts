@@ -150,4 +150,16 @@ describe('bestFit', () => {
     expect(res.filledCells).toBe(0)
     expect(res.placements).toHaveLength(0)
   })
+
+  it('returns within a time budget on a large dense board instead of freezing', () => {
+    // Entire 12×12 board empty (144 cells) — the pathological case for the search.
+    const grid = makeGrid().map(row => row.map(() => ({ status: 'empty' as const })))
+    const start = performance.now()
+    const res = bestFit({ I: 5, O: 5, T: 5, L: 5 }, grid)
+    const elapsed = performance.now() - start
+    expect(elapsed).toBeLessThan(1000)          // pre-fix this ran for several seconds
+    expect(res.totalCells).toBe(144)
+    expect(res.filledCells).toBeGreaterThan(0)  // it still places what it can (best-so-far)
+    expect(res.filledCells).toBeLessThanOrEqual(144)
+  })
 })
