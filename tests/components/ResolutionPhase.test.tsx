@@ -114,11 +114,17 @@ describe('ResolutionPhase — badge copy (reduced motion)', () => {
     expect(screen.queryByText(/%$/)).not.toBeInTheDocument()
   })
 
-  it('low coverage → "Nice try" with the reason sub-label', () => {
+  it('very low coverage → "Yikes" with the reason sub-label', () => {
     showPartial(0.25, 'missed-many')
     render(<ResolutionPhase />)
-    expect(screen.getByText('Nice try')).toBeInTheDocument()
+    expect(screen.getByText('Yikes')).toBeInTheDocument()
     expect(screen.getByText('Missed some pieces')).toBeInTheDocument()
+  })
+
+  it('mid coverage → "Tough Round"', () => {
+    showPartial(0.5, 'wrong-shapes')
+    render(<ResolutionPhase />)
+    expect(screen.getByText('Tough Round')).toBeInTheDocument()
   })
 })
 
