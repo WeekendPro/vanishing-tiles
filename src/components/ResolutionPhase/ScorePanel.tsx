@@ -28,7 +28,7 @@ const COUNT_DURATION = 400
 const ROUND_TOTAL_DELAY = ROW_STAGGER * 3
 const GRAND_TOTAL_DELAY = ROW_STAGGER * 4
 
-export function ScorePanel({ roundScore, grandTotal, show, accuracyTier }: Props) {
+export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailure = false, speedSlow = false }: Props) {
   if (!show) return null
 
   return (
@@ -39,8 +39,12 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier }: Props
       transition={{ duration: 0.15 }}
     >
       <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.correctness} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
-      <Row icon="⚡" label="Speed"      value={roundScore.speedBonus}      delay={ROW_STAGGER}      color="text-yellow-400" />
-      <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2}  color="text-cyan-400"   />
+      {!isFailure && (
+        <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={ROW_STAGGER} color={speedSlow ? 'text-gray-400' : 'text-yellow-400'} />
+      )}
+      {!isFailure && (
+        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2} color="text-cyan-400" />
+      )}
 
       <div className="mt-2 pt-2 border-t border-gray-800 flex flex-col gap-1">
         <motion.div
@@ -50,8 +54,8 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier }: Props
           transition={{ delay: ROUND_TOTAL_DELAY, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
         >
           <span className="text-[11px] tracking-widest text-gray-400 uppercase">Round Total</span>
-          <span className="text-2xl font-extrabold text-yellow-400 tabular-nums">
-            +<DelayedCountUp value={roundScore.total} delay={ROUND_TOTAL_DELAY} />
+          <span className={`text-2xl font-extrabold tabular-nums ${roundScore.total < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+            {roundScore.total >= 0 ? '+' : ''}<DelayedCountUp value={roundScore.total} delay={ROUND_TOTAL_DELAY} />
           </span>
         </motion.div>
 
@@ -85,8 +89,8 @@ function Row({ icon, label, value, delay, color }: {
         <span className={`inline-block w-5 text-center mr-1 ${color}`}>{icon}</span>
         <span className="text-gray-300">{label}</span>
       </span>
-      <span className="font-semibold text-white tabular-nums">
-        +<DelayedCountUp value={value} delay={delay} />
+      <span className={`font-semibold tabular-nums ${value < 0 ? 'text-red-400' : 'text-white'}`}>
+        {value >= 0 ? '+' : ''}<DelayedCountUp value={value} delay={delay} />
       </span>
     </motion.div>
   )

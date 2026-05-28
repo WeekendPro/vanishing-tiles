@@ -248,3 +248,61 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     expect(useGameStore.getState().phase).toBe('game-over')
   })
 })
+
+describe('ResolutionPhase — score panel (reduced motion)', () => {
+  function showPartial(correctness: number, coverage = 0.3) {
+    useGameStore.setState({
+      phase: 'resolving', lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundScore: { correctness, speedBonus: 0, efficiencyBonus: 0, total: correctness },
+      _resolution: {
+        kind: 'partial', coverage, reason: 'too-many',
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+  }
+
+  function showPerfect(speedBonus: number) {
+    useGameStore.setState({
+      phase: 'resolving', lives: 3,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundScore: { correctness: 800, speedBonus, efficiencyBonus: 100, total: 900 + speedBonus },
+      _resolution: {
+        kind: 'perfect', coverage: 1,
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+  }
+
+  it('renders a negative Accuracy value on a failed round', () => {
+    showPartial(-200)
+    render(<ResolutionPhase />)
+    const accRow = screen.getByText('Accuracy').closest('div')!
+    expect(accRow.textContent).toContain('-200')
+  })
+
+  it('hides the Speed and Efficiency rows on a failed round', () => {
+    showPartial(-200)
+    render(<ResolutionPhase />)
+    expect(screen.queryByText('Speed')).not.toBeInTheDocument()
+    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument()
+  })
+
+  it('shows a turtle on the Speed row when a successful round was slow', () => {
+    showPerfect(50) // <= 100 (20% of 500)
+    render(<ResolutionPhase />)
+    const speedRow = screen.getByText('Speed').closest('div')!
+    expect(speedRow.textContent).toContain('🐢')
+  })
+
+  it('shows a lightning bolt when a successful round was fast', () => {
+    showPerfect(400)
+    render(<ResolutionPhase />)
+    const speedRow = screen.getByText('Speed').closest('div')!
+    expect(speedRow.textContent).toContain('⚡')
+  })
+})
