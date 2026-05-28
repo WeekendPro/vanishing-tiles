@@ -14,12 +14,10 @@ interface Props {
   consumed: ReadonlySet<number>
   /** Indices of chips that are "bad" (unused by the solver). */
   badSlots?: ReadonlySet<number>
-  /** true for the stamp variant (and reduced-motion / all-bad fallback) */
-  showBadX?: boolean
 }
 
 export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
-  function SelectionCart({ slots, consumed, badSlots, showBadX }, ref) {
+  function SelectionCart({ slots, consumed, badSlots }, ref) {
     const chipRefs = useRef<(HTMLDivElement | null)[]>([])
 
     useImperativeHandle(ref, () => ({
@@ -33,7 +31,7 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 inline-flex gap-2 flex-wrap justify-center max-w-sm">
         {slots.map((slot) => {
           const dim = consumed.has(slot.slotIndex)
-          const bad = !!showBadX && !!badSlots?.has(slot.slotIndex)
+          const bad = !!badSlots?.has(slot.slotIndex)
           return (
             <motion.div
               key={slot.slotIndex}

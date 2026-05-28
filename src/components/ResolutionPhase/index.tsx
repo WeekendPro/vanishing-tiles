@@ -5,13 +5,11 @@ import { useShallow } from 'zustand/shallow'
 import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
-import { BadFlyerOverlay, type BadFlyer } from './BadFlyerOverlay'
 import { CelebrationBadge } from './CelebrationBadge'
 import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
-import { getBadFxMode } from './badFx'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -44,7 +42,6 @@ export function ResolutionPhase() {
     const claimed = new Set(placementToSlot.filter(i => i >= 0))
     return new Set(slots.map(s => s.slotIndex).filter(i => !claimed.has(i)))
   }, [placementToSlot, slots])
-  const badFx = getBadFxMode()
 
   const rootRef = useRef<HTMLDivElement>(null)
   const cartRef = useRef<SelectionCartHandle>(null)
@@ -52,7 +49,6 @@ export function ResolutionPhase() {
 
   const [stage, setStage] = useState<Stage>('measuring')
   const [flyers, setFlyers] = useState<FlyerSpec[] | null>(null)
-  const [badFlyers, setBadFlyers] = useState<BadFlyer[] | null>(null)
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null)
   const [consumed, setConsumed] = useState<ReadonlySet<number>>(new Set())
   const landedCount = useRef(0)
@@ -111,21 +107,8 @@ export function ResolutionPhase() {
     setContainerRect(rootRect)
     setFlyers(built)
 
-    if (badFx === 'fly' && cartRef.current) {
-      const towardX = rootRect.left + rootRect.width / 2
-      const towardY = rootRect.top + 40
-      const badBuilt: BadFlyer[] = []
-      for (const slotIdx of badSlots) {
-        const chipRect = cartRef.current.getChipRect(slotIdx)
-        const slot = slots.find(s => s.slotIndex === slotIdx)
-        if (!chipRect || !slot) continue
-        badBuilt.push({ pieceType: slot.pieceType, sourceX: chipRect.left, sourceY: chipRect.top, towardX, towardY })
-      }
-      setBadFlyers(badBuilt)
-    }
-
     setStage('flying')
-  }, [stage, solution, placementToSlot, reduceMotion, badFx, badSlots, slots])
+  }, [stage, solution, placementToSlot, reduceMotion])
 
   // Dim chips at the moment their flyer launches.
   useEffect(() => {
@@ -177,10 +160,6 @@ export function ResolutionPhase() {
   const isFinalLife = resolution?.kind === 'partial' && lives === 0
   const handleCta = () => { if (isFinalLife) endGame(); else nextRound() }
 
-  // Stamp X: show in cart when in stamp mode, or under reduced motion, or when
-  // all pieces are bad (no good flyers → fly overlay never runs).
-  const showStampX = badFx === 'stamp' || !!reduceMotion || (solution?.length ?? 0) === 0
-
   return (
     <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center">
       {/* Grid + centered badge overlay. Grid dims when the badge appears so
@@ -198,7 +177,7 @@ export function ResolutionPhase() {
           : <CelebrationBadge show={badgeShown} />}
       </div>
 
-      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} badSlots={badSlots} showBadX={showStampX} />
+      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} badSlots={badSlots} />
 
       {flyers && containerRect && stage === 'flying' && (
         <FlyerOverlay
@@ -206,10 +185,6 @@ export function ResolutionPhase() {
           flyers={flyers}
           onFlyerLanded={handleLanded}
         />
-      )}
-
-      {badFx === 'fly' && !showStampX && badFlyers && containerRect && (stage === 'flying' || stage === 'badge') && (
-        <BadFlyerOverlay containerRect={containerRect} flyers={badFlyers} />
       )}
 
       {roundScore && (
@@ -220,7 +195,7 @@ export function ResolutionPhase() {
         />
       )}
 
-      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={isFinalLife ? 'Game Over →' : 'Next Round →'} />
+      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={isFinalLife ? 'Game Over →' : 'Next Round →'} danger={isFinalLife} />
     </div>
   )
 }
