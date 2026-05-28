@@ -17,8 +17,8 @@ interface Props {
 
 function RejectMark() {
   return (
-    <span aria-label="rejected piece" className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="#ef4444"
+    <span aria-label="rejected piece" className="flex items-center justify-center pointer-events-none mb-0.5">
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="#ef4444"
            strokeWidth={4} strokeLinecap="round">
         <line x1="5" y1="5" x2="19" y2="19" />
         <line x1="19" y1="5" x2="5" y2="19" />
@@ -47,15 +47,16 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
             <motion.div
               key={slot.slotIndex}
               ref={el => { chipRefs.current[slot.slotIndex] = el }}
-              className={`relative p-1 transition-opacity duration-150 ${dim ? 'opacity-25' : 'opacity-100'}`}
+              className={`p-1 flex flex-col items-center transition-opacity duration-150 ${dim ? 'opacity-25' : 'opacity-100'}`}
               animate={rej ? { x: [0, -3, 3, -2, 2, 0] } : undefined}
               transition={rej ? { duration: 0.35 } : undefined}
             >
-              {/* grayscale wraps ONLY the piece so the red ✕ overlay stays red */}
+              {/* rejected: the red ✕ sits ABOVE the piece (not overlaid).
+                  grayscale wraps ONLY the piece so the ✕ stays red. */}
+              {rej && <RejectMark />}
               <div className={rej ? 'grayscale opacity-60 transition-all duration-200' : ''}>
                 <PieceShape pieceType={slot.pieceType} cellSize={11} />
               </div>
-              {rej && <RejectMark />}
             </motion.div>
           )
         })}
