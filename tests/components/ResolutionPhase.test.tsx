@@ -178,13 +178,13 @@ describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
 })
 
 describe('ResolutionPhase — partial (reduced motion)', () => {
-  it('shows the amber "So close!" badge for high coverage', () => {
+  it('shows the amber "So close!" badge and a Try Again CTA for high coverage with lives left', () => {
     useGameStore.setState({
       phase: 'resolving',
       lives: 2,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       selection: [{ pieceType: 'O', freeCount: 1 }],
-      roundScore: { correctness: 600, speedBonus: 0, efficiencyBonus: 100, total: 700 },
+      roundScore: { correctness: -50, speedBonus: 0, efficiencyBonus: 0, total: -50 },
       _resolution: {
         kind: 'partial',
         coverage: 0.75,
@@ -194,7 +194,31 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     })
     render(<ResolutionPhase />)
     expect(screen.getByText(/So close/i)).toBeInTheDocument()
-    expect(screen.getByText(/Next Round/)).toBeInTheDocument()
+    expect(screen.getByText(/Try Again/)).toBeInTheDocument()
+  })
+
+  it('Try Again regenerates the round without advancing, returning to viewing', async () => {
+    const user = userEvent.setup()
+    act(() => useGameStore.getState().startGame())   // establishes round 1 + a grid
+    useGameStore.setState({
+      phase: 'resolving',
+      lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundScore: { correctness: -50, speedBonus: 0, efficiencyBonus: 0, total: -50 },
+      _resolution: {
+        kind: 'partial',
+        coverage: 0.5,
+        reason: 'too-many',
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+    render(<ResolutionPhase />)
+    const before = useGameStore.getState().round
+    await user.click(screen.getByText(/Try Again/))
+    expect(useGameStore.getState().round).toBe(before)     // same round
+    expect(useGameStore.getState().phase).toBe('viewing')  // fresh puzzle
   })
 
   it('shows "Game Over" CTA when the partial resolution happened on the last life, and clicking it ends the game', async () => {

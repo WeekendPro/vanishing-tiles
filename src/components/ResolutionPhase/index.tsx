@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
-import { useGameStore } from '../../store/gameStore'
+import { useGameStore, MAX_SPEED_BONUS } from '../../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import type { Placement } from '../../types'
 import { Grid } from '../Grid'
@@ -22,7 +22,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, lives, endGame } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, lives, endGame } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
@@ -30,6 +30,7 @@ export function ResolutionPhase() {
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
       nextRound: s.nextRound,
+      retryRound: s.retryRound,
       lives: s.lives,
       endGame: s.endGame,
     })))
@@ -64,7 +65,7 @@ export function ResolutionPhase() {
   // Snapshot the pre-commit running score once, so the GRAND TOTAL count-up
   // target is stable even after commitRoundScore mutates the store later.
   const [scoreBeforeRound] = useState(() => useGameStore.getState().score)
-  const grandTotal = scoreBeforeRound + (roundScore?.total ?? 0)
+  const grandTotal = Math.max(0, scoreBeforeRound + (roundScore?.total ?? 0))
 
   const reduceMotion = useReducedMotion()
 
@@ -157,8 +158,20 @@ export function ResolutionPhase() {
     resolution?.kind === 'perfect' ? 'perfect'
       : (resolution && resolution.coverage >= 0.66 ? 'close' : 'far')
 
-  const isFinalLife = resolution?.kind === 'partial' && lives === 0
-  const handleCta = () => { if (isFinalLife) endGame(); else nextRound() }
+  const isFailure = resolution?.kind === 'partial'
+  const speedSlow = !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
+
+  const ctaVariant: 'next' | 'retry' | 'gameover' =
+    !isFailure ? 'next' : lives === 0 ? 'gameover' : 'retry'
+  const ctaLabel =
+    ctaVariant === 'next' ? 'Next Round →'
+      : ctaVariant === 'gameover' ? 'Game Over →'
+      : 'Try Again ↺'
+  const handleCta = () => {
+    if (ctaVariant === 'next') nextRound()
+    else if (ctaVariant === 'gameover') endGame()
+    else retryRound()
+  }
 
   return (
     <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center">
@@ -193,10 +206,12 @@ export function ResolutionPhase() {
           grandTotal={grandTotal}
           show={stage === 'scoring' || stage === 'cta'}
           accuracyTier={accuracyTier}
+          isFailure={isFailure}
+          speedSlow={speedSlow}
         />
       )}
 
-      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={isFinalLife ? 'Game Over →' : 'Next Round →'} danger={isFinalLife} />
+      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={ctaLabel} variant={ctaVariant} />
     </div>
   )
 }

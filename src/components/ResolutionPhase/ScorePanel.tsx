@@ -11,6 +11,10 @@ interface Props {
   /** When true, rows reveal + counts animate; when false, panel is hidden. */
   show: boolean
   accuracyTier: 'perfect' | 'close' | 'far'
+  /** Failed round: hide Speed/Efficiency rows and render Accuracy as a penalty. */
+  isFailure?: boolean
+  /** Successful but slow: swap the Speed ⚡ for a 🐢. */
+  speedSlow?: boolean
 }
 
 const ACCURACY_ICON: Record<'perfect' | 'close' | 'far', { icon: string; color: string }> = {

@@ -1,14 +1,22 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
 
+export type CtaVariant = 'next' | 'retry' | 'gameover'
+
 interface Props {
   show: boolean
   onClick: () => void
-  label?: string
-  danger?: boolean
+  label: string
+  variant: CtaVariant
 }
 
-export function NextRoundButton({ show, onClick, label = 'Next Round →', danger = false }: Props) {
+const VARIANT_CLASSES: Record<CtaVariant, string> = {
+  next:     'bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-900/40',
+  retry:    'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/40',
+  gameover: 'bg-red-900 border-2 border-red-500 text-red-300',
+}
+
+export function NextRoundButton({ show, onClick, label, variant }: Props) {
   const fired = useRef(false)
 
   if (!show) return null
@@ -19,14 +27,10 @@ export function NextRoundButton({ show, onClick, label = 'Next Round →', dange
     onClick()
   }
 
-  const colorClasses = danger
-    ? 'bg-red-900 border-2 border-red-500 text-red-300'
-    : 'bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-900/40'
-
   return (
     <motion.button
       onClick={handleClick}
-      className={`w-full py-3 rounded-xl font-bold cursor-pointer ${colorClasses}`}
+      className={`w-full py-3 rounded-xl font-bold cursor-pointer ${VARIANT_CLASSES[variant]}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
