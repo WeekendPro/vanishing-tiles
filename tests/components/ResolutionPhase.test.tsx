@@ -154,6 +154,26 @@ describe('ResolutionPhase — accuracy icon (reduced motion)', () => {
   })
 })
 
+describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
+  it('grays out the rejected piece', () => {
+    useGameStore.setState({
+      phase: 'resolving', lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }, { pieceType: 'T', freeCount: 1 }],
+      roundScore: { correctness: 1, speedBonus: 0, efficiencyBonus: 0, total: 1 },
+      _resolution: {
+        kind: 'partial', coverage: 0.5, reason: 'too-many',
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+    render(<ResolutionPhase />)
+    const mark = screen.getByLabelText('rejected piece')
+    // the mark's chip wrapper carries the grayscale utility
+    expect(mark.closest('.grayscale')).not.toBeNull()
+  })
+})
+
 describe('ResolutionPhase — partial (reduced motion)', () => {
   it('shows the amber "So close!" badge for high coverage', () => {
     useGameStore.setState({

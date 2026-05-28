@@ -4,20 +4,31 @@ import { PieceShape } from '../PieceShape'
 import type { ChipSlot } from '../../engine/cartSlots'
 
 export interface SelectionCartHandle {
-  /** Get the bounding rect of the chip at `slotIndex`, or null if not yet mounted. */
   getChipRect: (slotIndex: number) => DOMRect | null
 }
 
 interface Props {
   slots: ChipSlot[]
-  /** Indices of chips whose flyer has already launched; rendered dimmed. */
+  /** Chips whose flyer has launched; rendered dimmed. */
   consumed: ReadonlySet<number>
-  /** Indices of chips that are "bad" (unused by the solver). */
-  badSlots?: ReadonlySet<number>
+  /** Chips rejected so far; grayed out with a thick red ✕. */
+  rejected?: ReadonlySet<number>
+}
+
+function RejectMark() {
+  return (
+    <span aria-label="rejected piece" className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="#ef4444"
+           strokeWidth={4} strokeLinecap="round">
+        <line x1="5" y1="5" x2="19" y2="19" />
+        <line x1="19" y1="5" x2="5" y2="19" />
+      </svg>
+    </span>
+  )
 }
 
 export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
-  function SelectionCart({ slots, consumed, badSlots }, ref) {
+  function SelectionCart({ slots, consumed, rejected }, ref) {
     const chipRefs = useRef<(HTMLDivElement | null)[]>([])
 
     useImperativeHandle(ref, () => ({
@@ -31,24 +42,19 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 inline-flex gap-2 flex-wrap justify-center max-w-sm">
         {slots.map((slot) => {
           const dim = consumed.has(slot.slotIndex)
-          const bad = !!badSlots?.has(slot.slotIndex)
+          const rej = !!rejected?.has(slot.slotIndex)
           return (
             <motion.div
               key={slot.slotIndex}
               ref={el => { chipRefs.current[slot.slotIndex] = el }}
               className={`relative p-1 transition-opacity duration-150 ${dim ? 'opacity-25' : 'opacity-100'}`}
-              animate={bad ? { x: [0, -3, 3, -2, 2, 0] } : undefined}
-              transition={bad ? { duration: 0.35 } : undefined}
+              animate={rej ? { x: [0, -3, 3, -2, 2, 0] } : undefined}
+              transition={rej ? { duration: 0.35 } : undefined}
             >
-              <PieceShape pieceType={slot.pieceType} cellSize={11} />
-              {bad && (
-                <span
-                  aria-label="rejected piece"
-                  className="absolute inset-0 flex items-center justify-center text-red-500 font-black text-2xl pointer-events-none"
-                >
-                  ✕
-                </span>
-              )}
+              <div className={`relative${rej ? ' grayscale opacity-60 transition-all duration-200' : ''}`}>
+                <PieceShape pieceType={slot.pieceType} cellSize={11} />
+                {rej && <RejectMark />}
+              </div>
             </motion.div>
           )
         })}

@@ -187,7 +187,7 @@ export function ResolutionPhase() {
           : <CelebrationBadge show={badgeShown} />}
       </div>
 
-      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} badSlots={badSlots} />
+      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} rejected={badSlots} />
 
       {flyers && containerRect && stage === 'flying' && (
         <FlyerOverlay
