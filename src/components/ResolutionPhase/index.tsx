@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useGameStore } from '../../store/gameStore'
 import { useShallow } from 'zustand/shallow'
+import type { Placement } from '../../types'
 import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
@@ -13,10 +14,12 @@ import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
-// Time budgets (ms) from the spec:
-const BEAT_AFTER_FLIGHT = 200
+const FLY_DURATION      = 0.55   // s, per good-piece flight
+const LAND_BEAT         = 120    // ms, pause after a good piece lands
+const REJECT_DURATION   = 600    // ms, shake + gray/✕ reveal per bad piece
+const BEAT_AFTER_FLIGHT = 250    // ms, after the last item before the badge
 const BADGE_DURATION    = 400
-const SCORING_DURATION  = 1800   // 3 rows × 300ms + round total at 0.9s + grand total at 1.2s + 0.4s count + buffer
+const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
   const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, lives, endGame } =
@@ -38,20 +41,25 @@ export function ResolutionPhase() {
     [solution, slots],
   )
 
-  const badSlots = useMemo(() => {
-    const claimed = new Set(placementToSlot.filter(i => i >= 0))
-    return new Set(slots.map(s => s.slotIndex).filter(i => !claimed.has(i)))
-  }, [placementToSlot, slots])
+  const slotToPlacement = useMemo(() => {
+    const m = new Map<number, Placement>()
+    ;(solution ?? []).forEach((p, i) => {
+      const s = placementToSlot[i]
+      if (s >= 0) m.set(s, p)
+    })
+    return m
+  }, [solution, placementToSlot])
 
   const rootRef = useRef<HTMLDivElement>(null)
   const cartRef = useRef<SelectionCartHandle>(null)
   const cellRects = useRef<Map<string, DOMRect>>(new Map())
 
   const [stage, setStage] = useState<Stage>('measuring')
-  const [flyers, setFlyers] = useState<FlyerSpec[] | null>(null)
+  const [step, setStep] = useState(0)
+  const [currentFlyer, setCurrentFlyer] = useState<FlyerSpec | null>(null)
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null)
   const [consumed, setConsumed] = useState<ReadonlySet<number>>(new Set())
-  const landedCount = useRef(0)
+  const [rejected, setRejected] = useState<ReadonlySet<number>>(new Set())
 
   // Snapshot the pre-commit running score once, so the GRAND TOTAL count-up
   // target is stable even after commitRoundScore mutates the store later.
@@ -61,77 +69,68 @@ export function ResolutionPhase() {
   const reduceMotion = useReducedMotion()
 
   // Reduced motion: skip the flight. Apply all placements immediately,
-  // then jump straight to the CTA (with the badge + score visible).
+  // fill consumed/rejected, then jump straight to the CTA (with the badge + score visible).
   useEffect(() => {
-    if (!reduceMotion) return
-    if (stage !== 'measuring') return
-    if (!solution) return
+    if (!reduceMotion || stage !== 'measuring' || !solution) return
     for (const p of solution) applyPlacement(p)
+    const good = new Set<number>()
+    const bad = new Set<number>()
+    for (const s of slots) (slotToPlacement.has(s.slotIndex) ? good : bad).add(s.slotIndex)
+    setConsumed(good)
+    setRejected(bad)
     commitRoundScore()
     setStage('cta')
-  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore])
+  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement])
 
-  // Measure and build flyer specs after first render.
+  // Measure the container rect, then kick off the walk.
   useLayoutEffect(() => {
-    if (stage !== 'measuring') return
-    if (reduceMotion) return                     // ← reduced motion handled by useEffect above
-    if (!solution || solution.length === 0) {
-      // Defensive: no pieces to fly. Skip directly to badge.
-      setStage('badge')
-      return
-    }
-    if (!rootRef.current || !cartRef.current) return
-
-    const N = solution.length
-    const perPiece = Math.min(500, 3000 / N) / 1000
-    const built: FlyerSpec[] = []
-
-    for (let i = 0; i < N; i++) {
-      const placement = solution[i]
-      const slotIdx = placementToSlot[i]
-      const chipRect = slotIdx >= 0 ? cartRef.current.getChipRect(slotIdx) : null
-      const cellRect = cellRects.current.get(`${placement.anchorRow},${placement.anchorCol}`)
-      if (!chipRect || !cellRect) continue
-      built.push({
-        placement,
-        sourceX: chipRect.left,
-        sourceY: chipRect.top,
-        targetX: cellRect.left,
-        targetY: cellRect.top,
-        duration: perPiece,
-        delay: i * perPiece,
-      })
-    }
-
-    if (built.length === 0) {
-      // No measurable flyers (defensive); skip the flight so the phase can't hang.
-      setStage('badge')
-      return
-    }
-
-    const rootRect = rootRef.current.getBoundingClientRect()
-    setContainerRect(rootRect)
-    setFlyers(built)
-
+    if (stage !== 'measuring' || reduceMotion) return
+    if (!rootRef.current) return
+    if (!solution || slots.length === 0) { setStage('badge'); return }
+    setContainerRect(rootRef.current.getBoundingClientRect())
+    setStep(0)
     setStage('flying')
-  }, [stage, solution, placementToSlot, reduceMotion])
+  }, [stage, reduceMotion, solution, slots])
 
-  // Dim chips at the moment their flyer launches.
+  // The walk: process one cart slot per step.
   useEffect(() => {
-    if (stage !== 'flying' || !flyers) return
-    const timers = flyers.map((f, i) =>
-      window.setTimeout(() => {
-        setConsumed(prev => {
-          const slotIdx = placementToSlot[i]
-          if (slotIdx < 0) return prev
-          const next = new Set(prev)
-          next.add(slotIdx)
-          return next
-        })
-      }, f.delay * 1000),
-    )
-    return () => { timers.forEach(clearTimeout) }
-  }, [stage, flyers, placementToSlot])
+    if (stage !== 'flying') return
+    if (step >= slots.length) {
+      const t = window.setTimeout(() => setStage('badge'), BEAT_AFTER_FLIGHT)
+      return () => clearTimeout(t)
+    }
+    const slot = slots[step]
+    const placement = slotToPlacement.get(slot.slotIndex)
+    if (placement) {
+      const chipRect = cartRef.current?.getChipRect(slot.slotIndex) ?? null
+      const cellRect = cellRects.current.get(`${placement.anchorRow},${placement.anchorCol}`)
+      setConsumed(prev => new Set(prev).add(slot.slotIndex))
+      if (!chipRect || !cellRect) {
+        // Can't measure (defensive): apply immediately and advance.
+        applyPlacement(placement)
+        const t = window.setTimeout(() => setStep(s => s + 1), LAND_BEAT)
+        return () => clearTimeout(t)
+      }
+      setCurrentFlyer({
+        placement,
+        sourceX: chipRect.left, sourceY: chipRect.top,
+        targetX: cellRect.left, targetY: cellRect.top,
+        duration: FLY_DURATION, delay: 0,
+      })
+      // advancement happens in handleFlyerLanded
+    } else {
+      setRejected(prev => new Set(prev).add(slot.slotIndex))
+      const t = window.setTimeout(() => setStep(s => s + 1), REJECT_DURATION)
+      return () => clearTimeout(t)
+    }
+  }, [stage, step, slots, slotToPlacement, applyPlacement])
+
+  const handleFlyerLanded = () => {
+    const p = currentFlyer?.placement
+    setCurrentFlyer(null)
+    if (p) applyPlacement(p)
+    window.setTimeout(() => setStep(s => s + 1), LAND_BEAT)
+  }
 
   // Stage transitions after flying.
   useEffect(() => {
@@ -151,15 +150,6 @@ export function ResolutionPhase() {
     }, SCORING_DURATION)
     return () => clearTimeout(t)
   }, [stage, commitRoundScore])
-
-  const handleLanded = (flyerIndex: number) => {
-    if (!flyers) return
-    applyPlacement(flyers[flyerIndex].placement)
-    landedCount.current += 1
-    if (landedCount.current === flyers.length) {
-      window.setTimeout(() => setStage('badge'), BEAT_AFTER_FLIGHT)
-    }
-  }
 
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
@@ -187,13 +177,13 @@ export function ResolutionPhase() {
           : <CelebrationBadge show={badgeShown} />}
       </div>
 
-      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} rejected={badSlots} />
+      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} rejected={rejected} />
 
-      {flyers && containerRect && stage === 'flying' && (
+      {currentFlyer && containerRect && stage === 'flying' && (
         <FlyerOverlay
           containerRect={containerRect}
-          flyers={flyers}
-          onFlyerLanded={handleLanded}
+          flyers={[currentFlyer]}
+          onFlyerLanded={handleFlyerLanded}
         />
       )}
 
