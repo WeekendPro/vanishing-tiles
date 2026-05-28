@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useGameStore, DIFFICULTY_TABLE } from '../../src/store/gameStore'
 import { act } from '@testing-library/react'
-import type { Grid, Cell, PieceType } from '../../src/types'
+import type { Grid, Cell, PieceType, Gap } from '../../src/types'
 
 beforeEach(() => {
   useGameStore.getState().resetGame()
@@ -105,7 +105,7 @@ describe('submitSelection — perfect', () => {
 })
 
 describe('submitSelection — partial', () => {
-  it('goes to resolving, deducts a life, and awards partial credit', () => {
+  it('goes to resolving, deducts a life, and applies a negative accuracy penalty', () => {
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().endViewing())
     act(() => useGameStore.getState().incrementSelection('SINGLE')) // 1 cell, never a full fill
@@ -114,10 +114,12 @@ describe('submitSelection — partial', () => {
     expect(s.phase).toBe('resolving')
     expect(s._resolution?.kind).toBe('partial')
     expect(s.lives).toBe(2)
-    expect(s._resolution!.placements.length).toBeGreaterThan(0) // the SINGLE lands somewhere
+    expect(s._resolution!.placements.length).toBeGreaterThan(0)
     expect(s._resolution!.coverage).toBeGreaterThan(0)
-    expect(s.roundScore!.correctness).toBeGreaterThan(0)        // partial credit, not zero
     expect(s._resolution!.coverage).toBeLessThan(1)
+    expect(s.roundScore!.correctness).toBeLessThan(0)   // penalty, not credit
+    expect(s.roundScore!.speedBonus).toBe(0)
+    expect(s.roundScore!.efficiencyBonus).toBe(0)
   })
 })
 
@@ -299,5 +301,54 @@ describe('submitSelection — failure reason', () => {
     const res = submitWith(grid, [{ pieceType: 'O', freeCount: 1 }])
     expect(res?.kind).toBe('partial')
     expect(res?.reason).toBe('missed-many')
+  })
+})
+
+// Penalty reads only gaps.length (for "needed"), so a length-only stub is fine.
+function stubGaps(n: number): Gap[] {
+  return Array.from({ length: n }, () => ({
+    pieceType: 'O' as const, rotation: 0 as const, anchorRow: 0, anchorCol: 0, cells: [],
+  }))
+}
+function submitForScore(
+  grid: Grid,
+  gaps: Gap[],
+  selection: { pieceType: PieceType; freeCount: number }[],
+) {
+  useGameStore.setState({
+    grid, gaps, selection, lives: 3,
+    difficulty: DIFFICULTY_TABLE[0], phaseStartTime: Date.now(),
+  })
+  act(() => useGameStore.getState().submitSelection())
+  return useGameStore.getState().roundScore!
+}
+
+describe('submitSelection — failure penalty', () => {
+  it('penalizes extra pieces by -50 each, with no speed/efficiency', () => {
+    // one O gap (4 cells, needs 1 piece); select O + T → T is wasted (1 extra)
+    const grid = emptyAt(fullGrid(), O_GAP_1)
+    const rs = submitForScore(grid, stubGaps(1), [
+      { pieceType: 'O', freeCount: 1 },
+      { pieceType: 'T', freeCount: 1 },
+    ])
+    expect(rs.correctness).toBe(-50)
+    expect(rs.speedBonus).toBe(0)
+    expect(rs.efficiencyBonus).toBe(0)
+    expect(rs.total).toBe(-50)
+  })
+
+  it('penalizes missing pieces by -50 each', () => {
+    // two O gaps (needs 2), select nothing → 2 missing
+    const grid = emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2)
+    const rs = submitForScore(grid, stubGaps(2), [])
+    expect(rs.correctness).toBe(-100)
+    expect(rs.total).toBe(-100)
+  })
+
+  it('caps the penalty at -400', () => {
+    // pretend 12 gaps are needed but nothing is selected → 12 missing → -600, capped at -400
+    const grid = emptyAt(fullGrid(), O_GAP_1)
+    const rs = submitForScore(grid, stubGaps(12), [])
+    expect(rs.correctness).toBe(-400)
   })
 })

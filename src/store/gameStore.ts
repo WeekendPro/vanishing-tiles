@@ -33,8 +33,11 @@ function getDifficulty(round: number): DifficultyConfig {
 // ── Scoring constants ────────────────────────────────────────────────────────
 
 const CORRECTNESS_POINTS = 800
-const MAX_SPEED_BONUS = 500
+export const MAX_SPEED_BONUS = 500
 const MAX_EFFICIENCY_BONUS = 300
+
+const PENALTY_PER_PIECE = 50   // points docked per wrong/missing piece on a failed round
+const MAX_PENALTY = 400        // failed-round penalty floor (never worse than -400)
 
 // ── Store interface ──────────────────────────────────────────────────────────
 
@@ -171,23 +174,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
-      const minPieces = gaps.length
+      // Failed round: accuracy is a penalty scaled by how wrong the selection was.
+      // Bigger over-selection OR bigger shortfall = bigger penalty. No speed/efficiency.
+      const placed = fit.placements.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
-
-      const correctness = Math.round(CORRECTNESS_POINTS * coverage)
-      const speedBonus = Math.round(MAX_SPEED_BONUS * (timeRemaining / difficulty.selectDuration) * coverage)
-      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
+      const needed = gaps.length
+      const extra = Math.max(0, selectedPieces - placed)
+      const missing = Math.max(0, needed - placed)
+      const penalty = -Math.min(MAX_PENALTY, PENALTY_PER_PIECE * (extra + missing))
 
       set({
         phase: 'resolving',
         lives: Math.max(0, newLives),
         _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
         roundScore: {
-          correctness,
-          speedBonus,
-          efficiencyBonus,
-          total: correctness + speedBonus + efficiencyBonus,
+          correctness: penalty,
+          speedBonus: 0,
+          efficiencyBonus: 0,
+          total: penalty,
         },
       })
     }
