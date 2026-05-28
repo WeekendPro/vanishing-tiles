@@ -70,15 +70,16 @@ export function SelectingPhase() {
               <span className="text-[10px] text-gray-500">{def.type}</span>
             </button>
           ))}
-          <button
-            onClick={submitSelection}
-            className="flex items-center justify-center p-2 bg-green-950 border-2 border-green-600
-              rounded-lg text-green-400 font-bold text-xs hover:bg-green-900 cursor-pointer"
-          >
-            Done ✓
-          </button>
         </div>
       </div>
+
+      <button
+        onClick={submitSelection}
+        className="w-full py-3 rounded-xl font-bold bg-green-700 hover:bg-green-600
+          text-white shadow-lg shadow-green-900/40 cursor-pointer"
+      >
+        Done ✓
+      </button>
     </div>
   )
 }
