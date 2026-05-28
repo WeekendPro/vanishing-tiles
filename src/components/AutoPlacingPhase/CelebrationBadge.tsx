@@ -19,7 +19,7 @@ export function CelebrationBadge({ show }: Props) {
   if (!show) return null
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center pt-12 z-20">
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-20">
       <motion.div
         className="relative flex items-center justify-center"
         style={{

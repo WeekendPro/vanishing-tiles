@@ -15,7 +15,7 @@ type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 // Time budgets (ms) from the spec:
 const BEAT_AFTER_FLIGHT = 200
 const BADGE_DURATION    = 400
-const SCORING_DURATION  = 1500   // 3 rows × 300ms stagger + 400ms count + buffer
+const SCORING_DURATION  = 1800   // 3 rows × 300ms + round total at 0.9s + grand total at 1.2s + 0.4s count + buffer
 
 export function AutoPlacingPhase() {
   const { selection, solution, applyPlacement, roundScore, commitRoundScore, nextRound } =
@@ -43,6 +43,11 @@ export function AutoPlacingPhase() {
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null)
   const [consumed, setConsumed] = useState<ReadonlySet<number>>(new Set())
   const landedCount = useRef(0)
+
+  // Snapshot the pre-commit running score once, so the GRAND TOTAL count-up
+  // target is stable even after commitRoundScore mutates the store later.
+  const [scoreBeforeRound] = useState(() => useGameStore.getState().score)
+  const grandTotal = scoreBeforeRound + (roundScore?.total ?? 0)
 
   const reduceMotion = useReducedMotion()
 
@@ -139,13 +144,23 @@ export function AutoPlacingPhase() {
     }
   }
 
+  const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
+
   return (
     <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center">
-      <Grid
-        cellRef={(row, col, el) => {
-          if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
-        }}
-      />
+      {/* Grid + centered badge overlay. Grid dims when the badge appears so
+          the green checkmark pops visually. */}
+      <div className="relative">
+        <div className={`transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
+          <Grid
+            cellRef={(row, col, el) => {
+              if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
+            }}
+          />
+        </div>
+        <CelebrationBadge show={badgeShown} />
+      </div>
+
       <SelectionCart ref={cartRef} slots={slots} consumed={consumed} />
 
       {flyers && containerRect && stage === 'flying' && (
@@ -156,11 +171,10 @@ export function AutoPlacingPhase() {
         />
       )}
 
-      <CelebrationBadge show={stage === 'badge' || stage === 'scoring' || stage === 'cta'} />
-
       {roundScore && (
         <ScorePanel
           roundScore={roundScore}
+          grandTotal={grandTotal}
           show={stage === 'scoring' || stage === 'cta'}
         />
       )}

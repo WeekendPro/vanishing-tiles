@@ -5,14 +5,19 @@ import type { RoundScore } from '../../types'
 
 interface Props {
   roundScore: RoundScore
+  /** Cumulative running score INCLUDING this round (snapshot captured by caller
+   * to avoid a moving target when commitRoundScore fires mid-reveal). */
+  grandTotal: number
   /** When true, rows reveal + counts animate; when false, panel is hidden. */
   show: boolean
 }
 
 const ROW_STAGGER = 0.3   // seconds between row reveals
 const COUNT_DURATION = 400
+const ROUND_TOTAL_DELAY = ROW_STAGGER * 3
+const GRAND_TOTAL_DELAY = ROW_STAGGER * 4
 
-export function ScorePanel({ roundScore, show }: Props) {
+export function ScorePanel({ roundScore, grandTotal, show }: Props) {
   if (!show) return null
 
   return (
@@ -22,21 +27,35 @@ export function ScorePanel({ roundScore, show }: Props) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
-      <Row icon="✓" label="Correctness"        value={roundScore.correctness}     delay={0}                color="text-green-400"  />
-      <Row icon="⚡" label="Speed Bonus"        value={roundScore.speedBonus}      delay={ROW_STAGGER}      color="text-yellow-400" />
-      <Row icon="◆" label="Efficiency Bonus"   value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2}  color="text-cyan-400"   />
+      <Row icon="✓" label="Accuracy"   value={roundScore.correctness}     delay={0}                color="text-green-400"  />
+      <Row icon="⚡" label="Speed"      value={roundScore.speedBonus}      delay={ROW_STAGGER}      color="text-yellow-400" />
+      <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2}  color="text-cyan-400"   />
 
-      <motion.div
-        className="mt-2 pt-2 border-t border-gray-800 flex justify-between items-baseline"
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: [0.92, 1.08, 1] }}
-        transition={{ delay: ROW_STAGGER * 3, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
-      >
-        <span className="text-[11px] tracking-widest text-gray-400 uppercase">Round Total</span>
-        <span className="text-2xl font-extrabold text-yellow-400 tabular-nums">
-          +<TotalNumber value={roundScore.total} delay={ROW_STAGGER * 3} />
-        </span>
-      </motion.div>
+      <div className="mt-2 pt-2 border-t border-gray-800 flex flex-col gap-1">
+        <motion.div
+          className="flex justify-between items-baseline"
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: [0.92, 1.08, 1] }}
+          transition={{ delay: ROUND_TOTAL_DELAY, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+        >
+          <span className="text-[11px] tracking-widest text-gray-400 uppercase">Round Total</span>
+          <span className="text-2xl font-extrabold text-yellow-400 tabular-nums">
+            +<DelayedCountUp value={roundScore.total} delay={ROUND_TOTAL_DELAY} />
+          </span>
+        </motion.div>
+
+        <motion.div
+          className="flex justify-between items-baseline"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: GRAND_TOTAL_DELAY, duration: 0.3, ease: 'easeOut' }}
+        >
+          <span className="text-[11px] tracking-widest text-gray-500 uppercase">Grand Total</span>
+          <span className="text-lg font-bold text-yellow-400 tabular-nums">
+            <DelayedCountUp value={grandTotal} delay={GRAND_TOTAL_DELAY} />
+          </span>
+        </motion.div>
+      </div>
     </motion.div>
   )
 }
@@ -75,6 +94,3 @@ function DelayedCountUp({ value, delay }: { value: number; delay: number }) {
   return <>{animated.toLocaleString()}</>
 }
 
-function TotalNumber({ value, delay }: { value: number; delay: number }) {
-  return <DelayedCountUp value={value} delay={delay} />
-}
