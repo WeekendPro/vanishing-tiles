@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//opt/homebrew/lib/node_modules/npm/node_modules/.bin/**)",
+      "Read(//opt/homebrew/lib/node_modules/npm/bin/**)",
+      "Bash(# Try using create-vite package directly via node without interactive prompt *)"
+    ]
+  }
+}

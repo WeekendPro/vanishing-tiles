@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "puzzle-game",
+      "runtimeExecutable": "/opt/homebrew/bin/npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/bin:/bin"
+      }
+    }
+  ]
+}

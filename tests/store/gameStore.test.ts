@@ -84,7 +84,7 @@ describe('selection', () => {
 })
 
 describe('submitSelection — correct', () => {
-  it('transitions to auto-placing when selection is correct', () => {
+  it('transitions to resolving when selection is correct', () => {
     act(() => useGameStore.getState().startGame())
     const { gaps } = useGameStore.getState()
     act(() => useGameStore.getState().endViewing())
@@ -94,7 +94,7 @@ describe('submitSelection — correct', () => {
       }
     })
     act(() => useGameStore.getState().submitSelection())
-    expect(useGameStore.getState().phase).toBe('auto-placing')
+    expect(useGameStore.getState().phase).toBe('resolving')
   })
 })
 
@@ -163,7 +163,7 @@ describe('applyPlacement', () => {
     const solution = useGameStore.getState()._autoPlaceSolution!
 
     act(() => useGameStore.getState().applyPlacement(solution[0]))
-    expect(useGameStore.getState().phase).toBe('auto-placing')
+    expect(useGameStore.getState().phase).toBe('resolving')
   })
 })
 
@@ -203,7 +203,7 @@ describe('commitRoundScore', () => {
     act(() => useGameStore.getState().submitSelection())
     act(() => useGameStore.getState().commitRoundScore())
 
-    expect(useGameStore.getState().phase).toBe('auto-placing')
+    expect(useGameStore.getState().phase).toBe('resolving')
   })
 
   it('is a no-op when roundScore is null', () => {

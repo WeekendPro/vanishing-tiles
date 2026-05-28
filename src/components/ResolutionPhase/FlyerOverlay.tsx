@@ -17,7 +17,7 @@ export interface FlyerSpec {
 }
 
 interface Props {
-  /** Bounding rect of the AutoPlacingPhase root so we can convert to relative coords. */
+  /** Bounding rect of the ResolutionPhase root so we can convert to relative coords. */
   containerRect: DOMRect
   flyers: FlyerSpec[]
   /** Called when a flyer's animation completes; receives the index into `flyers`. */

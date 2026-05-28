@@ -86,7 +86,7 @@ export type GamePhase =
   | 'idle'
   | 'viewing'
   | 'selecting'
-  | 'auto-placing'
+  | 'resolving'
   | 'manual-placing'
   | 'scoring'
   | 'game-over'

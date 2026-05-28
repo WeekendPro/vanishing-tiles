@@ -158,7 +158,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * (minPieces / Math.max(selectedPieces, minPieces)))
 
       set({
-        phase: 'auto-placing',
+        phase: 'resolving',
         _autoPlaceSolution: result.placements,
         roundScore: {
           correctness: CORRECTNESS_POINTS,

@@ -17,7 +17,7 @@ const BEAT_AFTER_FLIGHT = 200
 const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800   // 3 rows × 300ms + round total at 0.9s + grand total at 1.2s + 0.4s count + buffer
 
-export function AutoPlacingPhase() {
+export function ResolutionPhase() {
   const { selection, solution, applyPlacement, roundScore, commitRoundScore, nextRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
