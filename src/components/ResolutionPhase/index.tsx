@@ -179,7 +179,7 @@ export function ResolutionPhase() {
           />
         </div>
         {resolution?.kind === 'partial'
-          ? <PartialBadge show={badgeShown} coverage={resolution.coverage} />
+          ? <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />
           : <CelebrationBadge show={badgeShown} />}
       </div>
 

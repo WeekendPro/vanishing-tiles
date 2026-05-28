@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ResolutionPhase } from '../../src/components/ResolutionPhase'
 import { useGameStore } from '../../src/store/gameStore'
-import type { Grid, Cell } from '../../src/types'
+import type { Grid, Cell, ResolutionReason } from '../../src/types'
 
 // Mock useReducedMotion to return true.
 vi.mock('framer-motion', async () => {
@@ -88,6 +88,37 @@ describe('ResolutionPhase — bad pieces (stamp, reduced motion)', () => {
     })
     render(<ResolutionPhase />)
     expect(screen.getAllByLabelText('rejected piece')).toHaveLength(1)
+  })
+})
+
+describe('ResolutionPhase — badge copy (reduced motion)', () => {
+  function showPartial(coverage: number, reason: ResolutionReason) {
+    useGameStore.setState({
+      phase: 'resolving', lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundScore: { correctness: 1, speedBonus: 0, efficiencyBonus: 0, total: 1 },
+      _resolution: {
+        kind: 'partial', coverage, reason,
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+  }
+
+  it('high coverage → "So close!" with the reason sub-label, no percentage', () => {
+    showPartial(0.8, 'too-many')
+    render(<ResolutionPhase />)
+    expect(screen.getByText('So close!')).toBeInTheDocument()
+    expect(screen.getByText('Too many pieces')).toBeInTheDocument()
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument()
+  })
+
+  it('low coverage → "Nice try" with the reason sub-label', () => {
+    showPartial(0.25, 'missed-many')
+    render(<ResolutionPhase />)
+    expect(screen.getByText('Nice try')).toBeInTheDocument()
+    expect(screen.getByText('Missed some pieces')).toBeInTheDocument()
   })
 })
 
