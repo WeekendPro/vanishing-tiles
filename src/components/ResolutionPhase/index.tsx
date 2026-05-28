@@ -6,6 +6,7 @@ import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
 import { CelebrationBadge } from './CelebrationBadge'
+import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
@@ -18,7 +19,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800   // 3 rows × 300ms + round total at 0.9s + grand total at 1.2s + 0.4s count + buffer
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, lives, endGame } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
@@ -26,6 +27,8 @@ export function ResolutionPhase() {
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
       nextRound: s.nextRound,
+      lives: s.lives,
+      endGame: s.endGame,
     })))
   const solution = resolution?.placements ?? null
 
@@ -147,6 +150,9 @@ export function ResolutionPhase() {
 
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
+  const isFinalLife = resolution?.kind === 'partial' && lives === 0
+  const handleCta = () => { if (isFinalLife) endGame(); else nextRound() }
+
   return (
     <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center">
       {/* Grid + centered badge overlay. Grid dims when the badge appears so
@@ -159,7 +165,9 @@ export function ResolutionPhase() {
             }}
           />
         </div>
-        <CelebrationBadge show={badgeShown} />
+        {resolution?.kind === 'partial'
+          ? <PartialBadge show={badgeShown} coverage={resolution.coverage} />
+          : <CelebrationBadge show={badgeShown} />}
       </div>
 
       <SelectionCart ref={cartRef} slots={slots} consumed={consumed} />
@@ -180,7 +188,7 @@ export function ResolutionPhase() {
         />
       )}
 
-      <NextRoundButton show={stage === 'cta'} onClick={nextRound} />
+      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={isFinalLife ? 'Game Over →' : 'Next Round →'} />
     </div>
   )
 }

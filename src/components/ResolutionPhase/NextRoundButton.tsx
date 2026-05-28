@@ -4,9 +4,10 @@ import { motion } from 'framer-motion'
 interface Props {
   show: boolean
   onClick: () => void
+  label?: string
 }
 
-export function NextRoundButton({ show, onClick }: Props) {
+export function NextRoundButton({ show, onClick, label = 'Next Round →' }: Props) {
   const fired = useRef(false)
 
   if (!show) return null
@@ -25,7 +26,7 @@ export function NextRoundButton({ show, onClick }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
     >
-      Next Round →
+      {label}
     </motion.button>
   )
 }
