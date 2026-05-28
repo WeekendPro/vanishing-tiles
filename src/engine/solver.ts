@@ -82,6 +82,88 @@ function backtrack(
   return false
 }
 
+export interface BestFitResult {
+  placements: Placement[]   // the winning packing — the "good" pieces
+  filledCells: number       // empty cells covered by `placements`
+  totalCells: number        // empty cells before placement
+}
+
+/**
+ * Find the placement of a SUBSET of the given pieces that covers the most
+ * empty cells (max-coverage). Tie-break: fewest pieces used. Pieces not in
+ * `placements` are the "bad" pieces (caller derives them from the selection).
+ */
+export function bestFit(pieceCount: PieceCount, grid: Grid): BestFitResult {
+  const totalCells = grid.flat().filter(c => c.status === 'empty').length
+  const workGrid = cloneGrid(grid)
+  const remaining: PieceCount = { ...pieceCount }
+
+  let best: Placement[] = []
+  let bestFilled = -1
+  let bestPieces = Infinity
+
+  const current: Placement[] = []
+  let currentFilled = 0
+  let currentPieces = 0
+
+  function record(): void {
+    if (currentFilled > bestFilled ||
+        (currentFilled === bestFilled && currentPieces < bestPieces)) {
+      bestFilled = currentFilled
+      bestPieces = currentPieces
+      best = current.map(p => ({ ...p, cells: p.cells.map(([r, c]) => [r, c] as [number, number]) }))
+    }
+  }
+
+  function search(): void {
+    const empty = findFirstEmpty(workGrid)
+    if (!empty) { record(); return }
+
+    // Branch-and-bound: best achievable from here = currentFilled + all
+    // remaining empties. If that can't beat the best, prune.
+    const remainingEmpty = workGrid.flat().filter(c => c.status === 'empty').length
+    if (currentFilled + remainingEmpty < bestFilled) return
+
+    const [targetRow, targetCol] = empty
+
+    // Branch A: cover this cell with each available piece/rotation.
+    for (const [pieceTypeKey, count] of Object.entries(remaining)) {
+      if ((count ?? 0) <= 0) continue
+      const pieceType = pieceTypeKey as PieceType
+      for (const { rotation, cells } of getAllRotations(pieceType)) {
+        for (const [dr, dc] of cells) {
+          const anchorRow = targetRow - dr
+          const anchorCol = targetCol - dc
+          if (!canPlace(workGrid, cells, anchorRow, anchorCol)) continue
+
+          const absoluteCells = cells.map(([r, c]) => [r + anchorRow, c + anchorCol] as [number, number])
+          applyPlacement(workGrid, cells, anchorRow, anchorCol, 'placed')
+          remaining[pieceType] = (count ?? 0) - 1
+          current.push({ pieceType, rotation, anchorRow, anchorCol, cells: absoluteCells })
+          currentFilled += cells.length
+          currentPieces += 1
+
+          search()
+
+          currentPieces -= 1
+          currentFilled -= cells.length
+          current.pop()
+          remaining[pieceType] = count
+          applyPlacement(workGrid, cells, anchorRow, anchorCol, 'empty')
+        }
+      }
+    }
+
+    // Branch B: leave this cell uncovered, then continue with the rest.
+    workGrid[targetRow][targetCol] = { status: 'filled' }
+    search()
+    workGrid[targetRow][targetCol] = { status: 'empty' }
+  }
+
+  search()
+  return { placements: best, filledCells: Math.max(bestFilled, 0), totalCells }
+}
+
 export function solve(pieceCount: PieceCount, grid: Grid, _gaps: Gap[]): SolveResult {
   const totalPieceCells = Object.entries(pieceCount).reduce((sum, [type, count]) => {
     if ((count ?? 0) === 0) return sum

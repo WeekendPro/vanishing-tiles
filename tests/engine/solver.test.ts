@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { solve } from '../../src/engine/solver'
-import type { Grid, Gap } from '../../src/types'
+import { solve, bestFit } from '../../src/engine/solver'
+import type { Grid, Gap, Cell } from '../../src/types'
 import { ROWS, COLS } from '../../src/types'
 
 function makeGrid(): Grid {
@@ -103,5 +103,51 @@ describe('solve', () => {
     }]
     const result = solve({ I: 1 }, grid, gaps)
     expect(result.solvable).toBe(true)
+  })
+})
+
+function fullGrid(): Grid {
+  return Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, (): Cell => ({ status: 'filled' })))
+}
+function emptyAt(grid: Grid, cells: [number, number][]): Grid {
+  for (const [r, c] of cells) grid[r][c] = { status: 'empty' }
+  return grid
+}
+
+describe('bestFit', () => {
+  it('fills a gap exactly and leaves the extra piece unused', () => {
+    const grid = emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]) // one O gap
+    const res = bestFit({ O: 1, T: 1 }, grid)
+    expect(res.totalCells).toBe(4)
+    expect(res.filledCells).toBe(4)
+    expect(res.placements).toHaveLength(1)
+    expect(res.placements[0].pieceType).toBe('O')
+  })
+
+  it('covers as many cells as possible when pieces are insufficient', () => {
+    const grid = emptyAt(fullGrid(), [
+      [0, 0], [0, 1], [1, 0], [1, 1],   // O gap A
+      [5, 5], [5, 6], [6, 5], [6, 6],   // O gap B
+    ])
+    const res = bestFit({ O: 1 }, grid) // only enough for one
+    expect(res.totalCells).toBe(8)
+    expect(res.filledCells).toBe(4)
+    expect(res.placements).toHaveLength(1)
+  })
+
+  it('tie-breaks equal coverage toward the fewest pieces', () => {
+    const grid = emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]) // one O gap
+    const res = bestFit({ O: 1, SINGLE: 4 }, grid)
+    expect(res.filledCells).toBe(4)
+    expect(res.placements).toHaveLength(1)          // O (1 piece) beats 4 SINGLEs
+    expect(res.placements[0].pieceType).toBe('O')
+  })
+
+  it('leaves genuinely unfillable cells uncovered', () => {
+    const grid = emptyAt(fullGrid(), [[0, 0], [0, 1], [0, 2]]) // 3-cell row, no 2x2
+    const res = bestFit({ O: 1 }, grid)                        // O cannot fit
+    expect(res.filledCells).toBe(0)
+    expect(res.placements).toHaveLength(0)
   })
 })
