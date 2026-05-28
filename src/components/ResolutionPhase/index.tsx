@@ -103,6 +103,12 @@ export function ResolutionPhase() {
       })
     }
 
+    if (built.length === 0) {
+      // No measurable flyers (defensive); skip the flight so the phase can't hang.
+      setStage('badge')
+      return
+    }
+
     const rootRect = rootRef.current.getBoundingClientRect()
     setContainerRect(rootRect)
     setFlyers(built)

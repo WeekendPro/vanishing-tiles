@@ -1,4 +1,4 @@
-import type { Grid, Gap, PieceType, Rotation, Placement } from '../types'
+import type { Grid, Gap, PieceType, Placement } from '../types'
 import { ROWS, COLS } from '../types'
 import { getAllRotations } from './pieces'
 
