@@ -67,10 +67,13 @@ export interface RoundScore {
 
 // ── Resolution (drives the resolving phase animation) ─────────────────────────
 
+export type ResolutionReason = 'too-many' | 'wrong-shapes' | 'missed-one' | 'missed-many'
+
 export interface Resolution {
   kind: 'perfect' | 'partial'
   placements: Placement[]
   coverage: number   // 1 for perfect; filledCells/totalCells for partial
+  reason?: ResolutionReason   // set only when kind === 'partial'
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

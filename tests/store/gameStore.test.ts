@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useGameStore, DIFFICULTY_TABLE } from '../../src/store/gameStore'
 import { act } from '@testing-library/react'
+import type { Grid, Cell, PieceType } from '../../src/types'
 
 beforeEach(() => {
   useGameStore.getState().resetGame()
@@ -228,5 +229,56 @@ describe('DIFFICULTY_TABLE', () => {
 
   it('view duration decreases in later rounds', () => {
     expect(DIFFICULTY_TABLE[4].viewDuration).toBeLessThan(DIFFICULTY_TABLE[0].viewDuration)
+  })
+})
+
+function fullGrid(): Grid {
+  return Array.from({ length: 10 }, () =>
+    Array.from({ length: 8 }, (): Cell => ({ status: 'filled' })))
+}
+function emptyAt(grid: Grid, cells: [number, number][]): Grid {
+  for (const [r, c] of cells) grid[r][c] = { status: 'empty' }
+  return grid
+}
+// reason depends only on grid + selection (not gaps); gaps:[] is fine here.
+function submitWith(grid: Grid, selection: { pieceType: PieceType; freeCount: number }[]) {
+  useGameStore.setState({
+    grid, gaps: [], selection, lives: 3,
+    difficulty: DIFFICULTY_TABLE[0], phaseStartTime: Date.now(),
+  })
+  act(() => useGameStore.getState().submitSelection())
+  return useGameStore.getState()._resolution
+}
+const O_GAP_1: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 1]]
+const O_GAP_2: [number, number][] = [[0, 3], [0, 4], [1, 3], [1, 4]]
+const O_GAP_3: [number, number][] = [[0, 6], [0, 7], [1, 6], [1, 7]]
+
+describe('submitSelection — failure reason', () => {
+  it('"too-many": all gaps covered but extra pieces selected', () => {
+    const grid = emptyAt(fullGrid(), O_GAP_1)
+    const res = submitWith(grid, [
+      { pieceType: 'O', freeCount: 1 },
+      { pieceType: 'T', freeCount: 1 },
+    ])
+    expect(res?.kind).toBe('partial')
+    expect(res?.reason).toBe('too-many')
+  })
+
+  it('"wrong-shapes": enough cells but shapes do not fit', () => {
+    const grid = emptyAt(fullGrid(), O_GAP_1)
+    const res = submitWith(grid, [{ pieceType: 'I', freeCount: 1 }])
+    expect(res?.reason).toBe('wrong-shapes')
+  })
+
+  it('"missed-one": under-selected by one piece', () => {
+    const grid = emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2)
+    const res = submitWith(grid, [{ pieceType: 'O', freeCount: 1 }])
+    expect(res?.reason).toBe('missed-one')
+  })
+
+  it('"missed-many": under-selected by more than one piece', () => {
+    const grid = emptyAt(emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2), O_GAP_3)
+    const res = submitWith(grid, [{ pieceType: 'O', freeCount: 1 }])
+    expect(res?.reason).toBe('missed-many')
   })
 })

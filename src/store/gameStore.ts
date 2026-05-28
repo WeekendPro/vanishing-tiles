@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type {
   GameState, PieceType,
-  DifficultyConfig, Placement, Resolution,
+  DifficultyConfig, Placement, Resolution, ResolutionReason,
 } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'
 import { solve, bestFit } from '../engine/solver'
@@ -157,6 +157,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const fit = bestFit(pieceCount, grid)
       const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
 
+      const uncovered = fit.totalCells - fit.filledCells
+      const selectedCells = Object.entries(pieceCount)
+        .reduce((sum, [type, n]) => sum + (n ?? 0) * (type === 'SINGLE' ? 1 : 4), 0)
+      let reason: ResolutionReason
+      if (uncovered === 0) reason = 'too-many'
+      else if (selectedCells >= fit.totalCells) reason = 'wrong-shapes'
+      else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
+
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
       const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
@@ -168,7 +176,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({
         phase: 'resolving',
         lives: Math.max(0, newLives),
-        _resolution: { kind: 'partial', placements: fit.placements, coverage },
+        _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
         roundScore: {
           correctness,
           speedBonus,
