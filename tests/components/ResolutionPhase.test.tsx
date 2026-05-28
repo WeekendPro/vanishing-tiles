@@ -122,6 +122,38 @@ describe('ResolutionPhase — badge copy (reduced motion)', () => {
   })
 })
 
+describe('ResolutionPhase — accuracy icon (reduced motion)', () => {
+  function showPartial(coverage: number) {
+    useGameStore.setState({
+      phase: 'resolving', lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundScore: { correctness: 1, speedBonus: 0, efficiencyBonus: 0, total: 1 },
+      _resolution: {
+        kind: 'partial', coverage, reason: 'too-many',
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+  }
+
+  // The badge glyph reuses the same character (≈/✕), so scope the assertion
+  // to the Accuracy row, not the whole document.
+  it('close coverage shows the amber ≈ accuracy icon', () => {
+    showPartial(0.8)
+    render(<ResolutionPhase />)
+    const accRow = screen.getByText('Accuracy').closest('div')!
+    expect(accRow.textContent).toContain('≈')
+  })
+
+  it('far coverage shows the red ✕ accuracy icon', () => {
+    showPartial(0.3)
+    render(<ResolutionPhase />)
+    const accRow = screen.getByText('Accuracy').closest('div')!
+    expect(accRow.textContent).toContain('✕')
+  })
+})
+
 describe('ResolutionPhase — partial (reduced motion)', () => {
   it('shows the amber "So close!" badge for high coverage', () => {
     useGameStore.setState({

@@ -10,6 +10,13 @@ interface Props {
   grandTotal: number
   /** When true, rows reveal + counts animate; when false, panel is hidden. */
   show: boolean
+  accuracyTier: 'perfect' | 'close' | 'far'
+}
+
+const ACCURACY_ICON: Record<'perfect' | 'close' | 'far', { icon: string; color: string }> = {
+  perfect: { icon: '✓', color: 'text-green-400' },
+  close:   { icon: '≈', color: 'text-amber-400' },
+  far:     { icon: '✕', color: 'text-red-400' },
 }
 
 const ROW_STAGGER = 0.3   // seconds between row reveals
@@ -17,7 +24,7 @@ const COUNT_DURATION = 400
 const ROUND_TOTAL_DELAY = ROW_STAGGER * 3
 const GRAND_TOTAL_DELAY = ROW_STAGGER * 4
 
-export function ScorePanel({ roundScore, grandTotal, show }: Props) {
+export function ScorePanel({ roundScore, grandTotal, show, accuracyTier }: Props) {
   if (!show) return null
 
   return (
@@ -27,7 +34,7 @@ export function ScorePanel({ roundScore, grandTotal, show }: Props) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
-      <Row icon="✓" label="Accuracy"   value={roundScore.correctness}     delay={0}                color="text-green-400"  />
+      <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.correctness} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
       <Row icon="⚡" label="Speed"      value={roundScore.speedBonus}      delay={ROW_STAGGER}      color="text-yellow-400" />
       <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2}  color="text-cyan-400"   />
 
