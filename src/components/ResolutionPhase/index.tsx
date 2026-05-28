@@ -22,7 +22,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, lives, endGame } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, lives, newGame } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
@@ -32,7 +32,7 @@ export function ResolutionPhase() {
       nextRound: s.nextRound,
       retryRound: s.retryRound,
       lives: s.lives,
-      endGame: s.endGame,
+      newGame: s.newGame,
     })))
   const solution = resolution?.placements ?? null
 
@@ -161,15 +161,15 @@ export function ResolutionPhase() {
   const isFailure = resolution?.kind === 'partial'
   const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
 
-  const ctaVariant: 'next' | 'retry' | 'gameover' =
-    !isFailure ? 'next' : lives === 0 ? 'gameover' : 'retry'
+  const ctaVariant: 'next' | 'retry' | 'newgame' =
+    !isFailure ? 'next' : lives === 0 ? 'newgame' : 'retry'
   const ctaLabel =
     ctaVariant === 'next' ? 'Next Round →'
-      : ctaVariant === 'gameover' ? 'Game Over →'
+      : ctaVariant === 'newgame' ? 'Start New Game'
       : 'Try Again ↺'
   const handleCta = () => {
     if (ctaVariant === 'next') nextRound()
-    else if (ctaVariant === 'gameover') endGame()
+    else if (ctaVariant === 'newgame') newGame()
     else retryRound()
   }
 

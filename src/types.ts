@@ -93,7 +93,6 @@ export type GamePhase =
   | 'viewing'
   | 'selecting'
   | 'resolving'
-  | 'game-over'
 
 // ── Full game state ───────────────────────────────────────────────────────────
 

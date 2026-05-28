@@ -49,7 +49,7 @@ interface GameStore extends GameState {
   commitRoundScore: () => void
   nextRound: () => void
   retryRound: () => void
-  endGame: () => void
+  newGame: () => void
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
@@ -226,5 +226,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startGame()
   },
 
-  endGame: () => set({ phase: 'game-over' }),
+  newGame: () => {
+    get().resetGame()
+    get().startGame()
+  },
 }))

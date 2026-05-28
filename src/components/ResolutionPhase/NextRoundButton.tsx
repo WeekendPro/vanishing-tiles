@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
 
-export type CtaVariant = 'next' | 'retry' | 'gameover'
+export type CtaVariant = 'next' | 'retry' | 'newgame'
 
 interface Props {
   show: boolean
@@ -11,9 +11,9 @@ interface Props {
 }
 
 const VARIANT_CLASSES: Record<CtaVariant, string> = {
-  next:     'bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-900/40',
-  retry:    'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/40',
-  gameover: 'bg-red-900 border-2 border-red-500 text-red-300',
+  next:    'bg-green-700 hover:bg-green-600 text-white shadow-lg shadow-green-900/40',
+  retry:   'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/40',
+  newgame: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40',
 }
 
 export function NextRoundButton({ show, onClick, label, variant }: Props) {

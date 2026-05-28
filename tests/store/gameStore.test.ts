@@ -136,10 +136,14 @@ describe('lives and game over', () => {
     expect(s._resolution?.kind).toBe('partial')
   })
 
-  it('endGame transitions to game-over', () => {
-    useGameStore.setState({ lives: 0, phase: 'resolving' })
-    act(() => useGameStore.getState().endGame())
-    expect(useGameStore.getState().phase).toBe('game-over')
+  it('newGame restarts at round 1 with full lives, score 0, in viewing', () => {
+    useGameStore.setState({ round: 7, score: 5000, lives: 0, phase: 'resolving' })
+    act(() => useGameStore.getState().newGame())
+    const s = useGameStore.getState()
+    expect(s.round).toBe(1)
+    expect(s.lives).toBe(3)
+    expect(s.score).toBe(0)
+    expect(s.phase).toBe('viewing')
   })
 })
 

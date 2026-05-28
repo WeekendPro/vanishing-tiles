@@ -227,25 +227,30 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     expect(useGameStore.getState().phase).toBe('viewing')  // fresh puzzle
   })
 
-  it('shows "Game Over" CTA when the partial resolution happened on the last life, and clicking it ends the game', async () => {
+  it('shows a "Start New Game" CTA on the last life, and clicking it restarts at round 1', async () => {
     const user = userEvent.setup()
     useGameStore.setState({
       phase: 'resolving',
       lives: 0,
+      round: 4,
+      score: 1234,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       selection: [{ pieceType: 'O', freeCount: 1 }],
-      roundScore: { correctness: 600, speedBonus: 0, efficiencyBonus: 100, total: 700 },
+      roundScore: { correctness: -50, speedBonus: 0, efficiencyBonus: 0, total: -50 },
       _resolution: {
         kind: 'partial',
-        coverage: 0.75,
+        coverage: 0.5,
         placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
           cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
       },
     })
     render(<ResolutionPhase />)
-    expect(screen.getByText(/Game Over/i)).toBeInTheDocument()
-    await user.click(screen.getByText(/Game Over/i))
-    expect(useGameStore.getState().phase).toBe('game-over')
+    expect(screen.getByText(/Start New Game/i)).toBeInTheDocument()
+    await user.click(screen.getByText(/Start New Game/i))
+    const s = useGameStore.getState()
+    expect(s.round).toBe(1)
+    expect(s.lives).toBe(3)
+    expect(s.phase).toBe('viewing')
   })
 })
 
