@@ -22,7 +22,7 @@ export function PartialBadge({ show, coverage }: Props) {
         animate={{ opacity: 1, scale: [0, 1.15, 1] }}
         transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
       >
-        <span className="text-4xl font-extrabold text-white">{Math.round(coverage * 100)}%</span>
+        <span className="text-4xl font-extrabold text-white">{Math.min(99, Math.round(coverage * 100))}%</span>
       </motion.div>
       <motion.span
         className="mt-3 text-sm font-bold tracking-widest uppercase text-amber-400"

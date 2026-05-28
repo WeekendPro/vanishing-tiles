@@ -90,7 +90,8 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     expect(screen.getByText(/Next Round/)).toBeInTheDocument()
   })
 
-  it('shows "Game Over" CTA when the partial resolution happened on the last life', () => {
+  it('shows "Game Over" CTA when the partial resolution happened on the last life, and clicking it ends the game', async () => {
+    const user = userEvent.setup()
     useGameStore.setState({
       phase: 'resolving',
       lives: 0,
@@ -106,5 +107,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     })
     render(<ResolutionPhase />)
     expect(screen.getByText(/Game Over/i)).toBeInTheDocument()
+    await user.click(screen.getByText(/Game Over/i))
+    expect(useGameStore.getState().phase).toBe('game-over')
   })
 })
