@@ -1,5 +1,3 @@
-import type { Placement } from './engine/solver'
-
 // ── Pieces ──────────────────────────────────────────────────────────────────
 
 export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L' | 'SINGLE'
@@ -39,6 +37,16 @@ export interface Gap {
   anchorRow: number
   anchorCol: number
   cells: PieceCells  // absolute [row, col] positions
+}
+
+// ── Placement (a piece positioned on the grid) ────────────────────────────────
+
+export interface Placement {
+  pieceType: PieceType
+  rotation: Rotation
+  anchorRow: number
+  anchorCol: number
+  cells: [number, number][]
 }
 
 // ── Selection ────────────────────────────────────────────────────────────────

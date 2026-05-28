@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { expandCartSlots, mapPlacementsToSlots } from '../../src/engine/cartSlots'
 import type { SelectionEntry } from '../../src/types'
-import type { Placement } from '../../src/engine/solver'
+import type { Placement } from '../../src/types'
 
 describe('expandCartSlots', () => {
   it('expands a single-entry selection into N chips', () => {

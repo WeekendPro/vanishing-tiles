@@ -1,5 +1,5 @@
 import type { PieceType, SelectionEntry } from '../types'
-import type { Placement } from './solver'
+import type { Placement } from '../types'
 
 export interface ChipSlot {
   pieceType: PieceType

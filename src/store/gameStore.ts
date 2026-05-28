@@ -1,14 +1,12 @@
 import { create } from 'zustand'
 import type {
   GameState, PieceType, SelectionEntry,
-  DifficultyConfig, Rotation,
+  DifficultyConfig, Rotation, Placement, Resolution,
 } from '../types'
 import { ROWS, COLS } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'
 import { solve, bestFit } from '../engine/solver'
 import { getRotatedCells } from '../engine/pieces'
-import type { Placement } from '../engine/solver'
-import type { Resolution } from '../types'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -157,7 +155,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
       const speedBonus = Math.round(MAX_SPEED_BONUS * (timeRemaining / difficulty.selectDuration))
-      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * (minPieces / Math.max(selectedPieces, minPieces)))
+      const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
+      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
 
       set({
         phase: 'resolving',

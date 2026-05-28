@@ -1,14 +1,6 @@
-import type { Grid, Gap, PieceType, Rotation } from '../types'
+import type { Grid, Gap, PieceType, Rotation, Placement } from '../types'
 import { ROWS, COLS } from '../types'
 import { getAllRotations } from './pieces'
-
-export interface Placement {
-  pieceType: PieceType
-  rotation: Rotation
-  anchorRow: number
-  anchorCol: number
-  cells: [number, number][]
-}
 
 export interface SolveResult {
   solvable: boolean
