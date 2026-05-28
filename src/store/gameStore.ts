@@ -9,16 +9,21 @@ import { solve, bestFit } from '../engine/solver'
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
 export const DIFFICULTY_TABLE: DifficultyConfig[] = [
-  { viewDuration: 5000, selectDuration: 15000, placeDuration: 60000, gapCount: 2, complexity: 'simple' },
-  { viewDuration: 5000, selectDuration: 15000, placeDuration: 60000, gapCount: 3, complexity: 'simple' },
-  { viewDuration: 4000, selectDuration: 13000, placeDuration: 60000, gapCount: 3, complexity: 'simple' },
-  { viewDuration: 4000, selectDuration: 13000, placeDuration: 60000, gapCount: 4, complexity: 'medium' },
-  { viewDuration: 3000, selectDuration: 11000, placeDuration: 60000, gapCount: 4, complexity: 'medium' },
-  { viewDuration: 3000, selectDuration: 11000, placeDuration: 60000, gapCount: 5, complexity: 'medium' },
-  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 5, complexity: 'complex' },
-  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 6, complexity: 'complex' },
-  { viewDuration: 2000, selectDuration:  7000, placeDuration: 60000, gapCount: 6, complexity: 'complex' },
-  { viewDuration: 2000, selectDuration:  7000, placeDuration: 60000, gapCount: 7, complexity: 'complex' },
+  { viewDuration: 5000, selectDuration: 15000, placeDuration: 60000, gapCount:  3, complexity: 'simple'  },
+  { viewDuration: 4700, selectDuration: 15000, placeDuration: 60000, gapCount:  4, complexity: 'simple'  },
+  { viewDuration: 4400, selectDuration: 14000, placeDuration: 60000, gapCount:  5, complexity: 'simple'  },
+  { viewDuration: 4100, selectDuration: 14000, placeDuration: 60000, gapCount:  6, complexity: 'medium'  },
+  { viewDuration: 3800, selectDuration: 13000, placeDuration: 60000, gapCount:  7, complexity: 'medium'  },
+  { viewDuration: 3500, selectDuration: 13000, placeDuration: 60000, gapCount:  8, complexity: 'medium'  },
+  { viewDuration: 3300, selectDuration: 12000, placeDuration: 60000, gapCount:  9, complexity: 'complex' },
+  { viewDuration: 3100, selectDuration: 12000, placeDuration: 60000, gapCount: 10, complexity: 'complex' },
+  { viewDuration: 2900, selectDuration: 11000, placeDuration: 60000, gapCount: 11, complexity: 'complex' },
+  { viewDuration: 2800, selectDuration: 11000, placeDuration: 60000, gapCount: 12, complexity: 'complex' },
+  { viewDuration: 2700, selectDuration: 10000, placeDuration: 60000, gapCount: 13, complexity: 'complex' },
+  { viewDuration: 2600, selectDuration: 10000, placeDuration: 60000, gapCount: 14, complexity: 'complex' },
+  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 15, complexity: 'complex' },
+  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
+  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
 ]
 
 function getDifficulty(round: number): DifficultyConfig {

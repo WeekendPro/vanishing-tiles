@@ -223,12 +223,28 @@ describe('commitRoundScore', () => {
 })
 
 describe('DIFFICULTY_TABLE', () => {
-  it('round 1 has 5000ms view duration', () => {
+  it('round 1 still starts at a 5000ms view duration', () => {
     expect(DIFFICULTY_TABLE[0].viewDuration).toBe(5000)
   })
 
-  it('view duration decreases in later rounds', () => {
-    expect(DIFFICULTY_TABLE[4].viewDuration).toBeLessThan(DIFFICULTY_TABLE[0].viewDuration)
+  it('has 15 rounds', () => {
+    expect(DIFFICULTY_TABLE).toHaveLength(15)
+  })
+
+  it('eases the view timer gently — round 2 is only ~300ms faster', () => {
+    expect(DIFFICULTY_TABLE[1].viewDuration).toBe(4700)
+  })
+
+  it('view duration never increases and floors at 2500ms', () => {
+    for (let i = 1; i < DIFFICULTY_TABLE.length; i++) {
+      expect(DIFFICULTY_TABLE[i].viewDuration).toBeLessThanOrEqual(DIFFICULTY_TABLE[i - 1].viewDuration)
+    }
+    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].viewDuration).toBe(2500)
+  })
+
+  it('gap count climbs across the run so the board stays full', () => {
+    expect(DIFFICULTY_TABLE[0].gapCount).toBe(3)
+    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].gapCount).toBeGreaterThanOrEqual(13)
   })
 })
 
