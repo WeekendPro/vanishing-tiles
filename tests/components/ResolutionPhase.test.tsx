@@ -169,8 +169,11 @@ describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
     })
     render(<ResolutionPhase />)
     const mark = screen.getByLabelText('rejected piece')
-    // the mark's chip wrapper carries the grayscale utility
-    expect(mark.closest('.grayscale')).not.toBeNull()
+    const chip = mark.parentElement!
+    // the piece is grayed out...
+    expect(chip.querySelector('.grayscale')).not.toBeNull()
+    // ...but the red ✕ overlay is NOT inside the grayscale filter (stays red)
+    expect(mark.closest('.grayscale')).toBeNull()
   })
 })
 

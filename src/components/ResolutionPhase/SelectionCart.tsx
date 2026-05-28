@@ -51,10 +51,11 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
               animate={rej ? { x: [0, -3, 3, -2, 2, 0] } : undefined}
               transition={rej ? { duration: 0.35 } : undefined}
             >
-              <div className={`relative${rej ? ' grayscale opacity-60 transition-all duration-200' : ''}`}>
+              {/* grayscale wraps ONLY the piece so the red ✕ overlay stays red */}
+              <div className={rej ? 'grayscale opacity-60 transition-all duration-200' : ''}>
                 <PieceShape pieceType={slot.pieceType} cellSize={11} />
-                {rej && <RejectMark />}
               </div>
+              {rej && <RejectMark />}
             </motion.div>
           )
         })}
