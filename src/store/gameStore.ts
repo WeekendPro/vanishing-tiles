@@ -163,6 +163,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let reason: ResolutionReason
       if (uncovered === 0) reason = 'too-many'
       else if (selectedCells >= fit.totalCells) reason = 'wrong-shapes'
+      // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
       const minPieces = gaps.length

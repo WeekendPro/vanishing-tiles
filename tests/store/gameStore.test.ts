@@ -267,18 +267,21 @@ describe('submitSelection — failure reason', () => {
   it('"wrong-shapes": enough cells but shapes do not fit', () => {
     const grid = emptyAt(fullGrid(), O_GAP_1)
     const res = submitWith(grid, [{ pieceType: 'I', freeCount: 1 }])
+    expect(res?.kind).toBe('partial')
     expect(res?.reason).toBe('wrong-shapes')
   })
 
   it('"missed-one": under-selected by one piece', () => {
     const grid = emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2)
     const res = submitWith(grid, [{ pieceType: 'O', freeCount: 1 }])
+    expect(res?.kind).toBe('partial')
     expect(res?.reason).toBe('missed-one')
   })
 
   it('"missed-many": under-selected by more than one piece', () => {
     const grid = emptyAt(emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2), O_GAP_3)
     const res = submitWith(grid, [{ pieceType: 'O', freeCount: 1 }])
+    expect(res?.kind).toBe('partial')
     expect(res?.reason).toBe('missed-many')
   })
 })
