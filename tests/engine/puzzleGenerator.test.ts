@@ -60,4 +60,9 @@ describe('generatePuzzle', () => {
       gaps.forEach(g => expect(g.cells.length).toBeGreaterThan(1))
     }
   })
+
+  it('places a high gap count on the larger board', () => {
+    const { gaps } = generatePuzzle({ gapCount: 16, complexity: 'complex' })
+    expect(gaps).toHaveLength(16)
+  })
 })

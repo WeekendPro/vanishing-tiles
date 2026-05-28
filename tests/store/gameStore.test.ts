@@ -34,7 +34,7 @@ describe('startGame', () => {
 
   it('generates a grid', () => {
     act(() => useGameStore.getState().startGame())
-    expect(useGameStore.getState().grid).toHaveLength(10)
+    expect(useGameStore.getState().grid).toHaveLength(12)
   })
 
   it('generates gaps', () => {
@@ -233,8 +233,8 @@ describe('DIFFICULTY_TABLE', () => {
 })
 
 function fullGrid(): Grid {
-  return Array.from({ length: 10 }, () =>
-    Array.from({ length: 8 }, (): Cell => ({ status: 'filled' })))
+  return Array.from({ length: 12 }, () =>
+    Array.from({ length: 12 }, (): Cell => ({ status: 'filled' })))
 }
 function emptyAt(grid: Grid, cells: [number, number][]): Grid {
   for (const [r, c] of cells) grid[r][c] = { status: 'empty' }

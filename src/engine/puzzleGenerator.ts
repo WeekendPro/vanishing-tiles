@@ -51,7 +51,7 @@ export function generatePuzzle(input: PuzzleInput): { grid: Grid; gaps: Gap[] } 
   const gaps: Gap[] = []
 
   let attempts = 0
-  while (gaps.length < gapCount && attempts < 1000) {
+  while (gaps.length < gapCount && attempts < 4000) {
     attempts++
     const pieceType = allowedTypes[Math.floor(Math.random() * allowedTypes.length)]
     const rotations = getAllRotations(pieceType)

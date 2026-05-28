@@ -22,11 +22,11 @@ export interface Cell {
   pieceType?: PieceType   // which piece occupies this cell (if placed)
 }
 
-/** Grid is ROWS × COLS. grid[row][col]. 10 rows, 8 cols. */
+/** Grid is ROWS × COLS. grid[row][col]. 12 rows, 12 cols. */
 export type Grid = Cell[][]
 
-export const ROWS = 10 as const
-export const COLS = 8 as const
+export const ROWS = 12 as const
+export const COLS = 12 as const
 
 // ── Gap ─────────────────────────────────────────────────────────────────────
 
