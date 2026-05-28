@@ -119,8 +119,14 @@ export function bestFit(pieceCount: PieceCount, grid: Grid): BestFitResult {
     const empty = findFirstEmpty(workGrid)
     if (!empty) { record(); return }
 
+    // No pieces left to place — the rest of the grid stays uncovered.
+    const piecesLeft = Object.values(remaining).some(n => (n ?? 0) > 0)
+    if (!piecesLeft) { record(); return }
+
     // Branch-and-bound: best achievable from here = currentFilled + all
-    // remaining empties. If that can't beat the best, prune.
+    // still-empty cells. (Cells skipped via Branch B are marked 'filled', so
+    // this is strictly less than totalCells - currentFilled once any are
+    // skipped — which is what makes the prune actually fire.)
     const remainingEmpty = workGrid.flat().filter(c => c.status === 'empty').length
     if (currentFilled + remainingEmpty < bestFilled) return
 
