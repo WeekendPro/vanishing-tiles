@@ -159,7 +159,7 @@ export function ResolutionPhase() {
       : (resolution && resolution.coverage >= 0.66 ? 'close' : 'far')
 
   const isFailure = resolution?.kind === 'partial'
-  const speedSlow = !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
+  const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
 
   const ctaVariant: 'next' | 'retry' | 'gameover' =
     !isFailure ? 'next' : lives === 0 ? 'gameover' : 'retry'
