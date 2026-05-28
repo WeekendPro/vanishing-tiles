@@ -56,7 +56,6 @@ describe('selection', () => {
     act(() => useGameStore.getState().incrementSelection('I'))
     const entry = useGameStore.getState().selection.find(e => e.pieceType === 'I')
     expect(entry?.freeCount).toBe(1)
-    expect(entry?.lockedCount).toBe(0)
   })
 
   it('decrementSelection removes a free piece', () => {
@@ -73,14 +72,6 @@ describe('selection', () => {
     expect(entry?.freeCount ?? 0).toBe(0)
   })
 
-  it('cannot decrement locked pieces', () => {
-    useGameStore.setState({ carryOvers: [{ pieceType: 'I', count: 1 }] })
-    act(() => useGameStore.getState().startGame())
-    act(() => useGameStore.getState().endViewing())
-    act(() => useGameStore.getState().decrementSelection('I'))
-    const entry = useGameStore.getState().selection.find(e => e.pieceType === 'I')
-    expect(entry?.lockedCount).toBe(1)
-  })
 })
 
 describe('submitSelection — correct', () => {
@@ -210,18 +201,6 @@ describe('commitRoundScore', () => {
     act(() => useGameStore.getState().commitRoundScore())
 
     expect(useGameStore.getState().score).toBe(before + total)
-  })
-
-  it('clears carryOvers', () => {
-    useGameStore.setState({ carryOvers: [{ pieceType: 'I', count: 2 }] })
-    act(() => useGameStore.getState().startGame())
-    const { gaps } = useGameStore.getState()
-    act(() => useGameStore.getState().endViewing())
-    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
-    act(() => useGameStore.getState().submitSelection())
-    act(() => useGameStore.getState().commitRoundScore())
-
-    expect(useGameStore.getState().carryOvers).toEqual([])
   })
 
   it('does not change phase', () => {

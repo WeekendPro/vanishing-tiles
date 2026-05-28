@@ -5,7 +5,7 @@ import type { Placement } from '../../src/types'
 
 describe('expandCartSlots', () => {
   it('expands a single-entry selection into N chips', () => {
-    const selection: SelectionEntry[] = [{ pieceType: 'I', lockedCount: 0, freeCount: 3 }]
+    const selection: SelectionEntry[] = [{ pieceType: 'I', freeCount: 3 }]
     expect(expandCartSlots(selection)).toEqual([
       { pieceType: 'I', slotIndex: 0 },
       { pieceType: 'I', slotIndex: 1 },
@@ -13,24 +13,24 @@ describe('expandCartSlots', () => {
     ])
   })
 
-  it('counts both locked and free pieces', () => {
-    const selection: SelectionEntry[] = [{ pieceType: 'O', lockedCount: 2, freeCount: 1 }]
+  it('counts all free pieces', () => {
+    const selection: SelectionEntry[] = [{ pieceType: 'O', freeCount: 3 }]
     expect(expandCartSlots(selection)).toHaveLength(3)
   })
 
   it('preserves selection-array order across multiple entries', () => {
     const selection: SelectionEntry[] = [
-      { pieceType: 'I', lockedCount: 0, freeCount: 2 },
-      { pieceType: 'O', lockedCount: 0, freeCount: 1 },
-      { pieceType: 'T', lockedCount: 0, freeCount: 1 },
+      { pieceType: 'I', freeCount: 2 },
+      { pieceType: 'O', freeCount: 1 },
+      { pieceType: 'T', freeCount: 1 },
     ]
     expect(expandCartSlots(selection).map(s => s.pieceType)).toEqual(['I', 'I', 'O', 'T'])
   })
 
   it('skips empty entries', () => {
     const selection: SelectionEntry[] = [
-      { pieceType: 'I', lockedCount: 0, freeCount: 0 },
-      { pieceType: 'O', lockedCount: 0, freeCount: 2 },
+      { pieceType: 'I', freeCount: 0 },
+      { pieceType: 'O', freeCount: 2 },
     ]
     expect(expandCartSlots(selection)).toEqual([
       { pieceType: 'O', slotIndex: 0 },

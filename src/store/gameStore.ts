@@ -1,12 +1,10 @@
 import { create } from 'zustand'
 import type {
   GameState, PieceType, SelectionEntry,
-  DifficultyConfig, Rotation, Placement, Resolution,
+  DifficultyConfig, Placement, Resolution,
 } from '../types'
-import { ROWS, COLS } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'
 import { solve, bestFit } from '../engine/solver'
-import { getRotatedCells } from '../engine/pieces'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -41,16 +39,11 @@ interface GameStore extends GameState {
   submitSelection: () => void
   applyPlacement: (placement: Placement) => void
   commitRoundScore: () => void
-  placePiece: (row: number, col: number) => void
-  finishManualPlace: () => void
   nextRound: () => void
   endGame: () => void
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
-  holdPiece: (pieceType: PieceType, rotation: Rotation) => void
-  rotatePiece: () => void
-  clearHeld: () => void
   _resolution: Resolution | null
 }
 
@@ -62,8 +55,6 @@ const INITIAL_STATE: GameState = {
   grid: [],
   gaps: [],
   selection: [],
-  carryOvers: [],
-  heldPiece: null,
   phaseStartTime: 0,
   phaseDuration: 0,
   roundScore: null,
@@ -77,23 +68,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetGame: () => set({ ...INITIAL_STATE, _resolution: null }),
 
   startGame: () => {
-    const { round, carryOvers } = get()
+    const { round } = get()
     const difficulty = getDifficulty(round)
     const { grid, gaps } = generatePuzzle(difficulty)
-
-    const selection: SelectionEntry[] = carryOvers.map(co => ({
-      pieceType: co.pieceType,
-      lockedCount: co.count,
-      freeCount: 0,
-    }))
 
     set({
       phase: 'viewing',
       grid,
       gaps,
-      selection,
+      selection: [],
       difficulty,
-      heldPiece: null,
       roundScore: null,
       phaseStartTime: Date.now(),
       phaseDuration: difficulty.viewDuration,
@@ -121,7 +105,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
       return {
-        selection: [...state.selection, { pieceType, lockedCount: 0, freeCount: 1 }],
+        selection: [...state.selection, { pieceType, freeCount: 1 }],
       }
     })
   },
@@ -134,7 +118,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             ? { ...e, freeCount: Math.max(0, e.freeCount - 1) }
             : e
         )
-        .filter(e => e.lockedCount > 0 || e.freeCount > 0),
+        .filter(e => e.freeCount > 0),
     }))
   },
 
@@ -143,7 +127,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const pieceCount: Partial<Record<PieceType, number>> = {}
     for (const entry of selection) {
-      const total = entry.lockedCount + entry.freeCount
+      const total = entry.freeCount
       if (total > 0) pieceCount[entry.pieceType] = (pieceCount[entry.pieceType] ?? 0) + total
     }
 
@@ -210,61 +194,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!state.roundScore) return {}
       return {
         score: state.score + state.roundScore.total,
-        carryOvers: [],
       }
-    })
-  },
-
-  holdPiece: (pieceType: PieceType, rotation: Rotation) => {
-    set({ heldPiece: { pieceType, rotation } })
-  },
-
-  rotatePiece: () => {
-    set(state => {
-      if (!state.heldPiece) return {}
-      return { heldPiece: { ...state.heldPiece, rotation: ((state.heldPiece.rotation + 1) % 4) as Rotation } }
-    })
-  },
-
-  clearHeld: () => set({ heldPiece: null }),
-
-  placePiece: (row: number, col: number) => {
-    const { heldPiece, grid, selection } = get()
-    if (!heldPiece) return
-    const cells: [number, number][] = getRotatedCells(heldPiece.pieceType, heldPiece.rotation)
-
-    const valid = cells.every(([dr, dc]) => {
-      const r = row + dr
-      const c = col + dc
-      return r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c].status === 'empty'
-    })
-    if (!valid) return
-
-    const newGrid = grid.map(r => r.map(cell => ({ ...cell })))
-    for (const [dr, dc] of cells) {
-      newGrid[row + dr][col + dc] = { status: 'placed', pieceType: heldPiece.pieceType }
-    }
-
-    const newSelection = selection.map(e => {
-      if (e.pieceType !== heldPiece.pieceType) return e
-      if (e.freeCount > 0) return { ...e, freeCount: e.freeCount - 1 }
-      if (e.lockedCount > 0) return { ...e, lockedCount: e.lockedCount - 1 }
-      return e
-    }).filter(e => e.lockedCount > 0 || e.freeCount > 0)
-
-    set({ grid: newGrid, selection: newSelection, heldPiece: null })
-  },
-
-  finishManualPlace: () => {
-    const { selection, roundScore, score } = get()
-    const carryOvers = selection
-      .map(e => ({ pieceType: e.pieceType, count: e.lockedCount + e.freeCount }))
-      .filter(co => co.count > 0)
-
-    set({
-      phase: 'scoring',
-      carryOvers,
-      score: score + (roundScore?.total ?? 0),
     })
   },
 

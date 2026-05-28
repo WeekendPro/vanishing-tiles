@@ -9,12 +9,12 @@ export interface ChipSlot {
 /**
  * Expand a SelectionEntry array into a flat list of individual chip slots.
  * Slot order preserves the selection array order; each entry contributes
- * (lockedCount + freeCount) chips in sequence.
+ * freeCount chips in sequence.
  */
 export function expandCartSlots(selection: SelectionEntry[]): ChipSlot[] {
   const slots: ChipSlot[] = []
   for (const entry of selection) {
-    const total = entry.lockedCount + entry.freeCount
+    const total = entry.freeCount
     for (let i = 0; i < total; i++) {
       slots.push({ pieceType: entry.pieceType, slotIndex: slots.length })
     }

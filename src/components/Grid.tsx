@@ -12,7 +12,6 @@ interface Props {
 
 export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }: Props) {
   const grid = useGameStore(s => s.grid)
-  const heldPiece = useGameStore(s => s.heldPiece)
   const highlighted = new Set(highlightCells.map(([r, c]) => `${r},${c}`))
 
   return (
@@ -40,7 +39,7 @@ export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }:
           className += 'bg-gray-800 border border-gray-600'
         }
 
-        if (onCellClick && heldPiece && cell?.status === 'empty') {
+        if (onCellClick && cell?.status === 'empty') {
           className += ' cursor-pointer hover:bg-blue-400/30'
         }
 

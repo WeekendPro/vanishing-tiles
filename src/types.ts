@@ -53,15 +53,7 @@ export interface Placement {
 
 export interface SelectionEntry {
   pieceType: PieceType
-  lockedCount: number   // carry-overs from previous round — cannot decrement
   freeCount: number     // freely added this round — can decrement to 0
-}
-
-// ── Carry-overs ─────────────────────────────────────────────────────────────
-
-export interface CarryOver {
-  pieceType: PieceType
-  count: number
 }
 
 // ── Scoring ──────────────────────────────────────────────────────────────────
@@ -91,13 +83,6 @@ export interface DifficultyConfig {
   complexity: 'simple' | 'medium' | 'complex'
 }
 
-// ── Held piece (manual placement) ────────────────────────────────────────────
-
-export interface HeldPiece {
-  pieceType: PieceType
-  rotation: Rotation
-}
-
 // ── Game phases ───────────────────────────────────────────────────────────────
 
 export type GamePhase =
@@ -105,8 +90,6 @@ export type GamePhase =
   | 'viewing'
   | 'selecting'
   | 'resolving'
-  | 'manual-placing'
-  | 'scoring'
   | 'game-over'
 
 // ── Full game state ───────────────────────────────────────────────────────────
@@ -119,8 +102,6 @@ export interface GameState {
   grid: Grid
   gaps: Gap[]                 // gaps placed in current puzzle
   selection: SelectionEntry[] // current selection cart
-  carryOvers: CarryOver[]     // locked pieces for next round
-  heldPiece: HeldPiece | null // piece currently held for placement
   phaseStartTime: number      // Date.now() when current phase started
   phaseDuration: number       // ms; 0 = no timer for this phase
   roundScore: RoundScore | null

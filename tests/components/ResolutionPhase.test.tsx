@@ -77,7 +77,7 @@ describe('ResolutionPhase — bad pieces (stamp, reduced motion)', () => {
       lives: 2,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       // O is used; T is left over (bad)
-      selection: [{ pieceType: 'O', lockedCount: 0, freeCount: 1 }, { pieceType: 'T', lockedCount: 0, freeCount: 1 }],
+      selection: [{ pieceType: 'O', freeCount: 1 }, { pieceType: 'T', freeCount: 1 }],
       roundScore: { correctness: 400, speedBonus: 0, efficiencyBonus: 50, total: 450 },
       _resolution: {
         kind: 'partial',
@@ -97,7 +97,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
       phase: 'resolving',
       lives: 2,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
-      selection: [{ pieceType: 'O', lockedCount: 0, freeCount: 1 }],
+      selection: [{ pieceType: 'O', freeCount: 1 }],
       roundScore: { correctness: 600, speedBonus: 0, efficiencyBonus: 100, total: 700 },
       _resolution: {
         kind: 'partial',
@@ -117,7 +117,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
       phase: 'resolving',
       lives: 0,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
-      selection: [{ pieceType: 'O', lockedCount: 0, freeCount: 1 }],
+      selection: [{ pieceType: 'O', freeCount: 1 }],
       roundScore: { correctness: 600, speedBonus: 0, efficiencyBonus: 100, total: 700 },
       _resolution: {
         kind: 'partial',

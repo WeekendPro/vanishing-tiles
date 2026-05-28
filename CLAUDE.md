@@ -3,7 +3,7 @@
 A memory-and-speed puzzle game. The web POC is complete and playable. The eventual goal is a React Native mobile app published to the Apple App Store.
 
 **Run the app:** `npm run dev` → http://localhost:5173  
-**Run tests:** `npm run test` (48 tests, all must pass before any commit)  
+**Run tests:** `npm run test` (76 tests, all must pass before any commit)  
 **Type check:** `npx tsc --noEmit`
 
 ---
@@ -17,8 +17,8 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
 2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
 3. **Resolution:**
-   - **Auto-place** (if the solver confirms the selection exactly fills all gaps): pieces are placed automatically, full scoring.
-   - **Manual-place** (selection doesn't fit): player loses 1 life and manually clicks pieces onto the grid. Leftover pieces carry over to the next round as **locked** pieces.
+   - **Perfect** (solver confirms the selection exactly fills all gaps): pieces fly in automatically, full scoring.
+   - **Partial** (selection doesn't fit): player loses 1 life, the game auto-runs a best-fit placement (good pieces fly in, leftover pieces get a red ✕), and awards partial credit. The next round starts clean — no carry-overs.
 4. **Scoring** — Three pillars:
    - ✓ Correctness: 800 pts (auto-place only)
    - ⚡ Speed bonus: up to 500 pts (auto-place only, based on time remaining)
@@ -28,10 +28,6 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 ### Piece types
 
 `I, O, T, S, Z, J, L` (standard tetrominoes, 4 cells each) + `SINGLE` (1 cell, temptation/decoy piece).
-
-### Carry-overs
-
-Unplaced pieces after manual-place become `lockedCount` entries in the next round's selection cart. Locked pieces cannot be decremented — they must be used or carried forward again.
 
 ---
 
@@ -52,8 +48,8 @@ src/
     GameShell.tsx       — Top bar (round/score/lives), phase router, idle screen
     ViewingPhase.tsx    — Grid + progress bar + Ready button
     SelectingPhase.tsx  — Piece menu + selection cart + Done button
-    PlacingPhase.tsx    — Manual placement: grid, piece tray, Finish Round button
-    ScoringPhase.tsx    — Score breakdown; Next Round / Play Again
+    ResolutionPhase.tsx — Auto-placement animation; perfect/partial badge; Next Round / Game Over CTA
+    ScoringPhase.tsx    — Game Over screen with Play Again button
     Grid.tsx            — 10×8 inline-grid, 28px cells; onCellClick / onCellHover props
     PieceShape.tsx      — Renders a single piece at a given rotation + cell size
     ProgressBar.tsx     — Animated countdown bar
@@ -91,17 +87,13 @@ Zustand 5 uses `useSyncExternalStore` internally. Inline object selectors return
 
 `solver.ts` uses backtracking. The outer piece-type loop must **not** `break` early — it must try all piece types for each empty cell, otherwise the solver is order-dependent and misses valid solutions.
 
-### Carry-over clearing
-
-`finishAutoPlace` must set `carryOvers: []`. If it doesn't, stale carry-overs persist into the next round even after a successful auto-placement.
-
 ### Efficiency bonus guard
 
 When `selectedPieces === 0`, the efficiency ratio must be 0 — not `minPieces / minPieces = 1.0`. Always check `selectedPieces === 0` before computing the ratio.
 
 ### Tests
 
-All 48 tests must pass before committing. Run `npm run test`. Do not skip or modify tests to make them pass unless the spec has genuinely changed.
+All 76 tests must pass before committing. Run `npm run test`. Do not skip or modify tests to make them pass unless the spec has genuinely changed.
 
 ---
 
@@ -110,7 +102,7 @@ All 48 tests must pass before committing. Run `npm run test`. Do not skip or mod
 - **Grid size:** 10 rows × 8 columns (not square; taller than wide)
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
 - **Scoring philosophy:** Reward speed AND precision, not just filling gaps
-- **Lives:** 3 hearts; manual placement costs 1 life
+- **Lives:** 3 hearts; a wrong selection (partial resolution) costs 1 life
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 
 ---

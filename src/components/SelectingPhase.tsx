@@ -35,27 +35,17 @@ export function SelectingPhase() {
           <span className="text-xs text-gray-600">tap selected to decrement</span>
         </div>
         <div className="flex gap-2 flex-wrap min-h-[52px] items-center">
-          {selection.filter(e => e.lockedCount + e.freeCount > 0).map(entry => {
-            const label = entry.lockedCount > 0
-              ? `🔒×${entry.lockedCount}${entry.freeCount > 0 ? ` +${entry.freeCount}` : ''}`
-              : `×${entry.freeCount}`
-            const isLocked = entry.lockedCount > 0 && entry.freeCount === 0
-
-            return (
-              <button
-                key={entry.pieceType}
-                onClick={() => !isLocked && decrementSelection(entry.pieceType)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs
-                  ${isLocked
-                    ? 'border-red-500 bg-red-950 text-red-300 cursor-not-allowed'
-                    : 'border-blue-500 bg-blue-950 text-blue-300 cursor-pointer hover:bg-blue-900'
-                  }`}
-              >
-                <PieceShape pieceType={entry.pieceType} cellSize={11} />
-                <span>{label}</span>
-              </button>
-            )
-          })}
+          {selection.filter(e => e.freeCount > 0).map(entry => (
+            <button
+              key={entry.pieceType}
+              onClick={() => decrementSelection(entry.pieceType)}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg border text-xs
+                border-blue-500 bg-blue-950 text-blue-300 cursor-pointer hover:bg-blue-900"
+            >
+              <PieceShape pieceType={entry.pieceType} cellSize={11} />
+              <span>×{entry.freeCount}</span>
+            </button>
+          ))}
           {selection.length === 0 && (
             <span className="text-xs text-gray-600 italic">No pieces selected</span>
           )}

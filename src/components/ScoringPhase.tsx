@@ -2,21 +2,16 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 
 export function ScoringPhase() {
-  const { roundScore, score, round, nextRound, resetGame, phase } = useGameStore(useShallow(s => ({
+  const { roundScore, score, resetGame } = useGameStore(useShallow(s => ({
     roundScore: s.roundScore,
     score: s.score,
-    round: s.round,
-    nextRound: s.nextRound,
     resetGame: s.resetGame,
-    phase: s.phase,
   })))
-
-  const isGameOver = phase === 'game-over'
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
       <h2 className="text-lg font-bold text-white text-center">
-        {isGameOver ? 'Game Over' : `Round ${round} Complete`}
+        Game Over
       </h2>
 
       {roundScore && (
@@ -36,21 +31,12 @@ export function ScoringPhase() {
         <p className="text-3xl font-bold text-yellow-400">{score.toLocaleString()}</p>
       </div>
 
-      {isGameOver ? (
-        <button
-          onClick={resetGame}
-          className="w-full py-3 bg-red-900 border-2 border-red-500 text-red-300 rounded-xl font-bold"
-        >
-          Play Again
-        </button>
-      ) : (
-        <button
-          onClick={nextRound}
-          className="w-full py-3 bg-green-900 border-2 border-green-500 text-green-300 rounded-xl font-bold"
-        >
-          Next Round →
-        </button>
-      )}
+      <button
+        onClick={resetGame}
+        className="w-full py-3 bg-red-900 border-2 border-red-500 text-red-300 rounded-xl font-bold"
+      >
+        Play Again
+      </button>
     </div>
   )
 }

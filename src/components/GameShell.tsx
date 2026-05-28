@@ -3,7 +3,6 @@ import { useShallow } from 'zustand/shallow'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
-import { PlacingPhase } from './PlacingPhase'
 import { ScoringPhase } from './ScoringPhase'
 
 function Hearts({ count }: { count: number }) {
@@ -54,8 +53,7 @@ export function GameShell() {
         {phase === 'viewing'        && <ViewingPhase />}
         {phase === 'selecting'      && <SelectingPhase />}
         {phase === 'resolving'      && <ResolutionPhase />}
-        {phase === 'manual-placing' && <PlacingPhase />}
-        {(phase === 'scoring' || phase === 'game-over') && <ScoringPhase />}
+        {phase === 'game-over'      && <ScoringPhase />}
       </div>
     </div>
   )
