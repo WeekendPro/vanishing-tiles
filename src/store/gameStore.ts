@@ -5,9 +5,10 @@ import type {
 } from '../types'
 import { ROWS, COLS } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'
-import { solve } from '../engine/solver'
+import { solve, bestFit } from '../engine/solver'
 import { getRotatedCells } from '../engine/pieces'
 import type { Placement } from '../engine/solver'
+import type { Resolution } from '../types'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -45,13 +46,14 @@ interface GameStore extends GameState {
   placePiece: (row: number, col: number) => void
   finishManualPlace: () => void
   nextRound: () => void
+  endGame: () => void
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
   holdPiece: (pieceType: PieceType, rotation: Rotation) => void
   rotatePiece: () => void
   clearHeld: () => void
-  _autoPlaceSolution: Placement[] | null
+  _resolution: Resolution | null
 }
 
 const INITIAL_STATE: GameState = {
@@ -72,9 +74,9 @@ const INITIAL_STATE: GameState = {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
-  _autoPlaceSolution: null,
+  _resolution: null,
 
-  resetGame: () => set({ ...INITIAL_STATE, _autoPlaceSolution: null }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null }),
 
   startGame: () => {
     const { round, carryOvers } = get()
@@ -97,7 +99,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roundScore: null,
       phaseStartTime: Date.now(),
       phaseDuration: difficulty.viewDuration,
-      _autoPlaceSolution: null,
+      _resolution: null,
     })
   },
 
@@ -159,7 +161,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       set({
         phase: 'resolving',
-        _autoPlaceSolution: result.placements,
+        _resolution: { kind: 'perfect', placements: result.placements ?? [], coverage: 1 },
         roundScore: {
           correctness: CORRECTNESS_POINTS,
           speedBonus,
@@ -169,19 +171,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       })
     } else {
       const newLives = lives - 1
+      const fit = bestFit(pieceCount, grid)
+      const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
+
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
       const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
+
+      const correctness = Math.round(CORRECTNESS_POINTS * coverage)
+      const speedBonus = Math.round(MAX_SPEED_BONUS * (timeRemaining / difficulty.selectDuration) * coverage)
       const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
 
       set({
-        phase: newLives <= 0 ? 'game-over' : 'manual-placing',
+        phase: 'resolving',
         lives: Math.max(0, newLives),
+        _resolution: { kind: 'partial', placements: fit.placements, coverage },
         roundScore: {
-          correctness: 0,
-          speedBonus: 0,
+          correctness,
+          speedBonus,
           efficiencyBonus,
-          total: efficiencyBonus,
+          total: correctness + speedBonus + efficiencyBonus,
         },
       })
     }
@@ -264,4 +273,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(state => ({ round: state.round + 1 }))
     get().startGame()
   },
+
+  endGame: () => set({ phase: 'game-over' }),
 }))

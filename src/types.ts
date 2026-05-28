@@ -1,3 +1,5 @@
+import type { Placement } from './engine/solver'
+
 // ── Pieces ──────────────────────────────────────────────────────────────────
 
 export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L' | 'SINGLE'
@@ -61,6 +63,14 @@ export interface RoundScore {
   speedBonus: number
   efficiencyBonus: number
   total: number
+}
+
+// ── Resolution (drives the resolving phase animation) ─────────────────────────
+
+export interface Resolution {
+  kind: 'perfect' | 'partial'
+  placements: Placement[]
+  coverage: number   // 1 for perfect; filledCells/totalCells for partial
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

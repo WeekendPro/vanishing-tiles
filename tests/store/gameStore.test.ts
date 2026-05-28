@@ -98,24 +98,53 @@ describe('submitSelection — correct', () => {
   })
 })
 
-describe('submitSelection — incorrect', () => {
-  it('transitions to manual-placing and deducts a life', () => {
+describe('submitSelection — perfect', () => {
+  it('sets resolution kind "perfect" with coverage 1', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('resolving')
+    expect(s._resolution?.kind).toBe('perfect')
+    expect(s._resolution?.coverage).toBe(1)
+  })
+})
+
+describe('submitSelection — partial', () => {
+  it('goes to resolving, deducts a life, and awards partial credit', () => {
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().endViewing())
-    act(() => useGameStore.getState().incrementSelection('SINGLE'))
+    act(() => useGameStore.getState().incrementSelection('SINGLE')) // 1 cell, never a full fill
     act(() => useGameStore.getState().submitSelection())
-    expect(useGameStore.getState().phase).toBe('manual-placing')
-    expect(useGameStore.getState().lives).toBe(2)
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('resolving')
+    expect(s._resolution?.kind).toBe('partial')
+    expect(s.lives).toBe(2)
+    expect(s._resolution!.placements.length).toBeGreaterThan(0) // the SINGLE lands somewhere
+    expect(s._resolution!.coverage).toBeGreaterThan(0)
+    expect(s.roundScore!.correctness).toBeGreaterThan(0)        // partial credit, not zero
+    expect(s._resolution!.coverage).toBeLessThan(1)
   })
 })
 
 describe('lives and game over', () => {
-  it('game over when lives reach 0', () => {
+  it('a wrong selection on the last life routes through resolving (not game-over)', () => {
     useGameStore.setState({ lives: 1 })
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().endViewing())
     act(() => useGameStore.getState().incrementSelection('SINGLE'))
     act(() => useGameStore.getState().submitSelection())
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('resolving')
+    expect(s.lives).toBe(0)
+    expect(s._resolution?.kind).toBe('partial')
+  })
+
+  it('endGame transitions to game-over', () => {
+    useGameStore.setState({ lives: 0, phase: 'resolving' })
+    act(() => useGameStore.getState().endGame())
     expect(useGameStore.getState().phase).toBe('game-over')
   })
 })
@@ -141,7 +170,7 @@ describe('applyPlacement', () => {
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
     act(() => useGameStore.getState().submitSelection())
 
-    const solution = useGameStore.getState()._autoPlaceSolution
+    const solution = useGameStore.getState()._resolution!.placements
     expect(solution).not.toBeNull()
     const firstPlacement = solution![0]
 
@@ -160,7 +189,7 @@ describe('applyPlacement', () => {
     act(() => useGameStore.getState().endViewing())
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
     act(() => useGameStore.getState().submitSelection())
-    const solution = useGameStore.getState()._autoPlaceSolution!
+    const solution = useGameStore.getState()._resolution!.placements
 
     act(() => useGameStore.getState().applyPlacement(solution[0]))
     expect(useGameStore.getState().phase).toBe('resolving')

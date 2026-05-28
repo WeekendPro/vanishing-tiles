@@ -18,15 +18,16 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800   // 3 rows × 300ms + round total at 0.9s + grand total at 1.2s + 0.4s count + buffer
 
 export function ResolutionPhase() {
-  const { selection, solution, applyPlacement, roundScore, commitRoundScore, nextRound } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
-      solution: s._autoPlaceSolution,
+      resolution: s._resolution,
       applyPlacement: s.applyPlacement,
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
       nextRound: s.nextRound,
     })))
+  const solution = resolution?.placements ?? null
 
   const slots = useMemo(() => expandCartSlots(selection), [selection])
   const placementToSlot = useMemo(
