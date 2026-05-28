@@ -70,6 +70,27 @@ function emptyAt(grid: Grid, cells: [number, number][]): Grid {
   return grid
 }
 
+describe('ResolutionPhase — bad pieces (stamp, reduced motion)', () => {
+  it('renders a red X on each unused (bad) chip', () => {
+    useGameStore.setState({
+      phase: 'resolving',
+      lives: 2,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      // O is used; T is left over (bad)
+      selection: [{ pieceType: 'O', lockedCount: 0, freeCount: 1 }, { pieceType: 'T', lockedCount: 0, freeCount: 1 }],
+      roundScore: { correctness: 400, speedBonus: 0, efficiencyBonus: 50, total: 450 },
+      _resolution: {
+        kind: 'partial',
+        coverage: 0.5,
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+    render(<ResolutionPhase />)
+    expect(screen.getAllByLabelText('rejected piece')).toHaveLength(1)
+  })
+})
+
 describe('ResolutionPhase — partial (reduced motion)', () => {
   it('shows the amber "So close!" badge for high coverage', () => {
     useGameStore.setState({
