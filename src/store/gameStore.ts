@@ -48,6 +48,7 @@ interface GameStore extends GameState {
   applyPlacement: (placement: Placement) => void
   commitRoundScore: () => void
   nextRound: () => void
+  retryRound: () => void
   endGame: () => void
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
@@ -211,13 +212,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(state => {
       if (!state.roundScore) return {}
       return {
-        score: state.score + state.roundScore.total,
+        score: Math.max(0, state.score + state.roundScore.total),
       }
     })
   },
 
   nextRound: () => {
     set(state => ({ round: state.round + 1 }))
+    get().startGame()
+  },
+
+  retryRound: () => {
     get().startGame()
   },
 

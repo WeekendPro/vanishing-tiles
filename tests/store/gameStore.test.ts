@@ -352,3 +352,33 @@ describe('submitSelection — failure penalty', () => {
     expect(rs.correctness).toBe(-400)
   })
 })
+
+describe('commitRoundScore', () => {
+  it('floors the running score at 0 on a net-negative round', () => {
+    useGameStore.setState({
+      score: 50,
+      roundScore: { correctness: -200, speedBonus: 0, efficiencyBonus: 0, total: -200 },
+    })
+    act(() => useGameStore.getState().commitRoundScore())
+    expect(useGameStore.getState().score).toBe(0)   // 50 + (-200) = -150 → floored to 0
+  })
+})
+
+describe('retryRound', () => {
+  it('regenerates the puzzle at the same round and returns to viewing', () => {
+    act(() => useGameStore.getState().startGame())
+    const before = useGameStore.getState().round
+    act(() => useGameStore.getState().retryRound())
+    expect(useGameStore.getState().round).toBe(before)   // round does NOT advance
+    expect(useGameStore.getState().phase).toBe('viewing')
+  })
+})
+
+describe('nextRound', () => {
+  it('advances the round number', () => {
+    act(() => useGameStore.getState().startGame())
+    const before = useGameStore.getState().round
+    act(() => useGameStore.getState().nextRound())
+    expect(useGameStore.getState().round).toBe(before + 1)
+  })
+})
