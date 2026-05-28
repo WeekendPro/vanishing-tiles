@@ -14,6 +14,8 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 
 ### Round loop
 
+Every round — the first start, a **Next Round →**, and a **Try Again ↺** — opens with a brief **countdown**: a bold "Round N" with a 3-2-1 that fades in and out. The view timer does not start until the countdown finishes (`startGame` → `countdown` phase → `beginViewing` → `viewing`).
+
 1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
 2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
 3. **Resolution:**
@@ -47,6 +49,7 @@ src/
     solver.ts           — solve(pieceCount, grid, gaps) backtracking solver
   components/
     GameShell.tsx       — Top bar (round/score/lives), phase router, idle screen
+    CountdownPhase.tsx  — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
     ViewingPhase.tsx    — Grid + progress bar + Ready button
     SelectingPhase.tsx  — Piece menu + selection cart + Done button
     ResolutionPhase/    — Auto-placement animation; perfect/failure badge; Try Again / Next Round / Game Over CTA (index.tsx + PartialBadge, CelebrationBadge, ScorePanel, NextRoundButton, FlyerOverlay, SelectionCart)
@@ -62,7 +65,7 @@ Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382
 
 ### Difficulty table
 
-`DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry): the view timer eases gently (~300ms/round from 5000ms, floored at 2500ms) and `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run.
+`DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry). The view timer starts at **10000ms** and eases down *within* each complexity tier, but **bumps back up at every tier step-up** (rounds 4 and 7) to cushion the difficulty leap — a cumulative +2000ms per tier. So it is intentionally **non-monotonic** (10000→8100, jump to 9300→8000, jump to 9500→6500) and the deep-game floor is **6500ms**. `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run.
 
 ---
 

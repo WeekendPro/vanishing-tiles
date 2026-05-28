@@ -27,9 +27,14 @@ describe('initial state', () => {
 })
 
 describe('startGame', () => {
-  it('transitions to viewing phase', () => {
+  it('opens the round on the countdown phase', () => {
     act(() => useGameStore.getState().startGame())
-    expect(useGameStore.getState().phase).toBe('viewing')
+    expect(useGameStore.getState().phase).toBe('countdown')
+  })
+
+  it('does not start the view timer until the countdown ends', () => {
+    act(() => useGameStore.getState().startGame())
+    expect(useGameStore.getState().phaseDuration).toBe(0)
   })
 
   it('generates a grid', () => {
@@ -40,6 +45,17 @@ describe('startGame', () => {
   it('generates gaps', () => {
     act(() => useGameStore.getState().startGame())
     expect(useGameStore.getState().gaps.length).toBeGreaterThan(0)
+  })
+})
+
+describe('beginViewing', () => {
+  it('transitions from countdown to viewing and starts the view timer', () => {
+    act(() => useGameStore.getState().startGame())
+    expect(useGameStore.getState().phase).toBe('countdown')
+    act(() => useGameStore.getState().beginViewing())
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('viewing')
+    expect(s.phaseDuration).toBe(s.difficulty.viewDuration)
   })
 })
 
@@ -136,14 +152,14 @@ describe('lives and game over', () => {
     expect(s._resolution?.kind).toBe('partial')
   })
 
-  it('newGame restarts at round 1 with full lives, score 0, in viewing', () => {
+  it('newGame restarts at round 1 with full lives, score 0, on the countdown', () => {
     useGameStore.setState({ round: 7, score: 5000, lives: 0, phase: 'resolving' })
     act(() => useGameStore.getState().newGame())
     const s = useGameStore.getState()
     expect(s.round).toBe(1)
     expect(s.lives).toBe(3)
     expect(s.score).toBe(0)
-    expect(s.phase).toBe('viewing')
+    expect(s.phase).toBe('countdown')
   })
 })
 
@@ -229,23 +245,36 @@ describe('commitRoundScore', () => {
 })
 
 describe('DIFFICULTY_TABLE', () => {
-  it('round 1 still starts at a 5000ms view duration', () => {
-    expect(DIFFICULTY_TABLE[0].viewDuration).toBe(5000)
+  it('round 1 starts at a 10000ms view duration', () => {
+    expect(DIFFICULTY_TABLE[0].viewDuration).toBe(10000)
   })
 
   it('has 15 rounds', () => {
     expect(DIFFICULTY_TABLE).toHaveLength(15)
   })
 
-  it('eases the view timer gently — round 2 is only ~300ms faster', () => {
-    expect(DIFFICULTY_TABLE[1].viewDuration).toBe(4700)
+  it('eases the view timer gently — round 2 is ~1000ms faster', () => {
+    expect(DIFFICULTY_TABLE[1].viewDuration).toBe(9000)
   })
 
-  it('view duration never increases and floors at 2500ms', () => {
+  it('view duration eases down within each complexity tier', () => {
     for (let i = 1; i < DIFFICULTY_TABLE.length; i++) {
-      expect(DIFFICULTY_TABLE[i].viewDuration).toBeLessThanOrEqual(DIFFICULTY_TABLE[i - 1].viewDuration)
+      if (DIFFICULTY_TABLE[i].complexity === DIFFICULTY_TABLE[i - 1].complexity) {
+        expect(DIFFICULTY_TABLE[i].viewDuration).toBeLessThanOrEqual(DIFFICULTY_TABLE[i - 1].viewDuration)
+      }
     }
-    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].viewDuration).toBe(2500)
+  })
+
+  it('cushions each complexity step-up by bumping view time back up', () => {
+    for (let i = 1; i < DIFFICULTY_TABLE.length; i++) {
+      if (DIFFICULTY_TABLE[i].complexity !== DIFFICULTY_TABLE[i - 1].complexity) {
+        expect(DIFFICULTY_TABLE[i].viewDuration).toBeGreaterThan(DIFFICULTY_TABLE[i - 1].viewDuration)
+      }
+    }
+  })
+
+  it('the deep-game view floor is 6500ms', () => {
+    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].viewDuration).toBe(6500)
   })
 
   it('gap count climbs across the run so the board stays full', () => {
@@ -369,12 +398,12 @@ describe('commitRoundScore', () => {
 })
 
 describe('retryRound', () => {
-  it('regenerates the puzzle at the same round and returns to viewing', () => {
+  it('regenerates the puzzle at the same round and re-opens on the countdown', () => {
     act(() => useGameStore.getState().startGame())
     const before = useGameStore.getState().round
     act(() => useGameStore.getState().retryRound())
     expect(useGameStore.getState().round).toBe(before)   // round does NOT advance
-    expect(useGameStore.getState().phase).toBe('viewing')
+    expect(useGameStore.getState().phase).toBe('countdown')
   })
 })
 

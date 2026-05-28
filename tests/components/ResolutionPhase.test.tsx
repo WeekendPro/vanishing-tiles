@@ -203,7 +203,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     expect(screen.getByText(/Try Again/)).toBeInTheDocument()
   })
 
-  it('Try Again regenerates the round without advancing, returning to viewing', async () => {
+  it('Try Again regenerates the round without advancing, re-opening on the countdown', async () => {
     const user = userEvent.setup()
     act(() => useGameStore.getState().startGame())   // establishes round 1 + a grid
     useGameStore.setState({
@@ -223,8 +223,8 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     render(<ResolutionPhase />)
     const before = useGameStore.getState().round
     await user.click(screen.getByText(/Try Again/))
-    expect(useGameStore.getState().round).toBe(before)     // same round
-    expect(useGameStore.getState().phase).toBe('viewing')  // fresh puzzle
+    expect(useGameStore.getState().round).toBe(before)       // same round
+    expect(useGameStore.getState().phase).toBe('countdown')  // fresh puzzle, counts in
   })
 
   it('shows a "Start New Game" CTA on the last life, and clicking it restarts at round 1', async () => {
@@ -250,7 +250,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     const s = useGameStore.getState()
     expect(s.round).toBe(1)
     expect(s.lives).toBe(3)
-    expect(s.phase).toBe('viewing')
+    expect(s.phase).toBe('countdown')
   })
 })
 

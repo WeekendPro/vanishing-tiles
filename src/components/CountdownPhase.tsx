@@ -1,0 +1,60 @@
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useGameStore } from '../store/gameStore'
+import { useShallow } from 'zustand/shallow'
+
+const STEP_MS = 800   // how long each digit holds before the next flashes in
+const EXIT_MS = 350   // let the final "1" finish fading before the grid appears
+
+export function CountdownPhase() {
+  const { round, beginViewing } = useGameStore(useShallow(s => ({
+    round: s.round,
+    beginViewing: s.beginViewing,
+  })))
+  const reduce = useReducedMotion()
+  const [count, setCount] = useState(3)
+
+  useEffect(() => {
+    if (count <= 0) {
+      const t = window.setTimeout(beginViewing, EXIT_MS)
+      return () => clearTimeout(t)
+    }
+    const t = window.setTimeout(() => setCount(c => c - 1), STEP_MS)
+    return () => clearTimeout(t)
+  }, [count, beginViewing])
+
+  // SF Pro Rounded on the Apple targets (macOS/iOS) with a graceful fallback.
+  const rounded = { fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' }
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-6 select-none">
+      <motion.h2
+        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+        animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
+        style={rounded}
+        className="text-6xl font-black tracking-tight text-white"
+      >
+        Round {round}
+      </motion.h2>
+
+      <div className="relative flex h-44 w-44 items-center justify-center">
+        <AnimatePresence>
+          {count > 0 && (
+            <motion.span
+              key={count}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.3 }}
+              animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.9 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              style={rounded}
+              className="absolute font-black leading-none text-cyan-300 text-[11rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
+            >
+              {count}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}

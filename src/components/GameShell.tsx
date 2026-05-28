@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
+import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
@@ -49,6 +50,7 @@ export function GameShell() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
+        {phase === 'countdown'      && <CountdownPhase />}
         {phase === 'viewing'        && <ViewingPhase />}
         {phase === 'selecting'      && <SelectingPhase />}
         {phase === 'resolving'      && <ResolutionPhase />}

@@ -8,22 +8,25 @@ import { solve, bestFit } from '../engine/solver'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
+// viewDuration eases down WITHIN each complexity tier, but bumps UP at every
+// tier step-up (rounds 4 and 7) to cushion the difficulty leap — a cumulative
+// +2000ms per tier over the smooth 10000→…→base curve.
 export const DIFFICULTY_TABLE: DifficultyConfig[] = [
-  { viewDuration: 5000, selectDuration: 15000, placeDuration: 60000, gapCount:  3, complexity: 'simple'  },
-  { viewDuration: 4700, selectDuration: 15000, placeDuration: 60000, gapCount:  4, complexity: 'simple'  },
-  { viewDuration: 4400, selectDuration: 14000, placeDuration: 60000, gapCount:  5, complexity: 'simple'  },
-  { viewDuration: 4100, selectDuration: 14000, placeDuration: 60000, gapCount:  6, complexity: 'medium'  },
-  { viewDuration: 3800, selectDuration: 13000, placeDuration: 60000, gapCount:  7, complexity: 'medium'  },
-  { viewDuration: 3500, selectDuration: 13000, placeDuration: 60000, gapCount:  8, complexity: 'medium'  },
-  { viewDuration: 3300, selectDuration: 12000, placeDuration: 60000, gapCount:  9, complexity: 'complex' },
-  { viewDuration: 3100, selectDuration: 12000, placeDuration: 60000, gapCount: 10, complexity: 'complex' },
-  { viewDuration: 2900, selectDuration: 11000, placeDuration: 60000, gapCount: 11, complexity: 'complex' },
-  { viewDuration: 2800, selectDuration: 11000, placeDuration: 60000, gapCount: 12, complexity: 'complex' },
-  { viewDuration: 2700, selectDuration: 10000, placeDuration: 60000, gapCount: 13, complexity: 'complex' },
-  { viewDuration: 2600, selectDuration: 10000, placeDuration: 60000, gapCount: 14, complexity: 'complex' },
-  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 15, complexity: 'complex' },
-  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
-  { viewDuration: 2500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
+  { viewDuration: 10000, selectDuration: 15000, placeDuration: 60000, gapCount:  3, complexity: 'simple'  },
+  { viewDuration:  9000, selectDuration: 15000, placeDuration: 60000, gapCount:  4, complexity: 'simple'  },
+  { viewDuration:  8100, selectDuration: 14000, placeDuration: 60000, gapCount:  5, complexity: 'simple'  },
+  { viewDuration:  9300, selectDuration: 14000, placeDuration: 60000, gapCount:  6, complexity: 'medium'  },
+  { viewDuration:  8600, selectDuration: 13000, placeDuration: 60000, gapCount:  7, complexity: 'medium'  },
+  { viewDuration:  8000, selectDuration: 13000, placeDuration: 60000, gapCount:  8, complexity: 'medium'  },
+  { viewDuration:  9500, selectDuration: 12000, placeDuration: 60000, gapCount:  9, complexity: 'complex' },
+  { viewDuration:  9000, selectDuration: 12000, placeDuration: 60000, gapCount: 10, complexity: 'complex' },
+  { viewDuration:  8500, selectDuration: 11000, placeDuration: 60000, gapCount: 11, complexity: 'complex' },
+  { viewDuration:  8100, selectDuration: 11000, placeDuration: 60000, gapCount: 12, complexity: 'complex' },
+  { viewDuration:  7700, selectDuration: 10000, placeDuration: 60000, gapCount: 13, complexity: 'complex' },
+  { viewDuration:  7300, selectDuration: 10000, placeDuration: 60000, gapCount: 14, complexity: 'complex' },
+  { viewDuration:  7000, selectDuration:  9000, placeDuration: 60000, gapCount: 15, complexity: 'complex' },
+  { viewDuration:  6700, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
+  { viewDuration:  6500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
 ]
 
 function getDifficulty(round: number): DifficultyConfig {
@@ -43,6 +46,7 @@ const MAX_PENALTY = 400        // failed-round penalty floor (never worse than -
 
 interface GameStore extends GameState {
   startGame: () => void
+  beginViewing: () => void
   endViewing: () => void
   submitSelection: () => void
   applyPlacement: (placement: Placement) => void
@@ -81,16 +85,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const difficulty = getDifficulty(round)
     const { grid, gaps } = generatePuzzle(difficulty)
 
+    // The round opens with a 3-2-1 countdown; the view timer starts only
+    // once beginViewing fires, so memorization time isn't eaten by the count.
     set({
-      phase: 'viewing',
+      phase: 'countdown',
       grid,
       gaps,
       selection: [],
       difficulty,
       roundScore: null,
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      _resolution: null,
+    })
+  },
+
+  beginViewing: () => {
+    const { difficulty } = get()
+    set({
+      phase: 'viewing',
       phaseStartTime: Date.now(),
       phaseDuration: difficulty.viewDuration,
-      _resolution: null,
     })
   },
 
