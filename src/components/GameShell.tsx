@@ -29,7 +29,7 @@ export function GameShell() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-dvh bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-2">Mind The Gap</h1>
           <p className="text-gray-400 mb-8">Memorize the gaps. Fill them fast.</p>
@@ -52,8 +52,8 @@ export function GameShell() {
   const centerContent = phase === 'countdown'
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <div className="flex justify-between items-center px-4 py-3 border-b border-gray-800">
+    <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
+      <div className="sticky top-0 z-30 bg-gray-950 flex justify-between items-center px-4 py-3 border-b border-gray-800">
         <span className="text-sm text-gray-400">Round <strong className="text-white">{round}</strong></span>
         <span className="text-sm text-yellow-400 font-bold">{score.toLocaleString()}</span>
         <Hearts count={lives} />
