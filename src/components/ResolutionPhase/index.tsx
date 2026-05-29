@@ -174,44 +174,59 @@ export function ResolutionPhase() {
   }
 
   return (
-    <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center">
-      {/* Grid + centered badge overlay. Grid dims when the badge appears so
-          the green checkmark pops visually. */}
-      <div className="relative">
-        <div className={`transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
-          <Grid
-            cellRef={(row, col, el) => {
-              if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
-            }}
-          />
+    <>
+      {/* pb-24 reserves clearance so the score panel never hides behind the
+          bottom-pinned action button. */}
+      <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center pb-24">
+        {/* Board with the badge centered over it. The grid dims at the end of the
+            round (~40%) so the badge pops against it. */}
+        <div className="relative">
+          <div className={`transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
+            <Grid
+              cellRef={(row, col, el) => {
+                if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
+              }}
+            />
+          </div>
+          {resolution?.kind === 'partial'
+            ? <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />
+            : <CelebrationBadge show={badgeShown} />}
         </div>
-        {resolution?.kind === 'partial'
-          ? <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />
-          : <CelebrationBadge show={badgeShown} />}
+
+        {/* The cart is the launch pad for the fly-in AND the record of the
+            attempt — consumed pieces dim, rejected pieces keep a red ✕. */}
+        <SelectionCart ref={cartRef} slots={slots} consumed={consumed} rejected={rejected} />
+
+        {currentFlyer && containerRect && stage === 'flying' && (
+          <FlyerOverlay
+            containerRect={containerRect}
+            flyers={[currentFlyer]}
+            onFlyerLanded={handleFlyerLanded}
+          />
+        )}
+
+        {/* Score breakdown flows in normal document flow beneath the board. */}
+        {roundScore && (
+          <ScorePanel
+            roundScore={roundScore}
+            grandTotal={grandTotal}
+            show={stage === 'scoring' || stage === 'cta'}
+            accuracyTier={accuracyTier}
+            isFailure={isFailure}
+            speedSlow={speedSlow}
+          />
+        )}
       </div>
 
-      <SelectionCart ref={cartRef} slots={slots} consumed={consumed} rejected={rejected} />
-
-      {currentFlyer && containerRect && stage === 'flying' && (
-        <FlyerOverlay
-          containerRect={containerRect}
-          flyers={[currentFlyer]}
-          onFlyerLanded={handleFlyerLanded}
-        />
+      {/* Action button pinned to the bottom of the screen — always tappable
+          without scrolling, with a gradient scrim so content scrolls under it. */}
+      {stage === 'cta' && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
+          <div className="w-full max-w-sm pointer-events-auto">
+            <NextRoundButton show onClick={handleCta} label={ctaLabel} variant={ctaVariant} />
+          </div>
+        </div>
       )}
-
-      {roundScore && (
-        <ScorePanel
-          roundScore={roundScore}
-          grandTotal={grandTotal}
-          show={stage === 'scoring' || stage === 'cta'}
-          accuracyTier={accuracyTier}
-          isFailure={isFailure}
-          speedSlow={speedSlow}
-        />
-      )}
-
-      <NextRoundButton show={stage === 'cta'} onClick={handleCta} label={ctaLabel} variant={ctaVariant} />
-    </div>
+    </>
   )
 }
