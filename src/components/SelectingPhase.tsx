@@ -3,19 +3,17 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '../engine/pieces'
 import { PieceShape } from './PieceShape'
-import { ProgressBar } from './ProgressBar'
 import type { PieceType } from '../types'
 
 export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
-    submitSelection, phaseStartTime, phaseDuration,
+    submitSelection, phaseDuration,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
     decrementSelection: s.decrementSelection,
     submitSelection: s.submitSelection,
-    phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
   })))
 
@@ -26,8 +24,6 @@ export function SelectingPhase() {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
-      <ProgressBar startTime={phaseStartTime} duration={phaseDuration} color="bg-green-400" />
-
       {/* Selection box */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
         <div className="flex justify-between items-center mb-2">

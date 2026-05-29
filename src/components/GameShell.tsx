@@ -4,6 +4,7 @@ import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
+import { ProgressBar } from './ProgressBar'
 
 function Hearts({ count }: { count: number }) {
   return (
@@ -16,12 +17,14 @@ function Hearts({ count }: { count: number }) {
 }
 
 export function GameShell() {
-  const { phase, round, score, lives, startGame } = useGameStore(useShallow(s => ({
+  const { phase, round, score, lives, startGame, phaseStartTime, phaseDuration } = useGameStore(useShallow(s => ({
     phase: s.phase,
     round: s.round,
     score: s.score,
     lives: s.lives,
     startGame: s.startGame,
+    phaseStartTime: s.phaseStartTime,
+    phaseDuration: s.phaseDuration,
   })))
 
   if (phase === 'idle') {
@@ -41,6 +44,13 @@ export function GameShell() {
     )
   }
 
+  const showTimer = phase === 'viewing' || phase === 'selecting'
+  // Countdown is a full-screen flourish (keep it centered). Every gameplay phase
+  // anchors its content to the top so the grid sits high and — crucially — holds
+  // the SAME vertical position across reveal → viewing → resolving (no shift when
+  // the resolution UI appears).
+  const centerContent = phase === 'countdown'
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
       <div className="flex justify-between items-center px-4 py-3 border-b border-gray-800">
@@ -49,7 +59,21 @@ export function GameShell() {
         <Hearts count={lives} />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
+      {/* Timer bar docked directly beneath the metadata bar. The 6px slot is
+          reserved in EVERY phase so the grid below never shifts when the timer
+          appears (viewing/selecting) or disappears (reveal/resolve). */}
+      <div className="h-1.5">
+        {showTimer && (
+          <ProgressBar
+            startTime={phaseStartTime}
+            duration={phaseDuration}
+            color={phase === 'viewing' ? 'bg-cyan-400' : 'bg-green-400'}
+            rounded="rounded-none"
+          />
+        )}
+      </div>
+
+      <div className={`flex-1 flex justify-center px-4 pb-4 ${centerContent ? 'items-center pt-4' : 'items-start pt-8'}`}>
         {phase === 'countdown'      && <CountdownPhase />}
         {phase === 'viewing'        && <ViewingPhase />}
         {phase === 'selecting'      && <SelectingPhase />}

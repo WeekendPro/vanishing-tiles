@@ -14,7 +14,9 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 
 ### Round loop
 
-Every round — the first start, a **Next Round →**, and a **Try Again ↺** — opens with a brief **countdown**: a bold "Round N" with a 3-2-1 that fades in and out. The view timer does not start until the countdown finishes (`startGame` → `countdown` phase → `beginViewing` → `viewing`).
+Every round — the first start, a **Next Round →**, and a **Try Again ↺** — opens with a brief **countdown** (bold "Round N" with a 3-2-1 fade), which is a **pre-roll** (the view timer starts only when `viewing` begins, so the countdown never costs memorize time). Flow: `startGame` → `countdown` → `beginViewing` → `viewing`.
+
+When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the memorization timer: a soft, cool-white glare band sweeps diagonally once, **masked to the gap shapes** (`GapShimmer.tsx`) so the light is only visible where it crosses a gap, never the filled board. It uses no piece colors and doesn't touch game state — purely a subtle visual crutch that draws the eye to the gap shapes. The gaps are visible from the start; the timer runs the whole time.
 
 1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
 2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
@@ -50,7 +52,8 @@ src/
   components/
     GameShell.tsx       — Top bar (round/score/lives), phase router, idle screen
     CountdownPhase.tsx  — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
-    ViewingPhase.tsx    — Grid + progress bar + Ready button
+    GapShimmer.tsx      — One-time glare sweep masked to the gap shapes; overlaid on the viewing grid (no game-state change)
+    ViewingPhase.tsx    — Grid + GapShimmer overlay + Ready button (timer bar lives in GameShell)
     SelectingPhase.tsx  — Piece menu + selection cart + Done button
     ResolutionPhase/    — Auto-placement animation; perfect/failure badge; Try Again / Next Round / Game Over CTA (index.tsx + PartialBadge, CelebrationBadge, ScorePanel, NextRoundButton, FlyerOverlay, SelectionCart)
     ScoringPhase.tsx    — Game Over screen with Play Again button
