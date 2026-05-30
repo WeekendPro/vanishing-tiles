@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useGameStore, DIFFICULTY_TABLE } from '../../src/store/gameStore'
+import { useGameStore, DIFFICULTY_TABLE, MAX_SPEED_BONUS } from '../../src/store/gameStore'
 import { act } from '@testing-library/react'
 import type { Grid, Cell, PieceType, Gap } from '../../src/types'
 
@@ -173,6 +173,49 @@ describe('scoring', () => {
     // submitSelection already sets roundScore for the auto-place path
     const { roundScore } = useGameStore.getState()
     expect(roundScore?.correctness).toBeGreaterThan(0)
+  })
+})
+
+describe('speed bonus — viewing + selection', () => {
+  it('is maximal when both viewing and selection are instant', () => {
+    vi.setSystemTime(0)
+    act(() => useGameStore.getState().startGame())
+    act(() => useGameStore.getState().beginViewing())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    const s = useGameStore.getState()
+    expect(s._resolution?.kind).toBe('perfect')
+    expect(s.roundScore!.speedBonus).toBe(MAX_SPEED_BONUS)
+  })
+
+  it('counts VIEWING speed: burning the full view time halves the bonus even with instant selection', () => {
+    vi.setSystemTime(0)
+    act(() => useGameStore.getState().startGame())
+    act(() => useGameStore.getState().beginViewing())
+    const { gaps, difficulty } = useGameStore.getState()
+    vi.setSystemTime(difficulty.viewDuration)            // use ALL the viewing time
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection()) // instant selection
+    const s = useGameStore.getState()
+    expect(s._resolution?.kind).toBe('perfect')
+    expect(s.roundScore!.speedBonus).toBe(Math.round(MAX_SPEED_BONUS * 0.5))
+  })
+
+  it('counts SELECTION speed: burning the full select time halves the bonus even with an instant Ready', () => {
+    vi.setSystemTime(0)
+    act(() => useGameStore.getState().startGame())
+    act(() => useGameStore.getState().beginViewing())
+    const { gaps, difficulty } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())      // instant Ready → full view time saved
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    vi.setSystemTime(difficulty.selectDuration)          // use ALL the selecting time
+    act(() => useGameStore.getState().submitSelection())
+    const s = useGameStore.getState()
+    expect(s._resolution?.kind).toBe('perfect')
+    expect(s.roundScore!.speedBonus).toBe(Math.round(MAX_SPEED_BONUS * 0.5))
   })
 })
 

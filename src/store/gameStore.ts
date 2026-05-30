@@ -70,6 +70,7 @@ const INITIAL_STATE: GameState = {
   selection: [],
   phaseStartTime: 0,
   phaseDuration: 0,
+  viewTimeRemaining: 0,
   roundScore: null,
   difficulty: DIFFICULTY_TABLE[0],
 }
@@ -96,6 +97,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roundScore: null,
       phaseStartTime: 0,
       phaseDuration: 0,
+      viewTimeRemaining: 0,
       _resolution: null,
     })
   },
@@ -110,11 +112,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   endViewing: () => {
-    const { difficulty } = get()
+    const { difficulty, phaseStartTime } = get()
+    // Capture the view time the player saved by hitting "Ready" early so it can
+    // feed the Speed bonus alongside selection time. (Timer expiry ⇒ ~0 saved.)
+    const viewElapsed = Date.now() - phaseStartTime
+    const viewTimeRemaining = Math.max(0, difficulty.viewDuration - viewElapsed)
     set({
       phase: 'selecting',
       phaseStartTime: Date.now(),
       phaseDuration: difficulty.selectDuration,
+      viewTimeRemaining,
     })
   },
 
@@ -147,7 +154,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   submitSelection: () => {
-    const { selection, grid, gaps, lives, difficulty, phaseStartTime } = get()
+    const { selection, grid, gaps, lives, difficulty, phaseStartTime, viewTimeRemaining } = get()
 
     const pieceCount: Partial<Record<PieceType, number>> = {}
     for (const entry of selection) {
@@ -156,13 +163,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const result = solve(pieceCount, grid, gaps)
-    const timeElapsed = Date.now() - phaseStartTime
-    const timeRemaining = Math.max(0, difficulty.selectDuration - timeElapsed)
+    const selectElapsed = Date.now() - phaseStartTime
+    const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
 
     if (result.solvable) {
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      const speedBonus = Math.round(MAX_SPEED_BONUS * (timeRemaining / difficulty.selectDuration))
+      // Speed rewards saving time in BOTH phases — fast memorization (viewing)
+      // and fast selection — each worth up to half the bonus.
+      const viewRatio = difficulty.viewDuration > 0 ? viewTimeRemaining / difficulty.viewDuration : 0
+      const selectRatio = difficulty.selectDuration > 0 ? selectTimeRemaining / difficulty.selectDuration : 0
+      const speedBonus = Math.round(MAX_SPEED_BONUS * 0.5 * (viewRatio + selectRatio))
       const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
       const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
 

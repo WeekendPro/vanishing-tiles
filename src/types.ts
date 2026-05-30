@@ -107,6 +107,7 @@ export interface GameState {
   selection: SelectionEntry[] // current selection cart
   phaseStartTime: number      // Date.now() when current phase started
   phaseDuration: number       // ms; 0 = no timer for this phase
+  viewTimeRemaining: number   // ms of view time left when viewing ended; feeds the Speed bonus
   roundScore: RoundScore | null
   difficulty: DifficultyConfig
 }
