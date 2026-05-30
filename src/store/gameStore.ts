@@ -5,6 +5,7 @@ import type {
 } from '../types'
 import { generatePuzzle } from '../engine/puzzleGenerator'
 import { solve, bestFit } from '../engine/solver'
+import { scoreClear, MAX_TRIES } from '../core/scoring'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -35,12 +36,9 @@ function getDifficulty(round: number): DifficultyConfig {
 
 // ── Scoring constants ────────────────────────────────────────────────────────
 
-const CORRECTNESS_POINTS = 800
+// Mirrors PILLAR_MAX.speed in core/scoring; kept here for the resolution UI's
+// turtle threshold and the speed-bonus tests.
 export const MAX_SPEED_BONUS = 500
-const MAX_EFFICIENCY_BONUS = 300
-
-const PENALTY_PER_PIECE = 50   // points docked per wrong/missing piece on a failed round
-const MAX_PENALTY = 400        // failed-round penalty floor (never worse than -400)
 
 // ── Store interface ──────────────────────────────────────────────────────────
 
@@ -64,7 +62,11 @@ const INITIAL_STATE: GameState = {
   phase: 'idle',
   round: 1,
   score: 0,
-  lives: 3,
+  triesUsed: 1,
+  maxTries: MAX_TRIES,
+  sessionId: crypto.randomUUID(),
+  levelId: null,
+  sessionGrid: [],
   grid: [],
   gaps: [],
   selection: [],
@@ -88,12 +90,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // The round opens with a 3-2-1 countdown; the view timer starts only
     // once beginViewing fires, so memorization time isn't eaten by the count.
+    // sessionGrid keeps the pristine board so all 3 tries replay the same puzzle.
     set({
       phase: 'countdown',
       grid,
+      sessionGrid: grid.map(row => row.map(cell => ({ ...cell }))),
       gaps,
       selection: [],
       difficulty,
+      sessionId: crypto.randomUUID(),
+      triesUsed: 1,
       roundScore: null,
       phaseStartTime: 0,
       phaseDuration: 0,
@@ -154,7 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   submitSelection: () => {
-    const { selection, grid, gaps, lives, difficulty, phaseStartTime, viewTimeRemaining } = get()
+    const { selection, grid, gaps, triesUsed, maxTries, difficulty, phaseStartTime, viewTimeRemaining } = get()
 
     const pieceCount: Partial<Record<PieceType, number>> = {}
     for (const entry of selection) {
@@ -169,26 +175,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (result.solvable) {
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      // Speed rewards saving time in BOTH phases — fast memorization (viewing)
-      // and fast selection — each worth up to half the bonus.
-      const viewRatio = difficulty.viewDuration > 0 ? viewTimeRemaining / difficulty.viewDuration : 0
-      const selectRatio = difficulty.selectDuration > 0 ? selectTimeRemaining / difficulty.selectDuration : 0
-      const speedBonus = Math.round(MAX_SPEED_BONUS * 0.5 * (viewRatio + selectRatio))
-      const efficiencyRatio = selectedPieces === 0 ? 0 : minPieces / Math.max(selectedPieces, minPieces)
-      const efficiencyBonus = Math.round(MAX_EFFICIENCY_BONUS * efficiencyRatio)
+      // Single source of scoring truth: core/scoring is shared with the server.
+      const ps = scoreClear({
+        triesUsed,
+        viewTimeRemaining,
+        viewDuration: difficulty.viewDuration,
+        selectTimeRemaining,
+        selectDuration: difficulty.selectDuration,
+        minPieces,
+        selectedPieces,
+      })
 
       set({
         phase: 'resolving',
         _resolution: { kind: 'perfect', placements: result.placements ?? [], coverage: 1 },
         roundScore: {
-          correctness: CORRECTNESS_POINTS,
-          speedBonus,
-          efficiencyBonus,
-          total: CORRECTNESS_POINTS + speedBonus + efficiencyBonus,
+          accuracy: ps.accuracy,
+          speedBonus: ps.speed,
+          efficiencyBonus: ps.efficiency,
+          attemptsBonus: ps.attempts,
+          stars: ps.stars,
+          total: ps.total,
         },
       })
     } else {
-      const newLives = lives - 1
+      // Failed try: no negative penalty — a failed round scores 0, never below.
+      // Advance to the next try unless this was the last one (game over).
+      const exhausted = triesUsed >= maxTries
       const fit = bestFit(pieceCount, grid)
       const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
 
@@ -201,24 +214,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
-      // Failed round: accuracy is a penalty scaled by how wrong the selection was.
-      // Bigger over-selection OR bigger shortfall = bigger penalty. No speed/efficiency.
-      const placed = fit.placements.length
-      const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      const needed = gaps.length
-      const extra = Math.max(0, selectedPieces - placed)
-      const missing = Math.max(0, needed - placed)
-      const penalty = -Math.min(MAX_PENALTY, PENALTY_PER_PIECE * (extra + missing))
-
       set({
         phase: 'resolving',
-        lives: Math.max(0, newLives),
+        triesUsed: exhausted ? triesUsed : triesUsed + 1,
         _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
         roundScore: {
-          correctness: penalty,
+          accuracy: 0,
           speedBonus: 0,
           efficiencyBonus: 0,
-          total: penalty,
+          attemptsBonus: 0,
+          stars: 0,
+          total: 0,
         },
       })
     }
@@ -248,8 +254,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startGame()
   },
 
+  // A failed try replays the SAME puzzle: restore the pristine board from
+  // sessionGrid and re-run the countdown. triesUsed already advanced in
+  // submitSelection, so it is left untouched here.
   retryRound: () => {
-    get().startGame()
+    set(state => ({
+      phase: 'countdown',
+      selection: [],
+      roundScore: null,
+      _resolution: null,
+      grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))),
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      viewTimeRemaining: 0,
+    }))
   },
 
   newGame: () => {

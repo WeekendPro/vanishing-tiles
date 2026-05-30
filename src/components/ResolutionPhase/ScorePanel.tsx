@@ -25,8 +25,8 @@ const ACCURACY_ICON: Record<'perfect' | 'close' | 'far', { icon: string; color: 
 
 const ROW_STAGGER = 0.3   // seconds between row reveals
 const COUNT_DURATION = 400
-const ROUND_TOTAL_DELAY = ROW_STAGGER * 3
-const GRAND_TOTAL_DELAY = ROW_STAGGER * 4
+const ROUND_TOTAL_DELAY = ROW_STAGGER * 4
+const GRAND_TOTAL_DELAY = ROW_STAGGER * 5
 
 export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailure = false, speedSlow = false }: Props) {
   if (!show) return null
@@ -38,12 +38,15 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailu
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
-      <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.correctness} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
+      <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.accuracy} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
       {!isFailure && (
         <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={ROW_STAGGER} color={speedSlow ? 'text-gray-400' : 'text-yellow-400'} />
       )}
       {!isFailure && (
         <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2} color="text-cyan-400" />
+      )}
+      {!isFailure && (
+        <Row icon="◎" label="Attempts" value={roundScore.attemptsBonus} delay={ROW_STAGGER * 3} color="text-violet-400" />
       )}
 
       <div className="mt-2 pt-2 border-t border-gray-800 flex flex-col gap-1">
