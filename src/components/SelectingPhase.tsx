@@ -8,19 +8,19 @@ import type { PieceType } from '@shared/types'
 export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
-    submitSelection, phaseDuration,
+    submit, phaseDuration,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
     decrementSelection: s.decrementSelection,
-    submitSelection: s.submitSelection,
+    submit: s.submit,
     phaseDuration: s.phaseDuration,
   })))
 
   useEffect(() => {
-    const timer = setTimeout(submitSelection, phaseDuration)
+    const timer = setTimeout(submit, phaseDuration)
     return () => clearTimeout(timer)
-  }, [phaseDuration, submitSelection])
+  }, [phaseDuration, submit])
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
@@ -70,7 +70,7 @@ export function SelectingPhase() {
       </div>
 
       <button
-        onClick={submitSelection}
+        onClick={submit}
         className="w-full py-3 rounded-xl font-bold bg-green-700 hover:bg-green-600
           text-white shadow-lg shadow-green-900/40 cursor-pointer"
       >
