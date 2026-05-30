@@ -23,10 +23,10 @@ This spec defines the data model, auth, scoring model, API surface, and the targ
 
 These decisions shape everything downstream and are settled:
 
-1. **A "level" is a difficulty profile, not a fixed board.** The puzzle re-rolls every **new session** (each fresh replay of the level), but stays fixed across the 3 tries within a session (see §3); what is pinned is the difficulty. A per-level global high score therefore means "the best score anyone posted on this difficulty profile" — an intentionally **slightly imperfect** grading model the product owner is comfortable with. (We do **not** seed deterministic per-level puzzles.)
+1. **A "level" is a difficulty profile, not a fixed board.** The puzzle is determined by a **server-issued seed** chosen fresh every **new session** (each fresh replay of the level), but stays fixed across the 3 tries within a session (see §3); what is pinned is the difficulty. A per-level global high score therefore means "the best score anyone posted on this difficulty profile" — an intentionally **slightly imperfect** grading model the product owner is comfortable with. (Per-session puzzles are deterministic *given the seed*, but the seed re-rolls each session, so we do **not** pin one fixed puzzle per level.)
 2. **Backend = Supabase.** Postgres + Auth + Row-Level Security (RLS) + Edge Functions (Deno/TypeScript). Chosen for the relational fit (scores-over-time, leaderboards), first-class React Native SDK, and built-in Apple/Google + anonymous auth. The same backend will serve the future RN app.
 3. **Auth = Apple + Google + anonymous guest**, with guest accounts upgradable via identity linking. (Apple sign-in is effectively required for the eventual App Store release.)
-4. **Trust model = client-trusted + server bounds-check.** The client computes scores and posts attempts; a server-side validation step rejects impossible values before insert. Raw attempt inputs (seed, timings, selection) are stored so we can flip to fully server-authoritative scoring later **with no schema change**.
+4. **Trust model = seed-based server authority (online-only).** The server chooses the puzzle seed, generates the puzzle from it, solves it, and scores every attempt — the client never computes a score during normal play. Generation is **deterministic from the seed** (a seeded PRNG replaces `Math.random` in the generator), so the server can regenerate the exact board a client played from `(seed, level config)` and verify it. The client is a **thin renderer + input collector**: it receives the puzzle for a session, collects the player's selection and timings, and posts them. Accuracy / efficiency / attempts are **fully server-verifiable** (recomputed from authoritative state); the **Speed** pillar is **bounded-trust** — the server clamps client-reported timings to the session's issued window — because the server can't observe wall-clock interaction latency. Online is a hard requirement; an offline pack-cache is a designed-for but deferred nice-to-have (§10).
 5. **Out-of-tries = no score, replayable.** Failing all 3 tries leaves the level uncleared, adds nothing to the journey total, and is replayable (tries reset). Every attempt is still logged. **No negative point penalties** — the cost of extra tries is a smaller attempts bonus, not lost points. (This replaces today's negative-accuracy penalty model.)
 6. **Theme unlock = threshold of previous theme cleared** (e.g. ≥70% of its levels cleared; threshold stored per-theme, tunable).
 7. **Schema reserves room for: Streaks & Daily Challenge, and Stars & Achievements.** Per-level **global high score** stays in (a simple max query, no friend graph). **Out:** friend relationships, sharing infrastructure, and the meta-economy (XP / currency / cosmetics / power-ups).
@@ -39,10 +39,10 @@ Replaces "3 lives total" with **3 tries per level session**.
 
 ### Session & try lifecycle
 
-- A **level session** is one play of a level and grants `maxTries = 3`. A fresh puzzle is generated **once, when the session starts.**
-- All three tries face the **same puzzle.** A failed try **consumes a try** and replays the *identical* board (only the player's selection is cleared). This is intentional: the puzzle is memorizable, so a 1st-try clear is the real achievement; a 2nd try feels cheap and a 3rd cheaper — the diminishing attempts bonus reinforces that, and the pressure to "get it first try" becomes the hook as levels get harder.
-- A perfect clear ends the session as **cleared**.
-- Running out of tries → **not cleared, no points, replayable.** Starting a **new session** (replaying the level) generates a **new** puzzle and resets tries. Every try is logged regardless.
+- A **level session** is one play of a level and grants `maxTries = 3`. When the session starts, the **server** chooses a seed, generates the puzzle from it, and persists the session (seed + the level's timing window) so it can re-derive and score every try. The client renders the puzzle the server returns.
+- All three tries face the **same puzzle** (same seed). A failed try **consumes a try** and replays the *identical* board (only the player's selection is cleared). This is intentional: the puzzle is memorizable, so a 1st-try clear is the real achievement; a 2nd try feels cheap and a 3rd cheaper — the diminishing attempts bonus reinforces that, and the pressure to "get it first try" becomes the hook as levels get harder.
+- Each try posts its selection + timings to the server, which **regenerates the puzzle from the session seed, solves it, scores the attempt, and persists it.** A perfect clear ends the session as **cleared**.
+- Running out of tries → **not cleared, no points, replayable.** Starting a **new session** (replaying the level) gets a **new seed** (new puzzle) and resets tries. Every try is logged regardless.
 
 ### Scoring pillars (computed on a clear)
 
@@ -83,6 +83,8 @@ A **level** is a difficulty profile. Difficulty levers:
 - `shape_complexity` — which piece set / complexity tier is allowed (e.g. Advanced theme trims the menu to T, S, Z, J, L).
 - **`adjacency` (new)** — how clustered/contiguous the gaps are (gaps touching one another are harder to memorize). The puzzle generator gains an adjacency parameter; the *algorithmic detail* of honoring it is an implementation concern, but the schema and generator signature reserve it now.
 - `modifiers` (jsonb) — per-level room for future theme mechanics (Numbered ordering, Flash-mob reveal) **without designing them now**.
+
+**Deterministic generation.** The generator is pure: `generatePuzzle(config, seed) → { grid, gaps }`. A seeded PRNG (e.g. mulberry32/xmur3) replaces `Math.random`, so the same `(config, seed)` always yields the same board. This is what lets the server hand a client a puzzle and later re-derive it for scoring/verification. Same input → same output is asserted in core unit tests.
 
 The current `DIFFICULTY_TABLE` (15 rows in `gameStore.ts`) migrates into seeded `levels` rows: **Beginner** = rounds 1–7, **Intermediate** = rounds 8–15. Advanced / Numbered / Flash-mob are seeded as **locked stub themes** for the future agent.
 
@@ -127,11 +129,26 @@ The current `DIFFICULTY_TABLE` (15 rows in `gameStore.ts`) migrates into seeded 
 - `created_at`
 - unique (`theme_id`, `index_in_theme`)
 
+### `level_sessions` (server-issued puzzle — the source of truth for a session)
+- `id` uuid PK — the `session_id` referenced by attempts
+- `user_id` uuid FK → profiles
+- `level_id` uuid FK → levels
+- `seed` text — the server-chosen seed the puzzle was generated from
+- `view_duration_ms` int — timing window snapshot at issue time (so scoring is stable even if the level row is later retuned)
+- `select_duration_ms` int
+- `tries_used` int default 0
+- `max_tries` int default 3
+- `status` text — `active | cleared | exhausted`
+- `started_at` timestamptz default now()
+- `ended_at` timestamptz null
+
+> The server never trusts a client-supplied seed or config — it reads them back from this row when scoring an attempt. Issued once by `start_session`; mutated only by `submit_attempt`.
+
 ### `attempts` (time-series fact table — powers graphs & leaderboards)
 - `id` uuid PK
 - `user_id` uuid FK → profiles
 - `level_id` uuid FK → levels
-- `session_id` uuid — groups the (up to 3) tries of one level session
+- `session_id` uuid FK → level_sessions — groups the (up to 3) tries of one level session
 - `try_number` int (1..3)
 - `solved` boolean
 - `coverage` numeric (0..1)
@@ -141,10 +158,11 @@ The current `DIFFICULTY_TABLE` (15 rows in `gameStore.ts`) migrates into seeded 
 - `attempts_bonus` int
 - `total` int
 - `stars` int (0..3; meaningful when solved)
-- `view_ms_remaining` int
-- `select_ms_remaining` int
-- `puzzle_seed` text — recorded for future server-authoritative verification
+- `view_ms_remaining` int — client-reported, **server-clamped** to the session window
+- `select_ms_remaining` int — client-reported, **server-clamped** to the session window
 - `created_at`
+
+> The puzzle seed lives on `level_sessions`, not here — every attempt in a session shares it. The server reads it back from the session when scoring, so it never depends on a client-supplied value.
 
 ### `level_progress` (1 row per user×level — denormalized current state for the level page)
 - `user_id` uuid FK → profiles
@@ -188,7 +206,7 @@ The current `DIFFICULTY_TABLE` (15 rows in `gameStore.ts`) migrates into seeded 
 - View `level_global_best`: `max(total)` per `level_id` plus the holder's `display_name`. (Plain view first; can be materialized later for scale.) PR is read from `level_progress.best_total`.
 
 ### RLS policies
-- `profiles`, `attempts`, `level_progress`, `daily_results`, `user_achievements`: **owner-only** (`auth.uid() = user_id` / `id`).
+- `profiles`, `level_sessions`, `attempts`, `level_progress`, `daily_results`, `user_achievements`: **owner-only** (`auth.uid() = user_id` / `id`). The client may **read** its own `level_sessions` but never **insert/update** them — sessions are written only by the `start_session` / `submit_attempt` Edge Functions (service role), so the client can't forge a seed or reset `tries_used`.
 - `themes`, `levels`, `achievements`, `daily_challenges`: **world-readable**, writes restricted to service role.
 - Leaderboard / global-best exposed via a **SECURITY DEFINER** view or RPC returning only `display_name` + score (never raw user rows).
 
@@ -196,23 +214,32 @@ The current `DIFFICULTY_TABLE` (15 rows in `gameStore.ts`) migrates into seeded 
 
 ## 6. API surface
 
-Reads go directly through Supabase (PostgREST / RPC) under RLS. Writes that need validation go through an Edge Function or `SECURITY DEFINER` RPC.
+Reads go directly through Supabase (PostgREST / RPC) under RLS. The two write paths that own game integrity — issuing a puzzle and scoring an attempt — are **Edge Functions** (Deno) that import `src/core` and run with the service role, so the same generation/solving/scoring code runs server-side.
 
 ### Reads
 - `get_journey()` → themes (in order) → their levels → each level's `{ my_pr, my_stars, cleared, last_played, locked, global_best }`. One call drives the journey screen. `locked` is computed from the previous theme's clear-ratio vs `unlock_threshold`.
 - `get_level(level_id)` → `{ theme_name, display_number, my_pr, global_high, last_played }`. Drives the level-detail screen.
 - `get_stats()` → the caller's attempts over time (for the future score-over-time graph) + streak summary.
 
-### Writes
-- `submit_attempt(payload)` — Edge Function / RPC. Steps:
-  1. **Bounds-check**: total ≤ theoretical max for that level's config; coverage ∈ [0,1]; `try_number` ≤ 3; pillar values within their maxes; piece counts sane. Reject on violation.
-  2. Insert the `attempts` row.
-  3. Recompute `level_progress` (PR, best_stars, best_try_count, cleared, times_played, last_played_at).
-  4. Update streak fields on `profiles` (current/longest/last_played_date).
-  5. Evaluate `achievements` against the new state; insert any newly unlocked `user_achievements`.
-  6. Return `{ progress, new_achievements, theme_unlocked }`.
+### Writes (Edge Functions — server-authoritative)
+- `start_session(level_id)` — Edge Function. Steps:
+  1. Load the level's difficulty config.
+  2. Choose a **fresh random seed** (server-side).
+  3. `generatePuzzle(config, seed)` using the shared core → the board.
+  4. Insert a `level_sessions` row (seed, timing-window snapshot, `tries_used = 0`, `status = 'active'`).
+  5. Return `{ session_id, puzzle: { grid, gaps }, view_duration_ms, select_duration_ms, max_tries }`. **The seed is not returned to the client** — the client only needs the rendered puzzle.
 
-> The client generates the puzzle locally (reusing the shared core), creates the `session_id`, and reports `puzzle_seed` + timings per try. Because scoring is client-trusted-with-bounds-check today, the server does not regenerate the puzzle yet — but storing the seed keeps the door open.
+- `submit_attempt({ session_id, selection, view_ms_remaining, select_ms_remaining })` — Edge Function. Steps:
+  1. Load the `level_sessions` row (must belong to the caller, `status = 'active'`, `tries_used < max_tries`). Reject otherwise.
+  2. `try_number = tries_used + 1`.
+  3. **Regenerate** the puzzle from the session's stored `seed` + level config (shared core) — the authoritative board.
+  4. **Solve / best-fit** the player's `selection` against that board (shared core) → `solved`, `coverage`, placements.
+  5. **Score** with the shared core: accuracy + efficiency + attempts from authoritative state; **Speed** from client timings **clamped** to `[0, session.view_duration_ms]` / `[0, session.select_duration_ms]`.
+  6. Insert the `attempts` row; bump `level_sessions.tries_used`; set session `status` (`cleared` on solve, `exhausted` when tries run out, else stays `active`).
+  7. On a clear: recompute `level_progress` (PR, best_stars, best_try_count, cleared, times_played, last_played_at); update streak fields on `profiles`; evaluate `achievements` and insert newly unlocked `user_achievements`.
+  8. Return `{ attempt: { solved, coverage, pillars, total, stars }, placements, session_status, progress, new_achievements, theme_unlocked }`.
+
+> The client never generates, solves, or scores during normal play — it renders the server's puzzle, collects the selection + timings, and posts them. Generation and solving stay in `src/core` (§7) precisely so the Edge Functions can run the identical logic. The only client-influenced input the score depends on is the (clamped) Speed timing.
 
 ### Auth
 - `signInWithOAuth({ provider: 'apple' | 'google' })`
@@ -223,13 +250,14 @@ Reads go directly through Supabase (PostgREST / RPC) under RLS. Writes that need
 
 ## 7. Shared core extraction (targeted refactor)
 
-Move the framework-agnostic domain logic out of the Zustand store into `src/core/` (no React, no Zustand):
+Move the framework-agnostic domain logic out of the Zustand store into `src/core/` (no React, no Zustand). This is the code the **Edge Functions import and run server-side**, so it must stay pure TS with no browser/Node-only deps:
 
-- `core/pieces.ts`, `core/puzzleGenerator.ts` (now accepts `adjacency`), `core/solver.ts`
-- `core/scoring.ts` — pillar math + `maxScoreFor(levelConfig)` and per-pillar maxes (single source of truth used by both the client and the bounds-check Edge Function)
+- `core/prng.ts` — seeded PRNG (e.g. mulberry32 + a string→seed hash); the single source of game randomness
+- `core/pieces.ts`, `core/puzzleGenerator.ts` (now pure: accepts `adjacency` **and a seed/PRNG**, no `Math.random`), `core/solver.ts`
+- `core/scoring.ts` — pillar math + `maxScoreFor(levelConfig)` and per-pillar maxes (single source of truth for server scoring)
 - `core/difficulty.ts` — the `LevelConfig` type
 
-Benefits: the Edge Function imports the **same** scoring/max logic (no drift between client score and server check), and the future RN app reuses the core unchanged. The Zustand store becomes a thin consumer of `core`.
+Benefits: the `start_session` / `submit_attempt` Edge Functions import the **same** generation/solving/scoring code, so there is **no second implementation to keep in sync** — the server is authoritative *and* drift-free. The future RN app reuses the core unchanged (for an offline pack-cache, §10). The Zustand store becomes a thin consumer that no longer needs the solver/scoring in the gameplay path — it calls `start_session`, renders, and posts to `submit_attempt`.
 
 This is a focused improvement of code we're already touching — not a broad refactor.
 
@@ -256,8 +284,8 @@ This spec deliberately stops at the backend. The following is the context packag
 6. **Achievements** gallery.
 
 ### Data contracts already available
-- `get_journey()`, `get_level(id)`, `get_stats()`, `submit_attempt(payload)` (shapes in §6).
-- Per-pillar raw values + maxes are available on each attempt for the bar visuals.
+- Reads: `get_journey()`, `get_level(id)`, `get_stats()`. Gameplay writes: `start_session(level_id)` → `{ session_id, puzzle, timings, max_tries }` and `submit_attempt({ session_id, selection, timings })` → `{ attempt, placements, session_status, progress, new_achievements, theme_unlocked }` (shapes in §6).
+- The results screen renders the **server's** scored attempt — per-pillar raw values + maxes come back on `submit_attempt` for the bar visuals; no client-side scoring.
 
 ### UX north-star (product-owner-curated)
 - **In schema now (build when ready):** Streaks + Daily Challenge; Stars + Achievements; per-level global high score.
@@ -279,14 +307,15 @@ This spec deliberately stops at the backend. The following is the context packag
 - Authoring the new theme **mechanics** (Advanced menu-trim logic, Numbered ordering, Flash-mob reveal) — only schema room (`themes.mechanic`, `levels.modifiers`) is reserved.
 - Friend graph, sharing, XP / currency / cosmetics / power-ups.
 - The React Native port itself (the backend and `core/` are built to enable it).
+- **Offline play (designed-for, deferred).** Online is a hard requirement for this foundation. The seed model leaves a clean path for a later offline mode: the server pre-issues a **pack** of `(level_id, seed)` pairs the client caches; the client runs the same `core/` generate→solve→score locally while disconnected, and the attempts sync + re-verify (re-score from seed) on reconnect. No work now — but the architecture is chosen so this needs no rewrite of generation, scoring, or schema.
 
 ---
 
 ## 11. Testing strategy
 
-- **Core unit tests:** attempts-bonus formula, stars thresholds, `maxScoreFor`, no-negative behavior; generator `adjacency` parameter.
-- **Bounds-check tests:** `submit_attempt` rejects impossible scores / coverage / try numbers; accepts valid ones.
-- **RLS tests:** owners can read/write only their own rows; leaderboard view leaks no private data.
+- **Core unit tests:** attempts-bonus formula, stars thresholds, `maxScoreFor`, no-negative behavior; generator `adjacency` parameter; **determinism — `generatePuzzle(config, seed)` returns an identical board for the same input and differs across seeds.**
+- **Edge Function tests:** `start_session` issues a session + renders a puzzle and **never leaks the seed**; `submit_attempt` regenerates from the stored seed and scores correctly; rejects sessions that aren't the caller's / aren't `active` / are out of tries; **clamps** out-of-window Speed timings; bumps `tries_used` and flips `status` correctly across a 3-try exhaust and a mid-session clear.
+- **RLS tests:** owners can read/write only their own rows; the client **cannot insert or update `level_sessions`** (only the service-role functions can); leaderboard view leaks no private data.
 - **Progress/streak tests:** `level_progress` recompute (PR, stars, cleared) and streak transitions across day boundaries.
 - **Migration/seed sanity:** Beginner/Intermediate levels seed with sane difficulty values; stub themes locked.
 - All existing client tests continue to pass (`npm run test`); verify with `npm run build` + lint per project convention.
