@@ -168,3 +168,25 @@ describe('submit dispatcher', () => {
     expect(useGameStore.getState().phase).toBe('resolving')
   })
 })
+
+describe('journey error handling', () => {
+  it('keeps the player in selecting and records an error when submit fails', async () => {
+    ;(api.startSession as any).mockResolvedValue(START_RESULT)
+    ;(api.submitAttempt as any).mockRejectedValue(new Error('network down'))
+    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
+    act(() => useGameStore.getState().beginViewing())
+    act(() => useGameStore.getState().endViewing())
+    await act(async () => { await useGameStore.getState().submitJourneyAttempt() })
+    const s = useGameStore.getState()
+    expect(s.phase).toBe('selecting')          // not advanced to resolving
+    expect(s._resolution).toBeNull()
+    expect(s.journeyError).toMatch(/network down/)
+  })
+
+  it('clears a prior error on the next session start and on retry', async () => {
+    useGameStore.setState({ journeyError: 'stale' } as any)
+    ;(api.startSession as any).mockResolvedValue(START_RESULT)
+    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
+    expect(useGameStore.getState().journeyError).toBeNull()
+  })
+})

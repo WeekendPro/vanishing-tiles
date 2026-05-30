@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '@shared/engine/pieces'
 import { PieceShape } from './PieceShape'
@@ -16,6 +17,8 @@ export function SelectingPhase() {
     submit: s.submit,
     phaseDuration: s.phaseDuration,
   })))
+  const journeyError = useGameStore(s => s.journeyError)
+  const backToMap = useNavStore(s => s.backToMap)
 
   useEffect(() => {
     const timer = setTimeout(submit, phaseDuration)
@@ -24,6 +27,14 @@ export function SelectingPhase() {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
+      {journeyError && (
+        <div className="bg-red-950 border border-red-700 rounded-xl p-3 text-sm text-red-300 flex items-center justify-between gap-3">
+          <span>Couldn’t submit: {journeyError}</span>
+          <button onClick={backToMap} className="shrink-0 px-3 py-1 rounded-lg bg-red-800 hover:bg-red-700 font-semibold">
+            Back to Map
+          </button>
+        </div>
+      )}
       {/* Selection box */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
         <div className="flex justify-between items-center mb-2">

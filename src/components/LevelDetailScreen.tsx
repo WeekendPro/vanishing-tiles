@@ -34,8 +34,14 @@ export function LevelDetailScreen() {
   const play = async () => {
     if (!level) return
     setBusy(true)
-    await startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number)
-    enterPlaying()
+    try {
+      await startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number)
+      enterPlaying()
+    } catch {
+      setError(true)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (

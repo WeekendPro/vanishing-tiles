@@ -59,8 +59,10 @@ interface GameStore extends GameState {
   decrementSelection: (pieceType: PieceType) => void
   _resolution: Resolution | null
   journeyResult: SubmitAttemptResult | null
+  journeyError: string | null
   priorPr: number
   levelDisplayNumber: number | null
+  clearJourneyError: () => void
   startJourneySession: (levelId: string, priorPr: number, displayNumber: number) => Promise<void>
   submitJourneyAttempt: () => Promise<void>
   retryJourney: () => void
@@ -91,10 +93,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
   _resolution: null,
   journeyResult: null,
+  journeyError: null,
   priorPr: 0,
   levelDisplayNumber: null,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, priorPr: 0, levelDisplayNumber: null }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null }),
 
   startPractice: () => {
     set({ mode: 'practice' })
@@ -318,6 +321,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       triesUsed: 1,
       roundScore: null,
       journeyResult: null,
+      journeyError: null,
       phaseStartTime: 0,
       phaseDuration: 0,
       viewTimeRemaining: 0,
@@ -335,12 +339,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const selectElapsed = Date.now() - phaseStartTime
     const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
 
-    const res = await submitAttempt({
-      sessionId,
-      selection: apiSelection,
-      viewMsRemaining: viewTimeRemaining,
-      selectMsRemaining: selectTimeRemaining,
-    })
+    let res: SubmitAttemptResult
+    try {
+      res = await submitAttempt({
+        sessionId,
+        selection: apiSelection,
+        viewMsRemaining: viewTimeRemaining,
+        selectMsRemaining: selectTimeRemaining,
+      })
+    } catch (e) {
+      set({ journeyError: e instanceof Error ? e.message : 'Submit failed' })
+      return
+    }
 
     const solved = res.attempt.solved
     set({
@@ -366,6 +376,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selection: [],
       roundScore: null,
       journeyResult: null,
+      journeyError: null,
       _resolution: null,
       grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))),
       phaseStartTime: 0,
@@ -373,6 +384,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       viewTimeRemaining: 0,
     }))
   },
+
+  clearJourneyError: () => set({ journeyError: null }),
 
   submit: () => {
     return get().mode === 'journey'
