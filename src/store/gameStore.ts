@@ -43,6 +43,7 @@ export const MAX_SPEED_BONUS = 500
 // ── Store interface ──────────────────────────────────────────────────────────
 
 interface GameStore extends GameState {
+  startPractice: () => void
   startGame: () => void
   beginViewing: () => void
   endViewing: () => void
@@ -59,6 +60,7 @@ interface GameStore extends GameState {
 }
 
 const INITIAL_STATE: GameState = {
+  mode: 'practice',
   phase: 'idle',
   round: 1,
   score: 0,
@@ -82,6 +84,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   _resolution: null,
 
   resetGame: () => set({ ...INITIAL_STATE, _resolution: null }),
+
+  startPractice: () => {
+    set({ mode: 'practice' })
+    get().startGame()
+  },
 
   startGame: () => {
     const { round } = get()
