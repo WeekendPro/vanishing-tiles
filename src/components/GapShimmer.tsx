@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Gap } from '../types'
 
@@ -33,7 +33,14 @@ export function GapShimmer({ containerRef, cellRects, gaps }: Props) {
   const reduce = useReducedMotion()
   const [mask, setMask] = useState<string | null>(null)
 
-  useLayoutEffect(() => {
+  // NOTE: useEffect (not useLayoutEffect) is deliberate. containerRef points to
+  // GapShimmer's PARENT div (the grid wrapper) — and React attaches a host's ref
+  // only after its children's effects have fired. With useLayoutEffect this
+  // effect ran before containerRef.current was attached (it was null in prod
+  // builds; dev's StrictMode mount/unmount/remount happened to mask it). useEffect
+  // runs after paint, by which point all refs are attached. The one-frame delay
+  // before the mask is computed is imperceptible for a one-time sweep.
+  useEffect(() => {
     if (reduce || !containerRef.current || !cellRects.current || gaps.length === 0) return
     const root = containerRef.current.getBoundingClientRect()
     const rects: { left: number; top: number; size: number }[] = []
