@@ -110,3 +110,23 @@ begin
     end if;
   end loop;
 end; $$;
+
+-- These SECURITY DEFINER writers take server-computed values with NO bounds-check
+-- and write rows for an arbitrary user_id, so they must never be reachable by a
+-- client JWT (anon/authenticated) via PostgREST — that would let a player forge a
+-- perfect score and bypass the server-authoritative scoring entirely. Supabase's
+-- default privileges grant EXECUTE on new public functions to anon, authenticated,
+-- AND service_role, so revoking from PUBLIC alone is not enough — strip anon and
+-- authenticated explicitly. service_role keeps its grant (the Edge Functions call
+-- these with the service-role key); the grant is restated to make that intent loud.
+revoke execute on function public.start_session_row(uuid, uuid, text, int, int)
+  from public, anon, authenticated;
+grant execute on function public.start_session_row(uuid, uuid, text, int, int) to service_role;
+
+revoke execute on function public.record_attempt(
+  uuid, boolean, numeric, int, int, int, int, int, int, int, int) from public, anon, authenticated;
+grant execute on function public.record_attempt(
+  uuid, boolean, numeric, int, int, int, int, int, int, int, int) to service_role;
+
+-- Only ever called internally by record_attempt (as its definer); never by a client.
+revoke execute on function public.evaluate_achievements(uuid) from public, anon, authenticated;
