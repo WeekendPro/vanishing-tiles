@@ -58,7 +58,13 @@ export function GapShimmer({ containerRef, cellRects, gaps }: Props) {
         WebkitMaskSize: '100% 100%',
         maskRepeat: 'no-repeat',
         WebkitMaskRepeat: 'no-repeat',
-        mixBlendMode: 'screen',
+        // No mix-blend-mode: iOS Safari has long-standing rendering bugs with
+        // mix-blend-mode under masks/filters that cause the glare to vanish on
+        // mobile. Over the dim "empty" gap cells, an alpha-composited band
+        // reads almost identically to the screen-blended version on desktop,
+        // and now renders everywhere. `isolation: isolate` is a defensive
+        // hint for any future blending we add inside this container.
+        isolation: 'isolate',
       }}
     >
       <motion.div
