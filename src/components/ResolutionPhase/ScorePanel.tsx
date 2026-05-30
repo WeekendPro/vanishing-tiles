@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useCountUp } from '../../hooks/useCountUp'
-import type { RoundScore } from '../../types'
+import type { RoundScore } from '@shared/types'
 
 interface Props {
   roundScore: RoundScore

@@ -4,7 +4,7 @@ import {
   rotateCells,
   getRotatedCells,
   getAllRotations,
-} from '../../src/engine/pieces'
+} from '@shared/engine/pieces'
 
 describe('PIECE_DEFINITIONS', () => {
   it('defines all 8 piece types', () => {

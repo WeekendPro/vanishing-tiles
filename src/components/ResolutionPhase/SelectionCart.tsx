@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { PieceShape } from '../PieceShape'
-import type { ChipSlot } from '../../engine/cartSlots'
+import type { ChipSlot } from '@shared/engine/cartSlots'
 
 export interface SelectionCartHandle {
   getChipRect: (slotIndex: number) => DOMRect | null

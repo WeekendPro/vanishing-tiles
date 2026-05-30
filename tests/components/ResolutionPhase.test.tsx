@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ResolutionPhase } from '../../src/components/ResolutionPhase'
 import { useGameStore } from '../../src/store/gameStore'
-import type { Grid, Cell, ResolutionReason } from '../../src/types'
+import type { Grid, Cell, ResolutionReason } from '@shared/types'
 
 // Mock useReducedMotion to return true.
 vi.mock('framer-motion', async () => {

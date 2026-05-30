@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useGameStore, DIFFICULTY_TABLE, MAX_SPEED_BONUS } from '../../src/store/gameStore'
 import { act } from '@testing-library/react'
-import type { Grid, Cell, PieceType, Gap } from '../../src/types'
+import type { Grid, Cell, PieceType, Gap } from '@shared/types'
 
 beforeEach(() => {
   useGameStore.getState().resetGame()

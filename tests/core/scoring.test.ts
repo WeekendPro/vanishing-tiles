@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PILLAR_MAX, MAX_TOTAL, attemptsBonus, starsForTotal, maxScoreFor, computeStars,
   scoreClear,
-} from '../../src/core/scoring'
+} from '@shared/core/scoring'
 
 describe('scoring pillars', () => {
   it('exposes constant pillar maxes summing to 2000', () => {

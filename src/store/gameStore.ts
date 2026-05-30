@@ -2,10 +2,10 @@ import { create } from 'zustand'
 import type {
   GameState, PieceType,
   DifficultyConfig, Placement, Resolution, ResolutionReason,
-} from '../types'
-import { generatePuzzle } from '../engine/puzzleGenerator'
-import { solve, bestFit } from '../engine/solver'
-import { scoreClear, MAX_TRIES } from '../core/scoring'
+} from '@shared/types'
+import { generatePuzzle } from '@shared/engine/puzzleGenerator'
+import { solve, bestFit } from '@shared/engine/solver'
+import { scoreClear, MAX_TRIES } from '@shared/core/scoring'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 

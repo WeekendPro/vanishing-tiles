@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { LEVEL_CONFIGS, themeForLevel } from '../../src/core/levelConfig'
+import { LEVEL_CONFIGS, themeForLevel } from '@shared/core/levelConfig'
 
 describe('level configs', () => {
   it('has 15 seed level configs', () => {

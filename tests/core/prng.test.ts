@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { makeRng, randomSeed } from '../../src/core/prng'
+import { makeRng, randomSeed } from '@shared/core/prng'
 
 describe('seeded PRNG', () => {
   it('is deterministic for the same seed', () => {

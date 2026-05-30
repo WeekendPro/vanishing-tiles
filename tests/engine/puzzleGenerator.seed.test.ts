@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generatePuzzle } from '../../src/engine/puzzleGenerator'
-import { makeRng } from '../../src/core/prng'
+import { generatePuzzle } from '@shared/engine/puzzleGenerator'
+import { makeRng } from '@shared/core/prng'
 
 describe('generatePuzzle determinism', () => {
   it('same config + same seed → identical board', () => {

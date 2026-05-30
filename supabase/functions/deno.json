@@ -1,8 +1,8 @@
 {
   "imports": {
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
-    "@core/": "../../src/core/",
-    "@engine/": "../../src/engine/",
-    "@types": "../../src/types.ts"
+    "@core/": "./_shared/core/",
+    "@engine/": "./_shared/engine/",
+    "@types": "./_shared/types.ts"
   }
 }

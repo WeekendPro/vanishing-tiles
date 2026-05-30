@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generatePuzzle } from '../../src/engine/puzzleGenerator'
-import { makeRng } from '../../src/core/prng'
+import { generatePuzzle } from '@shared/engine/puzzleGenerator'
+import { makeRng } from '@shared/core/prng'
 
 function emptyCount(grid: { status: string }[][]): number {
   return grid.flat().filter(c => c.status === 'empty').length

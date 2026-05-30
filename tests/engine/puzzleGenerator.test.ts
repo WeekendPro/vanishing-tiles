@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { generatePuzzle } from '../../src/engine/puzzleGenerator'
-import { ROWS, COLS } from '../../src/types'
+import { generatePuzzle } from '@shared/engine/puzzleGenerator'
+import { ROWS, COLS } from '@shared/types'
 
 describe('generatePuzzle', () => {
   it('returns a grid with correct dimensions', () => {
