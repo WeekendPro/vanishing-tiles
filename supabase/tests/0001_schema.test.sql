@@ -1,6 +1,6 @@
 -- supabase/tests/0001_schema.test.sql
 begin;
-select plan(13);
+select plan(14);
 select has_table('public', 'profiles', 'profiles exists');
 select has_table('public', 'themes', 'themes exists');
 select has_table('public', 'levels', 'levels exists');
@@ -14,5 +14,6 @@ select has_table('public', 'user_achievements', 'user_achievements exists');
 select col_is_pk('public', 'level_progress', ARRAY['user_id','level_id'], 'level_progress composite pk');
 select has_column('public', 'levels', 'adjacency', 'levels has adjacency lever');
 select has_column('public', 'level_sessions', 'seed', 'level_sessions stores the puzzle seed');
+select has_function('public', 'handle_new_user', 'new-user trigger fn exists');
 select * from finish();
 rollback;
