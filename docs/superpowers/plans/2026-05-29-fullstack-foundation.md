@@ -492,6 +492,9 @@ git commit -m "feat(engine): add adjacency clustering lever to generator"
   maxTries: number      // 3
   sessionId: string     // uuid grouping this session's tries
   levelId: string | null // current level (set when started from journey)
+  sessionGrid: Grid     // pristine puzzle captured at session start, so a
+                        // failed try can replay the identical board (the live
+                        // `grid` gets mutated with placements during resolution)
 ```
 And extend `RoundScore`:
 ```ts
@@ -538,8 +541,24 @@ Expected: FAIL (property names / triesUsed not present).
 
 - [ ] **Step 4: Implement the store changes** in `src/store/gameStore.ts`:
   - Import `scoreClear, MAX_TRIES, computeStars` from `../core/scoring`.
-  - In `INITIAL_STATE`: replace `lives: 3` with `triesUsed: 1, maxTries: MAX_TRIES, sessionId: crypto.randomUUID(), levelId: null`.
-  - In `startGame`: when starting a fresh **session** (from idle / nextRound / a new level) set `triesUsed: 1` and a new `sessionId`. `retryRound` (a failed try) keeps `sessionId` and does **not** reset `triesUsed`.
+  - In `INITIAL_STATE`: replace `lives: 3` with `triesUsed: 1, maxTries: MAX_TRIES, sessionId: crypto.randomUUID(), levelId: null, sessionGrid: []`.
+  - In `startGame`: when starting a fresh **session** (from idle / nextRound / a new level) generate a new puzzle, set `triesUsed: 1`, assign a new `sessionId`, and capture the pristine board as **both** `grid` and `sessionGrid` (e.g. `set({ grid, sessionGrid: grid, gaps, ... })`).
+  - In `retryRound` (a failed try within a session): **do not regenerate the puzzle and do not call `startGame`.** Keep the existing `grid`, `gaps`, `sessionId`, and the already-incremented `triesUsed`; clear only `selection`, reset to the `countdown` phase, and replay the same board. (All 3 tries face the identical puzzle — spec §3. Only a brand-new session re-rolls.) Concretely:
+    ```ts
+    retryRound: () => set(state => ({
+      phase: 'countdown',
+      selection: [],
+      roundScore: null,
+      _resolution: null,
+      grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))), // restore pristine board
+      gaps: state.gaps,            // unchanged — same gaps
+      // triesUsed already incremented by submitSelection; sessionId unchanged
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      viewTimeRemaining: 0,
+    })),
+    ```
+    Note: the failed-try `triesUsed` increment happens in `submitSelection` (below), so `retryRound` must not touch it.
   - In `submitSelection` (solvable branch): replace the inline pillar math with:
     ```ts
     const ps = scoreClear({

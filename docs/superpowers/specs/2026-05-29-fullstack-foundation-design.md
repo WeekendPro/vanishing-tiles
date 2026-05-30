@@ -23,7 +23,7 @@ This spec defines the data model, auth, scoring model, API surface, and the targ
 
 These decisions shape everything downstream and are settled:
 
-1. **A "level" is a difficulty profile, not a fixed board.** The puzzle re-rolls every play; what is pinned is the difficulty. A per-level global high score therefore means "the best score anyone posted on this difficulty profile" — an intentionally **slightly imperfect** grading model the product owner is comfortable with. (We do **not** seed deterministic per-level puzzles.)
+1. **A "level" is a difficulty profile, not a fixed board.** The puzzle re-rolls every **new session** (each fresh replay of the level), but stays fixed across the 3 tries within a session (see §3); what is pinned is the difficulty. A per-level global high score therefore means "the best score anyone posted on this difficulty profile" — an intentionally **slightly imperfect** grading model the product owner is comfortable with. (We do **not** seed deterministic per-level puzzles.)
 2. **Backend = Supabase.** Postgres + Auth + Row-Level Security (RLS) + Edge Functions (Deno/TypeScript). Chosen for the relational fit (scores-over-time, leaderboards), first-class React Native SDK, and built-in Apple/Google + anonymous auth. The same backend will serve the future RN app.
 3. **Auth = Apple + Google + anonymous guest**, with guest accounts upgradable via identity linking. (Apple sign-in is effectively required for the eventual App Store release.)
 4. **Trust model = client-trusted + server bounds-check.** The client computes scores and posts attempts; a server-side validation step rejects impossible values before insert. Raw attempt inputs (seed, timings, selection) are stored so we can flip to fully server-authoritative scoring later **with no schema change**.
@@ -39,11 +39,10 @@ Replaces "3 lives total" with **3 tries per level session**.
 
 ### Session & try lifecycle
 
-- A **level session** is one play of a level and grants `maxTries = 3`.
-- Each **try** generates a fresh puzzle at the level's difficulty profile.
+- A **level session** is one play of a level and grants `maxTries = 3`. A fresh puzzle is generated **once, when the session starts.**
+- All three tries face the **same puzzle.** A failed try **consumes a try** and replays the *identical* board (only the player's selection is cleared). This is intentional: the puzzle is memorizable, so a 1st-try clear is the real achievement; a 2nd try feels cheap and a 3rd cheaper — the diminishing attempts bonus reinforces that, and the pressure to "get it first try" becomes the hook as levels get harder.
 - A perfect clear ends the session as **cleared**.
-- A failed try **consumes a try and re-rolls** a new puzzle at the same difficulty.
-- Running out of tries → **not cleared, no points, replayable** (a new session resets tries). Every try is logged regardless.
+- Running out of tries → **not cleared, no points, replayable.** Starting a **new session** (replaying the level) generates a **new** puzzle and resets tries. Every try is logged regardless.
 
 ### Scoring pillars (computed on a clear)
 
