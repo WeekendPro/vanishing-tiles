@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   PILLAR_MAX, MAX_TOTAL, attemptsBonus, starsForTotal, maxScoreFor, computeStars,
+  scoreClear,
 } from '../../src/core/scoring'
 
 describe('scoring pillars', () => {
@@ -28,5 +29,34 @@ describe('scoring pillars', () => {
   it('computeStars returns 0 when not cleared', () => {
     expect(computeStars({ solved: false, total: 0 })).toBe(0)
     expect(computeStars({ solved: true, total: 1600 })).toBe(3)
+  })
+})
+
+describe('scoreClear', () => {
+  it('combines pillars and attempts bonus into a total', () => {
+    const s = scoreClear({
+      triesUsed: 1,
+      viewTimeRemaining: 5000, viewDuration: 10000,
+      selectTimeRemaining: 7500, selectDuration: 15000,
+      minPieces: 4, selectedPieces: 4,
+    })
+    expect(s.accuracy).toBe(800)
+    // speed = 500 * 0.5 * (0.5 + 0.5) = 250
+    expect(s.speed).toBe(250)
+    // efficiency = 300 * (4 / 4) = 300
+    expect(s.efficiency).toBe(300)
+    expect(s.attempts).toBe(400)
+    expect(s.total).toBe(1750)
+    expect(s.stars).toBe(3)
+  })
+
+  it('zeroes efficiency when no pieces selected', () => {
+    const s = scoreClear({
+      triesUsed: 3, viewTimeRemaining: 0, viewDuration: 10000,
+      selectTimeRemaining: 0, selectDuration: 15000, minPieces: 4, selectedPieces: 0,
+    })
+    expect(s.efficiency).toBe(0)
+    expect(s.attempts).toBe(0)
+    expect(s.total).toBe(800)
   })
 })

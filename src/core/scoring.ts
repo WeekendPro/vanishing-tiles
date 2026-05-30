@@ -33,3 +33,36 @@ export function starsForTotal(total: number): number {
 export function computeStars(a: { solved: boolean; total: number }): number {
   return a.solved ? starsForTotal(a.total) : 0
 }
+
+export interface ClearInput {
+  triesUsed: number
+  viewTimeRemaining: number
+  viewDuration: number
+  selectTimeRemaining: number
+  selectDuration: number
+  minPieces: number
+  selectedPieces: number
+}
+
+export interface PillarScore {
+  accuracy: number
+  speed: number
+  efficiency: number
+  attempts: number
+  total: number
+  stars: number
+}
+
+export function scoreClear(i: ClearInput): PillarScore {
+  const accuracy = PILLAR_MAX.accuracy
+  const viewRatio = i.viewDuration > 0 ? i.viewTimeRemaining / i.viewDuration : 0
+  const selectRatio = i.selectDuration > 0 ? i.selectTimeRemaining / i.selectDuration : 0
+  const speed = Math.round(PILLAR_MAX.speed * 0.5 * (viewRatio + selectRatio))
+  const efficiencyRatio = i.selectedPieces === 0
+    ? 0
+    : i.minPieces / Math.max(i.selectedPieces, i.minPieces)
+  const efficiency = Math.round(PILLAR_MAX.efficiency * efficiencyRatio)
+  const attempts = attemptsBonus(i.triesUsed)
+  const total = accuracy + speed + efficiency + attempts
+  return { accuracy, speed, efficiency, attempts, total, stars: starsForTotal(total) }
+}
