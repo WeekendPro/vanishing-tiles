@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useGameStore, MAX_SPEED_BONUS } from '../../store/gameStore'
 import { useShallow } from 'zustand/shallow'
-import type { Placement } from '../../types'
+import type { Placement } from '@shared/types'
 import { Grid } from '../Grid'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
@@ -10,7 +10,7 @@ import { CelebrationBadge } from './CelebrationBadge'
 import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
-import { expandCartSlots, mapPlacementsToSlots } from '../../engine/cartSlots'
+import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -22,7 +22,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, lives, newGame } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, triesUsed, maxTries, newGame } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
@@ -31,7 +31,8 @@ export function ResolutionPhase() {
       commitRoundScore: s.commitRoundScore,
       nextRound: s.nextRound,
       retryRound: s.retryRound,
-      lives: s.lives,
+      triesUsed: s.triesUsed,
+      maxTries: s.maxTries,
       newGame: s.newGame,
     })))
   const solution = resolution?.placements ?? null
@@ -162,7 +163,7 @@ export function ResolutionPhase() {
   const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
 
   const ctaVariant: 'next' | 'retry' | 'newgame' =
-    !isFailure ? 'next' : lives === 0 ? 'newgame' : 'retry'
+    !isFailure ? 'next' : triesUsed >= maxTries ? 'newgame' : 'retry'
   const ctaLabel =
     ctaVariant === 'next' ? 'Next Round →'
       : ctaVariant === 'newgame' ? 'Start New Game'

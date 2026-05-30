@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { PieceShape } from '../PieceShape'
-import type { Placement } from '../../types'
+import type { Placement } from '@shared/types'
 
 export interface FlyerSpec {
   placement: Placement

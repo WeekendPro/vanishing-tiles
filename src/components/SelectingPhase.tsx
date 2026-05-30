@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
-import { PIECE_DEFINITIONS } from '../engine/pieces'
+import { PIECE_DEFINITIONS } from '@shared/engine/pieces'
 import { PieceShape } from './PieceShape'
-import type { PieceType } from '../types'
+import type { PieceType } from '@shared/types'
 
 export function SelectingPhase() {
   const {

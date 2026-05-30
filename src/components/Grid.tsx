@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/gameStore'
-import { getPieceColor } from '../engine/pieces'
-import { ROWS, COLS } from '../types'
+import { getPieceColor } from '@shared/engine/pieces'
+import { ROWS, COLS } from '@shared/types'
 
 interface Props {
   onCellClick?: (row: number, col: number) => void

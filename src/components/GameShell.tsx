@@ -6,10 +6,10 @@ import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
 
-function Hearts({ count }: { count: number }) {
+function Hearts({ count, total }: { count: number; total: number }) {
   return (
     <div className="flex gap-1">
-      {[1, 2, 3].map(i => (
+      {Array.from({ length: total }, (_, i) => i + 1).map(i => (
         <span key={i} className={i <= count ? 'text-red-500' : 'text-gray-700'}>♥</span>
       ))}
     </div>
@@ -17,11 +17,12 @@ function Hearts({ count }: { count: number }) {
 }
 
 export function GameShell() {
-  const { phase, round, score, lives, startGame, phaseStartTime, phaseDuration } = useGameStore(useShallow(s => ({
+  const { phase, round, score, triesUsed, maxTries, startGame, phaseStartTime, phaseDuration } = useGameStore(useShallow(s => ({
     phase: s.phase,
     round: s.round,
     score: s.score,
-    lives: s.lives,
+    triesUsed: s.triesUsed,
+    maxTries: s.maxTries,
     startGame: s.startGame,
     phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
@@ -56,7 +57,7 @@ export function GameShell() {
       <div className="sticky top-0 z-30 bg-gray-950 flex justify-between items-center px-4 py-3 border-b border-gray-800">
         <span className="text-sm text-gray-400">Round <strong className="text-white">{round}</strong></span>
         <span className="text-sm text-yellow-400 font-bold">{score.toLocaleString()}</span>
-        <Hearts count={lives} />
+        <Hearts count={maxTries - triesUsed + 1} total={maxTries} />
       </div>
 
       {/* Timer bar docked directly beneath the metadata bar. The 6px slot is

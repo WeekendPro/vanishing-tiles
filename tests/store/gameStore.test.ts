@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useGameStore, DIFFICULTY_TABLE, MAX_SPEED_BONUS } from '../../src/store/gameStore'
 import { act } from '@testing-library/react'
-import type { Grid, Cell, PieceType, Gap } from '../../src/types'
+import type { Grid, Cell, PieceType, Gap } from '@shared/types'
 
 beforeEach(() => {
   useGameStore.getState().resetGame()
@@ -17,8 +17,10 @@ describe('initial state', () => {
     expect(useGameStore.getState().phase).toBe('idle')
   })
 
-  it('starts with 3 lives', () => {
-    expect(useGameStore.getState().lives).toBe(3)
+  it('starts with 3 tries (triesUsed 1 of maxTries 3)', () => {
+    const s = useGameStore.getState()
+    expect(s.triesUsed).toBe(1)
+    expect(s.maxTries).toBe(3)
   })
 
   it('starts with score 0', () => {
@@ -121,7 +123,7 @@ describe('submitSelection — perfect', () => {
 })
 
 describe('submitSelection — partial', () => {
-  it('goes to resolving, deducts a life, and applies a negative accuracy penalty', () => {
+  it('goes to resolving, advances a try, and scores zero (no negative penalty)', () => {
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().endViewing())
     act(() => useGameStore.getState().incrementSelection('SINGLE')) // 1 cell, never a full fill
@@ -129,42 +131,44 @@ describe('submitSelection — partial', () => {
     const s = useGameStore.getState()
     expect(s.phase).toBe('resolving')
     expect(s._resolution?.kind).toBe('partial')
-    expect(s.lives).toBe(2)
+    expect(s.triesUsed).toBe(2)
     expect(s._resolution!.placements.length).toBeGreaterThan(0)
     expect(s._resolution!.coverage).toBeGreaterThan(0)
     expect(s._resolution!.coverage).toBeLessThan(1)
-    expect(s.roundScore!.correctness).toBeLessThan(0)   // penalty, not credit
+    expect(s.roundScore!.accuracy).toBe(0)   // failed round never goes negative
     expect(s.roundScore!.speedBonus).toBe(0)
     expect(s.roundScore!.efficiencyBonus).toBe(0)
+    expect(s.roundScore!.total).toBe(0)
   })
 })
 
-describe('lives and game over', () => {
-  it('a wrong selection on the last life routes through resolving (not game-over)', () => {
-    useGameStore.setState({ lives: 1 })
+describe('tries and game over', () => {
+  it('a wrong selection on the last try routes through resolving (not game-over) and does not over-advance', () => {
     act(() => useGameStore.getState().startGame())
+    useGameStore.setState({ triesUsed: 3 })   // last of 3 tries
     act(() => useGameStore.getState().endViewing())
     act(() => useGameStore.getState().incrementSelection('SINGLE'))
     act(() => useGameStore.getState().submitSelection())
     const s = useGameStore.getState()
     expect(s.phase).toBe('resolving')
-    expect(s.lives).toBe(0)
+    expect(s.triesUsed).toBe(3)   // exhausted: stays put, no 4th try
     expect(s._resolution?.kind).toBe('partial')
   })
 
-  it('newGame restarts at round 1 with full lives, score 0, on the countdown', () => {
-    useGameStore.setState({ round: 7, score: 5000, lives: 0, phase: 'resolving' })
+  it('newGame restarts at round 1 with tries reset, score 0, on the countdown', () => {
+    useGameStore.setState({ round: 7, score: 5000, triesUsed: 3, phase: 'resolving' })
     act(() => useGameStore.getState().newGame())
     const s = useGameStore.getState()
     expect(s.round).toBe(1)
-    expect(s.lives).toBe(3)
+    expect(s.triesUsed).toBe(1)
+    expect(s.maxTries).toBe(3)
     expect(s.score).toBe(0)
     expect(s.phase).toBe('countdown')
   })
 })
 
 describe('scoring', () => {
-  it('correct selection awards correctness points', () => {
+  it('correct selection awards accuracy points', () => {
     act(() => useGameStore.getState().startGame())
     const { gaps } = useGameStore.getState()
     act(() => useGameStore.getState().endViewing())
@@ -172,7 +176,16 @@ describe('scoring', () => {
     act(() => useGameStore.getState().submitSelection())
     // submitSelection already sets roundScore for the auto-place path
     const { roundScore } = useGameStore.getState()
-    expect(roundScore?.correctness).toBeGreaterThan(0)
+    expect(roundScore?.accuracy).toBeGreaterThan(0)
+  })
+
+  it('a first-try clear earns the full attempts bonus', () => {
+    act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
+    act(() => useGameStore.getState().endViewing())
+    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
+    act(() => useGameStore.getState().submitSelection())
+    expect(useGameStore.getState().roundScore?.attemptsBonus).toBe(400)
   })
 })
 
@@ -337,7 +350,7 @@ function emptyAt(grid: Grid, cells: [number, number][]): Grid {
 // reason depends only on grid + selection (not gaps); gaps:[] is fine here.
 function submitWith(grid: Grid, selection: { pieceType: PieceType; freeCount: number }[]) {
   useGameStore.setState({
-    grid, gaps: [], selection, lives: 3,
+    grid, gaps: [], selection, triesUsed: 1, maxTries: 3,
     difficulty: DIFFICULTY_TABLE[0], phaseStartTime: Date.now(),
   })
   act(() => useGameStore.getState().submitSelection())
@@ -392,48 +405,43 @@ function submitForScore(
   selection: { pieceType: PieceType; freeCount: number }[],
 ) {
   useGameStore.setState({
-    grid, gaps, selection, lives: 3,
+    grid, gaps, selection, triesUsed: 1, maxTries: 3,
     difficulty: DIFFICULTY_TABLE[0], phaseStartTime: Date.now(),
   })
   act(() => useGameStore.getState().submitSelection())
   return useGameStore.getState().roundScore!
 }
 
-describe('submitSelection — failure penalty', () => {
-  it('penalizes extra pieces by -50 each, with no speed/efficiency', () => {
+describe('submitSelection — failure scores zero', () => {
+  it('a failed round zeroes every pillar (no negative penalty), with extra pieces', () => {
     // one O gap (4 cells, needs 1 piece); select O + T → T is wasted (1 extra)
     const grid = emptyAt(fullGrid(), O_GAP_1)
     const rs = submitForScore(grid, stubGaps(1), [
       { pieceType: 'O', freeCount: 1 },
       { pieceType: 'T', freeCount: 1 },
     ])
-    expect(rs.correctness).toBe(-50)
+    expect(rs.accuracy).toBe(0)
     expect(rs.speedBonus).toBe(0)
     expect(rs.efficiencyBonus).toBe(0)
-    expect(rs.total).toBe(-50)
+    expect(rs.attemptsBonus).toBe(0)
+    expect(rs.stars).toBe(0)
+    expect(rs.total).toBe(0)
   })
 
-  it('penalizes missing pieces by -50 each', () => {
+  it('a failed round zeroes the score even when pieces are missing', () => {
     // two O gaps (needs 2), select nothing → 2 missing
     const grid = emptyAt(emptyAt(fullGrid(), O_GAP_1), O_GAP_2)
     const rs = submitForScore(grid, stubGaps(2), [])
-    expect(rs.correctness).toBe(-100)
-    expect(rs.total).toBe(-100)
-  })
-
-  it('caps the penalty at -400', () => {
-    // pretend 12 gaps are needed but nothing is selected → 12 missing → -600, capped at -400
-    const grid = emptyAt(fullGrid(), O_GAP_1)
-    const rs = submitForScore(grid, stubGaps(12), [])
-    expect(rs.correctness).toBe(-400)
+    expect(rs.accuracy).toBe(0)
+    expect(rs.total).toBe(0)
   })
 })
 
 describe('commitRoundScore', () => {
-  it('floors the running score at 0 on a net-negative round', () => {
+  it('floors the running score at 0 (defensive — a round total is never negative)', () => {
     useGameStore.setState({
       score: 50,
-      roundScore: { correctness: -200, speedBonus: 0, efficiencyBonus: 0, total: -200 },
+      roundScore: { accuracy: -200, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: -200 },
     })
     act(() => useGameStore.getState().commitRoundScore())
     expect(useGameStore.getState().score).toBe(0)   // 50 + (-200) = -150 → floored to 0
@@ -441,12 +449,23 @@ describe('commitRoundScore', () => {
 })
 
 describe('retryRound', () => {
-  it('regenerates the puzzle at the same round and re-opens on the countdown', () => {
+  it('replays the SAME puzzle at the same round and re-opens on the countdown', () => {
     act(() => useGameStore.getState().startGame())
     const before = useGameStore.getState().round
+    const sessionGrid = useGameStore.getState().sessionGrid
     act(() => useGameStore.getState().retryRound())
-    expect(useGameStore.getState().round).toBe(before)   // round does NOT advance
-    expect(useGameStore.getState().phase).toBe('countdown')
+    const s = useGameStore.getState()
+    expect(s.round).toBe(before)   // round does NOT advance
+    expect(s.phase).toBe('countdown')
+    // the board is restored to the pristine session board (same puzzle)
+    expect(s.grid).toEqual(sessionGrid)
+  })
+
+  it('preserves triesUsed (the failed try already advanced it)', () => {
+    act(() => useGameStore.getState().startGame())
+    useGameStore.setState({ triesUsed: 2 })
+    act(() => useGameStore.getState().retryRound())
+    expect(useGameStore.getState().triesUsed).toBe(2)
   })
 })
 

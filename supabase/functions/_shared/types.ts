@@ -59,9 +59,11 @@ export interface SelectionEntry {
 // ── Scoring ──────────────────────────────────────────────────────────────────
 
 export interface RoundScore {
-  correctness: number
+  accuracy: number
   speedBonus: number
   efficiencyBonus: number
+  attemptsBonus: number
+  stars: number
   total: number
 }
 
@@ -101,7 +103,11 @@ export interface GameState {
   phase: GamePhase
   round: number
   score: number
-  lives: number               // 3 → 0; reaching 0 = game over
+  triesUsed: number           // 1..maxTries; current attempt at this level
+  maxTries: number            // tries allowed per level before game over
+  sessionId: string           // id for the current level session
+  levelId: string | null      // server level id once journey is wired (null offline)
+  sessionGrid: Grid           // pristine puzzle board, replayed on each retry
   grid: Grid
   gaps: Gap[]                 // gaps placed in current puzzle
   selection: SelectionEntry[] // current selection cart

@@ -1,6 +1,6 @@
-import type { Grid, Gap, PieceType, Placement } from '../types'
-import { ROWS, COLS } from '../types'
-import { getAllRotations } from './pieces'
+import type { Grid, Gap, PieceType, Placement } from '../types.ts'
+import { ROWS, COLS } from '../types.ts'
+import { getAllRotations } from './pieces.ts'
 
 export interface SolveResult {
   solvable: boolean

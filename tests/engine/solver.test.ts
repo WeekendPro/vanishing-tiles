@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { solve, bestFit } from '../../src/engine/solver'
-import type { Grid, Gap, Cell } from '../../src/types'
-import { ROWS, COLS } from '../../src/types'
+import { solve, bestFit } from '@shared/engine/solver'
+import type { Grid, Gap, Cell } from '@shared/types'
+import { ROWS, COLS } from '@shared/types'
 
 function makeGrid(): Grid {
   return Array.from({ length: ROWS }, () =>

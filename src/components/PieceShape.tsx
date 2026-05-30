@@ -1,5 +1,5 @@
-import { getRotatedCells, getPieceColor } from '../engine/pieces'
-import type { PieceType, Rotation } from '../types'
+import { getRotatedCells, getPieceColor } from '@shared/engine/pieces'
+import type { PieceType, Rotation } from '@shared/types'
 
 interface Props {
   pieceType: PieceType

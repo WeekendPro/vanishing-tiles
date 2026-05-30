@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import type { Gap } from '../types'
+import type { Gap } from '@shared/types'
 
 // Feel knobs — tune freely.
 const SWEEP_MS = 2600   // time for the glare band to cross the board (one pass)

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import type { ResolutionReason } from '../../types'
+import type { ResolutionReason } from '@shared/types'
 
 interface Props {
   show: boolean
