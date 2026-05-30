@@ -4,7 +4,7 @@
 -- profile, and `set local role authenticated` + a `request.jwt.claims` JSON
 -- makes auth.uid() resolve to that user so the owner-only policies apply.
 begin;
-select plan(4);
+select plan(5);
 
 -- Two real auth users; the trigger creates their profiles.
 insert into auth.users (id, email) values
@@ -44,6 +44,9 @@ select throws_ok($$insert into public.level_sessions (user_id,level_id,seed,view
   null, 'client cannot insert level_sessions directly (RLS)');
 
 reset role;
+
+-- Task 3.2: the per-level global-best leaderboard view exists.
+select has_view('public', 'level_global_best', 'global best view exists');
 
 select * from finish();
 rollback;
