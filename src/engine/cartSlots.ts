@@ -1,5 +1,5 @@
-import type { PieceType, SelectionEntry } from '../types'
-import type { Placement } from '../types'
+import type { PieceType, SelectionEntry } from '../types.ts'
+import type { Placement } from '../types.ts'
 
 export interface ChipSlot {
   pieceType: PieceType

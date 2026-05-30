@@ -1,6 +1,6 @@
-import type { Grid, Gap, Cell, DifficultyConfig, PieceType } from '../types'
-import { ROWS, COLS } from '../types'
-import { getAllRotations } from './pieces'
+import type { Grid, Gap, Cell, DifficultyConfig, PieceType } from '../types.ts'
+import { ROWS, COLS } from '../types.ts'
+import { getAllRotations } from './pieces.ts'
 
 type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   adjacency?: number

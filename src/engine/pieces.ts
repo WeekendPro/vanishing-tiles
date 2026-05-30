@@ -1,4 +1,4 @@
-import type { PieceCells, PieceDefinition, PieceType, Rotation } from '../types'
+import type { PieceCells, PieceDefinition, PieceType, Rotation } from '../types.ts'
 
 export const PIECE_DEFINITIONS: PieceDefinition[] = [
   { type: 'I', color: 'bg-cyan-400',   cells: [[0,0],[0,1],[0,2],[0,3]] },
