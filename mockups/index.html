@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mind The Gap — Journey Map mockups</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background:#0b1020; }
+  .ink { color:#e7ecff; }
+  .muted { color:#8c98c0; }
+  .card { background:#141a30; border:1px solid #232c4d; }
+  .node { background:#161d36; border:1px solid #283358; }
+  .node-done { background:#16233a; border:1px solid #2f5fae; }
+  .node-current { background:#1c2a16; border:1px solid #5fae3f; box-shadow:0 0 0 2px rgba(95,174,63,.35); }
+  .locked { filter:grayscale(.6); opacity:.55; }
+  .star { color:#ffd24a; }
+  .star-empty { color:#3a4straight; color:#39406a; }
+  .pill { background:#1e294a; border:1px solid #2c3a66; }
+  .path-line { background:linear-gradient(#2f5fae,#283358); }
+  .tab.active { background:#2f5fae; color:#fff; }
+  .tab { background:#1a2240; color:#9fb0e0; }
+  .theme-beg { color:#7fd1ff; }
+  .theme-int { color:#b39bff; }
+  .theme-locked { color:#7681a6; }
+  ::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body class="ink">
+<div class="max-w-[400px] mx-auto p-3">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <div class="text-lg font-bold">Mind The Gap</div>
+      <div class="muted text-xs">Journey map — style mockups</div>
+    </div>
+    <div class="text-right text-xs muted">🔥 5-day streak<br/>Total ★ 14</div>
+  </div>
+
+  <div class="flex gap-2 mb-4 text-xs font-semibold">
+    <button class="tab active px-3 py-1.5 rounded-full" onclick="show('linear',this)">Linear path</button>
+    <button class="tab px-3 py-1.5 rounded-full" onclick="show('grid',this)">Sectioned grid</button>
+    <button class="tab px-3 py-1.5 rounded-full" onclick="show('branch',this)">Branching</button>
+  </div>
+
+  <!-- ============ LINEAR PATH ============ -->
+  <section id="linear">
+    <div class="theme-beg text-xs font-bold tracking-wider mb-2">● BEGINNER</div>
+    <div class="relative pl-8">
+      <div class="absolute left-3 top-2 bottom-2 w-0.5 path-line"></div>
+      <!-- nodes -->
+      <div id="L1"></div>
+    </div>
+    <div class="theme-int text-xs font-bold tracking-wider mt-5 mb-2">● INTERMEDIATE</div>
+    <div class="relative pl-8" id="linear-int"></div>
+    <div class="theme-locked text-xs font-bold tracking-wider mt-5 mb-2">🔒 ADVANCED</div>
+    <div class="card rounded-xl p-3 text-xs muted locked">Clear 75% of Intermediate to unlock · menu-trim mechanic</div>
+    <div class="theme-locked text-xs font-bold tracking-wider mt-3 mb-2">🔒 NUMBERED &nbsp; 🔒 FLASH MOB</div>
+    <div class="card rounded-xl p-3 text-xs muted locked">Locked theme stubs — coming soon</div>
+  </section>
+
+  <!-- ============ SECTIONED GRID ============ -->
+  <section id="grid" class="hidden">
+    <div class="theme-beg text-xs font-bold tracking-wider mb-2">● BEGINNER &nbsp;<span class="muted font-normal">5/7 cleared</span></div>
+    <div class="grid grid-cols-3 gap-2" id="grid-beg"></div>
+    <div class="theme-int text-xs font-bold tracking-wider mt-5 mb-2">● INTERMEDIATE &nbsp;<span class="muted font-normal">1/8 cleared</span></div>
+    <div class="grid grid-cols-3 gap-2" id="grid-int"></div>
+    <div class="theme-locked text-xs font-bold tracking-wider mt-5 mb-2">🔒 ADVANCED · NUMBERED · FLASH MOB</div>
+    <div class="grid grid-cols-3 gap-2 locked">
+      <div class="node rounded-xl p-3 text-center text-xs muted">🔒</div>
+      <div class="node rounded-xl p-3 text-center text-xs muted">🔒</div>
+      <div class="node rounded-xl p-3 text-center text-xs muted">🔒</div>
+    </div>
+  </section>
+
+  <!-- ============ BRANCHING ============ -->
+  <section id="branch" class="hidden">
+    <svg viewBox="0 0 360 520" class="w-full">
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2f5fae"/><stop offset="1" stop-color="#283358"/>
+        </linearGradient>
+      </defs>
+      <path d="M60,470 C120,420 60,360 120,320 C180,280 120,230 170,190 C220,150 300,170 300,110"
+            stroke="url(#pg)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <!-- beginner nodes -->
+      <g id="bnodes"></g>
+      <text x="20" y="500" fill="#7fd1ff" font-size="11" font-weight="700">BEGINNER</text>
+      <text x="150" y="250" fill="#b39bff" font-size="11" font-weight="700">INTERMEDIATE</text>
+      <g transform="translate(250,60)">
+        <circle r="22" fill="#161d36" stroke="#283358"/>
+        <text x="0" y="5" text-anchor="middle" font-size="16" fill="#7681a6">🔒</text>
+        <text x="0" y="40" text-anchor="middle" font-size="9" fill="#7681a6">ADVANCED</text>
+      </g>
+    </svg>
+    <div class="muted text-[11px] text-center -mt-2">Candy-Crush-style branching path (heaviest to build)</div>
+  </section>
+</div>
+
+<script>
+const beginner = [
+  {n:1, stars:3, pr:1820, done:true},
+  {n:2, stars:3, pr:1755, done:true},
+  {n:3, stars:2, pr:1490, done:true},
+  {n:4, stars:2, pr:1602, done:true},
+  {n:5, stars:1, pr:980,  done:true},
+  {n:6, stars:0, pr:null, current:true},
+  {n:7, stars:0, pr:null},
+];
+const intermediate = [
+  {n:8, stars:2, pr:1410, done:true},
+  {n:9, stars:0, pr:null},
+  {n:10,stars:0, pr:null},
+  {n:11,stars:0, pr:null},
+  {n:12,stars:0, pr:null},
+  {n:13,stars:0, pr:null},
+  {n:14,stars:0, pr:null},
+  {n:15,stars:0, pr:null},
+];
+function stars(s){let h='';for(let i=0;i<3;i++)h+=`<span class="${i<s?'star':''}" style="${i<s?'':'color:#39406a'}">★</span>`;return h;}
+function listNode(l){
+  const cls = l.current?'node-current':(l.done?'node-done':'node');
+  const pr = l.pr?`<span class="muted text-[10px]">PR ${l.pr}</span>`:`<span class="muted text-[10px]">${l.current?'▶ continue':'not played'}</span>`;
+  return `<div class="relative mb-2">
+    <div class="absolute -left-[22px] top-3 w-4 h-4 rounded-full ${l.done?'bg-[#2f5fae]':(l.current?'bg-[#5fae3f]':'bg-[#39406a]')} border-2 border-[#0b1020]"></div>
+    <div class="${cls} rounded-xl px-3 py-2 flex items-center justify-between">
+      <div><div class="font-bold text-sm">Level ${l.n}</div><div class="text-[11px]">${stars(l.stars)}</div></div>
+      <div class="text-right">${pr}${l.current?'<div class="pill rounded-full px-2 py-0.5 text-[10px] mt-1 inline-block">PLAY</div>':''}</div>
+    </div></div>`;
+}
+function gridNode(l){
+  const cls = l.current?'node-current':(l.done?'node-done':'node');
+  return `<div class="${cls} rounded-xl p-2 text-center">
+    <div class="font-bold text-sm">${l.n}</div>
+    <div class="text-[11px] leading-none">${stars(l.stars)}</div>
+    <div class="muted text-[9px] mt-1">${l.pr?('PR '+l.pr):(l.current?'▶':'—')}</div>
+  </div>`;
+}
+document.querySelector('#linear .relative.pl-8').innerHTML =
+  '<div class="absolute left-3 top-2 bottom-2 w-0.5 path-line"></div>' + beginner.map(listNode).join('');
+document.getElementById('linear-int').innerHTML =
+  '<div class="absolute left-3 top-2 bottom-2 w-0.5 path-line"></div>' + intermediate.map(listNode).join('');
+document.getElementById('grid-beg').innerHTML = beginner.map(gridNode).join('');
+document.getElementById('grid-int').innerHTML = intermediate.map(gridNode).join('');
+// branching beginner nodes along the path
+const pts=[[60,470],[120,320],[170,190]];
+document.getElementById('bnodes').innerHTML = pts.map((p,i)=>{
+  const done=i<2;const cur=i===2;
+  return `<g transform="translate(${p[0]},${p[1]})">
+    <circle r="20" fill="${done?'#16233a':(cur?'#1c2a16':'#161d36')}" stroke="${done?'#2f5fae':(cur?'#5fae3f':'#283358')}" stroke-width="2"/>
+    <text x="0" y="5" text-anchor="middle" font-size="14" fill="#e7ecff" font-weight="700">${i+1}</text>
+  </g>`;
+}).join('');
+function show(id,btn){
+  ['linear','grid','branch'].forEach(s=>document.getElementById(s).classList.toggle('hidden',s!==id));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
