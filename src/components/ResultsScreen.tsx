@@ -41,6 +41,9 @@ export function ResultsScreen() {
   const isClear = attempt.solved
   const prBreak = isClear && attempt.total > priorPr
   const canRetry = session_status === 'active'
+  // A failed attempt that still covered every gap can only mean the player
+  // picked the right pieces PLUS extras — a clear needs the EXACT pieces.
+  const overSelected = !isClear && attempt.coverage >= 1
 
   const tryAgain = () => { retryJourney(); enterPlaying() }
 
@@ -49,7 +52,10 @@ export function ResultsScreen() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="text-3xl font-bold mb-1">
-            {isClear ? 'Cleared!' : session_status === 'exhausted' ? 'Out of tries' : 'Missed it'}
+            {isClear ? 'Cleared!'
+              : session_status === 'exhausted' ? 'Out of tries'
+              : overSelected ? 'Too many pieces'
+              : 'Missed it'}
           </div>
           <div className="text-2xl">
             {[0, 1, 2].map(i => (
@@ -58,7 +64,9 @@ export function ResultsScreen() {
           </div>
           {prBreak && <div className="text-yellow-300 font-bold mt-2">🎉 New PR — {attempt.total}!</div>}
           {!isClear && (
-            <div className="text-gray-400 text-sm mt-2">Coverage {Math.round(attempt.coverage * 100)}%</div>
+            overSelected
+              ? <div className="text-gray-400 text-sm mt-2">Every gap was covered — but you picked extra pieces. Choose the exact pieces that fit, nothing spare.</div>
+              : <div className="text-gray-400 text-sm mt-2">Coverage {Math.round(attempt.coverage * 100)}%</div>
           )}
         </div>
 

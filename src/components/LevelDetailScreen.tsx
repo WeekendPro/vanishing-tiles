@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getLevel } from '../lib/api'
+import { relativeTime } from '../lib/relativeTime'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 
@@ -45,11 +46,16 @@ export function LevelDetailScreen() {
   }
 
   return (
-    <div className="min-h-dvh bg-gray-950/90 text-white flex items-end sm:items-center justify-center px-4 py-6">
-      <div className="w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl p-5">
-        <div className="flex justify-between items-start mb-4">
-          <button onClick={goJourney} className="text-gray-500 hover:text-gray-300 text-sm">← Back</button>
-        </div>
+    <div
+      onClick={goJourney}
+      className="fixed inset-0 z-50 overflow-y-auto bg-gray-950/90 text-white flex items-center justify-center px-4 py-6"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-sm bg-gray-900 border border-gray-700 rounded-2xl p-5"
+      >
+        <button onClick={goJourney} aria-label="Close"
+          className="absolute top-5 right-5 text-gray-500 hover:text-gray-300 text-xl leading-none p-1 -m-1">✕</button>
 
         {error && (
           <div className="text-center py-6">
@@ -62,12 +68,12 @@ export function LevelDetailScreen() {
 
         {level && (
           <>
-            <div className="text-xs font-bold tracking-widest uppercase text-cyan-300 mb-1">{level.theme_name}</div>
-            <h2 className="text-2xl font-bold mb-4">Level {level.display_number}</h2>
+            <div className="text-xs font-bold tracking-widest uppercase text-cyan-300 mb-1 pr-8">{level.theme_name}</div>
+            <h2 className="text-2xl font-bold mb-4 pr-8">Level {level.display_number}</h2>
             <dl className="text-sm text-gray-300 space-y-1 mb-6">
-              <div className="flex justify-between"><dt className="text-gray-500">My PR</dt><dd>{level.my_pr ?? '—'}</dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Global high</dt><dd>{level.global_high ?? '—'}</dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Last played</dt><dd>{level.last_played ?? 'never'}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Your Best</dt><dd>{level.my_pr ?? '—'}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Global Best</dt><dd>{level.global_high ?? '—'}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500">Last played</dt><dd>{relativeTime(level.last_played)}</dd></div>
             </dl>
             <button disabled={busy} onClick={play}
               className="w-full py-3 rounded-xl font-bold bg-green-700 hover:bg-green-600 disabled:opacity-50">

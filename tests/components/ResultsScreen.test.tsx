@@ -49,6 +49,35 @@ describe('ResultsScreen', () => {
     expect(screen.queryByRole('button', { name: /Try Again/i })).not.toBeInTheDocument()
   })
 
+  it('explains over-selection when a failed attempt still covered every gap', () => {
+    seedResult({
+      journeyResult: {
+        attempt: { solved: false, coverage: 1,
+          pillars: { accuracy: 0, speed: 0, efficiency: 0, attempts: 0, total: 0, stars: 0 },
+          total: 0, stars: 0 },
+        placements: [], session_status: 'active', progress: null,
+      },
+    })
+    render(<ResultsScreen />)
+    expect(screen.getByText(/Too many pieces/i)).toBeInTheDocument()
+    expect(screen.getByText(/extra pieces/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Coverage/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the coverage percentage for a genuine partial miss', () => {
+    seedResult({
+      journeyResult: {
+        attempt: { solved: false, coverage: 0.4,
+          pillars: { accuracy: 0, speed: 0, efficiency: 0, attempts: 0, total: 0, stars: 0 },
+          total: 0, stars: 0 },
+        placements: [], session_status: 'active', progress: null,
+      },
+    })
+    render(<ResultsScreen />)
+    expect(screen.getByText(/Coverage 40%/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Too many pieces/i)).not.toBeInTheDocument()
+  })
+
   it('offers Try Again on an active session and replays the same session', async () => {
     seedResult({
       journeyResult: {
