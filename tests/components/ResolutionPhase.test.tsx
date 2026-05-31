@@ -312,3 +312,33 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
     expect(speedRow.textContent).toContain('⚡')
   })
 })
+
+import { useNavStore } from '../../src/store/navStore'
+
+describe('ResolutionPhase in journey mode', () => {
+  it('routes to results (does not show the practice score panel) when the badge settles', () => {
+    useNavStore.getState().reset()
+    // Drive the store directly into a journey resolving state.
+    act(() => {
+      useGameStore.setState({
+        mode: 'journey',
+        phase: 'resolving',
+        selection: [],
+        _resolution: { kind: 'perfect', placements: [], coverage: 1 },
+        journeyResult: {
+          attempt: { solved: true, coverage: 1,
+            pillars: { accuracy: 800, speed: 0, efficiency: 0, attempts: 400, total: 1200, stars: 2 },
+            total: 1200, stars: 2 },
+          placements: [], session_status: 'cleared', progress: null,
+        },
+        roundScore: null,
+      } as any)
+    })
+    render(<ResolutionPhase />)
+    // With reduced motion mocked true, the journey branch reaches the results
+    // hand-off synchronously: showResults() has been called.
+    expect(useNavStore.getState().appView).toBe('results')
+    // The practice "Next Round" CTA must NOT appear on the journey path.
+    expect(screen.queryByText(/Next Round/)).not.toBeInTheDocument()
+  })
+})

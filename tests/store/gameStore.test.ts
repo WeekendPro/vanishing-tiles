@@ -477,3 +477,16 @@ describe('nextRound', () => {
     expect(useGameStore.getState().round).toBe(before + 1)
   })
 })
+
+describe('mode', () => {
+  it('defaults to practice mode', () => {
+    expect(useGameStore.getState().mode).toBe('practice')
+  })
+
+  it('startPractice sets practice mode and opens the countdown', () => {
+    act(() => useGameStore.getState().startPractice())
+    const s = useGameStore.getState()
+    expect(s.mode).toBe('practice')
+    expect(s.phase).toBe('countdown')
+  })
+})

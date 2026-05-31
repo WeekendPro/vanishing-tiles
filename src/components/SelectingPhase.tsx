@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '@shared/engine/pieces'
 import { PieceShape } from './PieceShape'
@@ -8,22 +9,32 @@ import type { PieceType } from '@shared/types'
 export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
-    submitSelection, phaseDuration,
+    submit, phaseDuration,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
     decrementSelection: s.decrementSelection,
-    submitSelection: s.submitSelection,
+    submit: s.submit,
     phaseDuration: s.phaseDuration,
   })))
+  const journeyError = useGameStore(s => s.journeyError)
+  const backToMap = useNavStore(s => s.backToMap)
 
   useEffect(() => {
-    const timer = setTimeout(submitSelection, phaseDuration)
+    const timer = setTimeout(submit, phaseDuration)
     return () => clearTimeout(timer)
-  }, [phaseDuration, submitSelection])
+  }, [phaseDuration, submit])
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
+      {journeyError && (
+        <div className="bg-red-950 border border-red-700 rounded-xl p-3 text-sm text-red-300 flex items-center justify-between gap-3">
+          <span>Couldn’t submit: {journeyError}</span>
+          <button onClick={backToMap} className="shrink-0 px-3 py-1 rounded-lg bg-red-800 hover:bg-red-700 font-semibold">
+            Back to Map
+          </button>
+        </div>
+      )}
       {/* Selection box */}
       <div className="bg-gray-900 border border-gray-700 rounded-xl p-3">
         <div className="flex justify-between items-center mb-2">
@@ -70,7 +81,7 @@ export function SelectingPhase() {
       </div>
 
       <button
-        onClick={submitSelection}
+        onClick={submit}
         className="w-full py-3 rounded-xl font-bold bg-green-700 hover:bg-green-600
           text-white shadow-lg shadow-green-900/40 cursor-pointer"
       >

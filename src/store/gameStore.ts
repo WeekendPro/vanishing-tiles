@@ -6,6 +6,7 @@ import type {
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { solve, bestFit } from '@shared/engine/solver'
 import { scoreClear, MAX_TRIES } from '@shared/core/scoring'
+import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -43,6 +44,7 @@ export const MAX_SPEED_BONUS = 500
 // ── Store interface ──────────────────────────────────────────────────────────
 
 interface GameStore extends GameState {
+  startPractice: () => void
   startGame: () => void
   beginViewing: () => void
   endViewing: () => void
@@ -56,9 +58,19 @@ interface GameStore extends GameState {
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
   _resolution: Resolution | null
+  journeyResult: SubmitAttemptResult | null
+  journeyError: string | null
+  priorPr: number
+  levelDisplayNumber: number | null
+  clearJourneyError: () => void
+  startJourneySession: (levelId: string, priorPr: number, displayNumber: number) => Promise<void>
+  submitJourneyAttempt: () => Promise<void>
+  retryJourney: () => void
+  submit: () => void | Promise<void>
 }
 
 const INITIAL_STATE: GameState = {
+  mode: 'practice',
   phase: 'idle',
   round: 1,
   score: 0,
@@ -80,8 +92,17 @@ const INITIAL_STATE: GameState = {
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
   _resolution: null,
+  journeyResult: null,
+  journeyError: null,
+  priorPr: 0,
+  levelDisplayNumber: null,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null }),
+
+  startPractice: () => {
+    set({ mode: 'practice' })
+    get().startGame()
+  },
 
   startGame: () => {
     const { round } = get()
@@ -273,5 +294,102 @@ export const useGameStore = create<GameStore>((set, get) => ({
   newGame: () => {
     get().resetGame()
     get().startGame()
+  },
+
+  startJourneySession: async (levelId, priorPr, displayNumber) => {
+    const res = await startSession(levelId)
+    const difficulty: DifficultyConfig = {
+      viewDuration: res.view_duration_ms,
+      selectDuration: res.select_duration_ms,
+      placeDuration: 0,
+      gapCount: res.puzzle.gaps.length,
+      complexity: 'medium',
+    }
+    set({
+      mode: 'journey',
+      phase: 'countdown',
+      sessionId: res.session_id,
+      levelId,
+      priorPr,
+      levelDisplayNumber: displayNumber,
+      grid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
+      sessionGrid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
+      gaps: res.puzzle.gaps,
+      selection: [],
+      difficulty,
+      maxTries: res.max_tries,
+      triesUsed: 1,
+      roundScore: null,
+      journeyResult: null,
+      journeyError: null,
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      viewTimeRemaining: 0,
+      _resolution: null,
+    })
+  },
+
+  submitJourneyAttempt: async () => {
+    const { phase, selection, sessionId, difficulty, phaseStartTime, viewTimeRemaining, triesUsed } = get()
+    if (phase !== 'selecting') return // guard against double-submit (timer + click)
+
+    const apiSelection = selection
+      .filter(e => e.freeCount > 0)
+      .map(e => ({ pieceType: e.pieceType, count: e.freeCount }))
+    const selectElapsed = Date.now() - phaseStartTime
+    const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
+
+    let res: SubmitAttemptResult
+    try {
+      res = await submitAttempt({
+        sessionId,
+        selection: apiSelection,
+        viewMsRemaining: viewTimeRemaining,
+        selectMsRemaining: selectTimeRemaining,
+      })
+    } catch (e) {
+      set({ journeyError: e instanceof Error ? e.message : 'Submit failed' })
+      return
+    }
+
+    const solved = res.attempt.solved
+    set({
+      phase: 'resolving',
+      journeyResult: res,
+      _resolution: {
+        kind: solved ? 'perfect' : 'partial',
+        placements: res.placements ?? [],
+        coverage: res.attempt.coverage,
+      },
+      // Mirror the server: another try only if the session is still active.
+      triesUsed: res.session_status === 'active' ? triesUsed + 1 : triesUsed,
+      roundScore: null,
+    })
+  },
+
+  // Try Again on the journey path: replay the SAME session_id and the SAME
+  // in-memory puzzle (restore sessionGrid). Does NOT call startSession — that
+  // would re-roll the seed and break the 3-tries/same-puzzle invariant.
+  retryJourney: () => {
+    set(state => ({
+      phase: 'countdown',
+      selection: [],
+      roundScore: null,
+      journeyResult: null,
+      journeyError: null,
+      _resolution: null,
+      grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))),
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      viewTimeRemaining: 0,
+    }))
+  },
+
+  clearJourneyError: () => set({ journeyError: null }),
+
+  submit: () => {
+    return get().mode === 'journey'
+      ? get().submitJourneyAttempt()
+      : get().submitSelection()
   },
 }))

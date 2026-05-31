@@ -1,5 +1,24 @@
 import { supabase } from './supabase'
-import type { Grid, Gap, PieceType } from '@shared/types'
+import type { Grid, Gap, PieceType, Placement } from '@shared/types'
+
+export interface AttemptPillars {
+  accuracy: number; speed: number; efficiency: number
+  attempts: number; total: number; stars: number
+}
+export interface AttemptScore {
+  solved: boolean
+  coverage: number
+  pillars: AttemptPillars
+  total: number
+  stars: number
+}
+export type SessionStatus = 'cleared' | 'exhausted' | 'active'
+export interface SubmitAttemptResult {
+  attempt: AttemptScore
+  placements: Placement[]
+  session_status: SessionStatus
+  progress: unknown
+}
 
 export interface StartSessionResult {
   session_id: string
@@ -24,7 +43,7 @@ export interface SubmitAttemptInput {
   selectMsRemaining: number
 }
 
-export async function submitAttempt(a: SubmitAttemptInput) {
+export async function submitAttempt(a: SubmitAttemptInput): Promise<SubmitAttemptResult> {
   const { data, error } = await supabase.functions.invoke('submit_attempt', {
     body: {
       session_id: a.sessionId, selection: a.selection,
@@ -32,7 +51,7 @@ export async function submitAttempt(a: SubmitAttemptInput) {
     },
   })
   if (error) throw error
-  return data // { attempt, placements, session_status, progress }
+  return data as SubmitAttemptResult
 }
 
 export async function getJourney() {

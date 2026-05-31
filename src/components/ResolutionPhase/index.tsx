@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useGameStore, MAX_SPEED_BONUS } from '../../store/gameStore'
+import { useNavStore } from '../../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import type { Placement } from '@shared/types'
 import { Grid } from '../Grid'
@@ -22,7 +23,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, triesUsed, maxTries, newGame } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, triesUsed, maxTries, newGame, mode } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
@@ -34,7 +35,9 @@ export function ResolutionPhase() {
       triesUsed: s.triesUsed,
       maxTries: s.maxTries,
       newGame: s.newGame,
+      mode: s.mode,
     })))
+  const showResults = useNavStore(s => s.showResults)
   const solution = resolution?.placements ?? null
 
   const slots = useMemo(() => expandCartSlots(selection), [selection])
@@ -80,9 +83,10 @@ export function ResolutionPhase() {
     for (const s of slots) (slotToPlacement.has(s.slotIndex) ? good : bad).add(s.slotIndex)
     setConsumed(good)
     setRejected(bad)
+    if (mode === 'journey') { showResults(); return }
     commitRoundScore()
     setStage('cta')
-  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement])
+  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement, mode, showResults])
 
   // Measure the container rect, then kick off the walk.
   useLayoutEffect(() => {
@@ -137,9 +141,13 @@ export function ResolutionPhase() {
   // Stage transitions after flying.
   useEffect(() => {
     if (stage !== 'badge') return
+    if (mode === 'journey') {
+      const t = window.setTimeout(() => showResults(), BADGE_DURATION)
+      return () => clearTimeout(t)
+    }
     const t = window.setTimeout(() => setStage('scoring'), BADGE_DURATION)
     return () => clearTimeout(t)
-  }, [stage])
+  }, [stage, mode, showResults])
 
   useEffect(() => {
     if (stage !== 'scoring') return

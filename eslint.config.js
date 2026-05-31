@@ -29,4 +29,13 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Tests lean on `as any` to feed partial/loose mock payloads (mocked api/auth
+    // resolved values, store setState seeds). Source stays strict; only relax the
+    // explicit-any rule inside the test tree.
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 )

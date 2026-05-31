@@ -100,6 +100,7 @@ export type GamePhase =
 // ── Full game state ───────────────────────────────────────────────────────────
 
 export interface GameState {
+  mode: 'practice' | 'journey'
   phase: GamePhase
   round: number
   score: number
