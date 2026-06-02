@@ -5,8 +5,11 @@ import { generatePuzzle } from '@engine/puzzleGenerator.ts'
 import { solve, bestFit } from '@engine/solver.ts'
 import { scoreClear } from '@core/scoring.ts'
 import type { PieceType } from '@types'
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req)
+  if (preflight) return preflight
   try {
     const { session_id, selection, view_ms_remaining, select_ms_remaining } = await req.json()
     if (!session_id || !Array.isArray(selection)) return json({ error: 'bad payload' }, 400)
@@ -92,6 +95,6 @@ Deno.serve(async (req) => {
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Number(n) || 0))
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status, headers: { 'Content-Type': 'application/json' },
+    status, headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }

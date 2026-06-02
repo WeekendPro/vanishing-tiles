@@ -2,8 +2,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { makeRng, randomSeed } from '@core/prng.ts'
 import { generatePuzzle } from '@engine/puzzleGenerator.ts'
+import { corsHeaders, handlePreflight } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  const preflight = handlePreflight(req)
+  if (preflight) return preflight
   try {
     const { level_id } = await req.json()
     if (!level_id) return json({ error: 'level_id required' }, 400)
@@ -51,6 +54,6 @@ Deno.serve(async (req) => {
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status, headers: { 'Content-Type': 'application/json' },
+    status, headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }
