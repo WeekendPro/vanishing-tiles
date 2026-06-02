@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
+import { track } from '../store/asyncStatus'
 import { UserMenu } from './UserMenu'
 
 interface JourneyLevel {
@@ -32,7 +33,7 @@ export function JourneyScreen() {
     setError(false)
     setThemes(null)
     try {
-      setThemes((await getJourney()) as JourneyTheme[])
+      setThemes((await track(getJourney())) as JourneyTheme[])
     } catch {
       setError(true)
     }
