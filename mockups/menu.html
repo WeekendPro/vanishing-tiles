@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Menu mockups</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif; }
+  .phone { width: 390px; height: 760px; }
+  /* fake game board behind, to show "hide the game" */
+  .cell { width: 22px; height: 22px; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-zinc-900 text-white p-8">
+  <h1 class="text-2xl font-black mb-1">Mind The Gap — Menu / Pause concepts</h1>
+  <p class="text-zinc-400 mb-8 text-sm">Floating top-right button is global. Opening it mid-game = bold full-screen pause that hides the board & freezes the clock.</p>
+
+  <div class="flex gap-10 flex-wrap items-start">
+
+    <!-- A: gameplay, menu CLOSED -->
+    <div>
+      <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">A · In game (closed)</div>
+      <div class="phone relative rounded-[2rem] overflow-hidden bg-gray-950 ring-1 ring-zinc-700">
+        <!-- redesigned top bar: metadata grouped LEFT, right corner free for floating btn -->
+        <div class="flex items-center gap-4 px-4 py-3 border-b border-gray-800">
+          <span class="text-sm text-gray-400">Round <strong class="text-white">3</strong></span>
+          <span class="text-sm text-yellow-400 font-bold">2,150</span>
+          <span class="text-red-500 tracking-tight">♥♥<span class="text-gray-700">♥</span></span>
+          <span class="flex-1"></span>
+          <!-- floating menu button -->
+          <button class="grid place-items-center w-10 h-10 rounded-xl border border-gray-700 bg-gray-900">
+            <span class="flex flex-col gap-[5px]">
+              <span class="block w-5 h-0.5 rounded-full bg-gray-200"></span>
+              <span class="block w-5 h-0.5 rounded-full bg-gray-200"></span>
+              <span class="block w-5 h-0.5 rounded-full bg-gray-200"></span>
+            </span>
+          </button>
+        </div>
+        <div class="h-1.5 bg-cyan-400" style="width:62%"></div>
+        <div class="flex justify-center pt-8">
+          <div class="grid grid-cols-6 gap-1">
+            <!-- fake board with gaps -->
+            <script>
+              document.write(Array.from({length:42},(_,i)=>{
+                const gap=[8,9,14,15,21,27].includes(i);
+                return `<div class="cell ${gap?'bg-gray-800':'bg-indigo-500'}"></div>`
+              }).join(''))
+            </script>
+          </div>
+        </div>
+        <p class="text-center text-xs tracking-widest uppercase text-slate-400 mt-4">Memorize the gaps</p>
+      </div>
+    </div>
+
+    <!-- B: gameplay PAUSE — full screen bold -->
+    <div>
+      <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">B · Paused (full-screen, board hidden)</div>
+      <div class="phone relative rounded-[2rem] overflow-hidden bg-gray-950 ring-1 ring-zinc-700">
+        <div class="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col">
+          <!-- close / resume X top-right where the hamburger was -->
+          <div class="flex justify-end p-4">
+            <button class="grid place-items-center w-10 h-10 rounded-xl border border-gray-700 bg-gray-900 text-2xl leading-none text-gray-300">×</button>
+          </div>
+
+          <div class="flex-1 flex flex-col px-7">
+            <div class="text-xs uppercase tracking-[0.3em] text-cyan-400 font-bold mb-1">Paused</div>
+            <!-- profile -->
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-12 h-12 rounded-full grid place-items-center font-black text-lg bg-gradient-to-br from-cyan-400 to-indigo-600">LA</div>
+              <div>
+                <div class="font-bold text-lg leading-tight">Luis Alejo</div>
+                <div class="text-xs text-gray-400">luis@example.com</div>
+              </div>
+            </div>
+
+            <!-- BIG bold actions -->
+            <button class="text-left text-3xl font-black py-3 text-white hover:text-cyan-300">Resume</button>
+            <button class="text-left text-3xl font-black py-3 text-white hover:text-cyan-300">Quit to Map</button>
+            <button class="text-left text-3xl font-black py-3 text-gray-500 hover:text-white">Settings</button>
+            <div class="mt-auto mb-8">
+              <button class="text-left text-3xl font-black py-3 text-red-400/90 hover:text-red-300">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C: map menu — same bold full-screen, context items -->
+    <div>
+      <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">C · Map menu (context items)</div>
+      <div class="phone relative rounded-[2rem] overflow-hidden bg-gray-950 ring-1 ring-zinc-700">
+        <div class="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col">
+          <div class="flex justify-end p-4">
+            <button class="grid place-items-center w-10 h-10 rounded-xl border border-gray-700 bg-gray-900 text-2xl leading-none text-gray-300">×</button>
+          </div>
+          <div class="flex-1 flex flex-col px-7">
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-12 h-12 rounded-full grid place-items-center font-black text-lg bg-gradient-to-br from-cyan-400 to-indigo-600">LA</div>
+              <div>
+                <div class="font-bold text-lg leading-tight">Luis Alejo</div>
+                <div class="text-xs text-gray-400">luis@example.com</div>
+              </div>
+            </div>
+            <button class="text-left text-3xl font-black py-3 text-white hover:text-cyan-300">Training Mode</button>
+            <button class="text-left text-3xl font-black py-3 text-gray-500 hover:text-white">Settings</button>
+            <div class="mt-auto mb-8">
+              <button class="text-left text-3xl font-black py-3 text-red-400/90 hover:text-red-300">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
