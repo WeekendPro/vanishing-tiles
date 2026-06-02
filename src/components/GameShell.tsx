@@ -17,9 +17,10 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber } =
+  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
+      paused: s.paused,
       round: s.round,
       score: s.score,
       triesUsed: s.triesUsed,
@@ -30,7 +31,7 @@ export function GameShell() {
       levelDisplayNumber: s.levelDisplayNumber,
     })))
 
-  const showTimer = phase === 'viewing' || phase === 'selecting'
+  const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
   // Countdown is a full-screen flourish (keep it centered). Every gameplay phase
   // anchors its content to the top so the grid sits high and — crucially — holds
   // the SAME vertical position across reveal → viewing → resolving (no shift when
@@ -39,7 +40,7 @@ export function GameShell() {
 
   return (
     <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
-      <div className="sticky top-0 z-30 bg-gray-950 flex justify-between items-center px-4 py-3 border-b border-gray-800">
+      <div className="sticky top-0 z-30 bg-gray-950 flex items-center gap-4 px-4 py-3 border-b border-gray-800">
         <span className="text-sm text-gray-400">
           {mode === 'journey'
             ? <>Level <strong className="text-white">{levelDisplayNumber}</strong></>
@@ -47,6 +48,8 @@ export function GameShell() {
         </span>
         <span className="text-sm text-yellow-400 font-bold">{score.toLocaleString()}</span>
         <Hearts count={maxTries - triesUsed + 1} total={maxTries} />
+        <span className="flex-1" />
+        <span className="w-10" aria-hidden />
       </div>
 
       {/* Timer bar docked directly beneath the metadata bar. The 6px slot is
@@ -64,10 +67,10 @@ export function GameShell() {
       </div>
 
       <div className={`flex-1 flex justify-center px-4 pb-4 ${centerContent ? 'items-center pt-4' : 'items-start pt-8'}`}>
-        {phase === 'countdown'      && <CountdownPhase />}
-        {phase === 'viewing'        && <ViewingPhase />}
-        {phase === 'selecting'      && <SelectingPhase />}
-        {phase === 'resolving'      && <ResolutionPhase />}
+        {!paused && phase === 'countdown'  && <CountdownPhase />}
+        {!paused && phase === 'viewing'    && <ViewingPhase />}
+        {!paused && phase === 'selecting'  && <SelectingPhase />}
+        {!paused && phase === 'resolving'  && <ResolutionPhase />}
       </div>
     </div>
   )
