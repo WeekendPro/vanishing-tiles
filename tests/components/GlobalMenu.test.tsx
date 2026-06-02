@@ -39,19 +39,19 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(useGameStore.getState().paused).toBe(true)
     expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Quit to Map/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Exit Training Mode/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Resume/i }))
     expect(useGameStore.getState().paused).toBe(false)
   })
 
-  it('Quit to Map resets the game and navigates to the journey', async () => {
+  it('Exit resets the game and navigates to the journey', async () => {
     useNavStore.setState({ appView: 'practice' })
     useGameStore.setState({ phase: 'viewing', round: 4 })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: /Quit to Map/i }))
+    await user.click(screen.getByRole('button', { name: /Exit Training Mode/i }))
     expect(useNavStore.getState().appView).toBe('journey')
     expect(useGameStore.getState().paused).toBe(false)
   })

@@ -97,8 +97,8 @@ export function GlobalMenu() {
         onClick={open ? close : openMenu}
         aria-label="Menu"
         aria-expanded={open}
-        className="fixed top-3 right-3 z-50 grid place-items-center w-10 h-10 rounded-xl
-          border border-gray-700 bg-gray-900/90 text-gray-200 hover:border-gray-500"
+        className="fixed top-1.5 right-3 z-50 grid place-items-center w-10 h-10 rounded-xl
+          text-gray-300 hover:text-white"
       >
         {open ? (
           <span className="text-2xl leading-none">×</span>
@@ -132,7 +132,7 @@ export function GlobalMenu() {
           {inGame ? (
             <>
               <Action label="Resume" onClick={close} />
-              <Action label="Quit to Map" onClick={quitToMap} />
+              <Action label={appView === 'practice' ? 'Exit Training Mode' : 'Exit Journey Mode'} onClick={quitToMap} />
             </>
           ) : (
             <Action label="Training Mode" onClick={enterPractice} />
