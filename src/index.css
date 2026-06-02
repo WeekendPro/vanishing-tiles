@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Arcade aesthetic primitives ──────────────────────────────────────────
+   Shared building blocks for the retro/arcade look. Currently consumed by the
+   global loading overlay; intended to be reused by the broader visual overhaul. */
+
+.font-pixel {
+  font-family: 'Press Start 2P', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Segmented "power meter" block: a cyan neon cell that lights up, with a dark
+   gap travelling across the row when each cell is staggered via animation-delay. */
+@keyframes arcadeSeg {
+  0%, 70% {
+    background-color: #22d3ee;
+    box-shadow: 0 0 8px #22d3ee, inset 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+  71%, 100% {
+    background-color: #0c1f25;
+    box-shadow: none;
+  }
+}
+.arcade-seg {
+  animation: arcadeSeg 1.8s infinite;
+}
+
+/* Faint CRT scanline overlay. */
+.arcade-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 2px,
+    rgba(0, 0, 0, 0.6) 2px 3px
+  );
+}

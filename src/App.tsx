@@ -7,7 +7,7 @@ import { JourneyScreen } from './components/JourneyScreen'
 import { LevelDetailScreen } from './components/LevelDetailScreen'
 import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
-import { GlobalLoadingBar } from './components/GlobalLoadingBar'
+import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
 import { GlobalMenu } from './components/GlobalMenu'
 
 export default function App() {
@@ -45,7 +45,7 @@ export default function App() {
 
   return (
     <>
-      <GlobalLoadingBar />
+      <GlobalLoadingOverlay />
       {view}
       {appView !== 'auth' && <GlobalMenu />}
     </>

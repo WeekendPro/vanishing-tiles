@@ -65,7 +65,8 @@ export function LevelDetailScreen() {
           </div>
         )}
 
-        {!error && !level && <p className="text-gray-500 text-center py-6">Loading…</p>}
+        {/* While loading, the card stays empty; the global arcade overlay covers it. */}
+        {!error && !level && <div className="py-6" />}
 
         {level && (
           <>

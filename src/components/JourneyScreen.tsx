@@ -50,7 +50,8 @@ export function JourneyScreen() {
   }
 
   if (!themes) {
-    return <div className="min-h-dvh bg-gray-950 text-gray-500 flex items-center justify-center">Loading…</div>
+    // Blank dark canvas; the global arcade loading overlay sits on top while loading.
+    return <div className="min-h-dvh bg-gray-950" />
   }
 
   return (
