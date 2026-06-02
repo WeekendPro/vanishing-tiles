@@ -13,3 +13,4 @@ export const upgradeGuest = (provider: 'apple' | 'google') =>
   supabase.auth.linkIdentity({ provider })
 export const signOut = () => supabase.auth.signOut()
 export const getSession = () => supabase.auth.getSession()
+export const getUser = () => supabase.auth.getUser()
