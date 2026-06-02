@@ -8,6 +8,7 @@ import { LevelDetailScreen } from './components/LevelDetailScreen'
 import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
 import { GlobalLoadingBar } from './components/GlobalLoadingBar'
+import { GlobalMenu } from './components/GlobalMenu'
 
 export default function App() {
   const { appView, goAuth, goJourney } = useNavStore(useShallow(s => ({
@@ -46,6 +47,7 @@ export default function App() {
     <>
       <GlobalLoadingBar />
       {view}
+      {appView !== 'auth' && <GlobalMenu />}
     </>
   )
 }

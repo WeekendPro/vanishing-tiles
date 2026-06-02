@@ -3,6 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 
 vi.mock('../../src/lib/auth', () => ({
   getSession: vi.fn(),
+  getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+  signOut: vi.fn(),
 }))
 // Keep the journey screen from hitting the network in this routing test.
 vi.mock('../../src/lib/api', () => ({ getJourney: vi.fn().mockResolvedValue([]) }))

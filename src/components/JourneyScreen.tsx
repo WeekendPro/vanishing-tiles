@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
-import { UserMenu } from './UserMenu'
 
 interface JourneyLevel {
   level_id: string; display_number: number
@@ -58,7 +57,6 @@ export function JourneyScreen() {
     <div className="min-h-dvh bg-gray-950 text-white px-4 py-4">
       <div className="flex items-center justify-between mb-4 max-w-md mx-auto">
         <h1 className="text-xl font-bold">Mind The Gap</h1>
-        <UserMenu />
       </div>
 
       <div className="max-w-md mx-auto flex flex-col gap-6">
