@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
@@ -49,8 +49,7 @@ export function GlobalMenu() {
     goPractice: s.goPractice,
     reset: s.reset,
   })))
-  const { phase, pauseGame, resumeGame, startPractice, resetGame } = useGameStore(useShallow(s => ({
-    phase: s.phase,
+  const { pauseGame, resumeGame, startPractice, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
     startPractice: s.startPractice,
