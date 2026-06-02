@@ -1,0 +1,67 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+vi.mock('../../src/lib/auth', () => ({
+  getUser: vi.fn().mockResolvedValue({
+    data: { user: { email: 'luis@example.com', is_anonymous: false, user_metadata: {} } },
+  }),
+  signOut: vi.fn().mockResolvedValue({ error: null }),
+}))
+import * as auth from '../../src/lib/auth'
+import { GlobalMenu } from '../../src/components/GlobalMenu'
+import { useNavStore } from '../../src/store/navStore'
+import { useGameStore } from '../../src/store/gameStore'
+
+beforeEach(() => {
+  useNavStore.getState().reset()
+  useGameStore.getState().resetGame()
+  vi.clearAllMocks()
+})
+
+describe('GlobalMenu', () => {
+  it('on the map shows Training Mode and account actions', async () => {
+    useNavStore.setState({ appView: 'journey' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(screen.getByRole('button', { name: /Training Mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Sign Out/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Resume/i })).not.toBeInTheDocument()
+  })
+
+  it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {
+    useNavStore.setState({ appView: 'practice' })
+    useGameStore.setState({ phase: 'viewing', phaseStartTime: Date.now(), phaseDuration: 10000 })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(useGameStore.getState().paused).toBe(true)
+    expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Quit to Map/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Resume/i }))
+    expect(useGameStore.getState().paused).toBe(false)
+  })
+
+  it('Quit to Map resets the game and navigates to the journey', async () => {
+    useNavStore.setState({ appView: 'practice' })
+    useGameStore.setState({ phase: 'viewing', round: 4 })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Quit to Map/i }))
+    expect(useNavStore.getState().appView).toBe('journey')
+    expect(useGameStore.getState().paused).toBe(false)
+  })
+
+  it('Sign Out calls signOut and resets navigation', async () => {
+    useNavStore.setState({ appView: 'journey' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Sign Out/i }))
+    expect(auth.signOut).toHaveBeenCalledTimes(1)
+  })
+})
