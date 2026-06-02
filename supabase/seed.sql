@@ -1,6 +1,6 @@
 -- supabase/seed.sql
 -- Gap City districts (The Hollows 1-5, The Stacks 6-10, The Grid 11-15).
--- Kept in sync with 0009_gap_city_identity.sql.
+-- Kept in sync with 0008_gap_city_districts.sql + 0009_gap_city_fictional_names.sql.
 insert into public.themes (slug,name,description,sort_order,unlock_threshold,piece_set,mechanic) values
  ('the_hollows','The Hollows','Sleepy outskirts — all gaps.',1,0.0,'{I,O,T,S,Z,J,L,SINGLE}','standard'),
  ('the_stacks','The Stacks','Blocks piling up.',2,0.7,'{I,O,T,S,Z,J,L,SINGLE}','standard'),
