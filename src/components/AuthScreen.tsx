@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signInAsGuest, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
+import { track } from '../store/asyncStatus'
 
 export function AuthScreen() {
   const goJourney = useNavStore(s => s.goJourney)
@@ -13,7 +14,7 @@ export function AuthScreen() {
     setError(null)
     setBusy(true)
     try {
-      const { error } = await fn()
+      const { error } = await track(fn())
       if (error) { setError(error.message); return }
       if (navigate) goJourney()
     } catch (e) {

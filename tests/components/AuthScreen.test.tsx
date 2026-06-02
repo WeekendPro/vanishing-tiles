@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../../src/lib/auth', () => ({
@@ -11,9 +11,11 @@ vi.mock('../../src/lib/auth', () => ({
 import * as auth from '../../src/lib/auth'
 import { AuthScreen } from '../../src/components/AuthScreen'
 import { useNavStore } from '../../src/store/navStore'
+import { useAsyncStatus } from '../../src/store/asyncStatus'
 
 beforeEach(() => {
   useNavStore.getState().reset()
+  useAsyncStatus.setState({ pending: 0 })
   vi.clearAllMocks()
 })
 
@@ -56,5 +58,18 @@ describe('AuthScreen', () => {
     expect(await screen.findByText(/Provider not enabled/i)).toBeInTheDocument()
     // Did not navigate away.
     expect(useNavStore.getState().appView).toBe('auth')
+  })
+
+  it('marks async status pending while a sign-in is in flight', async () => {
+    let resolve!: (v: { error: null }) => void
+    ;(auth.signInWithEmail as any).mockReturnValue(new Promise(r => { resolve = r }))
+    const user = userEvent.setup()
+    render(<AuthScreen />)
+    await user.type(screen.getByPlaceholderText(/Email/i), 'player@example.com')
+    await user.type(screen.getByPlaceholderText(/Password/i), 'hunter2')
+    await user.click(screen.getByRole('button', { name: /^Sign in$/i }))
+    expect(useAsyncStatus.getState().pending).toBe(1)
+    await act(async () => { resolve({ error: null }) })
+    expect(useAsyncStatus.getState().pending).toBe(0)
   })
 })
