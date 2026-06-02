@@ -7,6 +7,7 @@ import { JourneyScreen } from './components/JourneyScreen'
 import { LevelDetailScreen } from './components/LevelDetailScreen'
 import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
+import { GlobalLoadingBar } from './components/GlobalLoadingBar'
 
 export default function App() {
   const { appView, goAuth, goJourney } = useNavStore(useShallow(s => ({
@@ -27,15 +28,24 @@ export default function App() {
     return () => { cancelled = true }
   }, [goAuth, goJourney])
 
-  switch (appView) {
-    case 'auth': return <AuthScreen />
-    case 'journey': return <JourneyScreen />
-    case 'levelDetail':
-      return <><JourneyScreen /><LevelDetailScreen /></>
-    case 'results': return <ResultsScreen />
-    case 'playing':
-    case 'practice':
-      return <GameShell />
-    default: return <AuthScreen />
-  }
+  const view = (() => {
+    switch (appView) {
+      case 'auth': return <AuthScreen />
+      case 'journey': return <JourneyScreen />
+      case 'levelDetail':
+        return <><JourneyScreen /><LevelDetailScreen /></>
+      case 'results': return <ResultsScreen />
+      case 'playing':
+      case 'practice':
+        return <GameShell />
+      default: return <AuthScreen />
+    }
+  })()
+
+  return (
+    <>
+      <GlobalLoadingBar />
+      {view}
+    </>
+  )
 }
