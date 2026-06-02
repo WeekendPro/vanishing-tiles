@@ -102,6 +102,7 @@ export type GamePhase =
 export interface GameState {
   mode: 'practice' | 'journey'
   phase: GamePhase
+  paused: boolean             // true while the full-screen pause menu is open mid-game
   round: number
   score: number
   triesUsed: number           // 1..maxTries; current attempt at this level

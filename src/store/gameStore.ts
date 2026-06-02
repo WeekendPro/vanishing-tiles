@@ -57,6 +57,9 @@ interface GameStore extends GameState {
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
+  pauseGame: () => void
+  resumeGame: () => void
+  pausedElapsed: number
   _resolution: Resolution | null
   journeyResult: SubmitAttemptResult | null
   journeyError: string | null
@@ -72,6 +75,7 @@ interface GameStore extends GameState {
 const INITIAL_STATE: GameState = {
   mode: 'practice',
   phase: 'idle',
+  paused: false,
   round: 1,
   score: 0,
   triesUsed: 1,
@@ -91,6 +95,7 @@ const INITIAL_STATE: GameState = {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
+  pausedElapsed: 0,
   _resolution: null,
   journeyResult: null,
   journeyError: null,
@@ -98,6 +103,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   levelDisplayNumber: null,
 
   resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null }),
+
+  pauseGame: () => set(state => ({
+    paused: true,
+    pausedElapsed: Date.now() - state.phaseStartTime,
+  })),
+
+  resumeGame: () => set(state => ({
+    paused: false,
+    phaseStartTime: (state.phase === 'viewing' || state.phase === 'selecting')
+      ? Date.now() - state.pausedElapsed
+      : state.phaseStartTime,
+  })),
 
   startPractice: () => {
     set({ mode: 'practice' })
@@ -114,6 +131,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // sessionGrid keeps the pristine board so all 3 tries replay the same puzzle.
     set({
       phase: 'countdown',
+      paused: false,
       grid,
       sessionGrid: grid.map(row => row.map(cell => ({ ...cell }))),
       gaps,
