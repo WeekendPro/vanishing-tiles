@@ -65,6 +65,7 @@ interface GameStore extends GameState {
   journeyError: string | null
   priorPr: number
   levelDisplayNumber: number | null
+  submitting: boolean
   clearJourneyError: () => void
   startJourneySession: (levelId: string, priorPr: number, displayNumber: number) => Promise<void>
   submitJourneyAttempt: () => Promise<void>
@@ -101,8 +102,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   journeyError: null,
   priorPr: 0,
   levelDisplayNumber: null,
+  submitting: false,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, submitting: false }),
 
   pauseGame: () => set(state => {
     if (state.paused) return {}
@@ -361,6 +363,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const selectElapsed = Date.now() - phaseStartTime
     const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
 
+    set({ submitting: true })
+
     let res: SubmitAttemptResult
     try {
       res = await submitAttempt({
@@ -370,13 +374,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectMsRemaining: selectTimeRemaining,
       })
     } catch (e) {
-      set({ journeyError: e instanceof Error ? e.message : 'Submit failed' })
+      set({ journeyError: e instanceof Error ? e.message : 'Submit failed', submitting: false })
       return
     }
 
     const solved = res.attempt.solved
     set({
       phase: 'resolving',
+      submitting: false,
       journeyResult: res,
       _resolution: {
         kind: solved ? 'perfect' : 'partial',
