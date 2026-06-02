@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
-import { useGameStore } from '../store/gameStore'
+import { UserMenu } from './UserMenu'
 
 interface JourneyLevel {
   level_id: string; display_number: number
@@ -25,8 +25,6 @@ function Stars({ n }: { n: number }) {
 
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
-  const goPractice = useNavStore(s => s.goPractice)
-  const startPractice = useGameStore(s => s.startPractice)
   const [themes, setThemes] = useState<JourneyTheme[] | null>(null)
   const [error, setError] = useState(false)
 
@@ -41,8 +39,6 @@ export function JourneyScreen() {
   }, [])
 
   useEffect(() => { load() }, [load])
-
-  const enterPractice = () => { startPractice(); goPractice() }
 
   if (error) {
     return (
@@ -61,7 +57,7 @@ export function JourneyScreen() {
     <div className="min-h-dvh bg-gray-950 text-white px-4 py-4">
       <div className="flex items-center justify-between mb-4 max-w-md mx-auto">
         <h1 className="text-xl font-bold">Mind The Gap</h1>
-        <button onClick={enterPractice} className="text-sm text-cyan-400 hover:text-cyan-300 font-semibold">Practice</button>
+        <UserMenu />
       </div>
 
       <div className="max-w-md mx-auto flex flex-col gap-6">
