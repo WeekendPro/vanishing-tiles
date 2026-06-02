@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Map (final direction)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{ --cyan:#22d3ee; --magenta:#ff2d95; --green:#39d98a; --yellow:#facc15; --bg:#030712; }
+  body{ background:#06080f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-cyan{ text-shadow:0 0 8px rgba(34,211,238,.6); }
+  .glow-mag{ text-shadow:0 0 8px rgba(255,45,149,.6); }
+  .scan{ background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.45) 2px 3px); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:390px; background:var(--bg); border:2px solid #0e2b33; border-radius:20px; overflow:hidden; position:relative; }
+  .line{ stroke-width:7; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .conn{ stroke:#33406b; stroke-width:3; stroke-dasharray:2 6; fill:none; }
+  .stn{ fill:#06080f; stroke-width:3.5; }
+  .lbl{ font-size:11px; fill:#cdd6f4; }
+  .lbl-dim{ font-size:11px; fill:#6b7596; }
+  .star{ font-size:11px; }
+  @keyframes pulse{ 0%,100%{ r:11; opacity:1 } 50%{ r:14; opacity:.85 } }
+  .cur-ring{ animation:pulse 1.3s infinite; }
+</style>
+</head>
+<body class="p-5">
+  <div class="mb-3">
+    <div class="pixel text-white glow-cyan text-lg">GAP CITY · the Map</div>
+    <div class="muted text-xs mt-1">Transit map of a fictional city. Climb from The Hollows (bottom) to downtown The Grid (top). On a phone this scrolls and auto-centers on your next stop.</div>
+  </div>
+
+  <div class="flex gap-6 items-start">
+    <!-- THE MAP -->
+    <div class="frame scan">
+      <!-- header chrome -->
+      <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center" style="background:linear-gradient(to bottom,#06080f,transparent)">
+        <span class="pixel text-[11px] text-white glow-cyan">GAP CITY</span>
+        <span class="text-[11px] muted">★ 11</span>
+      </div>
+
+      <svg viewBox="0 0 390 1120" class="w-full block">
+        <!-- connectors between lines (transfers) -->
+        <path class="conn" d="M80,735 L160,665"/>
+        <path class="conn" d="M170,375 L260,305"/>
+
+        <!-- THE GRID line (green, locked/dashed) -->
+        <path class="line" stroke="#39d98a" stroke-opacity=".30" stroke-dasharray="3 10"
+              d="M260,300 L260,220 L320,170 L320,100 L250,60"/>
+        <!-- THE STACKS line (magenta) -->
+        <path class="line" stroke="#ff2d95" d="M160,660 L160,570 L240,510 L240,430 L170,370"/>
+        <!-- THE HOLLOWS line (cyan) -->
+        <path class="line" stroke="#22d3ee" d="M70,1050 L70,960 L140,890 L140,800 L80,730"/>
+
+        <!-- ===== HOLLOWS (cleared) ===== -->
+        <circle class="stn" stroke="#22d3ee" cx="70" cy="1050" r="9"/>
+        <text class="lbl" x="86" y="1054">Vacant Heights <tspan class="star" fill="#facc15">★★★</tspan></text>
+        <circle class="stn" stroke="#22d3ee" cx="70" cy="960" r="9"/>
+        <text class="lbl" x="86" y="964">Open Lots <tspan class="star" fill="#facc15">★★☆</tspan></text>
+        <circle class="stn" stroke="#22d3ee" cx="140" cy="890" r="9"/>
+        <text class="lbl" x="156" y="894">Holloway <tspan class="star" fill="#facc15">★★★</tspan></text>
+        <circle class="stn" stroke="#22d3ee" cx="140" cy="800" r="9"/>
+        <text class="lbl" x="156" y="804">Gapstead <tspan class="star" fill="#facc15">★☆☆</tspan></text>
+        <!-- Nilsen Park: interchange (ringed) -->
+        <circle cx="80" cy="730" r="10" fill="#06080f" stroke="#22d3ee" stroke-width="3.5"/>
+        <circle cx="80" cy="730" r="4" fill="#22d3ee"/>
+        <text class="lbl" x="96" y="734" fill="#9fe9f7">Nilsen Park ⇄ <tspan class="star" fill="#facc15">★★☆</tspan></text>
+
+        <!-- ===== STACKS ===== -->
+        <!-- Brickfall: CURRENT / next stop -->
+        <circle class="cur-ring" cx="160" cy="660" r="11" fill="none" stroke="#fff" stroke-width="2"/>
+        <circle cx="160" cy="660" r="7" fill="#fff" style="filter:drop-shadow(0 0 8px #ff2d95)"/>
+        <text x="178" y="664" fill="#fff" font-size="12" font-weight="700">Brickfall ▶ NEXT</text>
+        <!-- ahead on unlocked line: de-emphasized -->
+        <circle class="stn" stroke="#ff2d95" stroke-opacity=".5" cx="160" cy="570" r="8"/>
+        <text class="lbl-dim" x="176" y="574">Tetra Heights</text>
+        <circle class="stn" stroke="#ff2d95" stroke-opacity=".5" cx="240" cy="510" r="8"/>
+        <text class="lbl-dim" x="256" y="514">Four Corners</text>
+        <circle class="stn" stroke="#ff2d95" stroke-opacity=".5" cx="240" cy="430" r="8"/>
+        <text class="lbl-dim" x="256" y="434">Jaywick</text>
+        <circle cx="170" cy="370" r="10" fill="#06080f" stroke="#ff2d95" stroke-opacity=".5" stroke-width="3.5"/>
+        <circle cx="170" cy="370" r="4" fill="#ff2d95" fill-opacity=".5"/>
+        <text class="lbl-dim" x="186" y="374">Snug Harbor ⇄</text>
+
+        <!-- ===== GRID (locked line) ===== -->
+        <circle class="stn" stroke="#39d98a" stroke-opacity=".3" cx="260" cy="300" r="8"/>
+        <circle class="stn" stroke="#39d98a" stroke-opacity=".3" cx="260" cy="220" r="8"/>
+        <circle class="stn" stroke="#39d98a" stroke-opacity=".3" cx="320" cy="170" r="8"/>
+        <circle class="stn" stroke="#39d98a" stroke-opacity=".3" cx="320" cy="100" r="8"/>
+        <circle class="stn" stroke="#39d98a" stroke-opacity=".3" cx="250" cy="60" r="8"/>
+        <text x="150" y="250" fill="#caa66a" font-size="11">🔒 THE GRID</text>
+        <text x="150" y="266" class="lbl-dim" font-size="9">clear The Stacks to open</text>
+
+        <!-- line keys -->
+        <text x="24"  y="1100" fill="#22d3ee" font-size="9" font-weight="700">— HOLLOWS</text>
+        <text x="140" y="1100" fill="#ff2d95" font-size="9" font-weight="700">— STACKS</text>
+        <text x="250" y="1100" fill="#39d98a" font-size="9" font-weight="700">— GRID</text>
+      </svg>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="w-[300px] text-[12px] leading-relaxed">
+      <div class="pixel text-[10px] glow-cyan mb-2">STATION STATES</div>
+      <ul class="space-y-2 muted">
+        <li><b class="text-cyan-300">Cleared</b> — solid line-color dot + your ★ rating. Tap to replay.</li>
+        <li><b class="text-white">Next stop</b> — pulsing white node, the obvious "go here."</li>
+        <li><b class="text-[#b76b9a]">Ahead (unlocked line)</b> — dimmed, readable but clearly later. <span class="text-[#6b7596]">(These become the locked nodes when the gating spec lands.)</span></li>
+        <li><b class="text-[#caa66a]">Locked line</b> — dashed dim line + 🔒, not tappable until the prior district opens.</li>
+        <li><b class="text-cyan-200">⇄ Interchange</b> — ringed node where one line hands off to the next.</li>
+      </ul>
+      <div class="pixel text-[10px] glow-cyan mt-5 mb-2">PALETTE</div>
+      <ul class="space-y-1 muted">
+        <li><span style="color:#22d3ee">●</span> Hollows = neon cyan</li>
+        <li><span style="color:#ff2d95">●</span> Stacks = neon magenta</li>
+        <li><span style="color:#39d98a">●</span> Grid = neon green <span class="text-[#6b7596]">(yellow reserved for ★)</span></li>
+      </ul>
+      <div class="pixel text-[10px] glow-cyan mt-5 mb-2">CHROME</div>
+      <p class="muted">GAP CITY wordmark + total ★. Scanline overlay over the whole map. Tap a station → existing Level Detail modal (PLAY / PR / stars). No streak counter — no such data exists, so we don't invent it.</p>
+    </div>
+  </div>
+</body>
+</html>
