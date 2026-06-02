@@ -22,7 +22,7 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, submitting } =
+  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
@@ -34,6 +34,7 @@ export function GameShell() {
       phaseDuration: s.phaseDuration,
       mode: s.mode,
       levelDisplayNumber: s.levelDisplayNumber,
+      levelName: s.levelName,
       submitting: s.submitting,
     })))
 
@@ -49,7 +50,7 @@ export function GameShell() {
       <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 py-3 border-b-2 border-arcade-edge">
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
           {mode === 'journey'
-            ? <>LEVEL <strong className="text-white">{levelDisplayNumber}</strong></>
+            ? <strong className="text-white">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
             : <>ROUND <strong className="text-white">{round}</strong></>}
         </span>
         <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
