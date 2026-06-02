@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
+import { Wordmark } from './ui/Wordmark'
 
 interface JourneyLevel {
-  level_id: string; display_number: number
+  level_id: string; display_number: number; name: string
   my_pr: number | null; my_stars: number; cleared: boolean
   last_played: string | null; global_best: number | null
 }
@@ -57,7 +58,7 @@ export function JourneyScreen() {
   return (
     <div className="min-h-dvh bg-gray-950 text-white px-4 py-4">
       <div className="flex items-center justify-between mb-4 max-w-md mx-auto">
-        <h1 className="text-xl font-bold">Mind The Gap</h1>
+        <Wordmark size="sm" />
       </div>
 
       <div className="max-w-md mx-auto flex flex-col gap-6">
@@ -76,7 +77,7 @@ export function JourneyScreen() {
                   className="rounded-xl p-2 text-center border border-gray-700 bg-gray-900
                     enabled:hover:border-gray-500 disabled:cursor-not-allowed"
                 >
-                  <div className="font-bold text-sm">Level {lvl.display_number}</div>
+                  <div className="font-bold text-sm">{lvl.name}</div>
                   <Stars n={lvl.my_stars} />
                   <div className="text-[10px] text-gray-500 mt-1">
                     {lvl.cleared && lvl.my_pr != null ? `PR ${lvl.my_pr}` : theme.locked ? '🔒' : '—'}
