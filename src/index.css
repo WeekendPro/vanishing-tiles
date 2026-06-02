@@ -34,3 +34,18 @@
     rgba(0, 0, 0, 0.6) 2px 3px
   );
 }
+
+/* Neon text glow utilities — cheap box-free text-shadow halos matching the
+   neon color tokens. Pair with `.font-pixel` on titles/labels/numbers. */
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+}
+.text-glow-magenta {
+  text-shadow: 0 0 8px rgba(255, 45, 149, 0.6);
+}
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+}
+.text-glow-yellow {
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+}
