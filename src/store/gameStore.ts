@@ -10,25 +10,28 @@ import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/ap
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
-// viewDuration eases down WITHIN each complexity tier, but bumps UP at every
-// tier step-up (rounds 4 and 7) to cushion the difficulty leap — a cumulative
-// +2000ms per tier over the smooth 10000→…→base curve.
+// Memorize (viewDuration) rises with gapCount on a comfortable ~1.2–1.33s/gap
+// curve so every level stays solvable — the challenge is HOW FAST you clear it,
+// not WHETHER you can. The curve tapers slightly at the top (toward ~1.06s/gap)
+// where adjacent shapes chunk in memory. selectDuration rises too so picking
+// pieces is never the bottleneck. Speed scoring is ratio-based (scoring.ts), so
+// these absolute durations self-normalize and don't change the score ceiling.
 export const DIFFICULTY_TABLE: DifficultyConfig[] = [
-  { viewDuration: 10000, selectDuration: 15000, placeDuration: 60000, gapCount:  3, complexity: 'simple'  },
-  { viewDuration:  9000, selectDuration: 15000, placeDuration: 60000, gapCount:  4, complexity: 'simple'  },
-  { viewDuration:  8100, selectDuration: 14000, placeDuration: 60000, gapCount:  5, complexity: 'simple'  },
-  { viewDuration:  9300, selectDuration: 14000, placeDuration: 60000, gapCount:  6, complexity: 'medium'  },
-  { viewDuration:  8600, selectDuration: 13000, placeDuration: 60000, gapCount:  7, complexity: 'medium'  },
-  { viewDuration:  8000, selectDuration: 13000, placeDuration: 60000, gapCount:  8, complexity: 'medium'  },
-  { viewDuration:  9500, selectDuration: 12000, placeDuration: 60000, gapCount:  9, complexity: 'complex' },
-  { viewDuration:  9000, selectDuration: 12000, placeDuration: 60000, gapCount: 10, complexity: 'complex' },
-  { viewDuration:  8500, selectDuration: 11000, placeDuration: 60000, gapCount: 11, complexity: 'complex' },
-  { viewDuration:  8100, selectDuration: 11000, placeDuration: 60000, gapCount: 12, complexity: 'complex' },
-  { viewDuration:  7700, selectDuration: 10000, placeDuration: 60000, gapCount: 13, complexity: 'complex' },
-  { viewDuration:  7300, selectDuration: 10000, placeDuration: 60000, gapCount: 14, complexity: 'complex' },
-  { viewDuration:  7000, selectDuration:  9000, placeDuration: 60000, gapCount: 15, complexity: 'complex' },
-  { viewDuration:  6700, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
-  { viewDuration:  6500, selectDuration:  9000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
+  { viewDuration:  4000, selectDuration: 10000, placeDuration: 60000, gapCount:  3, complexity: 'simple'  },
+  { viewDuration:  5000, selectDuration: 11000, placeDuration: 60000, gapCount:  4, complexity: 'simple'  },
+  { viewDuration:  6500, selectDuration: 12000, placeDuration: 60000, gapCount:  5, complexity: 'simple'  },
+  { viewDuration:  8000, selectDuration: 14000, placeDuration: 60000, gapCount:  6, complexity: 'medium'  },
+  { viewDuration:  9000, selectDuration: 15000, placeDuration: 60000, gapCount:  7, complexity: 'medium'  },
+  { viewDuration: 10000, selectDuration: 16000, placeDuration: 60000, gapCount:  8, complexity: 'medium'  },
+  { viewDuration: 11000, selectDuration: 17000, placeDuration: 60000, gapCount:  9, complexity: 'complex' },
+  { viewDuration: 12000, selectDuration: 18000, placeDuration: 60000, gapCount: 10, complexity: 'complex' },
+  { viewDuration: 13000, selectDuration: 19000, placeDuration: 60000, gapCount: 11, complexity: 'complex' },
+  { viewDuration: 14000, selectDuration: 20000, placeDuration: 60000, gapCount: 12, complexity: 'complex' },
+  { viewDuration: 15000, selectDuration: 21000, placeDuration: 60000, gapCount: 13, complexity: 'complex' },
+  { viewDuration: 16000, selectDuration: 22000, placeDuration: 60000, gapCount: 14, complexity: 'complex' },
+  { viewDuration: 16500, selectDuration: 22000, placeDuration: 60000, gapCount: 15, complexity: 'complex' },
+  { viewDuration: 17000, selectDuration: 23000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
+  { viewDuration: 17000, selectDuration: 23000, placeDuration: 60000, gapCount: 16, complexity: 'complex' },
 ]
 
 function getDifficulty(round: number): DifficultyConfig {

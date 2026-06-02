@@ -301,36 +301,40 @@ describe('commitRoundScore', () => {
 })
 
 describe('DIFFICULTY_TABLE', () => {
-  it('round 1 starts at a 10000ms view duration', () => {
-    expect(DIFFICULTY_TABLE[0].viewDuration).toBe(10000)
+  it('round 1 starts at a quick 4000ms view duration', () => {
+    expect(DIFFICULTY_TABLE[0].viewDuration).toBe(4000)
   })
 
   it('has 15 rounds', () => {
     expect(DIFFICULTY_TABLE).toHaveLength(15)
   })
 
-  it('eases the view timer gently — round 2 is ~1000ms faster', () => {
-    expect(DIFFICULTY_TABLE[1].viewDuration).toBe(9000)
+  it('grows the view timer as gaps are added — round 2 gives more time than round 1', () => {
+    expect(DIFFICULTY_TABLE[1].viewDuration).toBeGreaterThan(DIFFICULTY_TABLE[0].viewDuration)
   })
 
-  it('view duration eases down within each complexity tier', () => {
+  it('view duration rises monotonically with gap count so every level stays solvable', () => {
     for (let i = 1; i < DIFFICULTY_TABLE.length; i++) {
-      if (DIFFICULTY_TABLE[i].complexity === DIFFICULTY_TABLE[i - 1].complexity) {
-        expect(DIFFICULTY_TABLE[i].viewDuration).toBeLessThanOrEqual(DIFFICULTY_TABLE[i - 1].viewDuration)
-      }
+      expect(DIFFICULTY_TABLE[i].viewDuration).toBeGreaterThanOrEqual(DIFFICULTY_TABLE[i - 1].viewDuration)
     }
   })
 
-  it('cushions each complexity step-up by bumping view time back up', () => {
-    for (let i = 1; i < DIFFICULTY_TABLE.length; i++) {
-      if (DIFFICULTY_TABLE[i].complexity !== DIFFICULTY_TABLE[i - 1].complexity) {
-        expect(DIFFICULTY_TABLE[i].viewDuration).toBeGreaterThan(DIFFICULTY_TABLE[i - 1].viewDuration)
-      }
+  it('keeps a comfortable per-gap memorize budget (~1.0–1.5s/gap) across the run', () => {
+    for (const cfg of DIFFICULTY_TABLE) {
+      const perGap = cfg.viewDuration / cfg.gapCount
+      expect(perGap).toBeGreaterThanOrEqual(1000)
+      expect(perGap).toBeLessThanOrEqual(1500)
     }
   })
 
-  it('the deep-game view floor is 6500ms', () => {
-    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].viewDuration).toBe(6500)
+  it('selection time is never the bottleneck — always longer than the memorize window', () => {
+    for (const cfg of DIFFICULTY_TABLE) {
+      expect(cfg.selectDuration).toBeGreaterThan(cfg.viewDuration)
+    }
+  })
+
+  it('the deep-game view duration caps at 17000ms', () => {
+    expect(DIFFICULTY_TABLE[DIFFICULTY_TABLE.length - 1].viewDuration).toBe(17000)
   })
 
   it('gap count climbs across the run so the board stays full', () => {
