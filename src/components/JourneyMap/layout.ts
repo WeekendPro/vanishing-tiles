@@ -29,6 +29,8 @@ export const LINE_COLOR: Record<DistrictSlug, string> = {
   the_grid: '#39d98a',
 }
 
+export const CONNECTOR_COLOR = '#33406b'
+
 export interface LineDef {
   slug: DistrictSlug
   color: string

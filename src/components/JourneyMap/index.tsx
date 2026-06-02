@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { STATIONS, LINES, LINE_COLOR, VIEWBOX, type DistrictSlug } from './layout'
+import { STATIONS, LINES, LINE_COLOR, CONNECTOR_COLOR, VIEWBOX, type DistrictSlug } from './layout'
 
 export interface JourneyLevel {
   level_id: string
@@ -72,6 +72,8 @@ export function TransitMap({
     nextRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
   }, [next?.level_id])
 
+  const slugToName = Object.fromEntries(themes.map(t => [t.slug, t.name]))
+
   return (
     <div className="relative w-full max-w-md mx-auto">
       <svg
@@ -89,7 +91,7 @@ export function TransitMap({
                 <path
                   d={line.connector}
                   fill="none"
-                  stroke="#33406b"
+                  stroke={CONNECTOR_COLOR}
                   strokeWidth={3}
                   strokeDasharray="2 6"
                 />
@@ -103,6 +105,15 @@ export function TransitMap({
                 strokeLinejoin="round"
                 strokeOpacity={lineCleared ? 1 : 0.85}
               />
+              <text
+                x={line.label.x}
+                y={line.label.y}
+                fill={line.color}
+                fontSize={9}
+                fontWeight={700}
+              >
+                {slugToName[line.slug] ?? line.slug}
+              </text>
             </g>
           )
         })}
@@ -127,9 +138,7 @@ export function TransitMap({
             type="button"
             disabled={s.locked}
             aria-current={isNext ? 'step' : undefined}
-            onClick={() => {
-              if (!s.locked) onSelect(s.level_id)
-            }}
+            onClick={() => onSelect(s.level_id)}
             className="absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             style={{
               left: `${(s.x / VIEWBOX.w) * 100}%`,
@@ -139,8 +148,8 @@ export function TransitMap({
             <span
               className={`block rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
               style={{
-                width: dotSize,
-                height: dotSize,
+                width: `${dotSize}px`,
+                height: `${dotSize}px`,
                 borderColor: color,
                 opacity: state === 'locked' || state === 'ahead' ? 0.5 : 1,
                 background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
@@ -157,8 +166,8 @@ export function TransitMap({
                 }`}
               >
                 {s.name}
-                {s.interchange ? ' ⇄' : ''}
-                {isNext ? ' ▶' : ''}
+                {s.interchange ? <span aria-hidden="true"> ⇄</span> : ''}
+                {isNext ? <span aria-hidden="true"> ▶</span> : ''}
               </span>
               {s.cleared && <Stars n={s.my_stars} />}
             </span>
