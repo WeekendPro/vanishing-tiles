@@ -3,6 +3,7 @@ import { getLevel } from '../lib/api'
 import { relativeTime } from '../lib/relativeTime'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { track } from '../store/asyncStatus'
 
 interface LevelDetail {
   level_id: string; display_number: number; theme_name: string
@@ -24,7 +25,7 @@ export function LevelDetailScreen() {
     if (!selectedLevelId) return
     setError(false); setLevel(null)
     try {
-      setLevel((await getLevel(selectedLevelId)) as LevelDetail)
+      setLevel((await track(getLevel(selectedLevelId))) as LevelDetail)
     } catch {
       setError(true)
     }
@@ -36,7 +37,7 @@ export function LevelDetailScreen() {
     if (!level) return
     setBusy(true)
     try {
-      await startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number)
+      await track(startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number))
       enterPlaying()
     } catch {
       setError(true)
