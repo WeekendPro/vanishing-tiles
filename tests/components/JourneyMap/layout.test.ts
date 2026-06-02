@@ -33,4 +33,35 @@ describe('JourneyMap layout', () => {
     expect(VIEWBOX.w).toBeGreaterThan(0)
     expect(VIEWBOX.h).toBeGreaterThan(0)
   })
+
+  // Guards hand-authored drift: each line's path must trace its 5 stations' coords,
+  // and each connector must join the prior interchange to the line's first station.
+  const pointsOf = (d: string): [number, number][] =>
+    d.trim().split(/\s+/).map(seg => {
+      const [x, y] = seg.replace(/^[ML]/, '').split(',').map(Number)
+      return [x, y] as [number, number]
+    })
+
+  it('each line path traces its 5 stations in display order', () => {
+    LINES.forEach((line, i) => {
+      const first = i * 5 + 1
+      const expected = [0, 1, 2, 3, 4].map(k => [STATIONS[first + k].x, STATIONS[first + k].y])
+      expect(pointsOf(line.path), `${line.slug} path`).toEqual(expected)
+    })
+  })
+
+  it('each connector joins the previous interchange to its line first station', () => {
+    LINES.forEach((line, i) => {
+      if (i === 0) {
+        expect(line.connector).toBeUndefined()
+        return
+      }
+      const prevInterchange = STATIONS[i * 5] // station 5 before stacks, 10 before grid
+      const firstStation = STATIONS[i * 5 + 1]
+      expect(pointsOf(line.connector!), `${line.slug} connector`).toEqual([
+        [prevInterchange.x, prevInterchange.y],
+        [firstStation.x, firstStation.y],
+      ])
+    })
+  })
 })
