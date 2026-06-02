@@ -23,17 +23,13 @@ export function CountdownPhase() {
     return () => clearTimeout(t)
   }, [count, beginViewing])
 
-  // SF Pro Rounded on the Apple targets (macOS/iOS) with a graceful fallback.
-  const rounded = { fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif' }
-
   return (
     <div className="flex flex-col items-center justify-center gap-6 select-none">
       <motion.h2
         initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
         animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        style={rounded}
-        className="text-6xl font-black tracking-tight text-white"
+        className="font-pixel uppercase tracking-[0.08em] text-2xl text-neon-cyan text-glow-cyan"
       >
         Round {round}
       </motion.h2>
@@ -47,8 +43,7 @@ export function CountdownPhase() {
               animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
               exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.9 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
-              style={rounded}
-              className="absolute font-black leading-none text-cyan-300 text-[11rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
+              className="absolute font-pixel leading-none text-neon-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
             >
               {count}
             </motion.span>

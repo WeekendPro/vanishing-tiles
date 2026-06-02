@@ -1,6 +1,8 @@
-# Mind The Gap — Project Context
+# Gap City — Project Context
 
-A memory-and-speed puzzle game. The web POC is complete and playable. The eventual goal is a React Native mobile app published to the Apple App Store.
+A memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
+complete and playable. The eventual goal is a React Native mobile app published to
+the Apple App Store.
 
 **Run the app:** `npm run dev` → http://localhost:5173  
 **Run tests:** `npm run test` (all must pass before any commit)  
@@ -10,7 +12,7 @@ A memory-and-speed puzzle game. The web POC is complete and playable. The eventu
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure.
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, progress through themed neighborhoods across the districts of Gap City, a fictional metropolis (The Hollows → The Stacks → The Grid), with each district containing a group of increasingly difficult levels.
 
 ### Round loop
 
@@ -60,6 +62,8 @@ src/
     Grid.tsx            — 12×12 inline-grid, 28px cells; onCellClick / onCellHover props
     PieceShape.tsx      — Renders a single piece at a given rotation + cell size
     ProgressBar.tsx     — Animated countdown bar
+    JourneyScreen.tsx   — Journey "Map" screen: loads get_journey, owns loading/error, GAP CITY header; renders <TransitMap>
+    JourneyMap/         — The transit-map Journey: index.tsx (TransitMap = SVG neon lines + HTML station buttons) + layout.ts (hand-authored station coords, line paths, slug→color). Presentational only; tap a station → openLevel.
 ```
 
 ### Grid dimensions
@@ -70,7 +74,7 @@ Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382
 
 `DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry). The view (memorize) timer **rises monotonically with `gapCount`** on a comfortable **~1.2–1.33s per gap** budget so every level stays solvable — the challenge is *how fast* you clear it, not *whether* you can. It runs **4000ms → 17000ms** across rounds 1–15, tapering toward ~1.06s/gap at the top tier where adjacent shapes chunk in memory. `selectDuration` also rises (10000 → 23000ms) and is always longer than the view window, so picking pieces is never the bottleneck. `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run. Speed scoring is **ratio-based** (`scoring.ts` uses `timeRemaining / duration`), so these absolute durations self-normalize and don't change the score ceiling — leaving more time on the clock (hitting **Ready →** early) banks more speed bonus.
 
-**Three sources must stay in sync:** the client fallback `DIFFICULTY_TABLE` (`gameStore.ts`), the server config `LEVEL_CONFIGS` (`supabase/functions/_shared/core/levelConfig.ts`), and the DB seed (`supabase/seed.sql`). When running against Supabase, the served durations come from the `levels` **DB table** — the seed uses `on conflict … do nothing`, so an existing DB must be re-seeded/migrated for new values to take effect.
+**Three sources must stay in sync:** the client fallback `DIFFICULTY_TABLE` (`gameStore.ts`), the server config `LEVEL_CONFIGS` (`supabase/functions/_shared/core/levelConfig.ts`), and the DB seed (`supabase/seed.sql`). When running against Supabase, the served durations come from the `levels` **DB table** — the seed uses `on conflict … do nothing`, so an existing DB must be re-seeded/migrated for new values to take effect. The three districts use the fictional slugs `the_hollows` / `the_stacks` / `the_grid` (renamed from the NYC slugs by migration `0009_gap_city_fictional_names.sql`); keep these in sync across `levelConfig.ts`, `seed.sql`, and the migrations.
 
 ---
 

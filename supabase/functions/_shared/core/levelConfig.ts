@@ -2,7 +2,7 @@ export type ShapeComplexity = 'simple' | 'medium' | 'complex'
 
 export interface LevelConfig {
   displayNumber: number
-  theme: 'beginner' | 'intermediate'
+  theme: 'the_hollows' | 'the_stacks' | 'the_grid'
   viewDuration: number
   selectDuration: number
   gapCount: number
@@ -36,8 +36,10 @@ const RAW: Omit<LevelConfig, 'theme' | 'adjacency'>[] = [
   { displayNumber: 15, viewDuration: 17000, selectDuration: 23000, gapCount: 16, shapeComplexity: 'complex' },
 ]
 
-export function themeForLevel(n: number): 'beginner' | 'intermediate' {
-  return n <= 7 ? 'beginner' : 'intermediate'
+export function themeForLevel(n: number): 'the_hollows' | 'the_stacks' | 'the_grid' {
+  if (n <= 5) return 'the_hollows'
+  if (n <= 10) return 'the_stacks'
+  return 'the_grid'
 }
 
 export const LEVEL_CONFIGS: LevelConfig[] = RAW.map(r => ({

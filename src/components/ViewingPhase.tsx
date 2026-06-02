@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { Grid } from './Grid'
 import { GapShimmer } from './GapShimmer'
+import { NeonButton } from './ui'
 
 export function ViewingPhase() {
   const { endViewing, phaseStartTime, phaseDuration, gaps } = useGameStore(useShallow(s => ({
@@ -31,13 +32,10 @@ export function ViewingPhase() {
         />
         <GapShimmer containerRef={gridWrapRef} cellRects={cellRects} gaps={gaps} />
       </div>
-      <p className="text-sm text-slate-400 tracking-widest uppercase text-center">Memorize the gaps</p>
-      <button
-        onClick={endViewing}
-        className="w-full py-3 bg-cyan-900 border-2 border-cyan-600 text-cyan-300 rounded-xl font-bold hover:bg-cyan-800"
-      >
+      <p className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan text-center">Memorize the gaps</p>
+      <NeonButton fullWidth variant="primary" onClick={endViewing}>
         Ready →
-      </button>
+      </NeonButton>
     </div>
   )
 }

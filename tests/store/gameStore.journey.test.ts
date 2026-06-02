@@ -33,7 +33,7 @@ describe('startJourneySession', () => {
   it('loads the server puzzle into state without local generation', async () => {
     ;(api.startSession as any).mockResolvedValue(START_RESULT)
     await act(async () => {
-      await useGameStore.getState().startJourneySession('lvl-1', 1200, 5)
+      await useGameStore.getState().startJourneySession('lvl-1', 1200, 5, 'Castle Hill')
     })
     const s = useGameStore.getState()
     expect(api.startSession).toHaveBeenCalledWith('lvl-1')
@@ -44,6 +44,7 @@ describe('startJourneySession', () => {
     expect(s.maxTries).toBe(3)
     expect(s.priorPr).toBe(1200)
     expect(s.levelDisplayNumber).toBe(5)
+    expect(s.levelName).toBe('Castle Hill')
     expect(s.difficulty.viewDuration).toBe(7000)
     expect(s.difficulty.selectDuration).toBe(9000)
     // sessionGrid is a pristine copy for retry replays.

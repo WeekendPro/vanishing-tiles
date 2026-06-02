@@ -34,3 +34,42 @@
     rgba(0, 0, 0, 0.6) 2px 3px
   );
 }
+
+/* Neon text glow utilities — cheap box-free text-shadow halos matching the
+   neon color tokens. Pair with `.font-pixel` on titles/labels/numbers. */
+.text-glow-cyan {
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+}
+.text-glow-magenta {
+  text-shadow: 0 0 8px rgba(255, 45, 149, 0.6);
+}
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+}
+.text-glow-yellow {
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+}
+
+/* Transit-map "next stop" node: a white dot that breathes to draw the eye. */
+@keyframes mapPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+}
+.map-next {
+  animation: mapPulse 1.3s ease-in-out infinite;
+  box-shadow: 0 0 8px #fff, 0 0 14px #ff2d95;
+}
+
+/* Cleared-route draw-on: sweep a line's stroke into view from its start.
+   Set --draw to the path length on the element to use. */
+@keyframes mapDrawOn {
+  from { stroke-dashoffset: var(--draw, 100); }
+  to { stroke-dashoffset: 0; }
+}
+.map-progress {
+  animation: mapDrawOn 0.9s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-next, .map-progress { animation: none; }
+}

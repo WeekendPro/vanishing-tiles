@@ -18,9 +18,9 @@ interface Props {
 }
 
 const ACCURACY_ICON: Record<'perfect' | 'close' | 'far', { icon: string; color: string }> = {
-  perfect: { icon: '✓', color: 'text-green-400' },
-  close:   { icon: '≈', color: 'text-amber-400' },
-  far:     { icon: '✕', color: 'text-red-400' },
+  perfect: { icon: '✓', color: 'text-neon-green' },
+  close:   { icon: '≈', color: 'text-neon-yellow' },
+  far:     { icon: '✕', color: 'text-neon-red' },
 }
 
 const ROW_STAGGER = 0.3   // seconds between row reveals
@@ -33,31 +33,31 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailu
 
   return (
     <motion.div
-      className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-col gap-1"
+      className="w-full bg-arcade-panel border-2 border-arcade-edge shadow-panel-inset rounded-md p-3 flex flex-col gap-1"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
       <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.accuracy} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
       {!isFailure && (
-        <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={ROW_STAGGER} color={speedSlow ? 'text-gray-400' : 'text-yellow-400'} />
+        <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={ROW_STAGGER} color={speedSlow ? 'text-gray-400' : 'text-neon-yellow'} />
       )}
       {!isFailure && (
-        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2} color="text-cyan-400" />
+        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2} color="text-neon-cyan" />
       )}
       {!isFailure && (
-        <Row icon="◎" label="Attempts" value={roundScore.attemptsBonus} delay={ROW_STAGGER * 3} color="text-violet-400" />
+        <Row icon="◎" label="Attempts" value={roundScore.attemptsBonus} delay={ROW_STAGGER * 3} color="text-neon-magenta" />
       )}
 
-      <div className="mt-2 pt-2 border-t border-gray-800 flex flex-col gap-1">
+      <div className="mt-2 pt-2 border-t border-arcade-edge flex flex-col gap-1">
         <motion.div
           className="flex justify-between items-baseline"
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: [0.92, 1.08, 1] }}
           transition={{ delay: ROUND_TOTAL_DELAY, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
         >
-          <span className="text-[11px] tracking-widest text-gray-400 uppercase">Round Total</span>
-          <span className={`text-2xl font-extrabold tabular-nums ${roundScore.total < 0 ? 'text-red-400' : 'text-yellow-400'}`}>
+          <span className="font-pixel text-[9px] tracking-[0.1em] text-gray-400 uppercase">Round Total</span>
+          <span className={`font-pixel text-lg tabular-nums ${roundScore.total < 0 ? 'text-neon-red text-glow-red' : 'text-neon-yellow text-glow-yellow'}`}>
             {roundScore.total >= 0 ? '+' : ''}<DelayedCountUp value={roundScore.total} delay={ROUND_TOTAL_DELAY} />
           </span>
         </motion.div>
@@ -68,8 +68,8 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailu
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: GRAND_TOTAL_DELAY, duration: 0.3, ease: 'easeOut' }}
         >
-          <span className="text-[11px] tracking-widest text-gray-500 uppercase">Grand Total</span>
-          <span className="text-lg font-bold text-yellow-400 tabular-nums">
+          <span className="font-pixel text-[9px] tracking-[0.1em] text-gray-500 uppercase">Grand Total</span>
+          <span className="font-pixel text-sm text-neon-yellow text-glow-yellow tabular-nums">
             <DelayedCountUp value={grandTotal} delay={GRAND_TOTAL_DELAY} />
           </span>
         </motion.div>
@@ -92,7 +92,7 @@ function Row({ icon, label, value, delay, color }: {
         <span className={`inline-block w-5 text-center mr-1 ${color}`}>{icon}</span>
         <span className="text-gray-300">{label}</span>
       </span>
-      <span className={`font-semibold tabular-nums ${value < 0 ? 'text-red-400' : 'text-white'}`}>
+      <span className={`font-semibold tabular-nums ${value < 0 ? 'text-neon-red' : 'text-white'}`}>
         {value >= 0 ? '+' : ''}<DelayedCountUp value={value} delay={delay} />
       </span>
     </motion.div>

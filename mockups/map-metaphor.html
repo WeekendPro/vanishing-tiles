@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Map metaphor options</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cyan:#22d3ee; --magenta:#ff2d95; --green:#39d98a; --yellow:#facc15;
+    --bg:#030712; --panel:#060d12; --edge:#0e2b33; --well:#0c1f25;
+  }
+  body{ background:var(--bg); color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-cyan{ text-shadow:0 0 8px rgba(34,211,238,.6); }
+  .glow-mag{ text-shadow:0 0 8px rgba(255,45,149,.6); }
+  .scan{ background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.5) 2px 3px); }
+  .phone{ width:390px; height:760px; background:var(--bg); border:2px solid var(--edge); border-radius:18px; overflow:hidden; position:relative; }
+  .col-title{ font-family:'Press Start 2P',monospace; font-size:11px; }
+  .muted{ color:#8c98c0; }
+
+  /* ===== A: ISOMETRIC ===== */
+  .iso-wrap{ perspective:none; }
+  .iso-board{ transform:rotateX(55deg) rotateZ(-45deg); transform-style:preserve-3d; }
+  .block{ position:relative; }
+  .block .top{ width:46px; height:46px; border:1px solid rgba(34,211,238,.35); background:rgba(12,31,37,.85); }
+  .block.done .top{ background:rgba(34,211,238,.18); border-color:var(--cyan); box-shadow:0 0 10px rgba(34,211,238,.5); }
+  .block.cur .top{ background:rgba(255,45,149,.22); border-color:var(--magenta); box-shadow:0 0 14px rgba(255,45,149,.6); }
+  .block.lock .top{ background:rgba(20,24,40,.6); border-color:#2a3350; }
+
+  /* ===== B: PERSPECTIVE FLOOR ===== */
+  .floor{ position:absolute; inset:0; overflow:hidden; }
+  .floor .grid{
+    position:absolute; left:50%; bottom:-40px; width:760px; height:760px; margin-left:-380px;
+    transform:rotateX(64deg); transform-origin:bottom center;
+    background-image:
+      linear-gradient(rgba(34,211,238,.22) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(34,211,238,.22) 1px,transparent 1px);
+    background-size:63px 63px;
+  }
+  .floor::after{ content:""; position:absolute; inset:0; background:linear-gradient(to top,transparent 30%,var(--bg) 78%); }
+  .plot{ position:absolute; width:16px; height:16px; border-radius:3px; transform:translate(-50%,-50%); }
+  .plot.done{ background:var(--cyan); box-shadow:0 0 12px var(--cyan); }
+  .plot.cur{ background:var(--magenta); box-shadow:0 0 16px var(--magenta); animation:pulse 1.4s infinite; }
+  .plot.todo{ background:#1c2740; border:1px solid #2f3c63; }
+  @keyframes pulse{ 0%,100%{ transform:translate(-50%,-50%) scale(1);} 50%{ transform:translate(-50%,-50%) scale(1.35);} }
+
+  /* ===== C: SUBWAY MAP ===== */
+  .line{ stroke-width:6; fill:none; stroke-linecap:round; }
+  .stn{ fill:#0c1f25; stroke-width:3; }
+</style>
+</head>
+<body class="p-5">
+  <div class="mb-4">
+    <div class="pixel text-white glow-cyan text-lg">GAP CITY</div>
+    <div class="muted text-xs mt-1">Spec 2 — "the grid IS the city": three ways to read the Journey as a city from above</div>
+  </div>
+
+  <div class="flex gap-6 items-start overflow-x-auto pb-4">
+
+    <!-- ============ A. ISOMETRIC BLOCKS ============ -->
+    <div>
+      <div class="col-title glow-cyan mb-2">A · ISOMETRIC CITY</div>
+      <div class="muted text-[11px] mb-2 w-[390px]">2.5D blocks rising off a floor. Districts = zones of blocks, each neighborhood is a city block. Most "toy city" / Monument Valley feel.</div>
+      <div class="phone scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-10 flex justify-between items-center" style="background:linear-gradient(to bottom,var(--bg),transparent)">
+          <span class="pixel text-[10px] text-white glow-cyan">GAP CITY</span>
+          <span class="text-[10px] muted">★ 14 · 🔥5</span>
+        </div>
+        <div class="iso-wrap absolute inset-0 flex items-center justify-center">
+          <div class="iso-board grid gap-2" style="grid-template-columns:repeat(3,46px);">
+            <!-- Manhattan (top, locked) -->
+            <div class="block lock"><div class="top"></div></div>
+            <div class="block lock"><div class="top"></div></div>
+            <div class="block lock"><div class="top"></div></div>
+            <!-- Brooklyn (mid) -->
+            <div class="block cur"><div class="top"></div></div>
+            <div class="block"><div class="top"></div></div>
+            <div class="block"><div class="top"></div></div>
+            <!-- Bronx (front, done) -->
+            <div class="block done"><div class="top"></div></div>
+            <div class="block done"><div class="top"></div></div>
+            <div class="block done"><div class="top"></div></div>
+          </div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 bg-[#060d12] border-t border-[#0e2b33]">
+          <div class="pixel text-[9px] glow-mag text-[#ff2d95]">BROOKLYN</div>
+          <div class="pixel text-[11px] text-white mt-1">BED-STUY</div>
+          <div class="text-[10px] muted mt-1">Level 6 · PR — · ▶ tap a block to play</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ B. PERSPECTIVE FLOOR ============ -->
+    <div>
+      <div class="col-title glow-cyan mb-2">B · PERSPECTIVE FLOOR</div>
+      <div class="muted text-[11px] mb-2 w-[390px]">The 12×12 board itself, tilted into perspective, receding to a neon horizon. Neighborhoods are glowing plots on the grid. Most literal to direction F & the gameplay board.</div>
+      <div class="phone scan">
+        <div class="floor">
+          <div class="grid"></div>
+          <!-- plots placed in screen space over the receding grid -->
+          <div class="plot done" style="left:46%; top:84%"></div>
+          <div class="plot done" style="left:54%; top:78%"></div>
+          <div class="plot done" style="left:44%; top:71%"></div>
+          <div class="plot done" style="left:56%; top:65%"></div>
+          <div class="plot done" style="left:47%; top:59%"></div>
+          <div class="plot cur"  style="left:53%; top:53%"></div>
+          <div class="plot todo" style="left:48%; top:48%"></div>
+          <div class="plot todo" style="left:52%; top:44%"></div>
+          <div class="plot todo" style="left:49%; top:40%"></div>
+          <div class="plot todo" style="left:51%; top:37%"></div>
+        </div>
+        <div class="absolute top-0 left-0 right-0 p-3 z-10 flex justify-between items-center">
+          <span class="pixel text-[10px] text-white glow-cyan">GAP CITY</span>
+          <span class="text-[10px] muted">★ 14</span>
+        </div>
+        <!-- horizon district labels -->
+        <div class="absolute z-10 text-center" style="left:0;right:0;top:32%"><span class="pixel text-[8px] muted">MANHATTAN ↑</span></div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 bg-[#060d12]/90 border-t border-[#0e2b33]">
+          <div class="pixel text-[9px] glow-mag text-[#ff2d95]">THE BRONX</div>
+          <div class="pixel text-[11px] text-white mt-1">CITY ISLAND</div>
+          <div class="text-[10px] muted mt-1">Level 5 · PR 980 · ★★☆</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ C. SUBWAY MAP ============ -->
+    <div>
+      <div class="col-title glow-cyan mb-2">C · NEON TRANSIT MAP</div>
+      <div class="muted text-[11px] mb-2 w-[390px]">A stylized NYC subway/street map. Districts = colored lines, neighborhoods = stations. Flat, readable, unmistakably New York — but least "grid is the city".</div>
+      <div class="phone scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-10 flex justify-between items-center">
+          <span class="pixel text-[10px] text-white glow-cyan">GAP CITY</span>
+          <span class="text-[10px] muted">★ 14</span>
+        </div>
+        <svg viewBox="0 0 390 700" class="absolute inset-0 w-full h-full">
+          <!-- bronx line (cyan) -->
+          <path class="line" stroke="#22d3ee" d="M70,640 L70,560 L130,500 L130,420 L80,360"/>
+          <!-- brooklyn line (magenta) -->
+          <path class="line" stroke="#ff2d95" d="M80,360 L160,300 L160,220 L240,170"/>
+          <!-- manhattan line (dim, locked) -->
+          <path class="line" stroke="#3a4straight" stroke="#2f3c63" stroke-dasharray="2 8" d="M240,170 L240,110 L310,70"/>
+          <!-- bronx stations done -->
+          <g>
+            <circle class="stn" stroke="#22d3ee" cx="70" cy="640" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="70" cy="560" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="130" cy="500" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="130" cy="420" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="80" cy="360" r="9"/>
+          </g>
+          <!-- brooklyn current -->
+          <circle cx="160" cy="300" r="11" fill="#ff2d95" filter="drop-shadow(0 0 8px #ff2d95)"/>
+          <circle class="stn" stroke="#ff2d95" cx="160" cy="220" r="9"/>
+          <circle class="stn" stroke="#ff2d95" cx="240" cy="170" r="9"/>
+          <text x="92" y="645" fill="#e7ecff" font-size="11">Castle Hill ★★★</text>
+          <text x="180" y="305" fill="#fff" font-size="11" font-weight="700">Bed-Stuy ▶</text>
+          <text x="150" y="150" fill="#7681a6" font-size="10">🔒 Manhattan</text>
+        </svg>
+        <div class="absolute bottom-0 left-0 right-0 p-3 bg-[#060d12]/90 border-t border-[#0e2b33]">
+          <div class="pixel text-[9px] glow-mag text-[#ff2d95]">BROOKLYN LINE</div>
+          <div class="pixel text-[11px] text-white mt-1">BED-STUY</div>
+          <div class="text-[10px] muted mt-1">Level 6 · next stop</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

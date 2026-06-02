@@ -3,6 +3,7 @@ import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
+import { ScanlineOverlay } from './ui'
 
 interface MenuUser {
   name: string
@@ -24,7 +25,7 @@ function Avatar({ user }: { user: MenuUser }) {
   }
   return (
     <div className="w-12 h-12 rounded-full grid place-items-center font-black text-lg text-white
-      bg-gradient-to-br from-cyan-400 to-indigo-600 ring-1 ring-white/15">
+      bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
       {initials(user.name)}
     </div>
   )
@@ -32,11 +33,11 @@ function Avatar({ user }: { user: MenuUser }) {
 
 function Action({ label, onClick, tone = 'default' }:
   { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger' }) {
-  const color = tone === 'danger' ? 'text-red-400/90 hover:text-red-300'
-    : tone === 'muted' ? 'text-gray-500 hover:text-white'
-    : 'text-white hover:text-cyan-300'
+  const color = tone === 'danger' ? 'text-neon-red hover:text-glow-red'
+    : tone === 'muted' ? 'text-arcade-edge hover:text-gray-300'
+    : 'text-gray-200 hover:text-neon-cyan'
   return (
-    <button onClick={onClick} className={`text-left text-3xl font-black py-3 ${color}`}>
+    <button onClick={onClick} className={`text-left font-pixel uppercase tracking-[0.08em] text-base py-3 ${color}`}>
       {label}
     </button>
   )
@@ -97,8 +98,8 @@ export function GlobalMenu() {
         onClick={open ? close : openMenu}
         aria-label="Menu"
         aria-expanded={open}
-        className="fixed top-1.5 right-3 z-50 grid place-items-center w-10 h-10 rounded-xl
-          text-gray-300 hover:text-white"
+        className="fixed top-1.5 right-3 z-50 grid place-items-center w-10 h-10 rounded-md
+          text-neon-cyan hover:text-neon-cyan text-glow-cyan"
       >
         {open ? (
           <span className="text-2xl leading-none">×</span>
@@ -113,15 +114,16 @@ export function GlobalMenu() {
 
       {open && (
         <div className="fixed inset-0 z-40 flex flex-col px-7 pt-20 pb-8 text-white
-          bg-gradient-to-b from-gray-950 via-gray-900 to-black">
+          bg-gradient-to-b from-arcade-bg via-arcade-panel to-black">
+          <ScanlineOverlay />
           {inGame && (
-            <div className="text-xs uppercase tracking-[0.3em] text-cyan-400 font-bold mb-1">Paused</div>
+            <div className="font-pixel text-[9px] uppercase tracking-[0.2em] text-neon-cyan text-glow-cyan mb-1">Paused</div>
           )}
           {user && (
             <div className="flex items-center gap-3 mb-8">
               <Avatar user={user} />
               <div className="min-w-0">
-                <div className="font-bold text-lg leading-tight truncate">{user.name}</div>
+                <div className="font-pixel text-sm leading-tight truncate">{user.name}</div>
                 <div className="text-xs text-gray-400 truncate">
                   {user.email ?? (user.isGuest ? 'Guest session' : '')}
                 </div>

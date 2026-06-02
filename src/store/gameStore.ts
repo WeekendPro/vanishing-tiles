@@ -68,9 +68,10 @@ interface GameStore extends GameState {
   journeyError: string | null
   priorPr: number
   levelDisplayNumber: number | null
+  levelName: string | null
   submitting: boolean
   clearJourneyError: () => void
-  startJourneySession: (levelId: string, priorPr: number, displayNumber: number) => Promise<void>
+  startJourneySession: (levelId: string, priorPr: number, displayNumber: number, levelName?: string | null) => Promise<void>
   submitJourneyAttempt: () => Promise<void>
   retryJourney: () => void
   submit: () => void | Promise<void>
@@ -105,9 +106,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   journeyError: null,
   priorPr: 0,
   levelDisplayNumber: null,
+  levelName: null,
   submitting: false,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, submitting: false }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, levelName: null, submitting: false }),
 
   pauseGame: () => set(state => {
     if (state.paused) return {}
@@ -323,7 +325,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startGame()
   },
 
-  startJourneySession: async (levelId, priorPr, displayNumber) => {
+  startJourneySession: async (levelId, priorPr, displayNumber, levelName = null) => {
     const res = await startSession(levelId)
     const difficulty: DifficultyConfig = {
       viewDuration: res.view_duration_ms,
@@ -339,6 +341,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       levelId,
       priorPr,
       levelDisplayNumber: displayNumber,
+      levelName,
       grid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
       sessionGrid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
       gaps: res.puzzle.gaps,

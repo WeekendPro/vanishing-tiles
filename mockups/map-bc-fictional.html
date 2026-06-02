@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — B vs C (fictional)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{ --cyan:#22d3ee; --magenta:#ff2d95; --green:#39d98a; --yellow:#facc15; --bg:#030712; }
+  body{ background:#06080f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-cyan{ text-shadow:0 0 8px rgba(34,211,238,.6); }
+  .glow-mag{ text-shadow:0 0 8px rgba(255,45,149,.6); }
+  .scan{ background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.5) 2px 3px); }
+  .phone{ width:390px; height:780px; background:var(--bg); border:2px solid #0e2b33; border-radius:20px; overflow:hidden; position:relative; }
+  .muted{ color:#8c98c0; }
+  .col-title{ font-family:'Press Start 2P',monospace; font-size:11px; }
+
+  /* ===== B: PERSPECTIVE GRID FLOOR ===== */
+  .scene{ position:absolute; inset:0; overflow:hidden; }
+  .gridfloor{
+    position:absolute; left:50%; top:34%; width:1100px; height:1100px; margin-left:-550px;
+    transform:rotateX(72deg); transform-origin:top center;
+    background-image:
+      linear-gradient(rgba(34,211,238,.28) 2px,transparent 2px),
+      linear-gradient(90deg,rgba(34,211,238,.16) 2px,transparent 2px);
+    background-size:55px 55px;
+  }
+  .scene::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse 80% 55% at 50% 30%, transparent 40%, var(--bg) 85%),
+               linear-gradient(to top, transparent 55%, rgba(3,7,18,.4) 100%); }
+  .horizon{ position:absolute; left:0; right:0; top:34%; height:1px; background:linear-gradient(90deg,transparent,rgba(34,211,238,.5),transparent); }
+  .skyglow{ position:absolute; left:0; right:0; top:0; height:36%;
+    background:radial-gradient(ellipse 70% 100% at 50% 100%, rgba(255,45,149,.18), transparent 70%); }
+  .plot{ position:absolute; border-radius:3px; transform:translate(-50%,-50%); }
+  .plot .lbl{ position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:10px; top:-15px; }
+  .done{ background:var(--cyan); box-shadow:0 0 10px var(--cyan); }
+  .done2{ background:var(--magenta); box-shadow:0 0 10px var(--magenta); }
+  .cur{ background:#fff; box-shadow:0 0 16px var(--magenta),0 0 6px #fff; animation:pulse 1.3s infinite; }
+  .todo{ background:#16203a; border:1px solid #33406b; }
+  .lock{ background:#11friendly; background:#101626; border:1px solid #232c44; }
+  @keyframes pulse{ 0%,100%{ transform:translate(-50%,-50%) scale(1);} 50%{ transform:translate(-50%,-50%) scale(1.4);} }
+
+  /* ===== C: TRANSIT MAP ===== */
+  .line{ stroke-width:7; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .stn{ fill:#06080f; stroke-width:3.5; }
+  .stn-lbl{ font-size:10.5px; fill:#cdd6f4; }
+</style>
+</head>
+<body class="p-5">
+  <div class="mb-4">
+    <div class="pixel text-white glow-cyan text-lg">GAP CITY</div>
+    <div class="muted text-xs mt-1">Fictional, pun-named. The two layouts you liked, populated for real. The Hollows → The Stacks → The Grid.</div>
+  </div>
+
+  <div class="flex gap-8 items-start">
+
+    <!-- ============ B ============ -->
+    <div>
+      <div class="col-title glow-cyan mb-2">B · PERSPECTIVE GRID — "the grid IS the city"</div>
+      <div class="muted text-[11px] mb-2 w-[390px]">You stand at street level looking down the avenues of Gap City. Each lit plot is a neighborhood; the road climbs from The Hollows up to the downtown Grid on the horizon. The map is canonical now — no real city to contradict it.</div>
+      <div class="phone scan">
+        <div class="scene">
+          <div class="skyglow"></div>
+          <div class="gridfloor"></div>
+          <div class="horizon"></div>
+          <!-- district horizon labels -->
+          <div class="absolute z-10 w-full text-center pixel text-[8px]" style="top:30%;color:#facc15;text-shadow:0 0 8px #facc15">▲ THE GRID</div>
+          <!-- plots: winding road, front(big)→back(small) -->
+          <!-- The Hollows (cyan, done) -->
+          <div class="plot done" style="left:46%;top:90%;width:22px;height:22px"><span class="lbl text-cyan-300">Vacant Heights ★★★</span></div>
+          <div class="plot done" style="left:56%;top:83%;width:20px;height:20px"></div>
+          <div class="plot done" style="left:44%;top:77%;width:18px;height:18px"></div>
+          <div class="plot done" style="left:55%;top:71%;width:16px;height:16px"></div>
+          <div class="plot done" style="left:46%;top:66%;width:15px;height:15px"></div>
+          <!-- The Stacks (magenta, current at first) -->
+          <div class="plot cur" style="left:53%;top:61%;width:15px;height:15px"><span class="lbl text-white">Brickfall ▶</span></div>
+          <div class="plot todo" style="left:47%;top:57%;width:13px;height:13px"></div>
+          <div class="plot todo" style="left:53%;top:53.5%;width:12px;height:12px"></div>
+          <div class="plot todo" style="left:48%;top:50.5%;width:11px;height:11px"></div>
+          <div class="plot todo" style="left:52%;top:48%;width:10px;height:10px"></div>
+          <!-- The Grid (locked, far) -->
+          <div class="plot lock" style="left:49%;top:45.5%;width:9px;height:9px"></div>
+          <div class="plot lock" style="left:51.5%;top:43.5%;width:9px;height:9px"></div>
+          <div class="plot lock" style="left:49%;top:41.5%;width:8px;height:8px"></div>
+          <div class="plot lock" style="left:51%;top:40%;width:8px;height:8px"></div>
+          <div class="plot lock" style="left:50%;top:38%;width:8px;height:8px"></div>
+        </div>
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center">
+          <span class="pixel text-[10px] text-white glow-cyan">GAP CITY</span>
+          <span class="text-[10px] muted">★ 11 · 🔥5</span>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 z-20 bg-[#060d12]/95 border-t border-[#0e2b33]">
+          <div class="pixel text-[9px] glow-mag text-[#ff2d95]">THE STACKS</div>
+          <div class="pixel text-[11px] text-white mt-1">BRICKFALL</div>
+          <div class="text-[10px] muted mt-1">Level 6 · PR — · tap to enter</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ C ============ -->
+    <div>
+      <div class="col-title glow-cyan mb-2">C · TRANSIT MAP — the Gap City lines</div>
+      <div class="muted text-[11px] mb-2 w-[390px]">Three subway lines you ride in order. Stations are neighborhoods; you progress stop by stop. Pun-friendly (line names too), instantly readable, the most accessible. The map is the canonical Gap City transit system.</div>
+      <div class="phone scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center">
+          <span class="pixel text-[10px] text-white glow-cyan">GAP CITY</span>
+          <span class="text-[10px] muted">★ 11</span>
+        </div>
+        <svg viewBox="0 0 390 780" class="absolute inset-0 w-full h-full">
+          <!-- HOLLOWS LINE (cyan) -->
+          <path class="line" stroke="#22d3ee" d="M60,720 L60,640 L120,580 L120,500 L70,440"/>
+          <!-- STACKS LINE (magenta) -->
+          <path class="line" stroke="#ff2d95" d="M70,440 L150,380 L150,300 L230,250 L230,180"/>
+          <!-- GRID LINE (yellow, locked) -->
+          <path class="line" stroke="#facc15" stroke-opacity=".35" stroke-dasharray="3 9" d="M230,180 L300,130 L300,70 L240,40"/>
+
+          <!-- Hollows stations (done) -->
+          <g>
+            <circle class="stn" stroke="#22d3ee" cx="60" cy="720" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="60" cy="640" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="120" cy="580" r="9"/>
+            <circle class="stn" stroke="#22d3ee" cx="120" cy="500" r="9"/>
+          </g>
+          <!-- interchange Hollows↔Stacks -->
+          <circle cx="70" cy="440" r="11" fill="#06080f" stroke="#22d3ee" stroke-width="3.5"/>
+          <!-- Stacks current -->
+          <circle cx="150" cy="380" r="12" fill="#fff" filter="drop-shadow(0 0 8px #ff2d95)"/>
+          <circle class="stn" stroke="#ff2d95" cx="150" cy="300" r="9"/>
+          <circle class="stn" stroke="#ff2d95" cx="230" cy="250" r="9"/>
+          <!-- interchange Stacks↔Grid -->
+          <circle cx="230" cy="180" r="11" fill="#06080f" stroke="#facc15" stroke-width="3" stroke-opacity=".5"/>
+
+          <!-- labels -->
+          <text class="stn-lbl" x="76" y="724">Vacant Heights ★★★</text>
+          <text class="stn-lbl" x="76" y="644">Open Lots ★★☆</text>
+          <text class="stn-lbl" x="136" y="584">Holloway ★★★</text>
+          <text class="stn-lbl" x="136" y="504">Gapstead ★☆☆</text>
+          <text class="stn-lbl" x="86" y="444" fill="#9fe9f7">Nilsen Park ⇄</text>
+          <text x="168" y="384" fill="#fff" font-size="11" font-weight="700">Brickfall ▶</text>
+          <text class="stn-lbl" x="166" y="304">Tetra Heights</text>
+          <text class="stn-lbl" x="246" y="254">Four Corners</text>
+          <text x="150" y="160" fill="#caa64a" font-size="10">🔒 The Grid · clear The Stacks</text>
+
+          <!-- line keys -->
+          <text x="30" y="760" fill="#22d3ee" font-size="9" font-weight="700">— HOLLOWS</text>
+          <text x="160" y="760" fill="#ff2d95" font-size="9" font-weight="700">— STACKS</text>
+          <text x="270" y="760" fill="#caa64a" font-size="9" font-weight="700">— GRID</text>
+        </svg>
+        <div class="absolute bottom-0 left-0 right-0 p-3 z-20 bg-[#060d12]/95 border-t border-[#0e2b33]" style="height:36px"></div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
