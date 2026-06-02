@@ -1,6 +1,8 @@
-# Mind The Gap — Project Context
+# Gap City — Project Context
 
-A memory-and-speed puzzle game. The web POC is complete and playable. The eventual goal is a React Native mobile app published to the Apple App Store.
+A memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
+complete and playable. The eventual goal is a React Native mobile app published to
+the Apple App Store.
 
 **Run the app:** `npm run dev` → http://localhost:5173  
 **Run tests:** `npm run test` (all must pass before any commit)  
@@ -10,7 +12,7 @@ A memory-and-speed puzzle game. The web POC is complete and playable. The eventu
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure.
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, progress through themed neighborhoods across New York districts (The Bronx, Brooklyn, Manhattan), with each district containing a group of increasingly difficult levels.
 
 ### Round loop
 

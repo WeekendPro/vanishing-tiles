@@ -4,7 +4,7 @@ import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
 import { NeonButton } from './ui/NeonButton'
 import { ArcadePanel } from './ui/ArcadePanel'
-import { PixelHeading } from './ui/PixelHeading'
+import { Wordmark } from './ui/Wordmark'
 import { ScanlineOverlay } from './ui/ScanlineOverlay'
 
 export function AuthScreen() {
@@ -39,7 +39,7 @@ export function AuthScreen() {
     <div className="relative min-h-dvh bg-arcade-bg flex items-center justify-center px-4 overflow-hidden">
       <ScanlineOverlay />
       <div className="relative inline-flex flex-col items-stretch w-full max-w-sm text-center">
-        <PixelHeading className="mb-3 text-2xl">Mind The Gap</PixelHeading>
+        <Wordmark size="lg" className="mb-3" />
         <p className="font-sans text-gray-400 mb-8">Sign in to start your journey.</p>
 
         <ArcadePanel className="p-5">
