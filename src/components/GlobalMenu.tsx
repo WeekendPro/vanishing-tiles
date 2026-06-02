@@ -112,7 +112,7 @@ export function GlobalMenu() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-40 flex flex-col px-7 pt-20 pb-8
+        <div className="fixed inset-0 z-40 flex flex-col px-7 pt-20 pb-8 text-white
           bg-gradient-to-b from-gray-950 via-gray-900 to-black">
           {inGame && (
             <div className="text-xs uppercase tracking-[0.3em] text-cyan-400 font-bold mb-1">Paused</div>
