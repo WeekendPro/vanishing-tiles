@@ -20,9 +20,9 @@ re-slicing the existing 15 levels:
 
 | District (theme) | Levels | Neighborhoods (in order) |
 |---|---|---|
-| **The Bronx** | 1–5 | Parkchester, East Tremont, Hunts Point, Mott Haven, Fordham |
+| **The Bronx** | 1–5 | Castle Hill, East Tremont, Hunts Point, Melrose, City Island |
 | **Brooklyn** | 6–10 | Bed-Stuy, Canarsie, Bushwick, Flatbush, Red Hook |
-| **Manhattan** | 11–15 | Harlem, Chelsea, SoHo, Inwood, Tribeca |
+| **Manhattan** | 11–15 | Harlem, Chelsea, SoHo, Washington Heights, Tribeca |
 
 This is a presentational + data-model change. **No game logic, scoring, solver,
 or difficulty-curve changes.** Difficulty climbs continuously across districts
@@ -138,11 +138,11 @@ A single forward migration. Idempotent where practical. Steps:
      index_in_theme = v.idx,
      name           = v.name
    from (values
-     (1,  'the_bronx', 1, 'Parkchester'),
+     (1,  'the_bronx', 1, 'Castle Hill'),
      (2,  'the_bronx', 2, 'East Tremont'),
      (3,  'the_bronx', 3, 'Hunts Point'),
-     (4,  'the_bronx', 4, 'Mott Haven'),
-     (5,  'the_bronx', 5, 'Fordham'),
+     (4,  'the_bronx', 4, 'Melrose'),
+     (5,  'the_bronx', 5, 'City Island'),
      (6,  'brooklyn',  1, 'Bed-Stuy'),
      (7,  'brooklyn',  2, 'Canarsie'),
      (8,  'brooklyn',  3, 'Bushwick'),
@@ -151,7 +151,7 @@ A single forward migration. Idempotent where practical. Steps:
      (11, 'manhattan', 1, 'Harlem'),
      (12, 'manhattan', 2, 'Chelsea'),
      (13, 'manhattan', 3, 'SoHo'),
-     (14, 'manhattan', 4, 'Inwood'),
+     (14, 'manhattan', 4, 'Washington Heights'),
      (15, 'manhattan', 5, 'Tribeca')
    ) as v(display_number, slug, idx, name)
    join public.themes th on th.slug = v.slug
@@ -275,7 +275,7 @@ encode the old labels:
 - **`tests/components/JourneyScreen.test.tsx`** — fixtures (`MOCK` themes/levels)
   gain `name` on each level; `name` on themes becomes a district (e.g. "The
   Bronx"); the `getByRole('button', { name: /Level 1/i })` / `/Level 9/i`
-  assertions change to the neighborhood names (e.g. `/Parkchester/i`). Locked-theme
+  assertions change to the neighborhood names (e.g. `/Castle Hill/i`). Locked-theme
   behavior assertion is unchanged in spirit.
 - **`tests/components/LevelDetailScreen.test.tsx`** — `LEVEL` fixture gains `name`;
   `theme_name` becomes a district; assert the neighborhood heading renders and the
