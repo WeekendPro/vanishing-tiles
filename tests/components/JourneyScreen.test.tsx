@@ -8,14 +8,14 @@ import { JourneyScreen } from '../../src/components/JourneyScreen'
 import { useNavStore } from '../../src/store/navStore'
 
 const JOURNEY = [
-  { theme_id: 't1', slug: 'the_bronx', name: 'The Bronx', mechanic: 'standard', sort_order: 1, locked: false,
+  { theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: 'standard', sort_order: 1, locked: false,
     levels: [
-      { level_id: 'l1', display_number: 1, name: 'Castle Hill', my_pr: 1820, my_stars: 3, cleared: true, last_played: null, global_best: 1900 },
-      { level_id: 'l2', display_number: 2, name: 'East Tremont', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
+      { level_id: 'l1', display_number: 1, name: 'Vacant Heights', my_pr: 1820, my_stars: 3, cleared: true, last_played: null, global_best: 1900 },
+      { level_id: 'l2', display_number: 2, name: 'Open Lots', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
     ] },
-  { theme_id: 't3', slug: 'manhattan', name: 'Manhattan', mechanic: 'standard', sort_order: 2, locked: true,
+  { theme_id: 't3', slug: 'the_grid', name: 'The Grid', mechanic: 'standard', sort_order: 2, locked: true,
     levels: [
-      { level_id: 'l11', display_number: 11, name: 'Harlem', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
+      { level_id: 'l11', display_number: 11, name: 'Highrise Row', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
     ] },
 ]
 
@@ -25,20 +25,20 @@ beforeEach(() => {
 })
 
 describe('JourneyScreen', () => {
-  it('renders unlocked theme sections with level cards and PR badges', async () => {
+  it('renders the transit map with district labels and station buttons', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    expect(await screen.findByText('The Bronx')).toBeInTheDocument()
-    expect(screen.getByText('Manhattan')).toBeInTheDocument()
-    expect(screen.getByText(/1820/)).toBeInTheDocument()
+    expect(await screen.findByText('The Hollows')).toBeInTheDocument()
+    expect(screen.getByText('The Grid')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Vacant Heights/i })).toBeInTheDocument()
   })
 
   it('opens the level detail when an unlocked card is tapped', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
-    await screen.findByText('The Bronx')
-    await user.click(screen.getByRole('button', { name: /Castle Hill/i }))
+    await screen.findByText('The Hollows')
+    await user.click(screen.getByRole('button', { name: /Vacant Heights/i }))
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
     expect(s.selectedLevelId).toBe('l1')
@@ -47,9 +47,8 @@ describe('JourneyScreen', () => {
   it('does not open locked-theme levels', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    await screen.findByText('Manhattan')
-    const locked = screen.getByRole('button', { name: /Harlem/i })
-    expect(locked).toBeDisabled()
+    await screen.findByText('The Grid')
+    expect(screen.getByRole('button', { name: /Highrise Row/i })).toBeDisabled()
   })
 
   it('shows a retry affordance when the journey fetch fails', async () => {

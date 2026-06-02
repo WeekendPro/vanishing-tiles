@@ -3,26 +3,7 @@ import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
-
-interface JourneyLevel {
-  level_id: string; display_number: number; name: string
-  my_pr: number | null; my_stars: number; cleared: boolean
-  last_played: string | null; global_best: number | null
-}
-interface JourneyTheme {
-  theme_id: string; slug: string; name: string; mechanic: string
-  sort_order: number; locked: boolean; levels: JourneyLevel[]
-}
-
-function Stars({ n }: { n: number }) {
-  return (
-    <span className="text-xs tracking-tight">
-      {[0, 1, 2].map(i => (
-        <span key={i} className={i < n ? 'text-yellow-400' : 'text-gray-700'}>★</span>
-      ))}
-    </span>
-  )
-}
+import { TransitMap, type JourneyTheme } from './JourneyMap'
 
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
@@ -44,50 +25,24 @@ export function JourneyScreen() {
   if (error) {
     return (
       <div className="min-h-dvh bg-gray-950 text-white flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400">Couldn’t load the journey.</p>
+        <p className="text-gray-400">Couldn't load the journey.</p>
         <button onClick={load} className="px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-600 font-bold">Retry</button>
       </div>
     )
   }
 
   if (!themes) {
-    // Blank dark canvas; the global arcade loading overlay sits on top while loading.
     return <div className="min-h-dvh bg-gray-950" />
   }
 
   return (
-    <div className="min-h-dvh bg-gray-950 text-white px-4 py-4">
-      <div className="flex items-center justify-between mb-4 max-w-md mx-auto">
+    <div className="min-h-dvh bg-arcade-bg text-white arcade-scanlines">
+      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3"
+           style={{ background: 'linear-gradient(to bottom, #06080f, transparent)' }}>
         <Wordmark size="sm" />
       </div>
-
-      <div className="max-w-md mx-auto flex flex-col gap-6">
-        {themes.map(theme => (
-          <section key={theme.theme_id}>
-            <div className="text-xs font-bold tracking-widest uppercase mb-2 flex items-center gap-2">
-              {theme.locked && <span>🔒</span>}
-              <span className={theme.locked ? 'text-gray-500' : 'text-cyan-300'}>{theme.name}</span>
-            </div>
-            <div className={`grid grid-cols-3 gap-2 ${theme.locked ? 'opacity-50' : ''}`}>
-              {theme.levels.map(lvl => (
-                <button
-                  key={lvl.level_id}
-                  disabled={theme.locked}
-                  onClick={() => openLevel(lvl.level_id)}
-                  className="rounded-xl p-2 text-center border border-gray-700 bg-gray-900
-                    enabled:hover:border-gray-500 disabled:cursor-not-allowed"
-                >
-                  <div className="font-bold text-sm">{lvl.name}</div>
-                  <Stars n={lvl.my_stars} />
-                  <div className="text-[10px] text-gray-500 mt-1">
-                    {lvl.cleared && lvl.my_pr != null ? `PR ${lvl.my_pr}` : theme.locked ? '🔒' : '—'}
-                  </div>
-                  {lvl.cleared && <div className="text-green-400 text-[10px]">✓ cleared</div>}
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
+      <div className="px-4 pb-10">
+        <TransitMap themes={themes} onSelect={openLevel} />
       </div>
     </div>
   )
