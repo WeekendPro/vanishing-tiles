@@ -100,11 +100,14 @@ Create `supabase/migrations/0009_gap_city_fictional_names.sql`:
 ```sql
 -- Gap City Spec 2: rename NYC toponyms to fictional pun-forward neighborhoods.
 -- Rename-only. No schema or RPC changes.
+-- IMPORTANT: themes.mechanic is a GAMEPLAY field (value 'standard') surfaced by
+-- get_journey — do NOT touch it. Flavor text goes in themes.description (DB-only;
+-- get_journey does not expose description today). slug + name are the renames.
 begin;
 
-update themes set slug = 'the_hollows', name = 'The Hollows', mechanic = 'Sleepy outskirts — all gaps.'   where slug = 'the_bronx';
-update themes set slug = 'the_stacks',  name = 'The Stacks',  mechanic = 'Blocks piling up.'               where slug = 'brooklyn';
-update themes set slug = 'the_grid',    name = 'The Grid',    mechanic = 'Dense downtown — locked in.'      where slug = 'manhattan';
+update themes set slug = 'the_hollows', name = 'The Hollows', description = 'Sleepy outskirts — all gaps.' where slug = 'the_bronx';
+update themes set slug = 'the_stacks',  name = 'The Stacks',  description = 'Blocks piling up.'             where slug = 'brooklyn';
+update themes set slug = 'the_grid',    name = 'The Grid',    description = 'Dense downtown — locked in.'    where slug = 'manhattan';
 
 update levels set name = 'Vacant Heights' where display_number = 1;
 update levels set name = 'Open Lots'      where display_number = 2;
@@ -125,7 +128,7 @@ update levels set name = 'Perfect Square' where display_number = 15;
 commit;
 ```
 
-> NOTE: confirm the actual `themes` column name for the description (`mechanic`) by reading `supabase/migrations/0008_gap_city_districts.sql` before writing — match whatever column 0008 used. If 0008 used a different column name, use that here.
+> NOTE (verified against 0008): `themes` columns are `(slug, name, description, sort_order, unlock_threshold, piece_set, mechanic)`. `get_journey` returns `t.mechanic` (value `'standard'`) as the JSON `mechanic` field and does NOT expose `description`. So: rename `slug` + `name`; put flavor text in `description`; leave `mechanic`, `piece_set`, `sort_order`, `unlock_threshold` untouched. The 5/5/5 level→theme mapping and all durations are unchanged.
 
 - [ ] **Step 4: Re-run pgTAP to verify it passes**
 
@@ -149,11 +152,15 @@ git commit -m "feat(db): rename districts/levels to fictional Gap City names"
 
 - [ ] **Step 1: Rename the three themes in the seed**
 
-In `supabase/seed.sql`, find the themes insert. Update each row's `slug`, `name`, and description column to match the table above (`the_bronx`→`the_hollows` 'The Hollows' 'Sleepy outskirts — all gaps.'; `brooklyn`→`the_stacks` 'The Stacks' 'Blocks piling up.'; `manhattan`→`the_grid` 'The Grid' 'Dense downtown — locked in.'). Leave `unlock_threshold`, `sort_order`, and every other column exactly as-is.
+The seed themes insert is `insert into public.themes (slug,name,description,sort_order,unlock_threshold,piece_set,mechanic) values (...)`. Update each row's **`slug`, `name`, and `description`** columns: `the_bronx`→`the_hollows` 'The Hollows' 'Sleepy outskirts — all gaps.'; `brooklyn`→`the_stacks` 'The Stacks' 'Blocks piling up.'; `manhattan`→`the_grid` 'The Grid' 'Dense downtown — locked in.'. **Leave `mechanic` (`'standard'`), `piece_set`, `sort_order`, `unlock_threshold` exactly as-is** — `mechanic` is a gameplay field surfaced by `get_journey`, not flavor text.
 
-- [ ] **Step 2: Rename the 15 level names in the seed**
+- [ ] **Step 2: Rename the 15 level names + their theme-slug refs in the seed**
 
-In the levels insert, replace each `name` value by `display_number` per the table above (1 `Vacant Heights` … 15 `Perfect Square`). **Do NOT touch any duration, gap_count, or other numeric column — those must stay byte-for-byte identical** (CLAUDE.md three-sources rule; durations are unchanged in Spec 2). If a `theme_id`/`theme_slug` foreign key references the old slug, update it to the new slug to match Step 1.
+The levels insert references themes via `(select id from t where slug='the_bronx')` etc. (a `with t as (...)` CTE selecting themes by slug). Two edits:
+1. In the level rows, replace each `name` (last column) by `display_number` per the table above (1 `Vacant Heights` … 15 `Perfect Square`).
+2. Update every `slug='the_bronx'` → `'the_hollows'`, `'brooklyn'` → `'the_stacks'`, `'manhattan'` → `'the_grid'` in those `select id from t where slug=...` refs **and** in the CTE `t` definition if it lists slugs, so they match the renamed themes from Step 1.
+
+**Do NOT touch any duration, gap_count, index, difficulty, or other column — those must stay byte-for-byte identical** (CLAUDE.md three-sources rule; durations are unchanged in Spec 2).
 
 - [ ] **Step 3: Re-seed and verify schema integrity**
 
