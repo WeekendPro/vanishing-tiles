@@ -5,6 +5,7 @@ import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
+import { TrickleBar } from './TrickleBar'
 
 function Hearts({ count, total }: { count: number; total: number }) {
   return (
@@ -17,7 +18,7 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber } =
+  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, submitting } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
@@ -29,6 +30,7 @@ export function GameShell() {
       phaseDuration: s.phaseDuration,
       mode: s.mode,
       levelDisplayNumber: s.levelDisplayNumber,
+      submitting: s.submitting,
     })))
 
   const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
@@ -56,14 +58,16 @@ export function GameShell() {
           reserved in EVERY phase so the grid below never shifts when the timer
           appears (viewing/selecting) or disappears (reveal/resolve). */}
       <div className="h-1.5">
-        {showTimer && (
+        {submitting ? (
+          <TrickleBar active height="h-1.5" className="rounded-none" />
+        ) : showTimer ? (
           <ProgressBar
             startTime={phaseStartTime}
             duration={phaseDuration}
             color={phase === 'viewing' ? 'bg-cyan-400' : 'bg-green-400'}
             rounded="rounded-none"
           />
-        )}
+        ) : null}
       </div>
 
       <div className={`flex-1 flex justify-center px-4 pb-4 ${centerContent ? 'items-center pt-4' : 'items-start pt-8'}`}>
