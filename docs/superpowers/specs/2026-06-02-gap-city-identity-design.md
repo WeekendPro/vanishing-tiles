@@ -157,20 +157,37 @@ A single forward migration. Idempotent where practical. Steps:
    join public.themes th on th.slug = v.slug
    where l.display_number = v.display_number;
    ```
-   **Ordering hazard:** the `levels` table has `unique (theme_id, index_in_theme)`.
-   Re-pointing 15 rows in one `UPDATE … FROM (values …)` can transiently collide
-   if the DB evaluates row-by-row against the old index space. Mitigation in the
-   plan: do the re-point inside a transaction, and if needed stage it (e.g. null
-   out `index_in_theme` for the affected rows first, or move all rows to the new
-   `theme_id`s before re-numbering). The plan must verify no unique-constraint
-   violation on a fresh DB *and* on a DB already seeded with the old grouping.
+   **Unique-constraint note:** the `levels` table has `unique (theme_id,
+   index_in_theme)`. Because the three destination themes (`the_bronx` / `brooklyn`
+   / `manhattan`) are **brand-new rows** whose ids never overlap the source themes
+   (`beginner` / `intermediate`), no `(theme_id, index_in_theme)` pair in the new
+   space can collide with an existing row, and each destination pair is unique by
+   construction. So a single `UPDATE … FROM (values …)` is collision-free on a fresh
+   DB *and* on a DB already seeded with the old grouping (re-runs re-point the same
+   rows to the same place). The plan still wraps it in a transaction and verifies via
+   pgTAP.
 
-4. **Retire the now-empty legacy themes.** `beginner` / `intermediate` will have no
-   levels after the re-point. Leave the `numbered` / `flashmob` themes untouched
-   (still empty, future use). Decision for the plan: either `delete from
-   public.themes where slug in ('beginner','intermediate')` (clean) — safe because
-   no levels reference them post-update and `level_progress` references `level_id`,
-   not `theme_id`. Confirm no FK from other tables to `themes` before deleting.
+4. **Remove ALL five legacy themes, seed only the three districts.** After the
+   re-point, `beginner` / `intermediate` have no levels. The seed also created three
+   *other* empty themes — `advanced`, `numbered`, `flashmob` — which were never
+   populated. **Decision (refines the spec): delete all five legacy themes**
+   (`beginner, intermediate, advanced, numbered, flashmob`) so the journey shows
+   exactly the three districts.
+
+   **Why delete the empties too, not just `beginner`/`intermediate`:** `get_journey()`
+   assigns `row_number()` (`rn`) over *all* themes ordered by `sort_order`, and the
+   per-theme lock test reads the **previous** theme's clear ratio via `prev.rn =
+   t.rn - 1`. If empty legacy themes remain interleaved, (a) `advanced`'s
+   `sort_order = 3` collides with `manhattan`'s `sort_order = 3`, making `rn`
+   nondeterministic, and (b) the district unlock chain could read a `prev` that is an
+   empty theme — corrupting lock state. Leaving them would also render empty,
+   level-less district headers in the journey. Deleting them yields exactly three
+   themes with `rn = 1/2/3` and a clean unlock chain. This is safe: no levels
+   reference them post-update; `level_progress` / `attempts` reference `level_id`,
+   not `theme_id`; the cascade `on delete cascade` on `levels.theme_id` only matters
+   for the now-empty themes. The `numbered` / `flashmob` *mechanics* can be
+   re-introduced as real districts when actually built (YAGNI — don't keep
+   speculative empty rows that break the lock chain).
 
 ### 4.2 Keep `seed.sql` in sync
 
@@ -184,7 +201,15 @@ correct `theme_id`/`index_in_theme`), preserving the recalibrated durations from
 > (`src/store/gameStore.ts`), `LEVEL_CONFIGS`
 > (`supabase/functions/_shared/core/levelConfig.ts`), `seed.sql`. The neighborhood
 > names are *new* metadata; durations/gap configs are unchanged, so those three
-> stay valid. We only add the district/neighborhood labels to `seed.sql`.
+> stay valid. We add the district/neighborhood labels to `seed.sql`.
+
+`levelConfig.ts` carries a vestigial `theme: 'beginner' | 'intermediate'` field and a
+`themeForLevel(n)` helper that splits 1–7/8–15. It is **not consumed by any runtime
+code** — only by its own test (`tests/core/levelConfig.test.ts`); the server serves
+durations from the DB `levels` table. To honor the "keep in sync" rule, update
+`themeForLevel` to return the district slug for the 5/5/5 split and widen the union
+type to `'the_bronx' | 'brooklyn' | 'manhattan'`, then update its test. Durations/gap
+configs in `RAW` are untouched.
 
 ### 4.3 RPC changes — add `name` to both reads
 
