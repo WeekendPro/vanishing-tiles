@@ -7,7 +7,7 @@ import { track } from '../store/asyncStatus'
 import { NeonButton, ScanlineOverlay } from './ui'
 
 interface LevelDetail {
-  level_id: string; display_number: number; theme_name: string
+  level_id: string; display_number: number; name: string; theme_name: string
   view_duration_ms: number; select_duration_ms: number
   gap_count: number; shape_complexity: string; adjacency: string
   my_pr: number | null; my_stars: number; global_high: number | null; last_played: string | null
@@ -38,7 +38,7 @@ export function LevelDetailScreen() {
     if (!level) return
     setBusy(true)
     try {
-      await track(startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number))
+      await track(startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number, level.name))
       enterPlaying()
     } catch {
       setError(true)
@@ -73,8 +73,9 @@ export function LevelDetailScreen() {
         {level && (
           <>
             <div className="font-pixel text-[9px] uppercase tracking-[0.15em] text-neon-magenta text-glow-magenta mb-1 pr-8">{level.theme_name}</div>
-            <h2 className="font-pixel text-lg uppercase tracking-[0.08em] text-neon-cyan text-glow-cyan mb-4 pr-8">Level {level.display_number}</h2>
+            <h2 className="font-pixel text-lg uppercase tracking-[0.08em] text-neon-cyan text-glow-cyan mb-4 pr-8">{level.name}</h2>
             <dl className="text-sm text-gray-300 space-y-1 mb-6">
+              <div className="flex justify-between"><dt className="text-gray-500">Level</dt><dd>{level.display_number}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-500">Your Best</dt><dd>{level.my_pr ?? '—'}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-500">Global Best</dt><dd>{level.global_high ?? '—'}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-500">Last played</dt><dd>{relativeTime(level.last_played)}</dd></div>
