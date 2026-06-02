@@ -11,21 +11,21 @@ on conflict (slug) do nothing;
 with t as (select id, slug from public.themes)
 insert into public.levels (theme_id,index_in_theme,display_number,view_duration_ms,select_duration_ms,gap_count,shape_complexity,adjacency)
 values
- ((select id from t where slug='beginner'),1,1,10000,15000,3,'simple',0),
- ((select id from t where slug='beginner'),2,2,9000,15000,4,'simple',0),
- ((select id from t where slug='beginner'),3,3,8100,14000,5,'simple',0),
- ((select id from t where slug='beginner'),4,4,9300,14000,6,'medium',1),
- ((select id from t where slug='beginner'),5,5,8600,13000,7,'medium',1),
- ((select id from t where slug='beginner'),6,6,8000,13000,8,'medium',1),
- ((select id from t where slug='beginner'),7,7,9500,12000,9,'complex',2),
- ((select id from t where slug='intermediate'),1,8,9000,12000,10,'complex',2),
- ((select id from t where slug='intermediate'),2,9,8500,11000,11,'complex',2),
- ((select id from t where slug='intermediate'),3,10,8100,11000,12,'complex',2),
- ((select id from t where slug='intermediate'),4,11,7700,10000,13,'complex',2),
- ((select id from t where slug='intermediate'),5,12,7300,10000,14,'complex',2),
- ((select id from t where slug='intermediate'),6,13,7000,9000,15,'complex',2),
- ((select id from t where slug='intermediate'),7,14,6700,9000,16,'complex',2),
- ((select id from t where slug='intermediate'),8,15,6500,9000,16,'complex',2)
+ ((select id from t where slug='beginner'),1,1,4000,10000,3,'simple',0),
+ ((select id from t where slug='beginner'),2,2,5000,11000,4,'simple',0),
+ ((select id from t where slug='beginner'),3,3,6500,12000,5,'simple',0),
+ ((select id from t where slug='beginner'),4,4,8000,14000,6,'medium',1),
+ ((select id from t where slug='beginner'),5,5,9000,15000,7,'medium',1),
+ ((select id from t where slug='beginner'),6,6,10000,16000,8,'medium',1),
+ ((select id from t where slug='beginner'),7,7,11000,17000,9,'complex',2),
+ ((select id from t where slug='intermediate'),1,8,12000,18000,10,'complex',2),
+ ((select id from t where slug='intermediate'),2,9,13000,19000,11,'complex',2),
+ ((select id from t where slug='intermediate'),3,10,14000,20000,12,'complex',2),
+ ((select id from t where slug='intermediate'),4,11,15000,21000,13,'complex',2),
+ ((select id from t where slug='intermediate'),5,12,16000,22000,14,'complex',2),
+ ((select id from t where slug='intermediate'),6,13,16500,22000,15,'complex',2),
+ ((select id from t where slug='intermediate'),7,14,17000,23000,16,'complex',2),
+ ((select id from t where slug='intermediate'),8,15,17000,23000,16,'complex',2)
 on conflict (theme_id,index_in_theme) do nothing;
 
 insert into public.achievements (slug,name,description,criteria) values
