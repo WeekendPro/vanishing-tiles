@@ -10,9 +10,13 @@ import { TrickleBar } from './TrickleBar'
 function Hearts({ count, total }: { count: number; total: number }) {
   return (
     <div className="flex gap-1">
-      {Array.from({ length: total }, (_, i) => i + 1).map(i => (
-        <span key={i} className={i <= count ? 'text-red-500' : 'text-gray-700'}>♥</span>
-      ))}
+      {Array.from({ length: total }, (_, i) => i + 1).map(i =>
+        i <= count ? (
+          <span key={i} className="text-neon-red text-glow-red">♥</span>
+        ) : (
+          <span key={i} className="text-arcade-edge">♥</span>
+        )
+      )}
     </div>
   )
 }
@@ -41,14 +45,14 @@ export function GameShell() {
   const centerContent = phase === 'countdown'
 
   return (
-    <div className="min-h-dvh bg-gray-950 text-white flex flex-col">
-      <div className="sticky top-0 z-30 bg-gray-950 flex items-center gap-4 px-4 py-3 border-b border-gray-800">
-        <span className="text-sm text-gray-400">
+    <div className="min-h-dvh bg-arcade-bg text-white flex flex-col">
+      <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 py-3 border-b-2 border-arcade-edge">
+        <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
           {mode === 'journey'
-            ? <>Level <strong className="text-white">{levelDisplayNumber}</strong></>
-            : <>Round <strong className="text-white">{round}</strong></>}
+            ? <>LEVEL <strong className="text-white">{levelDisplayNumber}</strong></>
+            : <>ROUND <strong className="text-white">{round}</strong></>}
         </span>
-        <span className="text-sm text-yellow-400 font-bold">{score.toLocaleString()}</span>
+        <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
         <Hearts count={maxTries - triesUsed + 1} total={maxTries} />
         <span className="flex-1" />
         <span className="w-10" aria-hidden />
