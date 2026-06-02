@@ -104,17 +104,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null }),
 
-  pauseGame: () => set(state => ({
-    paused: true,
-    pausedElapsed: Date.now() - state.phaseStartTime,
-  })),
+  pauseGame: () => set(state => {
+    if (state.paused) return {}
+    return { paused: true, pausedElapsed: Date.now() - state.phaseStartTime }
+  }),
 
-  resumeGame: () => set(state => ({
-    paused: false,
-    phaseStartTime: (state.phase === 'viewing' || state.phase === 'selecting')
-      ? Date.now() - state.pausedElapsed
-      : state.phaseStartTime,
-  })),
+  resumeGame: () => set(state => {
+    if (!state.paused) return {}
+    return {
+      paused: false,
+      phaseStartTime: (state.phase === 'viewing' || state.phase === 'selecting')
+        ? Date.now() - state.pausedElapsed
+        : state.phaseStartTime,
+    }
+  }),
 
   startPractice: () => {
     set({ mode: 'practice' })
@@ -299,6 +302,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   retryRound: () => {
     set(state => ({
       phase: 'countdown',
+      paused: false,
       selection: [],
       roundScore: null,
       _resolution: null,
@@ -391,6 +395,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   retryJourney: () => {
     set(state => ({
       phase: 'countdown',
+      paused: false,
       selection: [],
       roundScore: null,
       journeyResult: null,

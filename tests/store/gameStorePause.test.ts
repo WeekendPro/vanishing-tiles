@@ -41,4 +41,20 @@ describe('gameStore pause/resume', () => {
     useGameStore.getState().startGame()
     expect(useGameStore.getState().paused).toBe(false)
   })
+
+  it('double pauseGame does not overwrite the captured elapsed', () => {
+    const now = vi.spyOn(Date, 'now')
+    now.mockReturnValue(1000)
+    useGameStore.setState({ phase: 'viewing', phaseStartTime: 1000, phaseDuration: 10000, paused: false })
+
+    now.mockReturnValue(4000)               // 3000ms elapsed
+    useGameStore.getState().pauseGame()
+    now.mockReturnValue(8000)               // a second (accidental) pause later
+    useGameStore.getState().pauseGame()
+    expect(useGameStore.getState().pausedElapsed).toBe(3000)  // unchanged
+
+    now.mockReturnValue(10000)
+    useGameStore.getState().resumeGame()
+    expect(Date.now() - useGameStore.getState().phaseStartTime).toBe(3000)
+  })
 })
