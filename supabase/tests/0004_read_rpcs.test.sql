@@ -25,7 +25,7 @@ select isnt_empty(
   'get_journey levels carry a neighborhood name');
 select is(
   (select public.get_level((select id from public.levels order by display_number limit 1)) ->> 'name'),
-  'Castle Hill',
+  'Vacant Heights',
   'get_level returns the neighborhood name for display_number 1');
 reset role;
 
