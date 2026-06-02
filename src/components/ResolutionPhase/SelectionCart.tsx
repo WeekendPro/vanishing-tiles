@@ -39,7 +39,7 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
     }), [])
 
     return (
-      <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 inline-flex gap-2 flex-wrap justify-center max-w-sm">
+      <div className="bg-arcade-panel border-2 border-arcade-edge shadow-panel-inset rounded-md p-3 inline-flex gap-2 flex-wrap justify-center max-w-sm">
         {slots.map((slot) => {
           const dim = consumed.has(slot.slotIndex)
           const rej = !!rejected?.has(slot.slotIndex)

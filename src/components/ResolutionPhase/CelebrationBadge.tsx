@@ -68,7 +68,7 @@ export function CelebrationBadge({ show }: Props) {
       </motion.div>
 
       <motion.span
-        className="mt-3 text-sm font-bold tracking-widest uppercase text-green-400"
+        className="mt-3 font-pixel text-xs uppercase tracking-[0.1em] text-neon-green text-glow-cyan"
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.2 }}

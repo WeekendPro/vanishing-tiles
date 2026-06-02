@@ -23,19 +23,19 @@ const TIER: Record<Tier, {
     label: 'So close!', glyph: '≈',
     gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
     shadow: '0 8px 24px rgba(245,158,11,.35), 0 0 0 4px rgba(245,158,11,.15)',
-    text: 'text-amber-400',
+    text: 'text-neon-yellow text-glow-yellow',
   },
   tough: {
     label: 'Tough Round', glyph: '✕',
     gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)',
     shadow: '0 8px 24px rgba(239,68,68,.35), 0 0 0 4px rgba(239,68,68,.15)',
-    text: 'text-red-400',
+    text: 'text-neon-red text-glow-red',
   },
   yikes: {
     label: 'Yikes', glyph: '✕',
     gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)',
     shadow: '0 8px 24px rgba(239,68,68,.35), 0 0 0 4px rgba(239,68,68,.15)',
-    text: 'text-red-400',
+    text: 'text-neon-red text-glow-red',
   },
 }
 
@@ -61,7 +61,7 @@ export function PartialBadge({ show, coverage, reason }: Props) {
         <span className="text-5xl font-black text-white leading-none">{t.glyph}</span>
       </motion.div>
       <motion.span
-        className={`mt-3 text-sm font-bold tracking-widest uppercase ${t.text}`}
+        className={`mt-3 font-pixel text-xs uppercase tracking-[0.1em] ${t.text}`}
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.2 }}
