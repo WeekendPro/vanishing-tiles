@@ -9,13 +9,13 @@ describe('level configs', () => {
     expect(LEVEL_CONFIGS.map(l => l.displayNumber)).toEqual(
       Array.from({ length: 15 }, (_, i) => i + 1))
   })
-  it('groups levels into the three NY districts (5/5/5)', () => {
-    expect(themeForLevel(1)).toBe('the_bronx')
-    expect(themeForLevel(5)).toBe('the_bronx')
-    expect(themeForLevel(6)).toBe('brooklyn')
-    expect(themeForLevel(10)).toBe('brooklyn')
-    expect(themeForLevel(11)).toBe('manhattan')
-    expect(themeForLevel(15)).toBe('manhattan')
+  it('groups levels into the three Gap City districts (5/5/5)', () => {
+    expect(themeForLevel(1)).toBe('the_hollows')
+    expect(themeForLevel(5)).toBe('the_hollows')
+    expect(themeForLevel(6)).toBe('the_stacks')
+    expect(themeForLevel(10)).toBe('the_stacks')
+    expect(themeForLevel(11)).toBe('the_grid')
+    expect(themeForLevel(15)).toBe('the_grid')
   })
   it('every config carries an adjacency lever', () => {
     expect(LEVEL_CONFIGS.every(l => typeof l.adjacency === 'number')).toBe(true)
