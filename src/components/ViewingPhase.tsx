@@ -5,8 +5,9 @@ import { Grid } from './Grid'
 import { GapShimmer } from './GapShimmer'
 
 export function ViewingPhase() {
-  const { endViewing, phaseDuration, gaps } = useGameStore(useShallow(s => ({
+  const { endViewing, phaseStartTime, phaseDuration, gaps } = useGameStore(useShallow(s => ({
     endViewing: s.endViewing,
+    phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
     gaps: s.gaps,
   })))
@@ -15,9 +16,10 @@ export function ViewingPhase() {
   const cellRects = useRef<Map<string, DOMRect>>(new Map())
 
   useEffect(() => {
-    const timer = setTimeout(endViewing, phaseDuration)
+    const remaining = Math.max(0, phaseStartTime + phaseDuration - Date.now())
+    const timer = setTimeout(endViewing, remaining)
     return () => clearTimeout(timer)
-  }, [phaseDuration, endViewing])
+  }, [phaseStartTime, phaseDuration, endViewing])
 
   return (
     <div className="inline-flex flex-col gap-2 items-stretch">

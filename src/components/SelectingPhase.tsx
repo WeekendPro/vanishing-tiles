@@ -9,21 +9,23 @@ import type { PieceType } from '@shared/types'
 export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
-    submit, phaseDuration,
+    submit, phaseStartTime, phaseDuration,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
     decrementSelection: s.decrementSelection,
     submit: s.submit,
+    phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
   })))
   const journeyError = useGameStore(s => s.journeyError)
   const backToMap = useNavStore(s => s.backToMap)
 
   useEffect(() => {
-    const timer = setTimeout(submit, phaseDuration)
+    const remaining = Math.max(0, phaseStartTime + phaseDuration - Date.now())
+    const timer = setTimeout(submit, remaining)
     return () => clearTimeout(timer)
-  }, [phaseDuration, submit])
+  }, [phaseStartTime, phaseDuration, submit])
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
