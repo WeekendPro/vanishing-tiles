@@ -39,12 +39,6 @@ function getDifficulty(round: number): DifficultyConfig {
   return DIFFICULTY_TABLE[Math.min(round - 1, DIFFICULTY_TABLE.length - 1)]
 }
 
-// ── Scoring constants ────────────────────────────────────────────────────────
-
-// Mirrors PILLAR_MAX.speed in core/scoring; kept here for the resolution UI's
-// turtle threshold and the speed-bonus tests.
-export const MAX_SPEED_BONUS = 500
-
 // ── Store interface ──────────────────────────────────────────────────────────
 
 interface GameStore extends GameState {

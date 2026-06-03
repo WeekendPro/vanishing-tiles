@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
-import { useGameStore, MAX_SPEED_BONUS } from '../../store/gameStore'
+import { useGameStore } from '../../store/gameStore'
 import { useNavStore } from '../../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import type { Placement } from '@shared/types'
@@ -12,7 +12,7 @@ import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
-import { ROUNDS_PER_LEVEL } from '@shared/core/scoring'
+import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX } from '@shared/core/scoring'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -164,7 +164,7 @@ export function ResolutionPhase() {
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
   const isFailure = resolution?.kind === 'partial'
-  const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
+  const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= ROUND_PILLAR_MAX.speed * 0.2
 
   // The CTA only renders in practice mode — journey hands off to the results
   // screen via showResults() before ever reaching the 'cta' stage.
