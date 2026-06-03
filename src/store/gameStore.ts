@@ -321,7 +321,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(state => {
       const newGrid = state.grid.map(row => row.map(cell => ({ ...cell })))
       for (const [r, c] of placement.cells) {
-        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType }
+        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType, color: placement.color }
       }
       return { grid: newGrid }
     })

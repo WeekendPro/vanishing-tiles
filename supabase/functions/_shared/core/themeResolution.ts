@@ -90,12 +90,12 @@ export function resolveSelection(args: {
     const res = solve(colorTally, colorGrid, colorGaps)
     if (res.solvable) {
       filled += colorEmpty
-      placements.push(...(res.placements ?? []))
+      placements.push(...(res.placements ?? []).map(p => ({ ...p, color })))
     } else {
       allSolvable = false
       const fit = bestFit(colorTally, colorGrid)
       filled += fit.filledCells
-      placements.push(...fit.placements)
+      placements.push(...fit.placements.map(p => ({ ...p, color })))
     }
   }
 

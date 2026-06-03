@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/gameStore'
 import { getPieceColor } from '@shared/engine/pieces'
 import { ROWS, COLS } from '@shared/types'
+import { gapFillClass } from '../lib/gapPalette'
 
 interface Props {
   onCellClick?: (row: number, col: number) => void
@@ -29,7 +30,7 @@ export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }:
         if (cell?.status === 'filled') {
           className += 'bg-slate-600'
         } else if (cell?.status === 'placed' && cell.pieceType) {
-          className += getPieceColor(cell.pieceType)
+          className += cell.color ? gapFillClass(cell.color) : getPieceColor(cell.pieceType)
         } else if (cell?.status === 'preview') {
           className += 'bg-blue-400/50 border-2 border-blue-400'
         } else if (isHighlight) {

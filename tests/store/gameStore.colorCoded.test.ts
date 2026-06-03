@@ -77,6 +77,19 @@ describe('color-aware selection cart', () => {
   })
 })
 
+describe('applyPlacement color', () => {
+  it('applyPlacement records the placement color on placed cells', () => {
+    useGameStore.setState({ grid: gridWith([greenO]) })
+    useGameStore.getState().applyPlacement({
+      pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+      cells: [[0,0],[0,1],[1,0],[1,1]], color: 'green',
+    })
+    const cell = useGameStore.getState().grid[0][0]
+    expect(cell.status).toBe('placed')
+    expect(cell.color).toBe('green')
+  })
+})
+
 describe('round 2 is color-coded', () => {
   it('startPractice→advance to round 2 generates colored gaps of a single shape', () => {
     const store = useGameStore.getState()

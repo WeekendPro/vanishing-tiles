@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { PieceShape } from '../PieceShape'
 import type { Placement } from '@shared/types'
+import { gapFillClass } from '../../lib/gapPalette'
 
 export interface FlyerSpec {
   placement: Placement
@@ -66,6 +67,7 @@ export function FlyerOverlay({ containerRect, flyers, onFlyerLanded }: Props) {
               pieceType={flyer.placement.pieceType}
               rotation={flyer.placement.rotation}
               cellSize={GRID_CELL}
+              colorClass={flyer.placement.color ? gapFillClass(flyer.placement.color) : undefined}
             />
           </motion.div>
         )

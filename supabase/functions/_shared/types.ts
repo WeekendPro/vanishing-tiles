@@ -20,6 +20,7 @@ export type CellStatus = 'filled' | 'empty' | 'placed' | 'preview'
 export interface Cell {
   status: CellStatus
   pieceType?: PieceType   // which piece occupies this cell (if placed)
+  color?: string          // palette id when a placed cell belongs to a colored gap
 }
 
 /** Grid is ROWS × COLS. grid[row][col]. 12 rows, 12 cols. */
@@ -48,6 +49,7 @@ export interface Placement {
   anchorRow: number
   anchorCol: number
   cells: [number, number][]
+  color?: string  // palette id for color-coded rounds; undefined otherwise
 }
 
 // ── Selection ────────────────────────────────────────────────────────────────

@@ -49,6 +49,16 @@ describe('resolveSelection — color-coded', () => {
     expect(res.totalCells).toBe(8)    // both gaps
     expect(res.coverage).toBeCloseTo(0.5)
   })
+
+  it('tags each color-coded placement with its gap color', () => {
+    const selection: SelectionEntry[] = [
+      { pieceType: 'O' as const, color: 'green', freeCount: 1 },
+      { pieceType: 'O' as const, color: 'red', freeCount: 1 },
+    ]
+    const res = resolveSelection({ selection, grid: gridWith(gaps), gaps, theme: 'colorCoded' })
+    expect(res.placements).toHaveLength(2)
+    expect(new Set(res.placements.map(p => p.color))).toEqual(new Set(['green', 'red']))
+  })
 })
 
 describe('resolveSelection — basic (colorblind passthrough)', () => {
