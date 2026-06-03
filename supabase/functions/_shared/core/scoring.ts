@@ -66,3 +66,68 @@ export function scoreClear(i: ClearInput): PillarScore {
   const total = accuracy + speed + efficiency + attempts
   return { accuracy, speed, efficiency, attempts, total, stars: starsForTotal(total) }
 }
+
+// ── Multi-round level scoring (Speed / Efficiency per round; Lives per level) ──
+// Additive: the single-round scoreClear above is still used by the Journey
+// server path until the multi-round port lands.
+
+export const ROUND_PILLAR_MAX = { speed: 1000, efficiency: 1000 } as const
+export const LIVES_BONUS_MAX = 1000
+export const MAX_LIVES = 3
+export const ROUNDS_PER_LEVEL = 4
+export const MAX_LEVEL_TOTAL =
+  ROUNDS_PER_LEVEL * (ROUND_PILLAR_MAX.speed + ROUND_PILLAR_MAX.efficiency) + LIVES_BONUS_MAX
+
+const clampPillar = (n: number) => Math.max(-ROUND_PILLAR_MAX.efficiency, Math.min(ROUND_PILLAR_MAX.efficiency, n))
+
+export interface RoundSpeedInput {
+  viewTimeRemaining: number
+  viewDuration: number
+  selectTimeRemaining: number
+  selectDuration: number
+  /** Flash Mob: the viewing reveal is unskippable, so score Speed on the select clock only. */
+  selectOnly?: boolean
+}
+
+/** Speed = 1000 × fraction of allotted time left (combined view+select budget). */
+export function roundSpeed(i: RoundSpeedInput): number {
+  const rem = i.selectOnly ? i.selectTimeRemaining : i.viewTimeRemaining + i.selectTimeRemaining
+  const dur = i.selectOnly ? i.selectDuration : i.viewDuration + i.selectDuration
+  if (dur <= 0) return 0
+  return Math.round(ROUND_PILLAR_MAX.speed * (rem / dur))
+}
+
+/** Efficiency = 1000 × (1 − extra/min), extra = used − min, clamped to ±1000. Zero pieces ⇒ 0. */
+export function roundEfficiency(minPieces: number, selectedPieces: number): number {
+  if (selectedPieces === 0 || minPieces === 0) return 0
+  const extra = selectedPieces - minPieces
+  return clampPillar(Math.round(ROUND_PILLAR_MAX.efficiency * (1 - extra / minPieces)))
+}
+
+export interface RoundResult { speed: number; efficiency: number; total: number }
+
+export function scoreRound(i: RoundSpeedInput & { minPieces: number; selectedPieces: number }): RoundResult {
+  const speed = roundSpeed(i)
+  const efficiency = roundEfficiency(i.minPieces, i.selectedPieces)
+  return { speed, efficiency, total: speed + efficiency }
+}
+
+/** Lives bonus = floor(1000 × livesRemaining / 3): 3→1000, 2→666, 1→333, 0→0. */
+export function livesBonus(livesRemaining: number): number {
+  const lives = Math.max(0, Math.min(MAX_LIVES, livesRemaining))
+  return Math.floor(LIVES_BONUS_MAX * lives / MAX_LIVES)
+}
+
+/** Sum of cleared round totals + lives bonus, floored at 0. */
+export function levelTotal(roundTotals: number[], livesRemaining: number): number {
+  const rounds = roundTotals.reduce((s, n) => s + n, 0)
+  return Math.max(0, rounds + livesBonus(livesRemaining))
+}
+
+/** Stars from the level total / MAX_LEVEL_TOTAL ratio: ≥0.75→3, ≥0.5→2, else 1. */
+export function levelStars(total: number): number {
+  const ratio = total / MAX_LEVEL_TOTAL
+  if (ratio >= 0.75) return 3
+  if (ratio >= 0.5) return 2
+  return 1
+}
