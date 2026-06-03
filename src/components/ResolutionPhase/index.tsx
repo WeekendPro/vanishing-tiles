@@ -12,6 +12,7 @@ import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
+import { ROUNDS_PER_LEVEL } from '@shared/core/scoring'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -23,19 +24,18 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, triesUsed, maxTries, newGame, mode } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, mode, roundIndex, livesRemaining, advanceRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
       applyPlacement: s.applyPlacement,
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
-      nextRound: s.nextRound,
       retryRound: s.retryRound,
-      triesUsed: s.triesUsed,
-      maxTries: s.maxTries,
-      newGame: s.newGame,
       mode: s.mode,
+      roundIndex: s.roundIndex,
+      livesRemaining: s.livesRemaining,
+      advanceRound: s.advanceRound,
     })))
   const showResults = useNavStore(s => s.showResults)
   const solution = resolution?.placements ?? null
@@ -170,16 +170,26 @@ export function ResolutionPhase() {
   const isFailure = resolution?.kind === 'partial'
   const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
 
+  // The CTA only renders in practice mode — journey hands off to the results
+  // screen via showResults() before ever reaching the 'cta' stage.
+  const isLastRound = roundIndex >= ROUNDS_PER_LEVEL - 1
+  const outOfLives = livesRemaining <= 0
+
   const ctaVariant: 'next' | 'retry' | 'newgame' =
-    !isFailure ? 'next' : triesUsed >= maxTries ? 'newgame' : 'retry'
+    !isFailure ? 'next' : outOfLives ? 'newgame' : 'retry'
   const ctaLabel =
-    ctaVariant === 'next' ? 'Next Round →'
-      : ctaVariant === 'newgame' ? 'Start New Game'
+    !isFailure ? (isLastRound ? 'Level Complete →' : 'Next Round →')
+      : outOfLives ? 'Game Over →'
       : 'Try Again ↺'
   const handleCta = () => {
-    if (ctaVariant === 'next') nextRound()
-    else if (ctaVariant === 'newgame') newGame()
-    else retryRound()
+    if (!isFailure) {
+      advanceRound()
+      if (useGameStore.getState().levelComplete) showResults()
+    } else if (outOfLives) {
+      showResults()
+    } else {
+      retryRound()
+    }
   }
 
   return (
