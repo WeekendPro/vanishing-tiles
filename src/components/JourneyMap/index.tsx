@@ -80,16 +80,16 @@ export function TransitMap({
         className="w-full block"
         aria-hidden="true"
       >
-        {/* District watermarks: big, faint, vertically centred on each section and
-            placed in the dead space beside the line. Rendered first so the neon
-            lines and stations sit on top. Names come from the DB (get_journey);
-            we just uppercase and wrap to one word per line. */}
+        {/* District watermarks: large, faint, vertically centred on each section
+            and placed in the dead space beside the line. Rendered first so the
+            neon lines and stations sit on top. Names come from the DB
+            (get_journey); we wrap to one word per line, as-is (no casing). */}
         {LINES.map(line => {
-          const name = (slugToName[line.slug] ?? line.slug).toUpperCase()
+          const name = slugToName[line.slug] ?? line.slug
           const words = name.split(' ')
           const { x, y } = line.label
-          const LH = 44
-          const SIZE = 42
+          const LH = 37
+          const SIZE = 35
           // Vertically centre the whole multi-line block on the label anchor.
           const startY = y - ((words.length - 1) * LH) / 2 + SIZE * 0.34
           return (
