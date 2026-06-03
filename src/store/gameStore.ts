@@ -5,7 +5,7 @@ import type {
 } from '@shared/types'
 import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
-import { solve, bestFit } from '@shared/engine/solver'
+import { resolveSelection } from '@shared/core/themeResolution'
 import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
@@ -56,8 +56,8 @@ interface GameStore extends GameState {
   advanceRound: () => void
   loseLife: () => void
   resetGame: () => void
-  incrementSelection: (pieceType: PieceType) => void
-  decrementSelection: (pieceType: PieceType) => void
+  incrementSelection: (pieceType: PieceType, color?: string) => void
+  decrementSelection: (pieceType: PieceType, color?: string) => void
   pauseGame: () => void
   resumeGame: () => void
   pausedElapsed: number
@@ -218,27 +218,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })
   },
 
-  incrementSelection: (pieceType: PieceType) => {
+  incrementSelection: (pieceType: PieceType, color?: string) => {
     set(state => {
-      const existing = state.selection.find(e => e.pieceType === pieceType)
+      const existing = state.selection.find(e => e.pieceType === pieceType && e.color === color)
       if (existing) {
         return {
           selection: state.selection.map(e =>
-            e.pieceType === pieceType ? { ...e, freeCount: e.freeCount + 1 } : e
+            e.pieceType === pieceType && e.color === color ? { ...e, freeCount: e.freeCount + 1 } : e
           ),
         }
       }
-      return {
-        selection: [...state.selection, { pieceType, freeCount: 1 }],
-      }
+      return { selection: [...state.selection, { pieceType, color, freeCount: 1 }] }
     })
   },
 
-  decrementSelection: (pieceType: PieceType) => {
+  decrementSelection: (pieceType: PieceType, color?: string) => {
     set(state => ({
       selection: state.selection
         .map(e =>
-          e.pieceType === pieceType
+          e.pieceType === pieceType && e.color === color
             ? { ...e, freeCount: Math.max(0, e.freeCount - 1) }
             : e
         )
@@ -249,21 +247,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   submitSelection: () => {
     const { selection, grid, gaps, difficulty, phaseStartTime, viewTimeRemaining, roundTheme } = get()
 
-    const pieceCount: Partial<Record<PieceType, number>> = {}
-    for (const entry of selection) {
-      const total = entry.freeCount
-      if (total > 0) pieceCount[entry.pieceType] = (pieceCount[entry.pieceType] ?? 0) + total
-    }
-
-    const result = solve(pieceCount, grid, gaps)
     const selectElapsed = Date.now() - phaseStartTime
     const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
+    const res = resolveSelection({ selection, grid, gaps, theme: roundTheme })
+    const selectedPieces = selection.reduce((s, e) => s + e.freeCount, 0)
 
-    if (result.solvable) {
+    if (res.solvable) {
       // Per-round scoring: Speed + Efficiency only (no Accuracy/Attempts in the
       // multi-round model — lives are pooled per level, not per round).
       const minPieces = gaps.length
-      const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
       const r = scoreRound({
         viewTimeRemaining,
         viewDuration: difficulty.viewDuration,
@@ -276,7 +268,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       set({
         phase: 'resolving',
-        _resolution: { kind: 'perfect', placements: result.placements ?? [], coverage: 1 },
+        _resolution: { kind: 'perfect', placements: res.placements, coverage: 1 },
         roundScore: {
           accuracy: 0,
           speedBonus: r.speed,
@@ -288,15 +280,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       })
     } else {
       // Failed round: no negative penalty — a failed round scores 0, never below.
-      const fit = bestFit(pieceCount, grid)
-      const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
-
-      const uncovered = fit.totalCells - fit.filledCells
-      const selectedCells = Object.entries(pieceCount)
-        .reduce((sum, [type, n]) => sum + (n ?? 0) * (type === 'SINGLE' ? 1 : 4), 0)
+      const uncovered = res.totalCells - res.filledCells
+      const selectedCells = selection.reduce(
+        (sum, e) => sum + e.freeCount * (e.pieceType === 'SINGLE' ? 1 : 4), 0)
       let reason: ResolutionReason
       if (uncovered === 0) reason = 'too-many'
-      else if (selectedCells >= fit.totalCells) reason = 'wrong-shapes'
+      else if (selectedCells >= res.totalCells) reason = 'wrong-shapes'
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
@@ -304,7 +293,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       get().loseLife()
       set({
         phase: 'resolving',
-        _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
+        _resolution: { kind: 'partial', placements: res.placements, coverage: res.coverage, reason },
         roundScore: {
           accuracy: 0,
           speedBonus: 0,
