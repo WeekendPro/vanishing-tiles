@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { Grid } from './Grid'
+import { GapBorder } from './GapBorder'
 import { GapShimmer } from './GapShimmer'
 import { NeonButton } from './ui'
 
@@ -30,6 +31,7 @@ export function ViewingPhase() {
             if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
           }}
         />
+        <GapBorder gaps={gaps} />
         <GapShimmer containerRef={gridWrapRef} cellRects={cellRects} gaps={gaps} />
       </div>
       <p className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan text-center">Memorize the gaps</p>
