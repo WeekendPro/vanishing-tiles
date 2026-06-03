@@ -3,9 +3,10 @@ import type {
   GameState, PieceType,
   DifficultyConfig, Placement, Resolution, ResolutionReason,
 } from '@shared/types'
+import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { solve, bestFit } from '@shared/engine/solver'
-import { scoreClear, MAX_TRIES } from '@shared/core/scoring'
+import { scoreClear, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
@@ -57,6 +58,9 @@ interface GameStore extends GameState {
   nextRound: () => void
   retryRound: () => void
   newGame: () => void
+  startLevel: () => void
+  advanceRound: () => void
+  loseLife: () => void
   resetGame: () => void
   incrementSelection: (pieceType: PieceType) => void
   decrementSelection: (pieceType: PieceType) => void
@@ -96,6 +100,11 @@ const INITIAL_STATE: GameState = {
   viewTimeRemaining: 0,
   roundScore: null,
   difficulty: DIFFICULTY_TABLE[0],
+  roundIndex: 0,
+  roundTheme: THEME_SEQUENCE[0],
+  livesRemaining: MAX_LIVES,
+  roundResults: [],
+  levelComplete: false,
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -128,7 +137,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startPractice: () => {
     set({ mode: 'practice' })
-    get().startGame()
+    get().startLevel()
   },
 
   startGame: () => {
@@ -154,8 +163,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phaseDuration: 0,
       viewTimeRemaining: 0,
       _resolution: null,
+      roundTheme: THEME_SEQUENCE[get().roundIndex],
     })
   },
+
+  startLevel: () => {
+    set({
+      mode: get().mode,
+      roundIndex: 0,
+      roundTheme: THEME_SEQUENCE[0],
+      livesRemaining: MAX_LIVES,
+      roundResults: [],
+      levelComplete: false,
+      score: 0,
+    })
+    get().startGame()
+  },
+
+  // CTA after a cleared round: bank the round total, then either start the next
+  // round or finish the level (adding the lives bonus to the score).
+  advanceRound: () => {
+    const { roundScore, roundResults, roundIndex, livesRemaining } = get()
+    const banked = [...roundResults, roundScore?.total ?? 0]
+    const nextIndex = roundIndex + 1
+    if (nextIndex >= ROUNDS_PER_LEVEL) {
+      set({ roundResults: banked, levelComplete: true, score: levelTotal(banked, livesRemaining) })
+      return
+    }
+    set({
+      roundResults: banked,
+      roundIndex: nextIndex,
+      roundTheme: THEME_SEQUENCE[nextIndex],
+      score: Math.max(0, banked.reduce((s, n) => s + n, 0)),
+    })
+    get().startGame()
+  },
+
+  loseLife: () => set(state => ({ livesRemaining: Math.max(0, state.livesRemaining - 1) })),
 
   beginViewing: () => {
     const { difficulty } = get()
