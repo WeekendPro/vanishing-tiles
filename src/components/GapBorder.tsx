@@ -1,4 +1,5 @@
 import type { Gap } from '@shared/types'
+import { gapBorderClass } from '../lib/gapPalette'
 
 const CELL = 28
 const GAP = 2
@@ -25,6 +26,7 @@ export function GapBorder({ gaps, colorClass = 'border-gray-300/70' }: Props) {
     <div className="pointer-events-none absolute inset-0">
       {gaps.map((gap, gi) => {
         const inGap = new Set(gap.cells.map(([r, c]) => `${r},${c}`))
+        const borderColor = gap.color ? gapBorderClass(gap.color) : colorClass
         return (
           <div key={gi} data-gap-border>
             {gap.cells.map(([r, c]) => {
@@ -36,7 +38,7 @@ export function GapBorder({ gaps, colorClass = 'border-gray-300/70' }: Props) {
               return (
                 <div
                   key={`${r},${c}`}
-                  className={`absolute border-dashed ${colorClass} ${edges.join(' ')}`}
+                  className={`absolute border-dashed ${borderColor} ${edges.join(' ')}`}
                   style={{ left: px(c), top: px(r), width: CELL, height: CELL }}
                 />
               )

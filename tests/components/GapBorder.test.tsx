@@ -18,4 +18,15 @@ describe('GapBorder', () => {
     const { container } = render(<GapBorder gaps={[]} />)
     expect(container.querySelectorAll('[data-gap-border]').length).toBe(0)
   })
+
+  it('applies the per-gap palette border color when gap.color is set', () => {
+    const colored: Gap = {
+      pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+      cells: [[0, 0], [0, 1], [1, 0], [1, 1]], color: 'green',
+    }
+    const { container } = render(<GapBorder gaps={[colored]} />)
+    const wrapper = container.querySelector('[data-gap-border]')!
+    const cells = wrapper.querySelectorAll('div')
+    expect([...cells].some(el => el.className.includes('border-green-400'))).toBe(true)
+  })
 })
