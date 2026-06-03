@@ -38,9 +38,9 @@ describe('ResolutionPhase with reduced motion', () => {
     act(() => useGameStore.getState().submitSelection())
 
     render(<ResolutionPhase />)
-    const before = useGameStore.getState().round
+    const before = useGameStore.getState().roundIndex
     await user.click(screen.getByText(/Next Round/))
-    expect(useGameStore.getState().round).toBe(before + 1)
+    expect(useGameStore.getState().roundIndex).toBe(before + 1)
   })
 
   it('Next Round button is idempotent — multiple clicks advance only one round', async () => {
@@ -52,12 +52,12 @@ describe('ResolutionPhase with reduced motion', () => {
     act(() => useGameStore.getState().submitSelection())
 
     render(<ResolutionPhase />)
-    const before = useGameStore.getState().round
+    const before = useGameStore.getState().roundIndex
     const btn = screen.getByText(/Next Round/)
     await user.click(btn)
     await user.click(btn)
     await user.click(btn)
-    expect(useGameStore.getState().round).toBe(before + 1)
+    expect(useGameStore.getState().roundIndex).toBe(before + 1)
   })
 })
 
@@ -128,38 +128,6 @@ describe('ResolutionPhase — badge copy (reduced motion)', () => {
   })
 })
 
-describe('ResolutionPhase — accuracy icon (reduced motion)', () => {
-  function showPartial(coverage: number) {
-    useGameStore.setState({
-      phase: 'resolving', triesUsed: 2, maxTries: 3,
-      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
-      selection: [{ pieceType: 'O', freeCount: 1 }],
-      roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
-      _resolution: {
-        kind: 'partial', coverage, reason: 'too-many',
-        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
-          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
-      },
-    })
-  }
-
-  // The badge glyph reuses the same character (≈/✕), so scope the assertion
-  // to the Accuracy row, not the whole document.
-  it('close coverage shows the amber ≈ accuracy icon', () => {
-    showPartial(0.8)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('≈')
-  })
-
-  it('far coverage shows the red ✕ accuracy icon', () => {
-    showPartial(0.3)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('✕')
-  })
-})
-
 describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
   it('grays out the rejected piece', () => {
     useGameStore.setState({
@@ -184,10 +152,10 @@ describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
 })
 
 describe('ResolutionPhase — partial (reduced motion)', () => {
-  it('shows the amber "So close!" badge and a Try Again CTA for high coverage with tries left', () => {
+  it('shows the amber "So close!" badge and a Try Again CTA for high coverage with lives left', () => {
     useGameStore.setState({
       phase: 'resolving',
-      triesUsed: 2, maxTries: 3,
+      triesUsed: 2, maxTries: 3, livesRemaining: 2,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       selection: [{ pieceType: 'O', freeCount: 1 }],
       roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
@@ -208,7 +176,7 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
     act(() => useGameStore.getState().startGame())   // establishes round 1 + a grid
     useGameStore.setState({
       phase: 'resolving',
-      triesUsed: 2, maxTries: 3,
+      triesUsed: 2, maxTries: 3, livesRemaining: 2,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       selection: [{ pieceType: 'O', freeCount: 1 }],
       roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
@@ -221,18 +189,20 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
       },
     })
     render(<ResolutionPhase />)
-    const before = useGameStore.getState().round
+    const before = useGameStore.getState().roundIndex
     await user.click(screen.getByText(/Try Again/))
-    expect(useGameStore.getState().round).toBe(before)       // same round
+    expect(useGameStore.getState().roundIndex).toBe(before)  // same round
     expect(useGameStore.getState().phase).toBe('countdown')  // fresh puzzle, counts in
   })
 
-  it('shows a "Start New Game" CTA on the last try, and clicking it restarts at round 1', async () => {
+  it('shows a "Game Over" CTA when out of lives, and clicking it routes to results', async () => {
     const user = userEvent.setup()
+    useNavStore.getState().reset()
     useGameStore.setState({
       phase: 'resolving',
-      triesUsed: 3, maxTries: 3,
-      round: 4,
+      mode: 'practice',
+      triesUsed: 3, maxTries: 3, livesRemaining: 0,
+      roundIndex: 2,
       score: 1234,
       grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
       selection: [{ pieceType: 'O', freeCount: 1 }],
@@ -245,12 +215,35 @@ describe('ResolutionPhase — partial (reduced motion)', () => {
       },
     })
     render(<ResolutionPhase />)
-    expect(screen.getByText(/Start New Game/i)).toBeInTheDocument()
-    await user.click(screen.getByText(/Start New Game/i))
-    const s = useGameStore.getState()
-    expect(s.round).toBe(1)
-    expect(s.triesUsed).toBe(1)
-    expect(s.phase).toBe('countdown')
+    expect(screen.getByText(/Game Over/i)).toBeInTheDocument()
+    await user.click(screen.getByText(/Game Over/i))
+    expect(useNavStore.getState().appView).toBe('results')
+  })
+
+  it('shows a "Level Complete" CTA on the last round clear, and clicking it routes to results', async () => {
+    const user = userEvent.setup()
+    useNavStore.getState().reset()
+    useGameStore.setState({
+      phase: 'resolving',
+      mode: 'practice',
+      triesUsed: 1, maxTries: 3, livesRemaining: 3,
+      roundIndex: 3,
+      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+      selection: [{ pieceType: 'O', freeCount: 1 }],
+      roundResults: [800, 800, 800],
+      roundScore: { accuracy: 800, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 800 },
+      _resolution: {
+        kind: 'perfect',
+        coverage: 1,
+        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+      },
+    })
+    render(<ResolutionPhase />)
+    expect(screen.getByText(/Level Complete/i)).toBeInTheDocument()
+    await user.click(screen.getByText(/Level Complete/i))
+    expect(useGameStore.getState().levelComplete).toBe(true)
+    expect(useNavStore.getState().appView).toBe('results')
   })
 })
 
@@ -283,18 +276,22 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
     })
   }
 
-  it('renders a zero Accuracy value on a failed round', () => {
-    showPartial(0)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('+0')
-  })
-
-  it('hides the Speed, Efficiency, and Attempts rows on a failed round', () => {
+  it('hides all pillar rows on a failed round (round total is 0)', () => {
     showPartial(0)
     render(<ResolutionPhase />)
     expect(screen.queryByText('Speed')).not.toBeInTheDocument()
     expect(screen.queryByText('Efficiency')).not.toBeInTheDocument()
+    // Accuracy and Attempts pillars no longer exist in the round model.
+    expect(screen.queryByText('Accuracy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
+  })
+
+  it('shows Speed and Efficiency rows (and no Accuracy/Attempts) on a clear', () => {
+    showPerfect(300)
+    render(<ResolutionPhase />)
+    expect(screen.getByText('Speed')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency')).toBeInTheDocument()
+    expect(screen.queryByText('Accuracy')).not.toBeInTheDocument()
     expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
   })
 

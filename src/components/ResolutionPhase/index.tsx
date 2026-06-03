@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
-import { useGameStore, MAX_SPEED_BONUS } from '../../store/gameStore'
+import { useGameStore } from '../../store/gameStore'
 import { useNavStore } from '../../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import type { Placement } from '@shared/types'
@@ -12,6 +12,7 @@ import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
+import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX } from '@shared/core/scoring'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -23,19 +24,18 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, nextRound, retryRound, triesUsed, maxTries, newGame, mode } =
+  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, mode, roundIndex, livesRemaining, advanceRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       resolution: s._resolution,
       applyPlacement: s.applyPlacement,
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
-      nextRound: s.nextRound,
       retryRound: s.retryRound,
-      triesUsed: s.triesUsed,
-      maxTries: s.maxTries,
-      newGame: s.newGame,
       mode: s.mode,
+      roundIndex: s.roundIndex,
+      livesRemaining: s.livesRemaining,
+      advanceRound: s.advanceRound,
     })))
   const showResults = useNavStore(s => s.showResults)
   const solution = resolution?.placements ?? null
@@ -163,23 +163,29 @@ export function ResolutionPhase() {
 
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
-  const accuracyTier: 'perfect' | 'close' | 'far' =
-    resolution?.kind === 'perfect' ? 'perfect'
-      : (resolution && resolution.coverage >= 0.66 ? 'close' : 'far')
-
   const isFailure = resolution?.kind === 'partial'
-  const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
+  const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= ROUND_PILLAR_MAX.speed * 0.2
+
+  // The CTA only renders in practice mode — journey hands off to the results
+  // screen via showResults() before ever reaching the 'cta' stage.
+  const isLastRound = roundIndex >= ROUNDS_PER_LEVEL - 1
+  const outOfLives = livesRemaining <= 0
 
   const ctaVariant: 'next' | 'retry' | 'newgame' =
-    !isFailure ? 'next' : triesUsed >= maxTries ? 'newgame' : 'retry'
+    !isFailure ? 'next' : outOfLives ? 'newgame' : 'retry'
   const ctaLabel =
-    ctaVariant === 'next' ? 'Next Round →'
-      : ctaVariant === 'newgame' ? 'Start New Game'
+    !isFailure ? (isLastRound ? 'Level Complete →' : 'Next Round →')
+      : outOfLives ? 'Game Over →'
       : 'Try Again ↺'
   const handleCta = () => {
-    if (ctaVariant === 'next') nextRound()
-    else if (ctaVariant === 'newgame') newGame()
-    else retryRound()
+    if (!isFailure) {
+      advanceRound()
+      if (useGameStore.getState().levelComplete) showResults()
+    } else if (outOfLives) {
+      showResults()
+    } else {
+      retryRound()
+    }
   }
 
   return (
@@ -220,7 +226,6 @@ export function ResolutionPhase() {
             roundScore={roundScore}
             grandTotal={grandTotal}
             show={stage === 'scoring' || stage === 'cta'}
-            accuracyTier={accuracyTier}
             isFailure={isFailure}
             speedSlow={speedSlow}
           />

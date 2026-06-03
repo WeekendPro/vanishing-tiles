@@ -4,12 +4,25 @@ import { getAllRotations } from './pieces.ts'
 
 type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   adjacency?: number
+  /** When set, restrict the puzzle to `shapeTypeCount` shape(s) and assign each
+   *  gap a distinct color from `palette` (color-coded theme). */
+  colorCoded?: { shapeTypeCount: number; palette: string[] }
 }
 
 const COMPLEXITY_PIECES: Record<DifficultyConfig['complexity'], PieceType[]> = {
   simple:  ['I', 'O'],
   medium:  ['I', 'O', 'T', 'J', 'L'],
   complex: ['I', 'O', 'T', 'S', 'Z', 'J', 'L'],
+}
+
+// Fisher–Yates shuffle of a COPY, driven by the seeded rng.
+function shuffled<T>(items: T[], rng: () => number): T[] {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
 }
 
 function makeFullGrid(): Grid {
@@ -66,7 +79,9 @@ export function generatePuzzle(
 ): { grid: Grid; gaps: Gap[] } {
   const { gapCount, complexity } = input
   const adjacency = input.adjacency ?? 0
-  const allowedTypes = COMPLEXITY_PIECES[complexity]
+  const allowedTypes = input.colorCoded
+    ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
+    : COMPLEXITY_PIECES[complexity]
   const grid = makeFullGrid()
   const gaps: Gap[] = []
 
@@ -102,6 +117,12 @@ export function generatePuzzle(
     const absoluteCells = cells.map(([r, c]) => [r + anchorRow, c + anchorCol] as [number, number])
     placeGap(grid, cells, anchorRow, anchorCol)
     gaps.push({ pieceType, rotation, anchorRow, anchorCol, cells: absoluteCells })
+  }
+
+  // Color-coded: assign each gap a distinct palette color (shuffled by rng).
+  if (input.colorCoded) {
+    const palette = shuffled(input.colorCoded.palette, rng)
+    gaps.forEach((gap, i) => { gap.color = palette[i % palette.length] })
   }
 
   return { grid, gaps }

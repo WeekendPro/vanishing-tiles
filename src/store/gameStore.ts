@@ -3,9 +3,11 @@ import type {
   GameState, PieceType,
   DifficultyConfig, Placement, Resolution, ResolutionReason,
 } from '@shared/types'
+import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
-import { solve, bestFit } from '@shared/engine/solver'
-import { scoreClear, MAX_TRIES } from '@shared/core/scoring'
+import { resolveSelection } from '@shared/core/themeResolution'
+import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
+import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
@@ -38,12 +40,6 @@ function getDifficulty(round: number): DifficultyConfig {
   return DIFFICULTY_TABLE[Math.min(round - 1, DIFFICULTY_TABLE.length - 1)]
 }
 
-// ── Scoring constants ────────────────────────────────────────────────────────
-
-// Mirrors PILLAR_MAX.speed in core/scoring; kept here for the resolution UI's
-// turtle threshold and the speed-bonus tests.
-export const MAX_SPEED_BONUS = 500
-
 // ── Store interface ──────────────────────────────────────────────────────────
 
 interface GameStore extends GameState {
@@ -57,9 +53,12 @@ interface GameStore extends GameState {
   nextRound: () => void
   retryRound: () => void
   newGame: () => void
+  startLevel: () => void
+  advanceRound: () => void
+  loseLife: () => void
   resetGame: () => void
-  incrementSelection: (pieceType: PieceType) => void
-  decrementSelection: (pieceType: PieceType) => void
+  incrementSelection: (pieceType: PieceType, color?: string) => void
+  decrementSelection: (pieceType: PieceType, color?: string) => void
   pauseGame: () => void
   resumeGame: () => void
   pausedElapsed: number
@@ -96,6 +95,11 @@ const INITIAL_STATE: GameState = {
   viewTimeRemaining: 0,
   roundScore: null,
   difficulty: DIFFICULTY_TABLE[0],
+  roundIndex: 0,
+  roundTheme: THEME_SEQUENCE[0],
+  livesRemaining: MAX_LIVES,
+  roundResults: [],
+  levelComplete: false,
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -128,13 +132,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startPractice: () => {
     set({ mode: 'practice' })
-    get().startGame()
+    get().startLevel()
   },
 
   startGame: () => {
-    const { round } = get()
+    const { round, roundIndex } = get()
+    const roundTheme = THEME_SEQUENCE[roundIndex]
     const difficulty = getDifficulty(round)
-    const { grid, gaps } = generatePuzzle(difficulty)
+    const colorCoded = THEME_CONFIG[roundTheme].colorMatters
+    const { grid, gaps } = generatePuzzle(
+      colorCoded
+        ? {
+            gapCount: difficulty.gapCount,
+            complexity: difficulty.complexity,
+            colorCoded: { shapeTypeCount: 1, palette: [...GAP_COLOR_IDS] },
+          }
+        : difficulty
+    )
 
     // The round opens with a 3-2-1 countdown; the view timer starts only
     // once beginViewing fires, so memorization time isn't eaten by the count.
@@ -154,8 +168,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phaseDuration: 0,
       viewTimeRemaining: 0,
       _resolution: null,
+      roundTheme,
     })
   },
+
+  startLevel: () => {
+    set({
+      mode: get().mode,
+      roundIndex: 0,
+      roundTheme: THEME_SEQUENCE[0],
+      livesRemaining: MAX_LIVES,
+      roundResults: [],
+      levelComplete: false,
+      score: 0,
+    })
+    get().startGame()
+  },
+
+  // CTA after a cleared round: bank the round total, then either start the next
+  // round or finish the level (adding the lives bonus to the score).
+  advanceRound: () => {
+    const { roundScore, roundResults, roundIndex, livesRemaining } = get()
+    const banked = [...roundResults, roundScore?.total ?? 0]
+    const nextIndex = roundIndex + 1
+    if (nextIndex >= ROUNDS_PER_LEVEL) {
+      set({ roundResults: banked, levelComplete: true, score: levelTotal(banked, livesRemaining) })
+      return
+    }
+    set({
+      roundResults: banked,
+      roundIndex: nextIndex,
+      roundTheme: THEME_SEQUENCE[nextIndex],
+      score: Math.max(0, banked.reduce((s, n) => s + n, 0)),
+    })
+    get().startGame()
+  },
+
+  loseLife: () => set(state => ({ livesRemaining: Math.max(0, state.livesRemaining - 1) })),
 
   beginViewing: () => {
     const { difficulty } = get()
@@ -180,27 +229,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })
   },
 
-  incrementSelection: (pieceType: PieceType) => {
+  incrementSelection: (pieceType: PieceType, color?: string) => {
     set(state => {
-      const existing = state.selection.find(e => e.pieceType === pieceType)
+      const existing = state.selection.find(e => e.pieceType === pieceType && e.color === color)
       if (existing) {
         return {
           selection: state.selection.map(e =>
-            e.pieceType === pieceType ? { ...e, freeCount: e.freeCount + 1 } : e
+            e.pieceType === pieceType && e.color === color ? { ...e, freeCount: e.freeCount + 1 } : e
           ),
         }
       }
-      return {
-        selection: [...state.selection, { pieceType, freeCount: 1 }],
-      }
+      return { selection: [...state.selection, { pieceType, color, freeCount: 1 }] }
     })
   },
 
-  decrementSelection: (pieceType: PieceType) => {
+  decrementSelection: (pieceType: PieceType, color?: string) => {
     set(state => ({
       selection: state.selection
         .map(e =>
-          e.pieceType === pieceType
+          e.pieceType === pieceType && e.color === color
             ? { ...e, freeCount: Math.max(0, e.freeCount - 1) }
             : e
         )
@@ -209,64 +256,55 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   submitSelection: () => {
-    const { selection, grid, gaps, triesUsed, maxTries, difficulty, phaseStartTime, viewTimeRemaining } = get()
+    const { selection, grid, gaps, difficulty, phaseStartTime, viewTimeRemaining, roundTheme } = get()
 
-    const pieceCount: Partial<Record<PieceType, number>> = {}
-    for (const entry of selection) {
-      const total = entry.freeCount
-      if (total > 0) pieceCount[entry.pieceType] = (pieceCount[entry.pieceType] ?? 0) + total
-    }
-
-    const result = solve(pieceCount, grid, gaps)
     const selectElapsed = Date.now() - phaseStartTime
     const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
+    const res = resolveSelection({ selection, grid, gaps, theme: roundTheme })
+    const selectedPieces = selection.reduce((s, e) => s + e.freeCount, 0)
 
-    if (result.solvable) {
+    if (res.solvable) {
+      // Per-round scoring: Speed + Efficiency only (no Accuracy/Attempts in the
+      // multi-round model — lives are pooled per level, not per round).
       const minPieces = gaps.length
-      const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      // Single source of scoring truth: core/scoring is shared with the server.
-      const ps = scoreClear({
-        triesUsed,
+      const r = scoreRound({
         viewTimeRemaining,
         viewDuration: difficulty.viewDuration,
         selectTimeRemaining,
         selectDuration: difficulty.selectDuration,
         minPieces,
         selectedPieces,
+        selectOnly: roundTheme === 'flashMob',
       })
 
       set({
         phase: 'resolving',
-        _resolution: { kind: 'perfect', placements: result.placements ?? [], coverage: 1 },
+        _resolution: { kind: 'perfect', placements: res.placements, coverage: 1 },
         roundScore: {
-          accuracy: ps.accuracy,
-          speedBonus: ps.speed,
-          efficiencyBonus: ps.efficiency,
-          attemptsBonus: ps.attempts,
-          stars: ps.stars,
-          total: ps.total,
+          accuracy: 0,
+          speedBonus: r.speed,
+          efficiencyBonus: r.efficiency,
+          attemptsBonus: 0,
+          stars: 0,
+          total: r.total,
         },
       })
     } else {
-      // Failed try: no negative penalty — a failed round scores 0, never below.
-      // Advance to the next try unless this was the last one (game over).
-      const exhausted = triesUsed >= maxTries
-      const fit = bestFit(pieceCount, grid)
-      const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
-
-      const uncovered = fit.totalCells - fit.filledCells
-      const selectedCells = Object.entries(pieceCount)
-        .reduce((sum, [type, n]) => sum + (n ?? 0) * (type === 'SINGLE' ? 1 : 4), 0)
+      // Failed round: no negative penalty — a failed round scores 0, never below.
+      const uncovered = res.totalCells - res.filledCells
+      const selectedCells = selection.reduce(
+        (sum, e) => sum + e.freeCount * (e.pieceType === 'SINGLE' ? 1 : 4), 0)
       let reason: ResolutionReason
       if (uncovered === 0) reason = 'too-many'
-      else if (selectedCells >= fit.totalCells) reason = 'wrong-shapes'
+      else if (selectedCells >= res.totalCells) reason = 'wrong-shapes'
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
+      // A failed round spends one pooled life (retry replays the same board).
+      get().loseLife()
       set({
         phase: 'resolving',
-        triesUsed: exhausted ? triesUsed : triesUsed + 1,
-        _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
+        _resolution: { kind: 'partial', placements: res.placements, coverage: res.coverage, reason },
         roundScore: {
           accuracy: 0,
           speedBonus: 0,
@@ -283,7 +321,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(state => {
       const newGrid = state.grid.map(row => row.map(cell => ({ ...cell })))
       for (const [r, c] of placement.cells) {
-        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType }
+        newGrid[r][c] = { status: 'placed', pieceType: placement.pieceType, color: placement.color }
       }
       return { grid: newGrid }
     })

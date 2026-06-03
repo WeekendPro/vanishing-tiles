@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useGameStore, DIFFICULTY_TABLE, MAX_SPEED_BONUS } from '../../src/store/gameStore'
+import { useGameStore, DIFFICULTY_TABLE } from '../../src/store/gameStore'
+import { ROUND_PILLAR_MAX } from '@shared/core/scoring'
 import { act } from '@testing-library/react'
 import type { Grid, Cell, PieceType, Gap } from '@shared/types'
 
@@ -123,7 +124,7 @@ describe('submitSelection — perfect', () => {
 })
 
 describe('submitSelection — partial', () => {
-  it('goes to resolving, advances a try, and scores zero (no negative penalty)', () => {
+  it('goes to resolving, spends a pooled life, and scores zero (no negative penalty)', () => {
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().endViewing())
     act(() => useGameStore.getState().incrementSelection('SINGLE')) // 1 cell, never a full fill
@@ -131,7 +132,7 @@ describe('submitSelection — partial', () => {
     const s = useGameStore.getState()
     expect(s.phase).toBe('resolving')
     expect(s._resolution?.kind).toBe('partial')
-    expect(s.triesUsed).toBe(2)
+    expect(s.livesRemaining).toBe(2) // a failed round spends one pooled life
     expect(s._resolution!.placements.length).toBeGreaterThan(0)
     expect(s._resolution!.coverage).toBeGreaterThan(0)
     expect(s._resolution!.coverage).toBeLessThan(1)
@@ -168,28 +169,23 @@ describe('tries and game over', () => {
 })
 
 describe('scoring', () => {
-  it('correct selection awards accuracy points', () => {
+  it('a perfect clear scores Speed+Efficiency only (no accuracy/attempts)', () => {
     act(() => useGameStore.getState().startGame())
     const { gaps } = useGameStore.getState()
     act(() => useGameStore.getState().endViewing())
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
     act(() => useGameStore.getState().submitSelection())
-    // submitSelection already sets roundScore for the auto-place path
+    // Multi-round model: Accuracy/Attempts are gone; the round total is Speed + Efficiency.
     const { roundScore } = useGameStore.getState()
-    expect(roundScore?.accuracy).toBeGreaterThan(0)
-  })
-
-  it('a first-try clear earns the full attempts bonus', () => {
-    act(() => useGameStore.getState().startGame())
-    const { gaps } = useGameStore.getState()
-    act(() => useGameStore.getState().endViewing())
-    act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
-    act(() => useGameStore.getState().submitSelection())
-    expect(useGameStore.getState().roundScore?.attemptsBonus).toBe(400)
+    expect(roundScore?.accuracy).toBe(0)
+    expect(roundScore?.attemptsBonus).toBe(0)
+    expect(roundScore?.efficiencyBonus).toBeGreaterThan(0) // exact-fit selection ⇒ max efficiency
+    expect(roundScore?.total).toBe(roundScore!.speedBonus + roundScore!.efficiencyBonus)
   })
 })
 
 describe('speed bonus — viewing + selection', () => {
+  // Multi-round Speed = ROUND_PILLAR_MAX.speed × (viewRem + selectRem) / (viewDur + selectDur).
   it('is maximal when both viewing and selection are instant', () => {
     vi.setSystemTime(0)
     act(() => useGameStore.getState().startGame())
@@ -200,10 +196,10 @@ describe('speed bonus — viewing + selection', () => {
     act(() => useGameStore.getState().submitSelection())
     const s = useGameStore.getState()
     expect(s._resolution?.kind).toBe('perfect')
-    expect(s.roundScore!.speedBonus).toBe(MAX_SPEED_BONUS)
+    expect(s.roundScore!.speedBonus).toBe(ROUND_PILLAR_MAX.speed)
   })
 
-  it('counts VIEWING speed: burning the full view time halves the bonus even with instant selection', () => {
+  it('counts VIEWING speed: burning the full view time only saves the selection fraction', () => {
     vi.setSystemTime(0)
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().beginViewing())
@@ -211,13 +207,15 @@ describe('speed bonus — viewing + selection', () => {
     vi.setSystemTime(difficulty.viewDuration)            // use ALL the viewing time
     act(() => useGameStore.getState().endViewing())
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
-    act(() => useGameStore.getState().submitSelection()) // instant selection
+    act(() => useGameStore.getState().submitSelection()) // instant selection ⇒ only select time left
     const s = useGameStore.getState()
     expect(s._resolution?.kind).toBe('perfect')
-    expect(s.roundScore!.speedBonus).toBe(Math.round(MAX_SPEED_BONUS * 0.5))
+    const expected = Math.round(ROUND_PILLAR_MAX.speed *
+      (difficulty.selectDuration / (difficulty.viewDuration + difficulty.selectDuration)))
+    expect(s.roundScore!.speedBonus).toBe(expected)
   })
 
-  it('counts SELECTION speed: burning the full select time halves the bonus even with an instant Ready', () => {
+  it('counts SELECTION speed: burning the full select time only saves the view fraction', () => {
     vi.setSystemTime(0)
     act(() => useGameStore.getState().startGame())
     act(() => useGameStore.getState().beginViewing())
@@ -228,7 +226,9 @@ describe('speed bonus — viewing + selection', () => {
     act(() => useGameStore.getState().submitSelection())
     const s = useGameStore.getState()
     expect(s._resolution?.kind).toBe('perfect')
-    expect(s.roundScore!.speedBonus).toBe(Math.round(MAX_SPEED_BONUS * 0.5))
+    const expected = Math.round(ROUND_PILLAR_MAX.speed *
+      (difficulty.viewDuration / (difficulty.viewDuration + difficulty.selectDuration)))
+    expect(s.roundScore!.speedBonus).toBe(expected)
   })
 })
 

@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { PieceShape } from '../PieceShape'
+import { gapFillClass } from '../../lib/gapPalette'
 import type { ChipSlot } from '@shared/engine/cartSlots'
 
 export interface SelectionCartHandle {
@@ -55,7 +56,11 @@ export const SelectionCart = forwardRef<SelectionCartHandle, Props>(
                   grayscale wraps ONLY the piece so the ✕ stays red. */}
               {rej && <RejectMark />}
               <div className={rej ? 'grayscale opacity-60 transition-all duration-200' : ''}>
-                <PieceShape pieceType={slot.pieceType} cellSize={11} />
+                <PieceShape
+                  pieceType={slot.pieceType}
+                  cellSize={11}
+                  colorClass={slot.color ? gapFillClass(slot.color) : undefined}
+                />
               </div>
             </motion.div>
           )

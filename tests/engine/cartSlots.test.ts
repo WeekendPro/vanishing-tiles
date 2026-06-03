@@ -37,6 +37,17 @@ describe('expandCartSlots', () => {
       { pieceType: 'O', slotIndex: 1 },
     ])
   })
+
+  it('carries the entry color onto each chip slot', () => {
+    const selection: SelectionEntry[] = [
+      { pieceType: 'O', color: 'green', freeCount: 1 },
+      { pieceType: 'O', color: 'red', freeCount: 1 },
+    ]
+    expect(expandCartSlots(selection)).toEqual([
+      { pieceType: 'O', color: 'green', slotIndex: 0 },
+      { pieceType: 'O', color: 'red', slotIndex: 1 },
+    ])
+  })
 })
 
 describe('mapPlacementsToSlots', () => {
@@ -66,5 +77,18 @@ describe('mapPlacementsToSlots', () => {
 
   it('handles an empty placements list', () => {
     expect(mapPlacementsToSlots([], slots)).toEqual([])
+  })
+
+  it('matches on color so a colored placement claims its own color chip', () => {
+    const colorSlots = [
+      { pieceType: 'O' as const, color: 'green', slotIndex: 0 },
+      { pieceType: 'O' as const, color: 'red', slotIndex: 1 },
+    ]
+    const mkColor = (color: string): Placement => ({
+      pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0, cells: [[0, 0]], color,
+    })
+    // Placements arrive red-first; each must claim the matching color slot,
+    // not just the first unclaimed O slot.
+    expect(mapPlacementsToSlots([mkColor('red'), mkColor('green')], colorSlots)).toEqual([1, 0])
   })
 })
