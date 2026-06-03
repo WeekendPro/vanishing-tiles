@@ -10,25 +10,18 @@ interface Props {
   grandTotal: number
   /** When true, rows reveal + counts animate; when false, panel is hidden. */
   show: boolean
-  accuracyTier: 'perfect' | 'close' | 'far'
-  /** Failed round: hide Speed/Efficiency rows and render Accuracy as a penalty. */
+  /** Failed round: hide Speed/Efficiency rows (the round total is 0). */
   isFailure?: boolean
   /** Successful but slow: swap the Speed ⚡ for a 🐢. */
   speedSlow?: boolean
 }
 
-const ACCURACY_ICON: Record<'perfect' | 'close' | 'far', { icon: string; color: string }> = {
-  perfect: { icon: '✓', color: 'text-neon-green' },
-  close:   { icon: '≈', color: 'text-neon-yellow' },
-  far:     { icon: '✕', color: 'text-neon-red' },
-}
-
 const ROW_STAGGER = 0.3   // seconds between row reveals
 const COUNT_DURATION = 400
-const ROUND_TOTAL_DELAY = ROW_STAGGER * 4
-const GRAND_TOTAL_DELAY = ROW_STAGGER * 5
+const ROUND_TOTAL_DELAY = ROW_STAGGER * 2
+const GRAND_TOTAL_DELAY = ROW_STAGGER * 3
 
-export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailure = false, speedSlow = false }: Props) {
+export function ScorePanel({ roundScore, grandTotal, show, isFailure = false, speedSlow = false }: Props) {
   if (!show) return null
 
   return (
@@ -38,15 +31,11 @@ export function ScorePanel({ roundScore, grandTotal, show, accuracyTier, isFailu
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
-      <Row icon={ACCURACY_ICON[accuracyTier].icon} label="Accuracy" value={roundScore.accuracy} delay={0} color={ACCURACY_ICON[accuracyTier].color} />
       {!isFailure && (
-        <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={ROW_STAGGER} color={speedSlow ? 'text-gray-400' : 'text-neon-yellow'} />
+        <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={0} color={speedSlow ? 'text-gray-400' : 'text-neon-yellow'} />
       )}
       {!isFailure && (
-        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER * 2} color="text-neon-cyan" />
-      )}
-      {!isFailure && (
-        <Row icon="◎" label="Attempts" value={roundScore.attemptsBonus} delay={ROW_STAGGER * 3} color="text-neon-magenta" />
+        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER} color="text-neon-cyan" />
       )}
 
       <div className="mt-2 pt-2 border-t border-arcade-edge flex flex-col gap-1">

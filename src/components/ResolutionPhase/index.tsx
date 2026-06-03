@@ -163,10 +163,6 @@ export function ResolutionPhase() {
 
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
-  const accuracyTier: 'perfect' | 'close' | 'far' =
-    resolution?.kind === 'perfect' ? 'perfect'
-      : (resolution && resolution.coverage >= 0.66 ? 'close' : 'far')
-
   const isFailure = resolution?.kind === 'partial'
   const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= MAX_SPEED_BONUS * 0.2
 
@@ -230,7 +226,6 @@ export function ResolutionPhase() {
             roundScore={roundScore}
             grandTotal={grandTotal}
             show={stage === 'scoring' || stage === 'cta'}
-            accuracyTier={accuracyTier}
             isFailure={isFailure}
             speedSlow={speedSlow}
           />

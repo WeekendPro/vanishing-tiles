@@ -128,38 +128,6 @@ describe('ResolutionPhase — badge copy (reduced motion)', () => {
   })
 })
 
-describe('ResolutionPhase — accuracy icon (reduced motion)', () => {
-  function showPartial(coverage: number) {
-    useGameStore.setState({
-      phase: 'resolving', triesUsed: 2, maxTries: 3,
-      grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
-      selection: [{ pieceType: 'O', freeCount: 1 }],
-      roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
-      _resolution: {
-        kind: 'partial', coverage, reason: 'too-many',
-        placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
-          cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
-      },
-    })
-  }
-
-  // The badge glyph reuses the same character (≈/✕), so scope the assertion
-  // to the Accuracy row, not the whole document.
-  it('close coverage shows the amber ≈ accuracy icon', () => {
-    showPartial(0.8)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('≈')
-  })
-
-  it('far coverage shows the red ✕ accuracy icon', () => {
-    showPartial(0.3)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('✕')
-  })
-})
-
 describe('ResolutionPhase — rejected chip styling (reduced motion)', () => {
   it('grays out the rejected piece', () => {
     useGameStore.setState({
@@ -308,18 +276,22 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
     })
   }
 
-  it('renders a zero Accuracy value on a failed round', () => {
-    showPartial(0)
-    render(<ResolutionPhase />)
-    const accRow = screen.getByText('Accuracy').closest('div')!
-    expect(accRow.textContent).toContain('+0')
-  })
-
-  it('hides the Speed, Efficiency, and Attempts rows on a failed round', () => {
+  it('hides all pillar rows on a failed round (round total is 0)', () => {
     showPartial(0)
     render(<ResolutionPhase />)
     expect(screen.queryByText('Speed')).not.toBeInTheDocument()
     expect(screen.queryByText('Efficiency')).not.toBeInTheDocument()
+    // Accuracy and Attempts pillars no longer exist in the round model.
+    expect(screen.queryByText('Accuracy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
+  })
+
+  it('shows Speed and Efficiency rows (and no Accuracy/Attempts) on a clear', () => {
+    showPerfect(300)
+    render(<ResolutionPhase />)
+    expect(screen.getByText('Speed')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency')).toBeInTheDocument()
+    expect(screen.queryByText('Accuracy')).not.toBeInTheDocument()
     expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
   })
 
