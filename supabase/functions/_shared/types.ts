@@ -67,6 +67,22 @@ export interface RoundScore {
   total: number
 }
 
+// ── Multi-round levels ────────────────────────────────────────────────────────
+
+/** Themes are fixed by round position within a level. */
+export type RoundTheme = 'basic' | 'colorCoded' | 'sequential' | 'flashMob'
+
+/** The theme played at each round index. Theme plans (2–4) replace entries as
+ *  each mechanic ships; until then every round plays Basic. */
+export const THEME_SEQUENCE: RoundTheme[] = ['basic', 'basic', 'basic', 'basic']
+
+export const THEME_LABEL: Record<RoundTheme, string> = {
+  basic: 'Basic',
+  colorCoded: 'Color-coded',
+  sequential: 'Sequential',
+  flashMob: 'Flash Mob',
+}
+
 // ── Resolution (drives the resolving phase animation) ─────────────────────────
 
 export type ResolutionReason = 'too-many' | 'wrong-shapes' | 'missed-one' | 'missed-many'
@@ -118,4 +134,10 @@ export interface GameState {
   viewTimeRemaining: number   // ms of view time left when viewing ended; feeds the Speed bonus
   roundScore: RoundScore | null
   difficulty: DifficultyConfig
+  // ── Multi-round level state (practice mode) ──
+  roundIndex: number            // 0..ROUNDS_PER_LEVEL-1; which round of the level
+  roundTheme: RoundTheme        // theme for the current round
+  livesRemaining: number        // 3 pooled across the level; a FAIL decrements, a clear does not
+  roundResults: number[]        // cleared round totals so far (drives the level total)
+  levelComplete: boolean        // true once all rounds are cleared
 }
