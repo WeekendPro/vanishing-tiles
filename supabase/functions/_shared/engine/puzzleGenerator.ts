@@ -7,6 +7,8 @@ type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   /** When set, restrict the puzzle to `shapeTypeCount` shape(s) and assign each
    *  gap a distinct color from `palette` (color-coded theme). */
   colorCoded?: { shapeTypeCount: number; palette: string[] }
+  /** When true, stamp order 1..N across the gaps (Sequential theme). */
+  sequential?: boolean
 }
 
 const COMPLEXITY_PIECES: Record<DifficultyConfig['complexity'], PieceType[]> = {
@@ -123,6 +125,13 @@ export function generatePuzzle(
   if (input.colorCoded) {
     const palette = shuffled(input.colorCoded.palette, rng)
     gaps.forEach((gap, i) => { gap.color = palette[i % palette.length] })
+  }
+
+  // Sequential: stamp a 1..N order badge across the gaps in placement order.
+  // Gaps are already placed at random board positions, so ascending order
+  // numbers are spatially scattered (no trivial top-to-bottom reading).
+  if (input.sequential) {
+    gaps.forEach((gap, i) => { gap.order = i + 1 })
   }
 
   return { grid, gaps }

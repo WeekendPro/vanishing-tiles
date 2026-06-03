@@ -39,7 +39,33 @@ export function resolveSelection(args: {
   theme: RoundTheme
 }): ResolveResult {
   const { selection, grid, gaps, theme } = args
-  const { colorMatters } = THEME_CONFIG[theme]
+  const { colorMatters, orderMatters } = THEME_CONFIG[theme]
+
+  if (orderMatters) {
+    // Sequential: the k-th pick must match the shape of the gap labelled k.
+    // Compare positionally against gaps sorted by `order`; any mismatch (count,
+    // shape, or order) fails the whole round with zero partial credit.
+    const picks: PieceType[] = []
+    for (const e of selection) for (let i = 0; i < e.freeCount; i++) picks.push(e.pieceType)
+    const orderedGaps = [...gaps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    const totalCells = orderedGaps.reduce((sum, g) => sum + g.cells.length, 0)
+
+    const matches =
+      picks.length === orderedGaps.length &&
+      orderedGaps.every((g, k) => g.pieceType === picks[k])
+
+    if (matches) {
+      const placements: Placement[] = orderedGaps.map(g => ({
+        pieceType: g.pieceType,
+        rotation: g.rotation,
+        anchorRow: g.anchorRow,
+        anchorCol: g.anchorCol,
+        cells: g.cells,
+      }))
+      return { solvable: true, placements, coverage: 1, filledCells: totalCells, totalCells }
+    }
+    return { solvable: false, placements: [], coverage: 0, filledCells: 0, totalCells }
+  }
 
   if (!colorMatters) {
     const pieceCount = tally(selection)

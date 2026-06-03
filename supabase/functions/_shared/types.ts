@@ -39,6 +39,7 @@ export interface Gap {
   anchorCol: number
   cells: PieceCells  // absolute [row, col] positions
   color?: string     // palette id (color-coded rounds); undefined for monochrome themes
+  order?: number     // 1..N badge for Sequential rounds; undefined otherwise
 }
 
 // ── Placement (a piece positioned on the grid) ────────────────────────────────
@@ -78,7 +79,7 @@ export type RoundTheme = 'basic' | 'colorCoded' | 'sequential' | 'flashMob'
 
 /** The theme played at each round index. Theme plans (2–4) replace entries as
  *  each mechanic ships; until then every round plays Basic. */
-export const THEME_SEQUENCE: RoundTheme[] = ['basic', 'colorCoded', 'basic', 'basic']
+export const THEME_SEQUENCE: RoundTheme[] = ['basic', 'colorCoded', 'sequential', 'basic']
 
 export const THEME_LABEL: Record<RoundTheme, string> = {
   basic: 'Basic',
