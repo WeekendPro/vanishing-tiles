@@ -8,16 +8,22 @@ import { JourneyScreen } from '../../src/components/JourneyScreen'
 import { useNavStore } from '../../src/store/navStore'
 
 const JOURNEY = [
-  { theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: 'standard', sort_order: 1, locked: false,
+  { theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: 'standard', sort_order: 1,
     levels: [
-      { level_id: 'l1', display_number: 1, name: 'Vacant Heights', my_pr: 1820, my_stars: 3, cleared: true, last_played: null, global_best: 1900 },
-      { level_id: 'l2', display_number: 2, name: 'Open Lots', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
+      { level_id: 'l1', display_number: 1, name: 'Vacant Heights', my_pr: 1820, my_stars: 3, cleared: true, current: false, locked: false, last_played: null, global_best: 1900 },
+      { level_id: 'l2', display_number: 2, name: 'Open Lots', my_pr: null, my_stars: 0, cleared: false, current: true, locked: false, last_played: null, global_best: null },
     ] },
-  { theme_id: 't3', slug: 'the_grid', name: 'The Grid', mechanic: 'standard', sort_order: 2, locked: true,
+  { theme_id: 't3', slug: 'the_grid', name: 'The Grid', mechanic: 'standard', sort_order: 2,
     levels: [
-      { level_id: 'l11', display_number: 11, name: 'Highrise Row', my_pr: null, my_stars: 0, cleared: false, last_played: null, global_best: null },
+      { level_id: 'l11', display_number: 11, name: 'Highrise Row', my_pr: null, my_stars: 0, cleared: false, current: false, locked: true, last_played: null, global_best: null },
     ] },
 ]
+
+// Every level cleared → all-clear end state.
+const ALL_CLEAR = JOURNEY.map(t => ({
+  ...t,
+  levels: t.levels.map(l => ({ ...l, cleared: true, current: false, locked: false })),
+}))
 
 beforeEach(() => {
   useNavStore.getState().reset()
@@ -33,7 +39,7 @@ describe('JourneyScreen', () => {
     expect(screen.getByRole('button', { name: /Vacant Heights/i })).toBeInTheDocument()
   })
 
-  it('opens the level detail when an unlocked card is tapped', async () => {
+  it('opens the level detail when a tappable station is clicked', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
@@ -44,11 +50,24 @@ describe('JourneyScreen', () => {
     expect(s.selectedLevelId).toBe('l1')
   })
 
-  it('does not open locked-theme levels', async () => {
+  it('does not open locked stations', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
     await screen.findByText('The Grid')
     expect(screen.getByRole('button', { name: /Highrise Row/i })).toBeDisabled()
+  })
+
+  it('shows the all-clear badge when every level is cleared', async () => {
+    ;(api.getJourney as any).mockResolvedValue(ALL_CLEAR)
+    render(<JourneyScreen />)
+    expect(await screen.findByText(/Gap City cleared/i)).toBeInTheDocument()
+  })
+
+  it('does not show the all-clear badge while levels remain', async () => {
+    ;(api.getJourney as any).mockResolvedValue(JOURNEY)
+    render(<JourneyScreen />)
+    await screen.findByText('The Hollows')
+    expect(screen.queryByText(/Gap City cleared/i)).not.toBeInTheDocument()
   })
 
   it('shows a retry affordance when the journey fetch fails', async () => {
