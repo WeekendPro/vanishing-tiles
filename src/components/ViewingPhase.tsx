@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { Grid } from './Grid'
 import { GapBorder } from './GapBorder'
+import { GapNumbers } from './GapNumbers'
 import { GapShimmer } from './GapShimmer'
 import { NeonButton } from './ui'
 
@@ -32,6 +33,7 @@ export function ViewingPhase() {
           }}
         />
         <GapBorder gaps={gaps} />
+        <GapNumbers gaps={gaps} />
         <GapShimmer containerRef={gridWrapRef} cellRects={cellRects} gaps={gaps} />
       </div>
       <p className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan text-center">Memorize the gaps</p>
