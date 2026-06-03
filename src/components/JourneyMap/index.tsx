@@ -8,6 +8,8 @@ export interface JourneyLevel {
   my_pr: number | null
   my_stars: number
   cleared: boolean
+  current: boolean
+  locked: boolean
   last_played: string | null
   global_best: number | null
 }
@@ -18,13 +20,11 @@ export interface JourneyTheme {
   name: string
   mechanic: string
   sort_order: number
-  locked: boolean
   levels: JourneyLevel[]
 }
 
 interface FlatStation extends JourneyLevel {
   slug: DistrictSlug
-  locked: boolean
   x: number
   y: number
   interchange: boolean
@@ -55,7 +55,6 @@ export function TransitMap({
       return {
         ...lvl,
         slug: theme.slug as DistrictSlug,
-        locked: theme.locked,
         x: coord.x,
         y: coord.y,
         interchange: coord.interchange ?? false,
@@ -63,10 +62,8 @@ export function TransitMap({
     }),
   )
 
-  // Next stop = lowest display_number uncleared station on an unlocked line.
-  const next = stations
-    .filter(s => !s.locked && !s.cleared)
-    .sort((a, b) => a.display_number - b.display_number)[0]
+  // Next stop = the single current station (the frontier), straight from the RPC.
+  const next = stations.find(s => s.current)
 
   useEffect(() => {
     nextRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
@@ -121,13 +118,11 @@ export function TransitMap({
 
       {stations.map(s => {
         const isNext = next?.level_id === s.level_id
-        const state: 'locked' | 'cleared' | 'next' | 'ahead' = s.locked
-          ? 'locked'
-          : s.cleared
+        const state: 'locked' | 'cleared' | 'next' = s.cleared
           ? 'cleared'
           : isNext
           ? 'next'
-          : 'ahead'
+          : 'locked'
         const color = LINE_COLOR[s.slug]
         const dotSize = s.interchange ? 18 : 16
 
@@ -151,7 +146,7 @@ export function TransitMap({
                 width: `${dotSize}px`,
                 height: `${dotSize}px`,
                 borderColor: color,
-                opacity: state === 'locked' || state === 'ahead' ? 0.5 : 1,
+                opacity: state === 'locked' ? 0.5 : 1,
                 background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
               }}
             />
@@ -160,7 +155,7 @@ export function TransitMap({
                 className={`text-[11px] ${
                   state === 'next'
                     ? 'text-white font-bold'
-                    : state === 'locked' || state === 'ahead'
+                    : state === 'locked'
                     ? 'text-gray-500'
                     : 'text-gray-200'
                 }`}
