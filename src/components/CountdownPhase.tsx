@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
+import { THEME_LABEL } from '@shared/types'
 
 const STEP_MS = 800   // how long each digit holds before the next flashes in
 const EXIT_MS = 350   // let the final "1" finish fading before the grid appears
 
 export function CountdownPhase() {
-  const { round, beginViewing } = useGameStore(useShallow(s => ({
+  const { round, roundIndex, roundTheme, mode, beginViewing } = useGameStore(useShallow(s => ({
     round: s.round,
+    roundIndex: s.roundIndex,
+    roundTheme: s.roundTheme,
+    mode: s.mode,
     beginViewing: s.beginViewing,
   })))
   const reduce = useReducedMotion()
@@ -31,7 +35,7 @@ export function CountdownPhase() {
         transition={{ duration: 0.45, ease: 'easeOut' }}
         className="font-pixel uppercase tracking-[0.08em] text-2xl text-neon-cyan text-glow-cyan"
       >
-        Round {round}
+        {mode === 'journey' ? `Round ${round}` : `Round ${roundIndex + 1} · ${THEME_LABEL[roundTheme]}`}
       </motion.h2>
 
       <div className="relative flex h-44 w-44 items-center justify-center">
