@@ -3,13 +3,14 @@ import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
+import { LockIcon } from './ui'
 import { TransitMap, type JourneyTheme } from './JourneyMap'
 
 function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       {variant === 'locked' ? (
-        <span aria-hidden="true" className="block text-[13px] leading-none opacity-70">🔒</span>
+        <LockIcon size={13} color="#cbd5e1" />
       ) : (
         <span
           aria-hidden="true"

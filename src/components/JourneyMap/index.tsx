@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { STATIONS, LINES, LINE_COLOR, CONNECTOR_COLOR, VIEWBOX, type DistrictSlug } from './layout'
+import { LockIcon } from '../ui'
 
 export interface JourneyLevel {
   level_id: string
@@ -160,13 +161,7 @@ export function TransitMap({
                 className="flex h-full w-full items-center justify-center rounded-full border-2"
                 style={{ borderColor: color, background: '#0b0f1c', opacity: 0.85 }}
               >
-                <span
-                  aria-hidden="true"
-                  className="leading-none"
-                  style={{ fontSize: `${dotSize - 3}px` }}
-                >
-                  🔒
-                </span>
+                <LockIcon size={dotSize - 2} color="#cbd5e1" />
               </span>
             ) : (
               <span
