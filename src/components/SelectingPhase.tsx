@@ -3,6 +3,8 @@ import { useGameStore } from '../store/gameStore'
 import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '@shared/engine/pieces'
+import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
+import { gapFillClass } from '../lib/gapPalette'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ArcadePanel } from './ui'
 import type { PieceType } from '@shared/types'
@@ -11,6 +13,7 @@ export function SelectingPhase() {
   const {
     selection, incrementSelection, decrementSelection,
     submit, phaseStartTime, phaseDuration,
+    roundTheme, gaps,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
@@ -18,9 +21,14 @@ export function SelectingPhase() {
     submit: s.submit,
     phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
+    roundTheme: s.roundTheme,
+    gaps: s.gaps,
   })))
   const journeyError = useGameStore(s => s.journeyError)
   const backToMap = useNavStore(s => s.backToMap)
+
+  const colorMatters = THEME_CONFIG[roundTheme].colorMatters
+  const roundShapes = [...new Set(gaps.map(g => g.pieceType))]
 
   useEffect(() => {
     const remaining = Math.max(0, phaseStartTime + phaseDuration - Date.now())
@@ -47,12 +55,16 @@ export function SelectingPhase() {
         <div className="flex gap-2 flex-wrap min-h-[52px] items-center">
           {selection.filter(e => e.freeCount > 0).map(entry => (
             <button
-              key={entry.pieceType}
-              onClick={() => decrementSelection(entry.pieceType)}
+              key={`${entry.pieceType}:${entry.color ?? ""}`}
+              onClick={() => decrementSelection(entry.pieceType, entry.color)}
               className="flex flex-col items-center gap-1 p-2 rounded-md border-2 text-xs
                 border-neon-cyan bg-arcade-well text-neon-cyan cursor-pointer hover:bg-arcade-panel"
             >
-              <PieceShape pieceType={entry.pieceType} cellSize={11} />
+              <PieceShape
+                pieceType={entry.pieceType}
+                cellSize={11}
+                colorClass={entry.color ? gapFillClass(entry.color) : undefined}
+              />
               <span>×{entry.freeCount}</span>
             </button>
           ))}
@@ -68,19 +80,37 @@ export function SelectingPhase() {
           <span className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan">Pieces</span>
           <span className="text-[10px] text-gray-500">tap to increment</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {PIECE_DEFINITIONS.map(def => (
-            <button
-              key={def.type}
-              onClick={() => incrementSelection(def.type as PieceType)}
-              className="flex flex-col items-center gap-1 p-2 bg-arcade-well border-2 border-arcade-edge
-                rounded-md hover:border-neon-cyan cursor-pointer"
-            >
-              <PieceShape pieceType={def.type} cellSize={11} />
-              <span className="font-pixel text-[9px] text-gray-400">{def.type}</span>
-            </button>
-          ))}
-        </div>
+        {colorMatters ? (
+          <div className="grid grid-cols-4 gap-2">
+            {roundShapes.flatMap(shape =>
+              GAP_COLOR_IDS.map(colorId => (
+                <button
+                  key={`${shape}:${colorId}`}
+                  data-color-option={colorId}
+                  onClick={() => incrementSelection(shape as PieceType, colorId)}
+                  className="flex flex-col items-center gap-1 p-2 bg-arcade-well border-2 border-arcade-edge
+                    rounded-md hover:border-neon-cyan cursor-pointer"
+                >
+                  <PieceShape pieceType={shape as PieceType} cellSize={11} colorClass={gapFillClass(colorId)} />
+                </button>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            {PIECE_DEFINITIONS.map(def => (
+              <button
+                key={def.type}
+                onClick={() => incrementSelection(def.type as PieceType)}
+                className="flex flex-col items-center gap-1 p-2 bg-arcade-well border-2 border-arcade-edge
+                  rounded-md hover:border-neon-cyan cursor-pointer"
+              >
+                <PieceShape pieceType={def.type} cellSize={11} />
+                <span className="font-pixel text-[9px] text-gray-400">{def.type}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </ArcadePanel>
 
       <NeonButton fullWidth variant="go" onClick={submit}>

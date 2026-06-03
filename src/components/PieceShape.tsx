@@ -6,13 +6,14 @@ interface Props {
   rotation?: Rotation
   cellSize?: number  // px
   dim?: boolean
+  colorClass?: string  // override the piece-type color (e.g. color-coded palette)
 }
 
-export function PieceShape({ pieceType, rotation = 0, cellSize = 14, dim = false }: Props) {
+export function PieceShape({ pieceType, rotation = 0, cellSize = 14, dim = false, colorClass }: Props) {
   const cells = getRotatedCells(pieceType, rotation)
   const maxRow = Math.max(...cells.map(([r]) => r))
   const maxCol = Math.max(...cells.map(([, c]) => c))
-  const color = getPieceColor(pieceType)
+  const color = colorClass ?? getPieceColor(pieceType)
   const occupied = new Set(cells.map(([r, c]) => `${r},${c}`))
 
   return (
