@@ -37,6 +37,7 @@ export interface Gap {
   anchorRow: number
   anchorCol: number
   cells: PieceCells  // absolute [row, col] positions
+  color?: string     // palette id (color-coded rounds); undefined for monochrome themes
 }
 
 // ── Placement (a piece positioned on the grid) ────────────────────────────────
@@ -53,6 +54,7 @@ export interface Placement {
 
 export interface SelectionEntry {
   pieceType: PieceType
+  color?: string        // palette id when the theme is color-coded; undefined otherwise
   freeCount: number     // freely added this round — can decrement to 0
 }
 
