@@ -91,7 +91,13 @@ New migration **`0010_per_station_gating.sql`**:
   - `next` = the single station with `current === true`. Drop the client-side
     "lowest uncleared on an unlocked line" derivation; trust the RPC flag.
   - Cleared stations stay enabled and tappable (revisit/replay).
-  - Locked stations are `disabled` and rendered with the locked style.
+  - Locked stations are rendered with the locked style (dimmed + a 🔒 glyph) and
+    carry `aria-disabled`, but **stay tappable**: clicking one opens the level detail
+    like any other station. `onSelect(levelId, locked)` forwards the station's `locked`
+    flag (via `navStore.openLevel(id, locked)`) so the detail can surface the locked
+    state. The level detail shows a "🔒 Locked — clear the current station to unlock"
+    message and replaces PLAY with a disabled control, so a locked level can be
+    inspected but not started (consistent with display-only, no-skip gating).
 - **All-clear:** when no station is `current`, render no "next" marker and show a subtle
   **"Gap City cleared"** badge in the `JourneyScreen` header (derived from "every level
   across all themes is cleared"). Minimal for now; a richer ending is a future feature as
@@ -106,14 +112,16 @@ New migration **`0010_per_station_gating.sql`**:
     1–3 `cleared` and **not** `locked`.
   - All cleared → no level is `current` or `locked`.
 - **Frontend** (`tests/components/JourneyMap.test.tsx`,
-  `tests/components/JourneyScreen.test.tsx`): rewrite fixtures to carry per-level `locked` /
-  `current` and drop `theme.locked`. Assert:
-  - stations after current are `disabled`;
+  `tests/components/JourneyScreen.test.tsx`,
+  `tests/components/LevelDetailScreen.test.tsx`): rewrite fixtures to carry per-level
+  `locked` / `current` and drop `theme.locked`. Assert:
+  - stations after current stay enabled but carry `aria-disabled`;
   - the current station has `aria-current="step"`;
-  - cleared stations are enabled and fire `onSelect` when tapped;
-  - clicking a locked station does **not** fire `onSelect`;
-  - the all-clear badge renders when every level is cleared, and the level-detail does not
-    open for locked stations.
+  - cleared stations are enabled and fire `onSelect(id, false)` when tapped;
+  - clicking a locked station fires `onSelect(id, true)` and opens the level detail
+    flagged as locked;
+  - the locked level detail shows the lock message and offers no PLAY action;
+  - the all-clear badge renders when every level is cleared.
 - Remove/replace any test asserting the old 70%-threshold lock.
 
 **Baseline to keep green:** 237 frontend tests + 39 pgTAP (updating the obsolete
@@ -123,9 +131,13 @@ New migration **`0010_per_station_gating.sql`**:
 
 - `supabase/migrations/0010_per_station_gating.sql` (new) — RPC redefinition + column drop.
 - `supabase/seed.sql` — drop `unlock_threshold` from the themes insert.
-- `src/components/JourneyMap/index.tsx` — per-level flags, state collapse.
+- `src/components/JourneyMap/index.tsx` — per-level flags, state collapse, locked
+  stations stay tappable and forward `locked` through `onSelect`.
 - `src/components/JourneyScreen.tsx` — all-clear badge.
+- `src/store/navStore.ts` — `openLevel(id, locked)` carries `selectedLevelLocked`.
+- `src/components/LevelDetailScreen.tsx` — locked state: lock message + disabled PLAY.
 - `tests/components/JourneyMap.test.tsx`, `tests/components/JourneyScreen.test.tsx`,
+  `tests/components/LevelDetailScreen.test.tsx`,
   `supabase/tests/0004_read_rpcs.test.sql` — updated/added.
 
 ## 8. Explicitly NOT in scope

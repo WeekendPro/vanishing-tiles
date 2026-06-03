@@ -45,7 +45,7 @@ export function TransitMap({
   onSelect,
 }: {
   themes: JourneyTheme[]
-  onSelect: (levelId: string) => void
+  onSelect: (levelId: string, locked: boolean) => void
 }) {
   const nextRef = useRef<HTMLButtonElement | null>(null)
 
@@ -133,10 +133,12 @@ export function TransitMap({
             key={s.level_id}
             ref={isNext ? nextRef : undefined}
             type="button"
-            disabled={s.locked}
+            // Locked stations stay tappable: the click opens the level detail,
+            // which surfaces the locked state (display-only gating, no skipping).
             aria-current={isNext ? 'step' : undefined}
-            onClick={() => onSelect(s.level_id)}
-            className="absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-disabled={s.locked || undefined}
+            onClick={() => onSelect(s.level_id, s.locked)}
+            className="absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             style={{
               left: `${(s.x / VIEWBOX.w) * 100}%`,
               top: `${(s.y / VIEWBOX.h) * 100}%`,
@@ -165,6 +167,7 @@ export function TransitMap({
                 {s.name}
                 {s.interchange ? <span aria-hidden="true"> ⇄</span> : ''}
                 {isNext ? <span aria-hidden="true"> ▶</span> : ''}
+                {state === 'locked' ? <span aria-hidden="true"> 🔒</span> : ''}
               </span>
               {s.cleared && <Stars n={s.my_stars} />}
             </span>

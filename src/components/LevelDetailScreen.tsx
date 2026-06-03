@@ -15,6 +15,7 @@ interface LevelDetail {
 
 export function LevelDetailScreen() {
   const selectedLevelId = useNavStore(s => s.selectedLevelId)
+  const locked = useNavStore(s => s.selectedLevelLocked)
   const goJourney = useNavStore(s => s.goJourney)
   const enterPlaying = useNavStore(s => s.enterPlaying)
   const startJourneySession = useGameStore(s => s.startJourneySession)
@@ -80,7 +81,19 @@ export function LevelDetailScreen() {
               <div className="flex justify-between"><dt className="text-gray-500">Global Best</dt><dd>{level.global_high ?? '—'}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-500">Last played</dt><dd>{relativeTime(level.last_played)}</dd></div>
             </dl>
-            <NeonButton fullWidth variant="go" disabled={busy} onClick={play}>PLAY</NeonButton>
+            {locked ? (
+              <div className="text-center">
+                <p className="font-pixel text-[9px] uppercase tracking-[0.12em] text-neon-magenta text-glow-magenta mb-2">
+                  🔒 Locked
+                </p>
+                <p className="text-xs text-gray-400 mb-4">
+                  Clear the current station to unlock this level.
+                </p>
+                <NeonButton fullWidth variant="ghost" disabled>Locked</NeonButton>
+              </div>
+            ) : (
+              <NeonButton fullWidth variant="go" disabled={busy} onClick={play}>PLAY</NeonButton>
+            )}
           </>
         )}
       </div>

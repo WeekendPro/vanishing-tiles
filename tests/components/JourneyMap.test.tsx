@@ -46,10 +46,14 @@ describe('TransitMap', () => {
     expect(screen.getByRole('button', { name: /Snug Harbor/i })).toBeInTheDocument()
   })
 
-  it('disables every locked station (after the current frontier)', () => {
+  it('keeps locked stations tappable but marks them aria-disabled', () => {
     render(<TransitMap themes={themes} onSelect={() => {}} />)
-    expect(screen.getByRole('button', { name: /Holloway/i })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Brickfall/i })).toBeDisabled()
+    const holloway = screen.getByRole('button', { name: /Holloway/i })
+    const brickfall = screen.getByRole('button', { name: /Brickfall/i })
+    expect(holloway).toBeEnabled()
+    expect(holloway).toHaveAttribute('aria-disabled', 'true')
+    expect(brickfall).toBeEnabled()
+    expect(brickfall).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('marks the current station with aria-current=step', () => {
@@ -58,11 +62,11 @@ describe('TransitMap', () => {
     expect(screen.getByRole('button', { name: /Vacant Heights/i })).not.toHaveAttribute('aria-current')
   })
 
-  it('calls onSelect when the current station is clicked', () => {
+  it('calls onSelect (unlocked) when the current station is clicked', () => {
     const onSelect = vi.fn()
     render(<TransitMap themes={themes} onSelect={onSelect} />)
     screen.getByRole('button', { name: /Open Lots/i }).click()
-    expect(onSelect).toHaveBeenCalledWith('l2')
+    expect(onSelect).toHaveBeenCalledWith('l2', false)
   })
 
   it('keeps cleared stations tappable (revisitable)', () => {
@@ -70,14 +74,14 @@ describe('TransitMap', () => {
     render(<TransitMap themes={themes} onSelect={onSelect} />)
     expect(screen.getByRole('button', { name: /Vacant Heights/i })).toBeEnabled()
     screen.getByRole('button', { name: /Vacant Heights/i }).click()
-    expect(onSelect).toHaveBeenCalledWith('l1')
+    expect(onSelect).toHaveBeenCalledWith('l1', false)
   })
 
-  it('does not fire onSelect for a locked station', () => {
+  it('fires onSelect with locked=true for a locked station (opens the detail)', () => {
     const onSelect = vi.fn()
     render(<TransitMap themes={themes} onSelect={onSelect} />)
     screen.getByRole('button', { name: /Brickfall/i }).click()
-    expect(onSelect).not.toHaveBeenCalled()
+    expect(onSelect).toHaveBeenCalledWith('l6', true)
   })
 
   it('renders all-clear (no current station) with everything tappable and nothing marked', () => {

@@ -48,13 +48,19 @@ describe('JourneyScreen', () => {
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
     expect(s.selectedLevelId).toBe('l1')
+    expect(s.selectedLevelLocked).toBe(false)
   })
 
-  it('does not open locked stations', async () => {
+  it('opens a locked station detail flagged as locked', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
+    const user = userEvent.setup()
     render(<JourneyScreen />)
     await screen.findByText('The Grid')
-    expect(screen.getByRole('button', { name: /Highrise Row/i })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: /Highrise Row/i }))
+    const s = useNavStore.getState()
+    expect(s.appView).toBe('levelDetail')
+    expect(s.selectedLevelId).toBe('l11')
+    expect(s.selectedLevelLocked).toBe(true)
   })
 
   it('shows the all-clear badge when every level is cleared', async () => {
