@@ -28,7 +28,7 @@ const themes: JourneyTheme[] = [
     ],
   },
   {
-    theme_id: 't2', slug: 'the_stacks', name: 'The Stacks', mechanic: '', sort_order: 2,
+    theme_id: 't2', slug: 'the_stacks', name: 'The Sticks', mechanic: '', sort_order: 2,
     levels: [
       lvl(6, 'Brickfall', { locked: true }),
       lvl(7, 'Tetra Heights', { locked: true }),

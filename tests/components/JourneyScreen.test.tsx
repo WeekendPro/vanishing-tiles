@@ -13,7 +13,7 @@ const JOURNEY = [
       { level_id: 'l1', display_number: 1, name: 'Vacant Heights', my_pr: 1820, my_stars: 3, cleared: true, current: false, locked: false, last_played: null, global_best: 1900 },
       { level_id: 'l2', display_number: 2, name: 'Open Lots', my_pr: null, my_stars: 0, cleared: false, current: true, locked: false, last_played: null, global_best: null },
     ] },
-  { theme_id: 't3', slug: 'the_grid', name: 'The Grid', mechanic: 'standard', sort_order: 2,
+  { theme_id: 't3', slug: 'the_grid', name: 'Gridlock', mechanic: 'standard', sort_order: 2,
     levels: [
       { level_id: 'l11', display_number: 11, name: 'Highrise Row', my_pr: null, my_stars: 0, cleared: false, current: false, locked: true, last_played: null, global_best: null },
     ] },
@@ -34,8 +34,8 @@ describe('JourneyScreen', () => {
   it('renders the transit map with district labels and station buttons', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    expect(await screen.findByText('The Hollows')).toBeInTheDocument()
-    expect(screen.getByText('The Grid')).toBeInTheDocument()
+    expect(await screen.findByText('HOLLOWS')).toBeInTheDocument()
+    expect(screen.getByText('GRIDLOCK')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Vacant Heights/i })).toBeInTheDocument()
   })
 
@@ -43,7 +43,7 @@ describe('JourneyScreen', () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
-    await screen.findByText('The Hollows')
+    await screen.findByText('HOLLOWS')
     await user.click(screen.getByRole('button', { name: /Vacant Heights/i }))
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
@@ -55,7 +55,7 @@ describe('JourneyScreen', () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
-    await screen.findByText('The Grid')
+    await screen.findByText('GRIDLOCK')
     await user.click(screen.getByRole('button', { name: /Highrise Row/i }))
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
@@ -66,7 +66,7 @@ describe('JourneyScreen', () => {
   it('shows the marker legend (Complete / Current / Locked)', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    await screen.findByText('The Hollows')
+    await screen.findByText('HOLLOWS')
     expect(screen.getByText('Complete')).toBeInTheDocument()
     expect(screen.getByText('Current')).toBeInTheDocument()
     expect(screen.getByText('Locked')).toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('JourneyScreen', () => {
   it('does not show the all-clear badge while levels remain', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    await screen.findByText('The Hollows')
+    await screen.findByText('HOLLOWS')
     expect(screen.queryByText(/Gap City cleared/i)).not.toBeInTheDocument()
   })
 

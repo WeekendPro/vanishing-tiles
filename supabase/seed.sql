@@ -1,10 +1,11 @@
 -- supabase/seed.sql
--- Gap City districts (The Hollows 1-5, The Stacks 6-10, The Grid 11-15).
--- Kept in sync with 0008_gap_city_districts.sql + 0009_gap_city_fictional_names.sql.
+-- Gap City districts (The Hollows 1-5, The Sticks 6-10, Gridlock 11-15).
+-- Kept in sync with 0008_gap_city_districts.sql + 0009_gap_city_fictional_names.sql
+-- + 0011_rename_districts_sticks_gridlock.sql.
 insert into public.themes (slug,name,description,sort_order,piece_set,mechanic) values
  ('the_hollows','The Hollows','Sleepy outskirts — all gaps.',1,'{I,O,T,S,Z,J,L,SINGLE}','standard'),
- ('the_stacks','The Stacks','Blocks piling up.',2,'{I,O,T,S,Z,J,L,SINGLE}','standard'),
- ('the_grid','The Grid','Dense downtown — locked in.',3,'{I,O,T,S,Z,J,L,SINGLE}','standard')
+ ('the_stacks','The Sticks','Blocks piling up.',2,'{I,O,T,S,Z,J,L,SINGLE}','standard'),
+ ('the_grid','Gridlock','Dense downtown — locked in.',3,'{I,O,T,S,Z,J,L,SINGLE}','standard')
 on conflict (slug) do nothing;
 
 -- 15 levels across three districts from DIFFICULTY_TABLE.

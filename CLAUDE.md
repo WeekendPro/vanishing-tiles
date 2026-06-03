@@ -12,7 +12,7 @@ the Apple App Store.
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, progress through themed neighborhoods across the districts of Gap City, a fictional metropolis (The Hollows → The Stacks → The Grid), with each district containing a group of increasingly difficult levels.
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, progress through themed neighborhoods across the districts of Gap City, a fictional metropolis (The Hollows → The Sticks → Gridlock), with each district containing a group of increasingly difficult levels.
 
 ### Round loop
 

@@ -45,20 +45,24 @@ export const LINES: LineDef[] = [
     slug: 'the_hollows',
     color: LINE_COLOR.the_hollows,
     path: 'M70,1050 L70,960 L140,890 L140,800 L80,730',
-    label: { x: 12, y: 1062 },
+    // Big faint district watermark, vertically centred on the section and placed
+    // in the dead space to the RIGHT of this line.
+    label: { x: 283, y: 890 },
   },
   {
     slug: 'the_stacks',
     color: LINE_COLOR.the_stacks,
     path: 'M160,660 L160,570 L240,510 L240,430 L170,370',
     connector: 'M80,730 L160,660',
-    label: { x: 258, y: 654 },
+    // Placed in the dead space to the LEFT of this section.
+    label: { x: 84, y: 515 },
   },
   {
     slug: 'the_grid',
     color: LINE_COLOR.the_grid,
     path: 'M260,300 L260,220 L320,170 L320,100 L250,60',
     connector: 'M170,370 L260,300',
-    label: { x: 150, y: 286 },
+    // Placed in the dead space to the LEFT of this section.
+    label: { x: 110, y: 176 },
   },
 ]

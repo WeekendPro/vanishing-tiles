@@ -80,6 +80,37 @@ export function TransitMap({
         className="w-full block"
         aria-hidden="true"
       >
+        {/* District watermarks: big, faint, vertically centred on each section and
+            placed in the dead space beside the line. Rendered first so the neon
+            lines and stations sit on top. Names come from the DB (get_journey);
+            we just uppercase and wrap to one word per line. */}
+        {LINES.map(line => {
+          const name = (slugToName[line.slug] ?? line.slug).toUpperCase()
+          const words = name.split(' ')
+          const { x, y } = line.label
+          const LH = 44
+          const SIZE = 42
+          // Vertically centre the whole multi-line block on the label anchor.
+          const startY = y - ((words.length - 1) * LH) / 2 + SIZE * 0.34
+          return (
+            <text
+              key={`label-${line.slug}`}
+              x={x}
+              textAnchor="middle"
+              fill={line.color}
+              fontSize={SIZE}
+              fontWeight={800}
+              letterSpacing={2}
+              opacity={0.2}
+            >
+              {words.map((w, i) => (
+                <tspan key={i} x={x} y={startY + i * LH}>
+                  {w}
+                </tspan>
+              ))}
+            </text>
+          )
+        })}
         {LINES.map(line => {
           const lineCleared = stations
             .filter(s => s.slug === line.slug)
@@ -104,15 +135,6 @@ export function TransitMap({
                 strokeLinejoin="round"
                 strokeOpacity={lineCleared ? 1 : 0.85}
               />
-              <text
-                x={line.label.x}
-                y={line.label.y}
-                fill={line.color}
-                fontSize={9}
-                fontWeight={700}
-              >
-                {slugToName[line.slug] ?? line.slug}
-              </text>
             </g>
           )
         })}
