@@ -5,6 +5,24 @@ import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
 import { TransitMap, type JourneyTheme } from './JourneyMap'
 
+function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        aria-hidden="true"
+        className={`block h-3 w-3 rounded-full border-2${variant === 'current' ? ' map-next' : ''}`}
+        style={{
+          borderColor: variant === 'locked' ? '#6b7280' : '#e5e7eb',
+          background:
+            variant === 'complete' ? '#e5e7eb' : variant === 'current' ? '#ffffff' : 'transparent',
+          opacity: variant === 'locked' ? 0.6 : 1,
+        }}
+      />
+      <span className="text-[11px] text-gray-300">{label}</span>
+    </span>
+  )
+}
+
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
   const [themes, setThemes] = useState<JourneyTheme[] | null>(null)
@@ -48,6 +66,14 @@ export function JourneyScreen() {
       </div>
       <div className="px-4 pb-10">
         <TransitMap themes={themes} onSelect={openLevel} />
+      </div>
+      <div
+        className="sticky bottom-0 z-20 flex items-center justify-center gap-5 px-4 py-3"
+        style={{ background: 'linear-gradient(to top, #06080f 60%, transparent)' }}
+      >
+        <LegendItem variant="complete" label="Complete" />
+        <LegendItem variant="current" label="Current" />
+        <LegendItem variant="locked" label="Locked" />
       </div>
     </div>
   )

@@ -127,6 +127,9 @@ export function TransitMap({
           : 'locked'
         const color = LINE_COLOR[s.slug]
         const dotSize = s.interchange ? 18 : 16
+        // Stations on the right half of the map put their label to the LEFT, so
+        // labels grow toward the empty centre instead of off the right edge.
+        const labelLeft = s.x > VIEWBOX.w / 2
 
         return (
           <button
@@ -138,23 +141,30 @@ export function TransitMap({
             aria-current={isNext ? 'step' : undefined}
             aria-disabled={s.locked || undefined}
             onClick={() => onSelect(s.level_id, s.locked)}
-            className="absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            // The button is a dot-sized square centred on the line coordinate, so the
+            // marker always sits exactly on the line. The label is absolutely
+            // positioned to one side and doesn't shift the dot.
+            className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             style={{
               left: `${(s.x / VIEWBOX.w) * 100}%`,
               top: `${(s.y / VIEWBOX.h) * 100}%`,
+              width: `${dotSize}px`,
+              height: `${dotSize}px`,
             }}
           >
             <span
-              className={`block rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
+              className={`block h-full w-full rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
               style={{
-                width: `${dotSize}px`,
-                height: `${dotSize}px`,
                 borderColor: color,
                 opacity: state === 'locked' ? 0.5 : 1,
                 background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
               }}
             />
-            <span className="flex flex-col items-start leading-tight whitespace-nowrap">
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 flex flex-col leading-tight whitespace-nowrap ${
+                labelLeft ? 'right-full mr-1.5 items-end' : 'left-full ml-1.5 items-start'
+              }`}
+            >
               <span
                 className={`text-[11px] ${
                   state === 'next'

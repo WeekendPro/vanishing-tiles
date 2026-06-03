@@ -63,6 +63,15 @@ describe('JourneyScreen', () => {
     expect(s.selectedLevelLocked).toBe(true)
   })
 
+  it('shows the marker legend (Complete / Current / Locked)', async () => {
+    ;(api.getJourney as any).mockResolvedValue(JOURNEY)
+    render(<JourneyScreen />)
+    await screen.findByText('The Hollows')
+    expect(screen.getByText('Complete')).toBeInTheDocument()
+    expect(screen.getByText('Current')).toBeInTheDocument()
+    expect(screen.getByText('Locked')).toBeInTheDocument()
+  })
+
   it('shows the all-clear badge when every level is cleared', async () => {
     ;(api.getJourney as any).mockResolvedValue(ALL_CLEAR)
     render(<JourneyScreen />)
