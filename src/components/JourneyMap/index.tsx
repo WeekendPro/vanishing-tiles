@@ -8,6 +8,8 @@ export interface JourneyLevel {
   my_pr: number | null
   my_stars: number
   cleared: boolean
+  current: boolean
+  locked: boolean
   last_played: string | null
   global_best: number | null
 }
@@ -18,13 +20,11 @@ export interface JourneyTheme {
   name: string
   mechanic: string
   sort_order: number
-  locked: boolean
   levels: JourneyLevel[]
 }
 
 interface FlatStation extends JourneyLevel {
   slug: DistrictSlug
-  locked: boolean
   x: number
   y: number
   interchange: boolean
@@ -45,7 +45,7 @@ export function TransitMap({
   onSelect,
 }: {
   themes: JourneyTheme[]
-  onSelect: (levelId: string) => void
+  onSelect: (levelId: string, locked: boolean) => void
 }) {
   const nextRef = useRef<HTMLButtonElement | null>(null)
 
@@ -55,7 +55,6 @@ export function TransitMap({
       return {
         ...lvl,
         slug: theme.slug as DistrictSlug,
-        locked: theme.locked,
         x: coord.x,
         y: coord.y,
         interchange: coord.interchange ?? false,
@@ -63,10 +62,9 @@ export function TransitMap({
     }),
   )
 
-  // Next stop = lowest display_number uncleared station on an unlocked line.
-  const next = stations
-    .filter(s => !s.locked && !s.cleared)
-    .sort((a, b) => a.display_number - b.display_number)[0]
+  // RPC guarantees at most one current station (the lowest uncleared display_number);
+  // it's undefined in the all-clear state (every level cleared).
+  const next = stations.find(s => s.current)
 
   useEffect(() => {
     nextRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
@@ -121,46 +119,74 @@ export function TransitMap({
 
       {stations.map(s => {
         const isNext = next?.level_id === s.level_id
-        const state: 'locked' | 'cleared' | 'next' | 'ahead' = s.locked
-          ? 'locked'
-          : s.cleared
+        // Visual state trusts the RPC: a non-cleared, non-current level is always locked.
+        const state: 'locked' | 'cleared' | 'next' = s.cleared
           ? 'cleared'
           : isNext
           ? 'next'
-          : 'ahead'
+          : 'locked'
         const color = LINE_COLOR[s.slug]
         const dotSize = s.interchange ? 18 : 16
+        // Locked stations show a lock inside a slightly larger circle so the glyph
+        // stays legible while still reading as a station marker on the line.
+        const markerSize = state === 'locked' ? dotSize + 8 : dotSize
+        // Stations on the right half of the map put their label to the LEFT, so
+        // labels grow toward the empty centre instead of off the right edge.
+        const labelLeft = s.x > VIEWBOX.w / 2
 
         return (
           <button
             key={s.level_id}
             ref={isNext ? nextRef : undefined}
             type="button"
-            disabled={s.locked}
+            // Locked stations stay tappable: the click opens the level detail,
+            // which surfaces the locked state (display-only gating, no skipping).
             aria-current={isNext ? 'step' : undefined}
-            onClick={() => onSelect(s.level_id)}
-            className="absolute flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-disabled={s.locked || undefined}
+            onClick={() => onSelect(s.level_id, s.locked)}
+            // The button is a dot-sized square centred on the line coordinate, so the
+            // marker always sits exactly on the line. The label is absolutely
+            // positioned to one side and doesn't shift the dot.
+            className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             style={{
               left: `${(s.x / VIEWBOX.w) * 100}%`,
               top: `${(s.y / VIEWBOX.h) * 100}%`,
+              width: `${markerSize}px`,
+              height: `${markerSize}px`,
             }}
           >
+            {state === 'locked' ? (
+              <span
+                className="flex h-full w-full items-center justify-center rounded-full border-2"
+                style={{ borderColor: color, background: '#0b0f1c', opacity: 0.85 }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="leading-none"
+                  style={{ fontSize: `${dotSize - 3}px` }}
+                >
+                  🔒
+                </span>
+              </span>
+            ) : (
+              <span
+                className={`block h-full w-full rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
+                style={{
+                  borderColor: color,
+                  background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
+                }}
+              />
+            )}
             <span
-              className={`block rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
-              style={{
-                width: `${dotSize}px`,
-                height: `${dotSize}px`,
-                borderColor: color,
-                opacity: state === 'locked' || state === 'ahead' ? 0.5 : 1,
-                background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
-              }}
-            />
-            <span className="flex flex-col items-start leading-tight whitespace-nowrap">
+              className={`absolute top-1/2 -translate-y-1/2 flex flex-col leading-tight whitespace-nowrap ${
+                labelLeft ? 'right-full mr-1.5 items-end' : 'left-full ml-1.5 items-start'
+              }`}
+            >
               <span
                 className={`text-[11px] ${
                   state === 'next'
                     ? 'text-white font-bold'
-                    : state === 'locked' || state === 'ahead'
+                    : state === 'locked'
                     ? 'text-gray-500'
                     : 'text-gray-200'
                 }`}

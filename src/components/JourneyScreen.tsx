@@ -5,6 +5,26 @@ import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
 import { TransitMap, type JourneyTheme } from './JourneyMap'
 
+function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {variant === 'locked' ? (
+        <span aria-hidden="true" className="block text-[13px] leading-none opacity-70">🔒</span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className={`block h-3 w-3 rounded-full border-2${variant === 'current' ? ' map-next' : ''}`}
+          style={{
+            borderColor: '#e5e7eb',
+            background: variant === 'complete' ? '#e5e7eb' : '#ffffff',
+          }}
+        />
+      )}
+      <span className="text-[11px] text-gray-300">{label}</span>
+    </span>
+  )
+}
+
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
   const [themes, setThemes] = useState<JourneyTheme[] | null>(null)
@@ -40,9 +60,24 @@ export function JourneyScreen() {
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3"
            style={{ background: 'linear-gradient(to bottom, #06080f, transparent)' }}>
         <Wordmark size="sm" />
+        {themes.length > 0 && themes.every(t => t.levels.every(l => l.cleared)) && (
+          <span className="text-[11px] font-bold tracking-wide text-emerald-400">
+            Gap City cleared
+          </span>
+        )}
       </div>
       <div className="px-4 pb-10">
         <TransitMap themes={themes} onSelect={openLevel} />
+      </div>
+      <div
+        className="sticky bottom-0 z-20 flex justify-center px-4 pb-3 pt-6"
+        style={{ background: 'linear-gradient(to top, #06080f 70%, transparent)' }}
+      >
+        <div className="flex items-center justify-center gap-5 rounded-full border-2 border-arcade-edge bg-arcade-panel px-5 py-2 shadow-panel-inset">
+          <LegendItem variant="complete" label="Complete" />
+          <LegendItem variant="current" label="Current" />
+          <LegendItem variant="locked" label="Locked" />
+        </div>
       </div>
     </div>
   )
