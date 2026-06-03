@@ -6,6 +6,7 @@ import type {
 import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { resolveSelection } from '@shared/core/themeResolution'
+import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
 import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
@@ -135,9 +136,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startGame: () => {
-    const { round } = get()
+    const { round, roundIndex } = get()
+    const roundTheme = THEME_SEQUENCE[roundIndex]
     const difficulty = getDifficulty(round)
-    const { grid, gaps } = generatePuzzle(difficulty)
+    const colorCoded = THEME_CONFIG[roundTheme].colorMatters
+    const { grid, gaps } = generatePuzzle(
+      colorCoded
+        ? {
+            gapCount: difficulty.gapCount,
+            complexity: difficulty.complexity,
+            colorCoded: { shapeTypeCount: 1, palette: [...GAP_COLOR_IDS] },
+          }
+        : difficulty
+    )
 
     // The round opens with a 3-2-1 countdown; the view timer starts only
     // once beginViewing fires, so memorization time isn't eaten by the count.
@@ -157,7 +168,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phaseDuration: 0,
       viewTimeRemaining: 0,
       _resolution: null,
-      roundTheme: THEME_SEQUENCE[get().roundIndex],
+      roundTheme,
     })
   },
 

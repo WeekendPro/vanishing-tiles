@@ -76,3 +76,19 @@ describe('color-aware selection cart', () => {
     expect(s.roundScore?.total).toBe(0)
   })
 })
+
+describe('round 2 is color-coded', () => {
+  it('startPractice→advance to round 2 generates colored gaps of a single shape', () => {
+    const store = useGameStore.getState()
+    store.startPractice()             // round 1 (basic)
+    // Force a clear of round 1 by setting a non-null roundScore so advanceRound banks it.
+    useGameStore.setState({ roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 100 } })
+    useGameStore.getState().advanceRound()  // → round 2
+    const s = useGameStore.getState()
+    expect(s.roundIndex).toBe(1)
+    expect(s.roundTheme).toBe('colorCoded')
+    expect(s.gaps.length).toBeGreaterThan(0)
+    expect(s.gaps.every(g => g.color !== undefined)).toBe(true)
+    expect(new Set(s.gaps.map(g => g.pieceType)).size).toBe(1)
+  })
+})
