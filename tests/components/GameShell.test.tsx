@@ -28,3 +28,14 @@ describe('GameShell loading slot', () => {
     expect(screen.queryByTestId('trickle-bar')).toBeNull()
   })
 })
+
+describe('GameShell header', () => {
+  it('shows round-of-4 and pooled lives in practice level mode', () => {
+    act(() => {
+      useGameStore.setState({ mode: 'practice', phase: 'viewing', roundIndex: 1, livesRemaining: 2, score: 1400, levelComplete: false })
+    })
+    render(<GameShell />)
+    expect(screen.getByText(/ROUND/i)).toBeInTheDocument()
+    expect(screen.getByText(/2\s*\/\s*4|2 OF 4/i)).toBeInTheDocument()
+  })
+})

@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
+import { MAX_LIVES } from '@shared/core/scoring'
 import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
@@ -22,11 +23,10 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, paused, round, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting } =
+  const { phase, paused, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
-      round: s.round,
       score: s.score,
       triesUsed: s.triesUsed,
       maxTries: s.maxTries,
@@ -36,6 +36,8 @@ export function GameShell() {
       levelDisplayNumber: s.levelDisplayNumber,
       levelName: s.levelName,
       submitting: s.submitting,
+      roundIndex: s.roundIndex,
+      livesRemaining: s.livesRemaining,
     })))
 
   const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
@@ -51,10 +53,10 @@ export function GameShell() {
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
           {mode === 'journey'
             ? <strong className="text-white">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
-            : <>ROUND <strong className="text-white">{round}</strong></>}
+            : <>ROUND <strong className="text-white">{roundIndex + 1} / 4</strong></>}
         </span>
         <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
-        <Hearts count={maxTries - triesUsed + 1} total={maxTries} />
+        <Hearts count={mode === 'journey' ? maxTries - triesUsed + 1 : livesRemaining} total={mode === 'journey' ? maxTries : MAX_LIVES} />
         <span className="flex-1" />
         <span className="w-10" aria-hidden />
       </div>
