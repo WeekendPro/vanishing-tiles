@@ -87,7 +87,7 @@ export function TransitMap({
         {LINES.map(line => {
           const name = slugToName[line.slug] ?? line.slug
           const words = name.split(' ')
-          const { x, y } = line.label
+          const { x, y, align } = line.label
           const LH = 37
           const SIZE = 35
           // Vertically centre the whole multi-line block on the label anchor.
@@ -96,7 +96,7 @@ export function TransitMap({
             <text
               key={`label-${line.slug}`}
               x={x}
-              textAnchor="middle"
+              textAnchor={align}
               fill={line.color}
               fontSize={SIZE}
               fontWeight={800}
