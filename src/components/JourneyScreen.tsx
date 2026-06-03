@@ -40,7 +40,7 @@ export function JourneyScreen() {
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3"
            style={{ background: 'linear-gradient(to bottom, #06080f, transparent)' }}>
         <Wordmark size="sm" />
-        {themes.every(t => t.levels.every(l => l.cleared)) && (
+        {themes.length > 0 && themes.every(t => t.levels.every(l => l.cleared)) && (
           <span className="text-[11px] font-bold tracking-wide text-emerald-400">
             Gap City cleared
           </span>
