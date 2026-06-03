@@ -59,6 +59,8 @@ interface GameStore extends GameState {
   resetGame: () => void
   incrementSelection: (pieceType: PieceType, color?: string) => void
   decrementSelection: (pieceType: PieceType, color?: string) => void
+  appendQueuePiece: (pieceType: PieceType) => void
+  popQueuePiece: () => void
   pauseGame: () => void
   resumeGame: () => void
   pausedElapsed: number
@@ -139,15 +141,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { round, roundIndex } = get()
     const roundTheme = THEME_SEQUENCE[roundIndex]
     const difficulty = getDifficulty(round)
-    const colorCoded = THEME_CONFIG[roundTheme].colorMatters
+    const { colorMatters, orderMatters } = THEME_CONFIG[roundTheme]
     const { grid, gaps } = generatePuzzle(
-      colorCoded
+      colorMatters
         ? {
             gapCount: difficulty.gapCount,
             complexity: difficulty.complexity,
             colorCoded: { shapeTypeCount: 1, palette: [...GAP_COLOR_IDS] },
           }
-        : difficulty
+        : orderMatters
+          ? { gapCount: difficulty.gapCount, complexity: difficulty.complexity, sequential: true }
+          : difficulty
     )
 
     // The round opens with a 3-2-1 countdown; the view timer starts only
@@ -253,6 +257,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         )
         .filter(e => e.freeCount > 0),
     }))
+  },
+
+  // Sequential rounds use `selection` as an ORDERED queue: one singleton entry
+  // per tap (never aggregated), so tap order is preserved for order-aware
+  // validation and the in-order fly-in.
+  appendQueuePiece: (pieceType: PieceType) => {
+    set(state => ({ selection: [...state.selection, { pieceType, freeCount: 1 }] }))
+  },
+
+  popQueuePiece: () => {
+    set(state => ({ selection: state.selection.slice(0, -1) }))
   },
 
   submitSelection: () => {
