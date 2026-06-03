@@ -39,6 +39,7 @@ export interface Gap {
   anchorCol: number
   cells: PieceCells  // absolute [row, col] positions
   color?: string     // palette id (color-coded rounds); undefined for monochrome themes
+  order?: number     // 1..N badge for Sequential rounds; undefined otherwise
 }
 
 // ── Placement (a piece positioned on the grid) ────────────────────────────────
