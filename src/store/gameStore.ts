@@ -6,7 +6,7 @@ import type {
 import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { solve, bestFit } from '@shared/engine/solver'
-import { scoreClear, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
+import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
@@ -253,7 +253,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   submitSelection: () => {
-    const { selection, grid, gaps, triesUsed, maxTries, difficulty, phaseStartTime, viewTimeRemaining } = get()
+    const { selection, grid, gaps, difficulty, phaseStartTime, viewTimeRemaining, roundTheme } = get()
 
     const pieceCount: Partial<Record<PieceType, number>> = {}
     for (const entry of selection) {
@@ -266,35 +266,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
 
     if (result.solvable) {
+      // Per-round scoring: Speed + Efficiency only (no Accuracy/Attempts in the
+      // multi-round model — lives are pooled per level, not per round).
       const minPieces = gaps.length
       const selectedPieces = Object.values(pieceCount).reduce((s, n) => s + (n ?? 0), 0)
-      // Single source of scoring truth: core/scoring is shared with the server.
-      const ps = scoreClear({
-        triesUsed,
+      const r = scoreRound({
         viewTimeRemaining,
         viewDuration: difficulty.viewDuration,
         selectTimeRemaining,
         selectDuration: difficulty.selectDuration,
         minPieces,
         selectedPieces,
+        selectOnly: roundTheme === 'flashMob',
       })
 
       set({
         phase: 'resolving',
         _resolution: { kind: 'perfect', placements: result.placements ?? [], coverage: 1 },
         roundScore: {
-          accuracy: ps.accuracy,
-          speedBonus: ps.speed,
-          efficiencyBonus: ps.efficiency,
-          attemptsBonus: ps.attempts,
-          stars: ps.stars,
-          total: ps.total,
+          accuracy: 0,
+          speedBonus: r.speed,
+          efficiencyBonus: r.efficiency,
+          attemptsBonus: 0,
+          stars: 0,
+          total: r.total,
         },
       })
     } else {
-      // Failed try: no negative penalty — a failed round scores 0, never below.
-      // Advance to the next try unless this was the last one (game over).
-      const exhausted = triesUsed >= maxTries
+      // Failed round: no negative penalty — a failed round scores 0, never below.
       const fit = bestFit(pieceCount, grid)
       const coverage = fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells
 
@@ -307,9 +306,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
 
+      // A failed round spends one pooled life (retry replays the same board).
+      get().loseLife()
       set({
         phase: 'resolving',
-        triesUsed: exhausted ? triesUsed : triesUsed + 1,
         _resolution: { kind: 'partial', placements: fit.placements, coverage, reason },
         roundScore: {
           accuracy: 0,
