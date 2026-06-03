@@ -34,8 +34,8 @@ describe('JourneyScreen', () => {
   it('renders the transit map with district labels and station buttons', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    expect(await screen.findByText('HOLLOWS')).toBeInTheDocument()
-    expect(screen.getByText('GRIDLOCK')).toBeInTheDocument()
+    expect(await screen.findByText('Hollows')).toBeInTheDocument()
+    expect(screen.getByText('Gridlock')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Vacant Heights/i })).toBeInTheDocument()
   })
 
@@ -43,7 +43,7 @@ describe('JourneyScreen', () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
-    await screen.findByText('HOLLOWS')
+    await screen.findByText('Hollows')
     await user.click(screen.getByRole('button', { name: /Vacant Heights/i }))
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
@@ -55,7 +55,7 @@ describe('JourneyScreen', () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     const user = userEvent.setup()
     render(<JourneyScreen />)
-    await screen.findByText('GRIDLOCK')
+    await screen.findByText('Gridlock')
     await user.click(screen.getByRole('button', { name: /Highrise Row/i }))
     const s = useNavStore.getState()
     expect(s.appView).toBe('levelDetail')
@@ -66,7 +66,7 @@ describe('JourneyScreen', () => {
   it('shows the marker legend (Complete / Current / Locked)', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    await screen.findByText('HOLLOWS')
+    await screen.findByText('Hollows')
     expect(screen.getByText('Complete')).toBeInTheDocument()
     expect(screen.getByText('Current')).toBeInTheDocument()
     expect(screen.getByText('Locked')).toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('JourneyScreen', () => {
   it('does not show the all-clear badge while levels remain', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
-    await screen.findByText('HOLLOWS')
+    await screen.findByText('Hollows')
     expect(screen.queryByText(/Gap City cleared/i)).not.toBeInTheDocument()
   })
 
