@@ -3,7 +3,7 @@
 -- display_number + the player's cleared set (replaces the old 70% theme rule).
 -- `supabase test db` loads seed.sql during reset, so the 15 seeded levels exist.
 begin;
-select plan(11);
+select plan(13);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000b1', 'gate@test.dev');
@@ -47,6 +47,18 @@ select is(pg_temp.flag(4,'locked'),  false, 'the current station is never locked
 select is(pg_temp.flag(5,'locked'),  true,  'dn5 is locked beyond the frontier');
 select is(pg_temp.flag(1,'current'), false, 'cleared dn1 is not current');
 select is(pg_temp.flag(1,'locked'),  false, 'cleared dn1 stays revisitable (not locked)');
+reset role;
+
+-- (B2) Clear all of district 1 (1-5) → frontier crosses into district 2 at dn6.
+insert into public.level_progress (user_id, level_id, cleared)
+select '00000000-0000-0000-0000-0000000000b1', id, true
+from public.levels where display_number in (4,5)
+on conflict (user_id, level_id) do update set cleared = true;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated"}';
+select is(pg_temp.flag(6,'current'), true,  'dn6 (first of district 2) is current after clearing all of district 1');
+select is(pg_temp.flag(6,'locked'),  false, 'cross-district frontier station is not locked');
 reset role;
 
 -- (C) Clear everything → no frontier.
