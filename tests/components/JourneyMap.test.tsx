@@ -79,4 +79,23 @@ describe('TransitMap', () => {
     screen.getByRole('button', { name: /Brickfall/i }).click()
     expect(onSelect).not.toHaveBeenCalled()
   })
+
+  it('renders all-clear (no current station) with everything tappable and nothing marked', () => {
+    const allClear: JourneyTheme[] = [
+      {
+        theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: '', sort_order: 1,
+        levels: [
+          lvl(1, 'Vacant Heights', { cleared: true }),
+          lvl(2, 'Open Lots', { cleared: true }),
+        ],
+      },
+    ]
+    render(<TransitMap themes={allClear} onSelect={() => {}} />)
+    const a = screen.getByRole('button', { name: /Vacant Heights/i })
+    const b = screen.getByRole('button', { name: /Open Lots/i })
+    expect(a).toBeEnabled()
+    expect(b).toBeEnabled()
+    expect(a).not.toHaveAttribute('aria-current')
+    expect(b).not.toHaveAttribute('aria-current')
+  })
 })

@@ -62,7 +62,8 @@ export function TransitMap({
     }),
   )
 
-  // Next stop = the single current station (the frontier), straight from the RPC.
+  // RPC guarantees at most one current station (the lowest uncleared display_number);
+  // it's undefined in the all-clear state (every level cleared).
   const next = stations.find(s => s.current)
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export function TransitMap({
 
       {stations.map(s => {
         const isNext = next?.level_id === s.level_id
+        // Visual state trusts the RPC: a non-cleared, non-current level is always locked.
         const state: 'locked' | 'cleared' | 'next' = s.cleared
           ? 'cleared'
           : isNext
