@@ -127,6 +127,9 @@ export function TransitMap({
           : 'locked'
         const color = LINE_COLOR[s.slug]
         const dotSize = s.interchange ? 18 : 16
+        // Locked stations show a lock inside a slightly larger circle so the glyph
+        // stays legible while still reading as a station marker on the line.
+        const markerSize = state === 'locked' ? dotSize + 8 : dotSize
         // Stations on the right half of the map put their label to the LEFT, so
         // labels grow toward the empty centre instead of off the right edge.
         const labelLeft = s.x > VIEWBOX.w / 2
@@ -148,18 +151,32 @@ export function TransitMap({
             style={{
               left: `${(s.x / VIEWBOX.w) * 100}%`,
               top: `${(s.y / VIEWBOX.h) * 100}%`,
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
+              width: `${markerSize}px`,
+              height: `${markerSize}px`,
             }}
           >
-            <span
-              className={`block h-full w-full rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
-              style={{
-                borderColor: color,
-                opacity: state === 'locked' ? 0.5 : 1,
-                background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
-              }}
-            />
+            {state === 'locked' ? (
+              <span
+                className="flex h-full w-full items-center justify-center rounded-full border-2"
+                style={{ borderColor: color, background: '#0b0f1c', opacity: 0.85 }}
+              >
+                <span
+                  aria-hidden="true"
+                  className="leading-none"
+                  style={{ fontSize: `${dotSize - 3}px` }}
+                >
+                  🔒
+                </span>
+              </span>
+            ) : (
+              <span
+                className={`block h-full w-full rounded-full border-[3px]${state === 'next' ? ' map-next bg-white' : ''}`}
+                style={{
+                  borderColor: color,
+                  background: state === 'cleared' ? color : state === 'next' ? '#ffffff' : undefined,
+                }}
+              />
+            )}
             <span
               className={`absolute top-1/2 -translate-y-1/2 flex flex-col leading-tight whitespace-nowrap ${
                 labelLeft ? 'right-full mr-1.5 items-end' : 'left-full ml-1.5 items-start'
@@ -177,7 +194,6 @@ export function TransitMap({
                 {s.name}
                 {s.interchange ? <span aria-hidden="true"> ⇄</span> : ''}
                 {isNext ? <span aria-hidden="true"> ▶</span> : ''}
-                {state === 'locked' ? <span aria-hidden="true"> 🔒</span> : ''}
               </span>
               {s.cleared && <Stars n={s.my_stars} />}
             </span>

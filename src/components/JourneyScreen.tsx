@@ -8,16 +8,18 @@ import { TransitMap, type JourneyTheme } from './JourneyMap'
 function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span
-        aria-hidden="true"
-        className={`block h-3 w-3 rounded-full border-2${variant === 'current' ? ' map-next' : ''}`}
-        style={{
-          borderColor: variant === 'locked' ? '#6b7280' : '#e5e7eb',
-          background:
-            variant === 'complete' ? '#e5e7eb' : variant === 'current' ? '#ffffff' : 'transparent',
-          opacity: variant === 'locked' ? 0.6 : 1,
-        }}
-      />
+      {variant === 'locked' ? (
+        <span aria-hidden="true" className="block text-[13px] leading-none opacity-70">🔒</span>
+      ) : (
+        <span
+          aria-hidden="true"
+          className={`block h-3 w-3 rounded-full border-2${variant === 'current' ? ' map-next' : ''}`}
+          style={{
+            borderColor: '#e5e7eb',
+            background: variant === 'complete' ? '#e5e7eb' : '#ffffff',
+          }}
+        />
+      )}
       <span className="text-[11px] text-gray-300">{label}</span>
     </span>
   )
@@ -68,12 +70,14 @@ export function JourneyScreen() {
         <TransitMap themes={themes} onSelect={openLevel} />
       </div>
       <div
-        className="sticky bottom-0 z-20 flex items-center justify-center gap-5 px-4 py-3"
-        style={{ background: 'linear-gradient(to top, #06080f 60%, transparent)' }}
+        className="sticky bottom-0 z-20 flex justify-center px-4 pb-3 pt-6"
+        style={{ background: 'linear-gradient(to top, #06080f 70%, transparent)' }}
       >
-        <LegendItem variant="complete" label="Complete" />
-        <LegendItem variant="current" label="Current" />
-        <LegendItem variant="locked" label="Locked" />
+        <div className="flex items-center justify-center gap-5 rounded-full border-2 border-arcade-edge bg-arcade-panel px-5 py-2 shadow-panel-inset">
+          <LegendItem variant="complete" label="Complete" />
+          <LegendItem variant="current" label="Current" />
+          <LegendItem variant="locked" label="Locked" />
+        </div>
       </div>
     </div>
   )
