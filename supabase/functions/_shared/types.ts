@@ -90,7 +90,7 @@ export const THEME_LABEL: Record<RoundTheme, string> = {
 
 // ── Resolution (drives the resolving phase animation) ─────────────────────────
 
-export type ResolutionReason = 'too-many' | 'wrong-shapes' | 'missed-one' | 'missed-many'
+export type ResolutionReason = 'too-many' | 'wrong-shapes' | 'missed-one' | 'missed-many' | 'wrong-order'
 
 export interface Resolution {
   kind: 'perfect' | 'partial'

@@ -89,4 +89,15 @@ describe('sequential submitSelection', () => {
     expect(st._resolution?.coverage).toBe(0)
     expect(st.livesRemaining).toBe(2)
   })
+
+  it('reports an order-specific reason when shapes are right but order is wrong', () => {
+    setupSequentialRound()
+    const s = useGameStore.getState()
+    // Correct shape multiset (one O, one I) but reversed pick order — the only
+    // error is ordering, so the reason must be order-specific, not shape/count.
+    s.appendQueuePiece('I')
+    s.appendQueuePiece('O')
+    s.submitSelection()
+    expect(useGameStore.getState()._resolution?.reason).toBe('wrong-order')
+  })
 })

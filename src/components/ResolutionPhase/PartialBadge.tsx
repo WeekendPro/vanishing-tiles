@@ -12,6 +12,7 @@ const REASON_LABEL: Record<ResolutionReason, string> = {
   'wrong-shapes': "Some pieces don't fit",
   'missed-one': 'Missed a piece',
   'missed-many': 'Missed some pieces',
+  'wrong-order': 'Wrong order',
 }
 
 type Tier = 'close' | 'tough' | 'yikes'

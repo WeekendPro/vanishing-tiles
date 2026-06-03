@@ -310,7 +310,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const selectedCells = selection.reduce(
         (sum, e) => sum + e.freeCount * (e.pieceType === 'SINGLE' ? 1 : 4), 0)
       let reason: ResolutionReason
-      if (uncovered === 0) reason = 'too-many'
+      // Sequential rounds fail atomically on any count/shape/order mismatch; the
+      // shape-vs-count heuristic below would misreport a right-shapes/wrong-order
+      // pick as "wrong shapes" or "too many", so use an order-specific reason.
+      if (roundTheme === 'sequential') reason = 'wrong-order'
+      else if (uncovered === 0) reason = 'too-many'
       else if (selectedCells >= res.totalCells) reason = 'wrong-shapes'
       // uncovered cells → nearest whole piece, clamped to ≥1
       else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
