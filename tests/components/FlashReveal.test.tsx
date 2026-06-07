@@ -59,4 +59,34 @@ describe('FlashReveal', () => {
     act(() => { vi.advanceTimersByTime(OFF + 50) })
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
+
+  it('flashes the GAP silhouette (dashed, no colored piece fill)', () => {
+    const { container } = render(<FlashReveal gaps={gaps} onComplete={() => {}} />)
+    const grid = container.querySelector('.inline-grid')!
+    // The occupied cells are dashed gap outlines, not solid colored piece tiles.
+    expect(grid.querySelector('.border-dashed')).not.toBeNull()
+    // No filled piece-color tile (e.g. the O piece's bg-yellow-400) is rendered.
+    expect(container.querySelector('[class*="bg-yellow"]')).toBeNull()
+    expect(container.querySelector('[class*="bg-cyan-400"]')).toBeNull()
+  })
+
+  it('renders one carousel dot per gap, all hollow initially', () => {
+    const { container } = render(<FlashReveal gaps={gaps} onComplete={() => {}} />)
+    const dots = [...container.querySelectorAll('[data-flash-dot]')]
+    expect(dots).toHaveLength(gaps.length)
+    // Before the first gap finishes flashing, the dot for a not-yet-flashed gap
+    // is hollow. (The first gap is mid-flash, so at least the last dot is hollow.)
+    const filledStates = dots.map(d => d.getAttribute('data-filled'))
+    expect(filledStates.filter(s => s === 'false').length).toBeGreaterThan(0)
+  })
+
+  it('fills the carousel dots as gaps are flashed', () => {
+    const { container } = render(<FlashReveal gaps={gaps} onComplete={() => {}} />)
+    const filledCount = () =>
+      [...container.querySelectorAll('[data-flash-dot]')]
+        .filter(d => d.getAttribute('data-filled') === 'true').length
+    // After every gap's ON+OFF window has elapsed, all dots are filled.
+    act(() => { vi.advanceTimersByTime((ON + OFF) * gaps.length) })
+    expect(filledCount()).toBe(gaps.length)
+  })
 })

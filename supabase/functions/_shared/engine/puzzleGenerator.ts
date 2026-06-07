@@ -72,18 +72,15 @@ function anchorTouchesEmpty(
   })
 }
 
-// rng defaults to Math.random so existing free-play callers keep working; the
-// server always passes a seeded rng (src/core/prng.makeRng) so a (config, seed)
-// pair reproduces the exact board.
-export function generatePuzzle(
-  input: PuzzleInput,
-  rng: () => number = Math.random
+// Places `gapCount` gaps on a fresh full grid, drawing piece types/rotations/
+// anchors from `rng`. Pulled out so the sequential variety guard can re-roll a
+// whole board on the same advancing rng stream.
+function placeGaps(
+  gapCount: number,
+  allowedTypes: PieceType[],
+  adjacency: number,
+  rng: () => number
 ): { grid: Grid; gaps: Gap[] } {
-  const { gapCount, complexity } = input
-  const adjacency = input.adjacency ?? 0
-  const allowedTypes = input.colorCoded
-    ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
-    : COMPLEXITY_PIECES[complexity]
   const grid = makeFullGrid()
   const gaps: Gap[] = []
 
@@ -119,6 +116,44 @@ export function generatePuzzle(
     const absoluteCells = cells.map(([r, c]) => [r + anchorRow, c + anchorCol] as [number, number])
     placeGap(grid, cells, anchorRow, anchorCol)
     gaps.push({ pieceType, rotation, anchorRow, anchorCol, cells: absoluteCells })
+  }
+
+  return { grid, gaps }
+}
+
+// True when the gaps span at least 2 distinct piece types (the Sequential
+// variety rule: a 1-gap board is trivially fine; a 2+ gap board must never be
+// all-identical, e.g. three I-gaps or four O-gaps).
+function hasTypeVariety(gaps: Gap[]): boolean {
+  if (gaps.length < 2) return true
+  return new Set(gaps.map(g => g.pieceType)).size >= 2
+}
+
+// rng defaults to Math.random so existing free-play callers keep working; the
+// server always passes a seeded rng (src/core/prng.makeRng) so a (config, seed)
+// pair reproduces the exact board.
+export function generatePuzzle(
+  input: PuzzleInput,
+  rng: () => number = Math.random
+): { grid: Grid; gaps: Gap[] } {
+  const { gapCount, complexity } = input
+  const adjacency = input.adjacency ?? 0
+  const allowedTypes = input.colorCoded
+    ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
+    : COMPLEXITY_PIECES[complexity]
+
+  let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng)
+
+  // Sequential variety guard: a sequential round should exercise memory across
+  // different shapes, so never let every gap be the same piece type. Re-roll the
+  // whole board (rng keeps advancing, so each retry differs) until the gaps span
+  // ≥2 types. Only attempt this when >1 allowed type can actually satisfy it.
+  if (input.sequential && allowedTypes.length > 1) {
+    let retries = 0
+    while (!hasTypeVariety(gaps) && retries < 50) {
+      retries++
+      ;({ grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng))
+    }
   }
 
   // Color-coded: assign each gap a distinct palette color (shuffled by rng).
