@@ -25,7 +25,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, mode, roundIndex, livesRemaining, advanceRound } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       gaps: s.gaps,
@@ -35,7 +35,6 @@ export function ResolutionPhase() {
       roundScore: s.roundScore,
       commitRoundScore: s.commitRoundScore,
       retryRound: s.retryRound,
-      mode: s.mode,
       roundIndex: s.roundIndex,
       livesRemaining: s.livesRemaining,
       advanceRound: s.advanceRound,
@@ -86,10 +85,9 @@ export function ResolutionPhase() {
     for (const s of slots) (slotToPlacement.has(s.slotIndex) ? good : bad).add(s.slotIndex)
     setConsumed(good)
     setRejected(bad)
-    if (mode === 'journey') { showResults(); return }
     commitRoundScore()
     setStage('cta')
-  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement, mode, showResults])
+  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement])
 
   // Measure the container rect, then kick off the walk.
   useLayoutEffect(() => {
@@ -144,13 +142,9 @@ export function ResolutionPhase() {
   // Stage transitions after flying.
   useEffect(() => {
     if (stage !== 'badge') return
-    if (mode === 'journey') {
-      const t = window.setTimeout(() => showResults(), BADGE_DURATION)
-      return () => clearTimeout(t)
-    }
     const t = window.setTimeout(() => setStage('scoring'), BADGE_DURATION)
     return () => clearTimeout(t)
-  }, [stage, mode, showResults])
+  }, [stage])
 
   useEffect(() => {
     if (stage !== 'scoring') return
@@ -169,8 +163,9 @@ export function ResolutionPhase() {
   const isFailure = resolution?.kind === 'partial'
   const speedSlow = !isFailure && !!roundScore && roundScore.speedBonus <= ROUND_PILLAR_MAX.speed * 0.2
 
-  // The CTA only renders in practice mode — journey hands off to the results
-  // screen via showResults() before ever reaching the 'cta' stage.
+  // Practice AND Journey both run the per-round CTA: Next Round / Try Again for
+  // rounds 1-3, then hand off to the results screen on the final round or when
+  // lives run out (Journey submits its aggregate result from the results screen).
   const isLastRound = roundIndex >= ROUNDS_PER_LEVEL - 1
   const outOfLives = livesRemaining <= 0
 

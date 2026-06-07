@@ -7,8 +7,8 @@ import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { resolveSelection } from '@shared/core/themeResolution'
 import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
-import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
-import { startSession, submitAttempt, type SubmitAttemptResult } from '../lib/api'
+import { scoreRound, MAX_TRIES, levelTotal, levelStars, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
+import { submitLevelResult } from '../lib/api'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -74,16 +74,17 @@ interface GameStore extends GameState {
   resumeGame: () => void
   pausedElapsed: number
   _resolution: Resolution | null
-  journeyResult: SubmitAttemptResult | null
+  // Journey mode plays 4 themed rounds locally with a FIXED per-level difficulty
+  // profile (levelDifficulty), then submits one aggregate result at level end.
+  levelDifficulty: DifficultyConfig | null
   journeyError: string | null
   priorPr: number
   levelDisplayNumber: number | null
   levelName: string | null
   submitting: boolean
   clearJourneyError: () => void
-  startJourneySession: (levelId: string, priorPr: number, displayNumber: number, levelName?: string | null) => Promise<void>
-  submitJourneyAttempt: () => Promise<void>
-  retryJourney: () => void
+  startJourneyLevel: (levelId: string, difficulty: DifficultyConfig, priorPr: number, displayNumber: number, levelName?: string | null) => void
+  submitJourneyLevel: () => Promise<void>
   submit: () => void | Promise<void>
 }
 
@@ -117,14 +118,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...INITIAL_STATE,
   pausedElapsed: 0,
   _resolution: null,
-  journeyResult: null,
+  levelDifficulty: null,
   journeyError: null,
   priorPr: 0,
   levelDisplayNumber: null,
   levelName: null,
   submitting: false,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, journeyResult: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, levelName: null, submitting: false }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, levelDifficulty: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, levelName: null, submitting: false }),
 
   pauseGame: () => set(state => {
     if (state.paused) return {}
@@ -142,24 +143,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
   }),
 
   startPractice: () => {
-    set({ mode: 'practice' })
+    set({ mode: 'practice', levelDifficulty: null })
     get().startLevel()
   },
 
   startGame: () => {
-    const { round, roundIndex } = get()
+    const { round, roundIndex, mode, levelDifficulty } = get()
     const roundTheme = THEME_SEQUENCE[roundIndex]
-    const difficulty = getDifficulty(round)
+    // Journey: every round in a level shares the level's fixed difficulty profile.
+    // Practice: difficulty escalates by round via the DIFFICULTY_TABLE.
+    const difficulty = mode === 'journey' && levelDifficulty
+      ? levelDifficulty
+      : getDifficulty(round)
     const { colorMatters, orderMatters } = THEME_CONFIG[roundTheme]
     const { grid, gaps } = generatePuzzle(
       colorMatters
         ? {
             gapCount: difficulty.gapCount,
             complexity: difficulty.complexity,
+            adjacency: difficulty.adjacency,
             colorCoded: { shapeTypeCount: 1, palette: [...GAP_COLOR_IDS] },
           }
         : orderMatters
-          ? { gapCount: difficulty.gapCount, complexity: difficulty.complexity, sequential: true }
+          ? { gapCount: difficulty.gapCount, complexity: difficulty.complexity, adjacency: difficulty.adjacency, sequential: true }
           : difficulty
     )
 
@@ -392,105 +398,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startGame()
   },
 
-  startJourneySession: async (levelId, priorPr, displayNumber, levelName = null) => {
-    const res = await startSession(levelId)
-    const difficulty: DifficultyConfig = {
-      viewDuration: res.view_duration_ms,
-      selectDuration: res.select_duration_ms,
-      placeDuration: 0,
-      gapCount: res.puzzle.gaps.length,
-      complexity: 'medium',
-    }
+  // Start a Journey level: pin the level's fixed difficulty profile, then run the
+  // SAME 4-round / pooled-lives machinery as Practice (startLevel → startGame).
+  // The 4 rounds are generated, played, and scored entirely client-side; only one
+  // aggregate result is submitted at level end (submitJourneyLevel).
+  startJourneyLevel: (levelId, difficulty, priorPr, displayNumber, levelName = null) => {
     set({
       mode: 'journey',
-      phase: 'countdown',
-      sessionId: res.session_id,
       levelId,
+      levelDifficulty: difficulty,
       priorPr,
       levelDisplayNumber: displayNumber,
       levelName,
-      grid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
-      sessionGrid: res.puzzle.grid.map(row => row.map(cell => ({ ...cell }))),
-      gaps: res.puzzle.gaps,
-      selection: [],
-      difficulty,
-      maxTries: res.max_tries,
-      triesUsed: 1,
-      roundScore: null,
-      journeyResult: null,
       journeyError: null,
-      phaseStartTime: 0,
-      phaseDuration: 0,
-      viewTimeRemaining: 0,
-      _resolution: null,
+      submitting: false,
     })
+    get().startLevel()
   },
 
-  submitJourneyAttempt: async () => {
-    const { phase, selection, sessionId, difficulty, phaseStartTime, viewTimeRemaining, triesUsed } = get()
-    if (phase !== 'selecting') return // guard against double-submit (timer + click)
-
-    const apiSelection = selection
-      .filter(e => e.freeCount > 0)
-      .map(e => ({ pieceType: e.pieceType, count: e.freeCount }))
-    const selectElapsed = Date.now() - phaseStartTime
-    const selectTimeRemaining = Math.max(0, difficulty.selectDuration - selectElapsed)
-
-    set({ submitting: true })
-
-    let res: SubmitAttemptResult
+  // Submit ONE aggregate level result (best_total/best_stars/cleared) once the
+  // level ends — a perfect 4-round clear (levelComplete) OR a game over. Called by
+  // the Journey ResultsScreen on mount. Client-trusted (leaderboard deferred).
+  submitJourneyLevel: async () => {
+    const { roundResults, livesRemaining, levelComplete, levelId } = get()
+    if (!levelId) return
+    const total = levelTotal(roundResults, livesRemaining)
+    const stars = levelComplete ? levelStars(total) : 0
+    set({ submitting: true, journeyError: null })
     try {
-      res = await submitAttempt({
-        sessionId,
-        selection: apiSelection,
-        viewMsRemaining: viewTimeRemaining,
-        selectMsRemaining: selectTimeRemaining,
-      })
+      await submitLevelResult({ levelId, total, stars, cleared: levelComplete })
+      set({ submitting: false })
     } catch (e) {
       set({ journeyError: e instanceof Error ? e.message : 'Submit failed', submitting: false })
-      return
     }
-
-    const solved = res.attempt.solved
-    set({
-      phase: 'resolving',
-      submitting: false,
-      journeyResult: res,
-      _resolution: {
-        kind: solved ? 'perfect' : 'partial',
-        placements: res.placements ?? [],
-        coverage: res.attempt.coverage,
-      },
-      // Mirror the server: another try only if the session is still active.
-      triesUsed: res.session_status === 'active' ? triesUsed + 1 : triesUsed,
-      roundScore: null,
-    })
-  },
-
-  // Try Again on the journey path: replay the SAME session_id and the SAME
-  // in-memory puzzle (restore sessionGrid). Does NOT call startSession — that
-  // would re-roll the seed and break the 3-tries/same-puzzle invariant.
-  retryJourney: () => {
-    set(state => ({
-      phase: 'countdown',
-      paused: false,
-      selection: [],
-      roundScore: null,
-      journeyResult: null,
-      journeyError: null,
-      _resolution: null,
-      grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))),
-      phaseStartTime: 0,
-      phaseDuration: 0,
-      viewTimeRemaining: 0,
-    }))
   },
 
   clearJourneyError: () => set({ journeyError: null }),
 
-  submit: () => {
-    return get().mode === 'journey'
-      ? get().submitJourneyAttempt()
-      : get().submitSelection()
-  },
+  // Both modes now score client-side via submitSelection; mode only affects which
+  // difficulty profile feeds the rounds (handled in startGame) and where the level
+  // result is recorded (submitJourneyLevel).
+  submit: () => get().submitSelection(),
 }))

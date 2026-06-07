@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../../src/lib/api', () => ({ getLevel: vi.fn() }))
-const startJourneySession = vi.fn().mockResolvedValue(undefined)
+const startJourneyLevel = vi.fn()
 vi.mock('../../src/store/gameStore', () => ({
-  useGameStore: (sel: any) => sel({ startJourneySession }),
+  useGameStore: (sel: any) => sel({ startJourneyLevel }),
 }))
 import * as api from '../../src/lib/api'
 import { LevelDetailScreen } from '../../src/components/LevelDetailScreen'
@@ -14,7 +14,7 @@ import { useNavStore } from '../../src/store/navStore'
 const LEVEL = {
   level_id: 'l1', display_number: 1, name: 'Vacant Heights', theme_name: 'The Hollows',
   view_duration_ms: 7000, select_duration_ms: 9000,
-  gap_count: 4, shape_complexity: 'simple', adjacency: 'low',
+  gap_count: 4, shape_complexity: 'simple', adjacency: 1,
   my_pr: 1820, my_stars: 3, global_high: 1950, last_played: null,
 }
 
@@ -34,13 +34,17 @@ describe('LevelDetailScreen', () => {
     expect(screen.getByText(/1950/)).toBeInTheDocument()
   })
 
-  it('PLAY starts a journey session and enters playing', async () => {
+  it('PLAY starts a journey level with the fixed difficulty profile and enters playing', async () => {
     ;(api.getLevel as any).mockResolvedValue(LEVEL)
     const user = userEvent.setup()
     render(<LevelDetailScreen />)
     await screen.findByText(/Vacant Heights/)
     await user.click(screen.getByRole('button', { name: /PLAY/i }))
-    expect(startJourneySession).toHaveBeenCalledWith('l1', 1820, 1, 'Vacant Heights')
+    expect(startJourneyLevel).toHaveBeenCalledWith(
+      'l1',
+      { viewDuration: 7000, selectDuration: 9000, placeDuration: 0, gapCount: 4, complexity: 'simple', adjacency: 1 },
+      1820, 1, 'Vacant Heights',
+    )
     expect(useNavStore.getState().appView).toBe('playing')
   })
 
@@ -55,7 +59,7 @@ describe('LevelDetailScreen', () => {
     const locked = screen.getByRole('button', { name: /^Locked$/i })
     expect(locked).toBeDisabled()
     await user.click(locked)
-    expect(startJourneySession).not.toHaveBeenCalled()
+    expect(startJourneyLevel).not.toHaveBeenCalled()
     expect(useNavStore.getState().appView).toBe('levelDetail')
   })
 })

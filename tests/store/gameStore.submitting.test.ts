@@ -1,29 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
+import type { DifficultyConfig } from '@shared/types'
 
 vi.mock('../../src/lib/api', () => ({
-  startSession: vi.fn(),
-  submitAttempt: vi.fn(),
+  submitLevelResult: vi.fn(),
 }))
 import * as api from '../../src/lib/api'
-import { useGameStore, DIFFICULTY_TABLE } from '../../src/store/gameStore'
+import { useGameStore } from '../../src/store/gameStore'
 
-const RESULT = {
-  attempt: {
-    solved: true, coverage: 1,
-    pillars: { accuracy: 800, speed: 0, efficiency: 0, attempts: 1, total: 800, stars: 3 },
-    total: 800, stars: 3,
-  },
-  placements: [],
-  session_status: 'cleared' as const,
-  progress: {},
+const PROFILE: DifficultyConfig = {
+  viewDuration: 7000, selectDuration: 9000, placeDuration: 0,
+  gapCount: 4, complexity: 'medium', adjacency: 1,
 }
 
-function enterSelecting() {
+function enterCompletedLevel() {
+  act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
   useGameStore.setState({
-    phase: 'selecting', mode: 'journey', selection: [], sessionId: 's1',
-    difficulty: DIFFICULTY_TABLE[0], phaseStartTime: Date.now(),
-    viewTimeRemaining: 0, triesUsed: 1, submitting: false, journeyError: null,
+    roundResults: [1200, 1200, 1200, 1200], livesRemaining: 3,
+    levelComplete: true, score: 5800, submitting: false, journeyError: null,
   })
 }
 
@@ -32,27 +26,26 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('submitJourneyAttempt — submitting flag', () => {
+describe('submitJourneyLevel — submitting flag', () => {
   it('defaults to false', () => {
     expect(useGameStore.getState().submitting).toBe(false)
   })
 
-  it('is true while the attempt is in flight and false once it resolves', async () => {
-    let resolve!: (v: typeof RESULT) => void
-    ;(api.submitAttempt as any).mockReturnValue(new Promise(r => { resolve = r }))
-    enterSelecting()
+  it('is true while the submission is in flight and false once it resolves', async () => {
+    let resolve!: (v: unknown) => void
+    ;(api.submitLevelResult as any).mockReturnValue(new Promise(r => { resolve = r }))
+    enterCompletedLevel()
     let p!: Promise<void>
-    act(() => { p = useGameStore.getState().submitJourneyAttempt() })
+    act(() => { p = useGameStore.getState().submitJourneyLevel() })
     expect(useGameStore.getState().submitting).toBe(true)
-    await act(async () => { resolve(RESULT); await p })
+    await act(async () => { resolve({}); await p })
     expect(useGameStore.getState().submitting).toBe(false)
-    expect(useGameStore.getState().phase).toBe('resolving')
   })
 
-  it('clears submitting when the attempt fails', async () => {
-    ;(api.submitAttempt as any).mockRejectedValue(new Error('network down'))
-    enterSelecting()
-    await act(async () => { await useGameStore.getState().submitJourneyAttempt() })
+  it('clears submitting when the submission fails', async () => {
+    ;(api.submitLevelResult as any).mockRejectedValue(new Error('network down'))
+    enterCompletedLevel()
+    await act(async () => { await useGameStore.getState().submitJourneyLevel() })
     expect(useGameStore.getState().submitting).toBe(false)
     expect(useGameStore.getState().journeyError).toMatch(/network down/)
   })

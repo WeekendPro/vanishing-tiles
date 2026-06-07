@@ -313,29 +313,54 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
 import { useNavStore } from '../../src/store/navStore'
 
 describe('ResolutionPhase in journey mode', () => {
-  it('routes to results (does not show the practice score panel) when the badge settles', () => {
+  it('shows the per-round Next Round CTA (NOT an immediate results hand-off) on a non-final round clear', () => {
     useNavStore.getState().reset()
-    // Drive the store directly into a journey resolving state.
+    // Journey now runs the SAME per-round machinery as practice: a non-final
+    // clear shows "Next Round →" and does NOT jump to the results screen.
     act(() => {
       useGameStore.setState({
         mode: 'journey',
         phase: 'resolving',
-        selection: [],
-        _resolution: { kind: 'perfect', placements: [], coverage: 1 },
-        journeyResult: {
-          attempt: { solved: true, coverage: 1,
-            pillars: { accuracy: 800, speed: 0, efficiency: 0, attempts: 400, total: 1200, stars: 2 },
-            total: 1200, stars: 2 },
-          placements: [], session_status: 'cleared', progress: null,
+        roundIndex: 1,
+        livesRemaining: 3,
+        selection: [{ pieceType: 'O', freeCount: 1 }],
+        grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+        roundScore: { accuracy: 0, speedBonus: 1200, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 1200 },
+        _resolution: {
+          kind: 'perfect', coverage: 1,
+          placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+            cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
         },
-        roundScore: null,
       } as any)
     })
     render(<ResolutionPhase />)
-    // With reduced motion mocked true, the journey branch reaches the results
-    // hand-off synchronously: showResults() has been called.
+    expect(screen.getByText(/Next Round/)).toBeInTheDocument()
+    expect(useNavStore.getState().appView).not.toBe('results')
+  })
+
+  it('routes to results on the final round clear in journey mode', async () => {
+    const user = userEvent.setup()
+    useNavStore.getState().reset()
+    act(() => {
+      useGameStore.setState({
+        mode: 'journey',
+        phase: 'resolving',
+        roundIndex: 3,
+        livesRemaining: 3,
+        roundResults: [1200, 1200, 1200],
+        selection: [{ pieceType: 'O', freeCount: 1 }],
+        grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
+        roundScore: { accuracy: 0, speedBonus: 1200, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 1200 },
+        _resolution: {
+          kind: 'perfect', coverage: 1,
+          placements: [{ pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 0,
+            cells: [[0, 0], [0, 1], [1, 0], [1, 1]] }],
+        },
+      } as any)
+    })
+    render(<ResolutionPhase />)
+    await user.click(screen.getByText(/Level Complete/i))
+    expect(useGameStore.getState().levelComplete).toBe(true)
     expect(useNavStore.getState().appView).toBe('results')
-    // The practice "Next Round" CTA must NOT appear on the journey path.
-    expect(screen.queryByText(/Next Round/)).not.toBeInTheDocument()
   })
 })

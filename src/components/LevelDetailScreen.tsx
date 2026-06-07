@@ -5,11 +5,12 @@ import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { track } from '../store/asyncStatus'
 import { NeonButton, ScanlineOverlay } from './ui'
+import type { DifficultyConfig } from '@shared/types'
 
 interface LevelDetail {
   level_id: string; display_number: number; name: string; theme_name: string
   view_duration_ms: number; select_duration_ms: number
-  gap_count: number; shape_complexity: string; adjacency: string
+  gap_count: number; shape_complexity: string; adjacency: number
   my_pr: number | null; my_stars: number; global_high: number | null; last_played: string | null
 }
 
@@ -18,10 +19,9 @@ export function LevelDetailScreen() {
   const locked = useNavStore(s => s.selectedLevelLocked)
   const goJourney = useNavStore(s => s.goJourney)
   const enterPlaying = useNavStore(s => s.enterPlaying)
-  const startJourneySession = useGameStore(s => s.startJourneySession)
+  const startJourneyLevel = useGameStore(s => s.startJourneyLevel)
   const [level, setLevel] = useState<LevelDetail | null>(null)
   const [error, setError] = useState(false)
-  const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     if (!selectedLevelId) return
@@ -35,17 +35,20 @@ export function LevelDetailScreen() {
 
   useEffect(() => { load() }, [load])
 
-  const play = async () => {
+  const play = () => {
     if (!level) return
-    setBusy(true)
-    try {
-      await track(startJourneySession(level.level_id, level.my_pr ?? 0, level.display_number, level.name))
-      enterPlaying()
-    } catch {
-      setError(true)
-    } finally {
-      setBusy(false)
+    const difficulty: DifficultyConfig = {
+      viewDuration: level.view_duration_ms,
+      selectDuration: level.select_duration_ms,
+      placeDuration: 0,
+      gapCount: level.gap_count,
+      complexity: (level.shape_complexity as DifficultyConfig['complexity']) ?? 'medium',
+      adjacency: Number(level.adjacency) || 0,
     }
+    // Journey now plays all 4 themed rounds locally with this fixed difficulty
+    // profile — no server round-trip to start (the difficulty came from getLevel).
+    startJourneyLevel(level.level_id, difficulty, level.my_pr ?? 0, level.display_number, level.name)
+    enterPlaying()
   }
 
   return (
@@ -92,7 +95,7 @@ export function LevelDetailScreen() {
                 <NeonButton fullWidth variant="ghost" disabled>Locked</NeonButton>
               </div>
             ) : (
-              <NeonButton fullWidth variant="go" disabled={busy} onClick={play}>PLAY</NeonButton>
+              <NeonButton fullWidth variant="go" onClick={play}>PLAY</NeonButton>
             )}
           </>
         )}

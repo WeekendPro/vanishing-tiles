@@ -1,57 +1,25 @@
 import { supabase } from './supabase'
-import type { Grid, Gap, PieceType, Placement } from '@shared/types'
 
-export interface AttemptPillars {
-  accuracy: number; speed: number; efficiency: number
-  attempts: number; total: number; stars: number
-}
-export interface AttemptScore {
-  solved: boolean
-  coverage: number
-  pillars: AttemptPillars
+// Journey now plays 4 themed rounds entirely client-side (mirroring Practice)
+// using the level's difficulty profile, then submits ONE aggregate level result.
+// The level's difficulty profile comes from get_level (see getLevel below); the
+// aggregate is recorded by record_level_result.
+
+export interface SubmitLevelInput {
+  levelId: string
   total: number
   stars: number
-}
-export type SessionStatus = 'cleared' | 'exhausted' | 'active'
-export interface SubmitAttemptResult {
-  attempt: AttemptScore
-  placements: Placement[]
-  session_status: SessionStatus
-  progress: unknown
+  cleared: boolean
 }
 
-export interface StartSessionResult {
-  session_id: string
-  puzzle: { grid: Grid; gaps: Gap[] }
-  view_duration_ms: number
-  select_duration_ms: number
-  max_tries: number
-}
-
-export async function startSession(levelId: string): Promise<StartSessionResult> {
-  const { data, error } = await supabase.functions.invoke('start_session', {
-    body: { level_id: levelId },
+/** Records the aggregate result of a Journey level (best_total/best_stars/cleared
+ *  via a greatest() upsert) and returns the updated level_progress row. */
+export async function submitLevelResult(a: SubmitLevelInput): Promise<unknown> {
+  const { data, error } = await supabase.rpc('record_level_result', {
+    p_level_id: a.levelId, p_total: a.total, p_stars: a.stars, p_cleared: a.cleared,
   })
   if (error) throw error
-  return data as StartSessionResult
-}
-
-export interface SubmitAttemptInput {
-  sessionId: string
-  selection: { pieceType: PieceType; count: number }[]
-  viewMsRemaining: number
-  selectMsRemaining: number
-}
-
-export async function submitAttempt(a: SubmitAttemptInput): Promise<SubmitAttemptResult> {
-  const { data, error } = await supabase.functions.invoke('submit_attempt', {
-    body: {
-      session_id: a.sessionId, selection: a.selection,
-      view_ms_remaining: a.viewMsRemaining, select_ms_remaining: a.selectMsRemaining,
-    },
-  })
-  if (error) throw error
-  return data as SubmitAttemptResult
+  return data
 }
 
 export async function getJourney() {

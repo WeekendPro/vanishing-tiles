@@ -1,27 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
-import type { Grid, Cell } from '@shared/types'
+import type { DifficultyConfig } from '@shared/types'
+import { THEME_SEQUENCE } from '@shared/types'
 
 // Mock the api module BEFORE importing the store.
 vi.mock('../../src/lib/api', () => ({
-  startSession: vi.fn(),
-  submitAttempt: vi.fn(),
+  submitLevelResult: vi.fn(),
 }))
 import * as api from '../../src/lib/api'
 import { useGameStore } from '../../src/store/gameStore'
 
-// 2x2 all-filled grid is enough; the store never solves on the journey path.
-function filledGrid(): Grid {
-  const cell = (): Cell => ({ status: 'filled' })
-  return Array.from({ length: 2 }, () => Array.from({ length: 2 }, cell))
-}
-
-const START_RESULT = {
-  session_id: 'sess-1',
-  puzzle: { grid: filledGrid(), gaps: [] },
-  view_duration_ms: 7000,
-  select_duration_ms: 9000,
-  max_tries: 3,
+const PROFILE: DifficultyConfig = {
+  viewDuration: 7000, selectDuration: 9000, placeDuration: 0,
+  gapCount: 4, complexity: 'medium', adjacency: 1,
 }
 
 beforeEach(() => {
@@ -29,165 +20,93 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('startJourneySession', () => {
-  it('loads the server puzzle into state without local generation', async () => {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    await act(async () => {
-      await useGameStore.getState().startJourneySession('lvl-1', 1200, 5, 'Castle Hill')
-    })
+describe('startJourneyLevel', () => {
+  it('pins the level difficulty and starts the 4-round machinery locally', () => {
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 1200, 5, 'Castle Hill'))
     const s = useGameStore.getState()
-    expect(api.startSession).toHaveBeenCalledWith('lvl-1')
     expect(s.mode).toBe('journey')
-    expect(s.sessionId).toBe('sess-1')
-    expect(s.phase).toBe('countdown')
-    expect(s.triesUsed).toBe(1)
-    expect(s.maxTries).toBe(3)
+    expect(s.levelId).toBe('lvl-1')
+    expect(s.levelDifficulty).toEqual(PROFILE)
     expect(s.priorPr).toBe(1200)
     expect(s.levelDisplayNumber).toBe(5)
     expect(s.levelName).toBe('Castle Hill')
-    expect(s.difficulty.viewDuration).toBe(7000)
-    expect(s.difficulty.selectDuration).toBe(9000)
-    // sessionGrid is a pristine copy for retry replays.
-    expect(s.sessionGrid).toHaveLength(2)
-    expect(s.sessionGrid).not.toBe(s.grid)
-  })
-})
-
-describe('submitJourneyAttempt', () => {
-  async function startThenSubmit(submitResult: any) {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    ;(api.submitAttempt as any).mockResolvedValue(submitResult)
-    await act(async () => {
-      await useGameStore.getState().startJourneySession('lvl-1', 0, 1)
-    })
-    act(() => useGameStore.getState().beginViewing())
-    act(() => useGameStore.getState().endViewing())
-    await act(async () => {
-      await useGameStore.getState().submitJourneyAttempt()
-    })
-  }
-
-  it('stores the server result and enters the resolving phase on a clear', async () => {
-    await startThenSubmit({
-      attempt: { solved: true, coverage: 1,
-        pillars: { accuracy: 800, speed: 300, efficiency: 200, attempts: 400, total: 1700, stars: 3 },
-        total: 1700, stars: 3 },
-      placements: [], session_status: 'cleared', progress: null,
-    })
-    const s = useGameStore.getState()
-    expect(s.phase).toBe('resolving')
-    expect(s.journeyResult?.session_status).toBe('cleared')
-    expect(s._resolution?.kind).toBe('perfect')
-    // A cleared session must NOT offer another try.
-    expect(s.triesUsed).toBe(1)
-  })
-
-  it('increments triesUsed when the session stays active after a miss', async () => {
-    await startThenSubmit({
-      attempt: { solved: false, coverage: 0.4,
-        pillars: { accuracy: 0, speed: 0, efficiency: 0, attempts: 0, total: 0, stars: 0 },
-        total: 0, stars: 0 },
-      placements: [], session_status: 'active', progress: null,
-    })
-    const s = useGameStore.getState()
-    expect(s.phase).toBe('resolving')
-    expect(s._resolution?.kind).toBe('partial')
-    expect(s.triesUsed).toBe(2)
-  })
-
-  it('does not increment triesUsed when the session is exhausted', async () => {
-    await startThenSubmit({
-      attempt: { solved: false, coverage: 0.4,
-        pillars: { accuracy: 0, speed: 0, efficiency: 0, attempts: 0, total: 0, stars: 0 },
-        total: 0, stars: 0 },
-      placements: [], session_status: 'exhausted', progress: null,
-    })
-    expect(useGameStore.getState().triesUsed).toBe(1)
-  })
-
-  it('sends the cart as { pieceType, count } pairs', async () => {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    ;(api.submitAttempt as any).mockResolvedValue({
-      attempt: { solved: true, coverage: 1,
-        pillars: { accuracy: 800, speed: 0, efficiency: 0, attempts: 400, total: 1200, stars: 2 },
-        total: 1200, stars: 2 },
-      placements: [], session_status: 'cleared', progress: null,
-    })
-    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
-    act(() => useGameStore.getState().beginViewing())
-    act(() => useGameStore.getState().endViewing())
-    act(() => { useGameStore.getState().incrementSelection('T') })
-    act(() => { useGameStore.getState().incrementSelection('T') })
-    await act(async () => { await useGameStore.getState().submitJourneyAttempt() })
-    const arg = (api.submitAttempt as any).mock.calls[0][0]
-    expect(arg.sessionId).toBe('sess-1')
-    expect(arg.selection).toEqual([{ pieceType: 'T', count: 2 }])
-  })
-})
-
-describe('retryJourney (same-puzzle invariant)', () => {
-  it('replays the same session and puzzle without calling startSession again', async () => {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    ;(api.submitAttempt as any).mockResolvedValue({
-      attempt: { solved: false, coverage: 0.3,
-        pillars: { accuracy: 0, speed: 0, efficiency: 0, attempts: 0, total: 0, stars: 0 },
-        total: 0, stars: 0 },
-      placements: [], session_status: 'active', progress: null,
-    })
-    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
-    act(() => useGameStore.getState().beginViewing())
-    act(() => useGameStore.getState().endViewing())
-    await act(async () => { await useGameStore.getState().submitJourneyAttempt() })
-
-    const sessionBefore = useGameStore.getState().sessionId
-    ;(api.startSession as any).mockClear()
-    act(() => useGameStore.getState().retryJourney())
-    const s = useGameStore.getState()
-    expect(api.startSession).not.toHaveBeenCalled()
-    expect(s.sessionId).toBe(sessionBefore)
+    // startLevel resets the round state and starts round 0 at the countdown.
     expect(s.phase).toBe('countdown')
-    expect(s.selection).toEqual([])
-    expect(s._resolution).toBeNull()
-    expect(s.triesUsed).toBe(2) // carried over from the failed attempt
+    expect(s.roundIndex).toBe(0)
+    expect(s.roundTheme).toBe(THEME_SEQUENCE[0])
+    expect(s.livesRemaining).toBe(3)
+    expect(s.roundResults).toEqual([])
+    expect(s.levelComplete).toBe(false)
+    // The generated puzzle uses the LEVEL's fixed difficulty, not the table.
+    expect(s.difficulty).toEqual(PROFILE)
+    expect(s.grid.length).toBeGreaterThan(0)
   })
-})
 
-describe('submit dispatcher', () => {
-  it('routes to submitJourneyAttempt in journey mode', async () => {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    ;(api.submitAttempt as any).mockResolvedValue({
-      attempt: { solved: true, coverage: 1,
-        pillars: { accuracy: 800, speed: 0, efficiency: 0, attempts: 400, total: 1200, stars: 2 },
-        total: 1200, stars: 2 },
-      placements: [], session_status: 'cleared', progress: null,
-    })
-    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
-    act(() => useGameStore.getState().beginViewing())
-    act(() => useGameStore.getState().endViewing())
-    await act(async () => { await useGameStore.getState().submit() })
-    expect(api.submitAttempt).toHaveBeenCalledTimes(1)
-    expect(useGameStore.getState().phase).toBe('resolving')
-  })
-})
-
-describe('journey error handling', () => {
-  it('keeps the player in selecting and records an error when submit fails', async () => {
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    ;(api.submitAttempt as any).mockRejectedValue(new Error('network down'))
-    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
-    act(() => useGameStore.getState().beginViewing())
-    act(() => useGameStore.getState().endViewing())
-    await act(async () => { await useGameStore.getState().submitJourneyAttempt() })
+  it('applies the SAME fixed difficulty to every round (no per-round escalation)', () => {
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
+    // Clear round 0 and advance.
+    useGameStore.setState({ roundScore: { accuracy: 0, speedBonus: 1200, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 1200 } })
+    act(() => useGameStore.getState().advanceRound())
     const s = useGameStore.getState()
-    expect(s.phase).toBe('selecting')          // not advanced to resolving
-    expect(s._resolution).toBeNull()
-    expect(s.journeyError).toMatch(/network down/)
+    expect(s.roundIndex).toBe(1)
+    expect(s.roundTheme).toBe(THEME_SEQUENCE[1])
+    // Round 1 reuses the level's fixed profile (gapCount 4 / view 7000).
+    expect(s.difficulty).toEqual(PROFILE)
+  })
+})
+
+describe('submitJourneyLevel (aggregate submission)', () => {
+  it('submits the aggregate level total + stars + cleared on a completed level', async () => {
+    ;(api.submitLevelResult as any).mockResolvedValue({})
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
+    // Fake a completed level: four banked rounds, full lives.
+    useGameStore.setState({
+      roundResults: [1200, 1200, 1200, 1200], livesRemaining: 3,
+      levelComplete: true, score: 5800,
+    })
+    await act(async () => { await useGameStore.getState().submitJourneyLevel() })
+    expect(api.submitLevelResult).toHaveBeenCalledTimes(1)
+    const arg = (api.submitLevelResult as any).mock.calls[0][0]
+    expect(arg.levelId).toBe('lvl-1')
+    // levelTotal([1200×4], 3) = 4800 + livesBonus(3)=1000 = 5800
+    expect(arg.total).toBe(5800)
+    expect(arg.cleared).toBe(true)
+    expect(arg.stars).toBeGreaterThan(0)
+    expect(useGameStore.getState().submitting).toBe(false)
   })
 
-  it('clears a prior error on the next session start and on retry', async () => {
-    useGameStore.setState({ journeyError: 'stale' } as any)
-    ;(api.startSession as any).mockResolvedValue(START_RESULT)
-    await act(async () => { await useGameStore.getState().startJourneySession('lvl-1', 0, 1) })
-    expect(useGameStore.getState().journeyError).toBeNull()
+  it('submits cleared:false and 0 stars on a game over', async () => {
+    ;(api.submitLevelResult as any).mockResolvedValue({})
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
+    useGameStore.setState({
+      roundResults: [1200, 1200], livesRemaining: 0,
+      levelComplete: false,
+    })
+    await act(async () => { await useGameStore.getState().submitJourneyLevel() })
+    const arg = (api.submitLevelResult as any).mock.calls[0][0]
+    expect(arg.cleared).toBe(false)
+    expect(arg.stars).toBe(0)
+    // levelTotal([1200,1200], 0) = 2400 + livesBonus(0)=0
+    expect(arg.total).toBe(2400)
+  })
+
+  it('records an error and clears submitting when submission fails', async () => {
+    ;(api.submitLevelResult as any).mockRejectedValue(new Error('network down'))
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
+    useGameStore.setState({ roundResults: [1200], levelComplete: false, livesRemaining: 0 })
+    await act(async () => { await useGameStore.getState().submitJourneyLevel() })
+    const s = useGameStore.getState()
+    expect(s.journeyError).toMatch(/network down/)
+    expect(s.submitting).toBe(false)
+  })
+})
+
+describe('practice keeps using the difficulty table (not levelDifficulty)', () => {
+  it('startPractice clears any pinned level difficulty', () => {
+    act(() => useGameStore.getState().startJourneyLevel('lvl-1', PROFILE, 0, 1))
+    expect(useGameStore.getState().levelDifficulty).toEqual(PROFILE)
+    act(() => useGameStore.getState().startPractice())
+    expect(useGameStore.getState().levelDifficulty).toBeNull()
+    expect(useGameStore.getState().mode).toBe('practice')
   })
 })

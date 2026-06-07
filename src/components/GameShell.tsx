@@ -23,13 +23,11 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, paused, score, triesUsed, maxTries, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining } =
+  const { phase, paused, score, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
       score: s.score,
-      triesUsed: s.triesUsed,
-      maxTries: s.maxTries,
       phaseStartTime: s.phaseStartTime,
       phaseDuration: s.phaseDuration,
       mode: s.mode,
@@ -51,12 +49,13 @@ export function GameShell() {
     <div className="min-h-dvh bg-arcade-bg text-white flex flex-col">
       <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 py-3 border-b-2 border-arcade-edge">
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
-          {mode === 'journey'
-            ? <strong className="text-white">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
-            : <>ROUND <strong className="text-white">{roundIndex + 1} / 4</strong></>}
+          {mode === 'journey' && (
+            <strong className="text-white mr-2">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
+          )}
+          ROUND <strong className="text-white">{roundIndex + 1} / 4</strong>
         </span>
         <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
-        <Hearts count={mode === 'journey' ? maxTries - triesUsed + 1 : livesRemaining} total={mode === 'journey' ? maxTries : MAX_LIVES} />
+        <Hearts count={livesRemaining} total={MAX_LIVES} />
         <span className="flex-1" />
         <span className="w-10" aria-hidden />
       </div>

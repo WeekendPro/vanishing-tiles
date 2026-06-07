@@ -107,6 +107,7 @@ export interface DifficultyConfig {
   placeDuration: number    // ms
   gapCount: number         // number of tetromino gaps placed in the puzzle
   complexity: 'simple' | 'medium' | 'complex'
+  adjacency?: number       // 0 = scatter gaps; higher = more clustered (Journey levels)
 }
 
 // ── Game phases ───────────────────────────────────────────────────────────────
