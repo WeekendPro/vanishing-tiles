@@ -5,6 +5,7 @@ import { useNavStore } from '../../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import type { Placement } from '@shared/types'
 import { Grid } from '../Grid'
+import { GapBorder } from '../GapBorder'
 import { SelectionCart, type SelectionCartHandle } from './SelectionCart'
 import { FlyerOverlay, type FlyerSpec } from './FlyerOverlay'
 import { CelebrationBadge } from './CelebrationBadge'
@@ -24,9 +25,11 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, mode, roundIndex, livesRemaining, advanceRound } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, mode, roundIndex, livesRemaining, advanceRound } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
+      gaps: s.gaps,
+      grid: s.grid,
       resolution: s._resolution,
       applyPlacement: s.applyPlacement,
       roundScore: s.roundScore,
@@ -196,12 +199,17 @@ export function ResolutionPhase() {
         {/* Board with the badge centered over it. The grid dims at the end of the
             round (~40%) so the badge pops against it. */}
         <div className="relative">
-          <div className={`transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
+          <div className={`relative transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
             <Grid
               cellRef={(row, col, el) => {
                 if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())
               }}
             />
+            {/* Same dashed gap silhouettes as the viewing phase, so pieces are
+                seen flying into their outlined slots during the auto-placement.
+                Passing the live grid drops each outline as its piece lands, so
+                placed pieces cover the border instead of it sitting on top. */}
+            <GapBorder gaps={gaps} grid={grid} />
           </div>
           {resolution?.kind === 'partial'
             ? <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />

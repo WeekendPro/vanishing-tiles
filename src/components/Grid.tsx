@@ -36,8 +36,11 @@ export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }:
         } else if (isHighlight) {
           className += 'bg-blue-400/50 border-2 border-blue-400'
         } else {
-          // empty cell
-          className += 'bg-gray-800 border border-gray-600'
+          // empty cell (gap) — render as a TRUE hole: no fill, no per-cell border.
+          // A multi-cell gap then reads as one empty region defined solely by the
+          // dashed GapBorder silhouette, instead of N visible blocks that look like
+          // dark placed pieces. (The dark grid background shows through.)
+          className += 'bg-transparent'
         }
 
         if (onCellClick && cell?.status === 'empty') {

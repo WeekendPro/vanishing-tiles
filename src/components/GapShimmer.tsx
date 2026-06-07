@@ -2,6 +2,13 @@ import { useEffect, useState, type RefObject } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Gap } from '@shared/types'
 
+// Experiment (2026-06-07): the glare originally existed to help the eye read each
+// gap's silhouette when many gaps clustered. The dashed gap borders now do that
+// job, so we're trialling the game WITHOUT the glare. Flip back to `true` to
+// restore it. (Kept as an in-file toggle to avoid touching ViewingPhase.tsx while
+// the Flash Mob round is being built in parallel.)
+const SHIMMER_ENABLED = false
+
 // Feel knobs — tune freely.
 const SWEEP_MS = 2600   // time for the glare band to cross the board (one pass)
 // Soft, cool-white, narrow highlight; screen-blended and masked to the gap shapes,
@@ -33,6 +40,9 @@ export function GapShimmer({ containerRef, cellRects, gaps }: Props) {
   const reduce = useReducedMotion()
   const [mask, setMask] = useState<string | null>(null)
 
+  // Glare disabled — see SHIMMER_ENABLED note above. Hooks run first to keep
+  // hook order stable; we just skip the mask work and render nothing.
+
   // NOTE: useEffect (not useLayoutEffect) is deliberate. containerRef points to
   // GapShimmer's PARENT div (the grid wrapper) — and React attaches a host's ref
   // only after its children's effects have fired. With useLayoutEffect this
@@ -41,7 +51,7 @@ export function GapShimmer({ containerRef, cellRects, gaps }: Props) {
   // runs after paint, by which point all refs are attached. The one-frame delay
   // before the mask is computed is imperceptible for a one-time sweep.
   useEffect(() => {
-    if (reduce || !containerRef.current || !cellRects.current || gaps.length === 0) return
+    if (!SHIMMER_ENABLED || reduce || !containerRef.current || !cellRects.current || gaps.length === 0) return
     const root = containerRef.current.getBoundingClientRect()
     const rects: { left: number; top: number; size: number }[] = []
     for (const gap of gaps) {
@@ -54,7 +64,7 @@ export function GapShimmer({ containerRef, cellRects, gaps }: Props) {
     setMask(buildGapMask(rects, root.width, root.height))
   }, [reduce, gaps, containerRef, cellRects])
 
-  if (!mask) return null
+  if (!SHIMMER_ENABLED || !mask) return null
   return (
     <div
       className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
