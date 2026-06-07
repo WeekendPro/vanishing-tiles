@@ -79,7 +79,7 @@ export type RoundTheme = 'basic' | 'colorCoded' | 'sequential' | 'flashMob'
 
 /** The theme played at each round index. Theme plans (2–4) replace entries as
  *  each mechanic ships; until then every round plays Basic. */
-export const THEME_SEQUENCE: RoundTheme[] = ['basic', 'colorCoded', 'sequential', 'basic']
+export const THEME_SEQUENCE: RoundTheme[] = ['basic', 'colorCoded', 'sequential', 'flashMob']
 
 export const THEME_LABEL: Record<RoundTheme, string> = {
   basic: 'Basic',

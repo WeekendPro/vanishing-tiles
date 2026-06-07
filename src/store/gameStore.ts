@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type {
-  GameState, PieceType,
+  GameState, PieceType, RoundTheme,
   DifficultyConfig, Placement, Resolution, ResolutionReason,
 } from '@shared/types'
 import { THEME_SEQUENCE } from '@shared/types'
@@ -38,6 +38,15 @@ export const DIFFICULTY_TABLE: DifficultyConfig[] = [
 
 function getDifficulty(round: number): DifficultyConfig {
   return DIFFICULTY_TABLE[Math.min(round - 1, DIFFICULTY_TABLE.length - 1)]
+}
+
+// Flash Mob's viewing is a forced, unskippable flash sequence whose length is
+// derived from the gap count (gapCount × 1000ms), NOT the difficulty table's
+// viewDuration. Every consumer of the view-phase length — the flash sequence,
+// the GameShell timer bar, and the Speed-scoring viewDuration — must agree, so
+// they all route through this single helper.
+export function effectiveViewDuration(roundTheme: RoundTheme, difficulty: DifficultyConfig): number {
+  return roundTheme === 'flashMob' ? difficulty.gapCount * 1000 : difficulty.viewDuration
 }
 
 // ── Store interface ──────────────────────────────────────────────────────────
@@ -211,20 +220,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   loseLife: () => set(state => ({ livesRemaining: Math.max(0, state.livesRemaining - 1) })),
 
   beginViewing: () => {
-    const { difficulty } = get()
+    const { difficulty, roundTheme } = get()
     set({
       phase: 'viewing',
       phaseStartTime: Date.now(),
-      phaseDuration: difficulty.viewDuration,
+      phaseDuration: effectiveViewDuration(roundTheme, difficulty),
     })
   },
 
   endViewing: () => {
-    const { difficulty, phaseStartTime } = get()
+    const { difficulty, roundTheme, phaseStartTime } = get()
     // Capture the view time the player saved by hitting "Ready" early so it can
     // feed the Speed bonus alongside selection time. (Timer expiry ⇒ ~0 saved.)
+    const viewDuration = effectiveViewDuration(roundTheme, difficulty)
     const viewElapsed = Date.now() - phaseStartTime
-    const viewTimeRemaining = Math.max(0, difficulty.viewDuration - viewElapsed)
+    const viewTimeRemaining = Math.max(0, viewDuration - viewElapsed)
     set({
       phase: 'selecting',
       phaseStartTime: Date.now(),
@@ -284,7 +294,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const minPieces = gaps.length
       const r = scoreRound({
         viewTimeRemaining,
-        viewDuration: difficulty.viewDuration,
+        viewDuration: effectiveViewDuration(roundTheme, difficulty),
         selectTimeRemaining,
         selectDuration: difficulty.selectDuration,
         minPieces,
