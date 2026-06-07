@@ -19,5 +19,5 @@ export const THEME_CONFIG: Record<RoundTheme, ThemeConfig> = {
  *  shared logic stays free of Tailwind class strings; the client maps ids →
  *  classes in src/lib/gapPalette.ts. Decoupled from piece-type colors by design. */
 export const GAP_COLOR_IDS = [
-  'green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'indigo',
+  'green', 'red', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan',
 ] as const

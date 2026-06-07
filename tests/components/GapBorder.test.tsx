@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { GapBorder } from '../../src/components/GapBorder'
+import { gapBorderClass } from '../../src/lib/gapPalette'
 import type { Gap } from '@shared/types'
 
 const oGap: Gap = {
@@ -27,6 +28,6 @@ describe('GapBorder', () => {
     const { container } = render(<GapBorder gaps={[colored]} />)
     const wrapper = container.querySelector('[data-gap-border]')!
     const cells = wrapper.querySelectorAll('div')
-    expect([...cells].some(el => el.className.includes('border-green-400'))).toBe(true)
+    expect([...cells].some(el => el.className.includes(gapBorderClass('green')))).toBe(true)
   })
 })
