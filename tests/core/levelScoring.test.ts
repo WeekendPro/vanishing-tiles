@@ -6,24 +6,24 @@ import {
 
 describe('level scoring constants', () => {
   it('exposes the round/level maxes', () => {
-    expect(ROUND_PILLAR_MAX).toEqual({ speed: 1000, efficiency: 1000 })
+    expect(ROUND_PILLAR_MAX).toEqual({ speed: 2000, efficiency: 0 })
     expect(LIVES_BONUS_MAX).toBe(1000)
     expect(MAX_LIVES).toBe(3)
     expect(ROUNDS_PER_LEVEL).toBe(4)
-    expect(MAX_LEVEL_TOTAL).toBe(9000) // 4*(1000+1000) + 1000
+    expect(MAX_LEVEL_TOTAL).toBe(9000) // 4*(2000+0) + 1000
   })
 })
 
 describe('roundSpeed', () => {
   it('combined budget: fraction of total time remaining', () => {
-    // 40% used => 60% remaining => 600
-    expect(roundSpeed({ viewTimeRemaining: 6000, viewDuration: 10000, selectTimeRemaining: 0, selectDuration: 0 })).toBe(600)
-    // weighted across both clocks: (3000+4500)/(5000+10000) = 0.5 => 500
-    expect(roundSpeed({ viewTimeRemaining: 3000, viewDuration: 5000, selectTimeRemaining: 4500, selectDuration: 10000 })).toBe(500)
+    // 40% used => 60% remaining => 1200 (speed max 2000)
+    expect(roundSpeed({ viewTimeRemaining: 6000, viewDuration: 10000, selectTimeRemaining: 0, selectDuration: 0 })).toBe(1200)
+    // weighted across both clocks: (3000+4500)/(5000+10000) = 0.5 => 1000
+    expect(roundSpeed({ viewTimeRemaining: 3000, viewDuration: 5000, selectTimeRemaining: 4500, selectDuration: 10000 })).toBe(1000)
   })
 
   it('select-only (Flash Mob exception) ignores the view clock', () => {
-    expect(roundSpeed({ viewTimeRemaining: 9999, viewDuration: 10000, selectTimeRemaining: 5700, selectDuration: 10000, selectOnly: true })).toBe(570)
+    expect(roundSpeed({ viewTimeRemaining: 9999, viewDuration: 10000, selectTimeRemaining: 5700, selectDuration: 10000, selectOnly: true })).toBe(1140)
   })
 
   it('is 0 when no time budget exists', () => {
@@ -32,16 +32,13 @@ describe('roundSpeed', () => {
 })
 
 describe('roundEfficiency', () => {
-  it('matches the spec examples (min 5)', () => {
-    expect(roundEfficiency(5, 5)).toBe(1000)  // 0 extra
-    expect(roundEfficiency(5, 6)).toBe(800)   // 1 extra
-    expect(roundEfficiency(5, 9)).toBe(200)   // 4 extra
-    expect(roundEfficiency(5, 12)).toBe(-400) // 7 extra
-  })
-
-  it('clamps to [-1000, 1000]', () => {
-    expect(roundEfficiency(5, 20)).toBe(-1000) // 15 extra => -2000 clamped
-    expect(roundEfficiency(5, 0)).toBe(0)      // guard: zero pieces => 0
+  // Retired with the SINGLE piece: every gap is a 4-cell tetromino, so a clear
+  // always uses exactly minPieces and the metric flatlined. Always 0 now.
+  it('is always 0 regardless of piece counts', () => {
+    expect(roundEfficiency(5, 5)).toBe(0)
+    expect(roundEfficiency(5, 6)).toBe(0)
+    expect(roundEfficiency(5, 0)).toBe(0)
+    expect(roundEfficiency(5, 20)).toBe(0)
   })
 })
 
@@ -55,12 +52,12 @@ describe('livesBonus', () => {
 })
 
 describe('scoreRound', () => {
-  it('sums speed + efficiency', () => {
+  it('is speed-only now that efficiency is retired', () => {
     const r = scoreRound({
       viewTimeRemaining: 6000, viewDuration: 10000, selectTimeRemaining: 0, selectDuration: 0,
       minPieces: 5, selectedPieces: 6,
     })
-    expect(r).toEqual({ speed: 600, efficiency: 800, total: 1400 })
+    expect(r).toEqual({ speed: 1200, efficiency: 0, total: 1200 })
   })
 })
 

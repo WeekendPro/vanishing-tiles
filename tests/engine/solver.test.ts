@@ -136,14 +136,6 @@ describe('bestFit', () => {
     expect(res.placements).toHaveLength(1)
   })
 
-  it('tie-breaks equal coverage toward the fewest pieces', () => {
-    const grid = emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]) // one O gap
-    const res = bestFit({ O: 1, SINGLE: 4 }, grid)
-    expect(res.filledCells).toBe(4)
-    expect(res.placements).toHaveLength(1)          // O (1 piece) beats 4 SINGLEs
-    expect(res.placements[0].pieceType).toBe('O')
-  })
-
   it('leaves genuinely unfillable cells uncovered', () => {
     const grid = emptyAt(fullGrid(), [[0, 0], [0, 1], [0, 2]]) // 3-cell row, no 2x2
     const res = bestFit({ O: 1 }, grid)                        // O cannot fit

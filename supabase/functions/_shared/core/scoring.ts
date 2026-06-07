@@ -1,7 +1,12 @@
+// Efficiency was retired when the SINGLE piece was removed: every gap is a
+// 4-cell tetromino, so a clear always uses exactly minPieces and the pillar
+// flatlined to a constant. Its 300 pts were folded into Speed (500→800) to keep
+// the per-level ceiling at 2000. The DB still stores an `efficiency` column, so
+// the key is kept at 0 rather than removed (avoids a schema migration).
 export const PILLAR_MAX = {
   accuracy: 800,
-  speed: 500,
-  efficiency: 300,
+  speed: 800,
+  efficiency: 0,
   attempts: 400,
 } as const
 
@@ -58,10 +63,7 @@ export function scoreClear(i: ClearInput): PillarScore {
   const viewRatio = i.viewDuration > 0 ? i.viewTimeRemaining / i.viewDuration : 0
   const selectRatio = i.selectDuration > 0 ? i.selectTimeRemaining / i.selectDuration : 0
   const speed = Math.round(PILLAR_MAX.speed * 0.5 * (viewRatio + selectRatio))
-  const efficiencyRatio = i.selectedPieces === 0
-    ? 0
-    : i.minPieces / Math.max(i.selectedPieces, i.minPieces)
-  const efficiency = Math.round(PILLAR_MAX.efficiency * efficiencyRatio)
+  const efficiency = 0   // retired pillar — see PILLAR_MAX comment
   const attempts = attemptsBonus(i.triesUsed)
   const total = accuracy + speed + efficiency + attempts
   return { accuracy, speed, efficiency, attempts, total, stars: starsForTotal(total) }
@@ -71,14 +73,14 @@ export function scoreClear(i: ClearInput): PillarScore {
 // Additive: the single-round scoreClear above is still used by the Journey
 // server path until the multi-round port lands.
 
-export const ROUND_PILLAR_MAX = { speed: 1000, efficiency: 1000 } as const
+// Efficiency retired with the SINGLE piece (see PILLAR_MAX comment); its 1000
+// was folded into Speed (1000→2000), keeping MAX_LEVEL_TOTAL unchanged at 9000.
+export const ROUND_PILLAR_MAX = { speed: 2000, efficiency: 0 } as const
 export const LIVES_BONUS_MAX = 1000
 export const MAX_LIVES = 3
 export const ROUNDS_PER_LEVEL = 4
 export const MAX_LEVEL_TOTAL =
   ROUNDS_PER_LEVEL * (ROUND_PILLAR_MAX.speed + ROUND_PILLAR_MAX.efficiency) + LIVES_BONUS_MAX
-
-const clampPillar = (n: number) => Math.max(-ROUND_PILLAR_MAX.efficiency, Math.min(ROUND_PILLAR_MAX.efficiency, n))
 
 export interface RoundSpeedInput {
   viewTimeRemaining: number
@@ -97,11 +99,9 @@ export function roundSpeed(i: RoundSpeedInput): number {
   return Math.round(ROUND_PILLAR_MAX.speed * (rem / dur))
 }
 
-/** Efficiency = 1000 × (1 − extra/min), extra = used − min, clamped to ±1000. Zero pieces ⇒ 0. */
-export function roundEfficiency(minPieces: number, selectedPieces: number): number {
-  if (selectedPieces === 0 || minPieces === 0) return 0
-  const extra = selectedPieces - minPieces
-  return clampPillar(Math.round(ROUND_PILLAR_MAX.efficiency * (1 - extra / minPieces)))
+/** Retired pillar — always 0 (kept so callers/return shape stay stable). */
+export function roundEfficiency(_minPieces: number, _selectedPieces: number): number {
+  return 0
 }
 
 export interface RoundResult { speed: number; efficiency: number; total: number }

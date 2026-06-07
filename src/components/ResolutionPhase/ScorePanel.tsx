@@ -10,7 +10,7 @@ interface Props {
   grandTotal: number
   /** When true, rows reveal + counts animate; when false, panel is hidden. */
   show: boolean
-  /** Failed round: hide Speed/Efficiency rows (the round total is 0). */
+  /** Failed round: hide the Speed row (the round total is 0). */
   isFailure?: boolean
   /** Successful but slow: swap the Speed ⚡ for a 🐢. */
   speedSlow?: boolean
@@ -33,9 +33,6 @@ export function ScorePanel({ roundScore, grandTotal, show, isFailure = false, sp
     >
       {!isFailure && (
         <Row icon={speedSlow ? '🐢' : '⚡'} label="Speed" value={roundScore.speedBonus} delay={0} color={speedSlow ? 'text-gray-400' : 'text-neon-yellow'} />
-      )}
-      {!isFailure && (
-        <Row icon="◆" label="Efficiency" value={roundScore.efficiencyBonus} delay={ROW_STAGGER} color="text-neon-cyan" />
       )}
 
       <div className="mt-2 pt-2 border-t border-arcade-edge flex flex-col gap-1">

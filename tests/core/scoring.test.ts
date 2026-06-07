@@ -5,8 +5,8 @@ import {
 } from '@shared/core/scoring'
 
 describe('scoring pillars', () => {
-  it('exposes constant pillar maxes summing to 2000', () => {
-    expect(PILLAR_MAX).toEqual({ accuracy: 800, speed: 500, efficiency: 300, attempts: 400 })
+  it('exposes constant pillar maxes summing to 2000 (efficiency retired into speed)', () => {
+    expect(PILLAR_MAX).toEqual({ accuracy: 800, speed: 800, efficiency: 0, attempts: 400 })
     expect(MAX_TOTAL).toBe(2000)
     expect(maxScoreFor()).toBe(2000)
   })
@@ -41,12 +41,12 @@ describe('scoreClear', () => {
       minPieces: 4, selectedPieces: 4,
     })
     expect(s.accuracy).toBe(800)
-    // speed = 500 * 0.5 * (0.5 + 0.5) = 250
-    expect(s.speed).toBe(250)
-    // efficiency = 300 * (4 / 4) = 300
-    expect(s.efficiency).toBe(300)
+    // speed = 800 * 0.5 * (0.5 + 0.5) = 400
+    expect(s.speed).toBe(400)
+    // efficiency retired — always 0
+    expect(s.efficiency).toBe(0)
     expect(s.attempts).toBe(400)
-    expect(s.total).toBe(1750)
+    expect(s.total).toBe(1600)
     expect(s.stars).toBe(3)
   })
 

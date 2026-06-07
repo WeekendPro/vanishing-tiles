@@ -7,16 +7,9 @@ import {
 } from '@shared/engine/pieces'
 
 describe('PIECE_DEFINITIONS', () => {
-  it('defines all 8 piece types', () => {
+  it('defines all 7 tetromino types', () => {
     const types = PIECE_DEFINITIONS.map(p => p.type)
-    expect(types).toContain('I')
-    expect(types).toContain('O')
-    expect(types).toContain('T')
-    expect(types).toContain('S')
-    expect(types).toContain('Z')
-    expect(types).toContain('J')
-    expect(types).toContain('L')
-    expect(types).toContain('SINGLE')
+    expect(types).toEqual(['I', 'O', 'T', 'S', 'Z', 'J', 'L'])
   })
 
   it('I piece has 4 cells in a row', () => {
@@ -31,11 +24,6 @@ describe('PIECE_DEFINITIONS', () => {
     expect(O.cells).toHaveLength(4)
   })
 
-  it('SINGLE piece has exactly 1 cell', () => {
-    const single = PIECE_DEFINITIONS.find(p => p.type === 'SINGLE')!
-    expect(single.cells).toHaveLength(1)
-    expect(single.cells[0]).toEqual([0, 0])
-  })
 })
 
 describe('rotateCells', () => {
@@ -108,10 +96,5 @@ describe('getAllRotations', () => {
   it('L piece has 4 unique rotations', () => {
     const rotations = getAllRotations('L')
     expect(rotations).toHaveLength(4)
-  })
-
-  it('SINGLE piece has 1 unique rotation', () => {
-    const rotations = getAllRotations('SINGLE')
-    expect(rotations).toHaveLength(1)
   })
 })

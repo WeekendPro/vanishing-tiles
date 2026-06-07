@@ -8,7 +8,6 @@ export const PIECE_DEFINITIONS: PieceDefinition[] = [
   { type: 'Z', color: 'bg-red-500',    cells: [[0,0],[0,1],[1,1],[1,2]] },
   { type: 'J', color: 'bg-blue-500',   cells: [[0,0],[1,0],[1,1],[1,2]] },
   { type: 'L', color: 'bg-orange-400', cells: [[0,2],[1,0],[1,1],[1,2]] },
-  { type: 'SINGLE', color: 'bg-gray-400', cells: [[0,0]] },
 ]
 
 function normalizeCells(cells: PieceCells): PieceCells {

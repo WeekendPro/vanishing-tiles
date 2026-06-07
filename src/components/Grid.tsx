@@ -3,6 +3,11 @@ import { getPieceColor } from '@shared/engine/pieces'
 import { ROWS, COLS } from '@shared/types'
 import { gapFillClass } from '../lib/gapPalette'
 
+// R&D toggle for the board look. 'classic' = solid gray tiles (original);
+// 'empty' = faint lattice with no real tiles, so only the dashed gaps read.
+// Flip this constant to A/B the two while we evaluate the empty-board design.
+const BOARD_STYLE: 'classic' | 'empty' = 'empty'
+
 interface Props {
   onCellClick?: (row: number, col: number) => void
   onCellHover?: (row: number, col: number) => void
@@ -28,7 +33,7 @@ export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }:
 
         let className = 'w-7 h-7 rounded-sm '
         if (cell?.status === 'filled') {
-          className += 'bg-slate-600'
+          className += BOARD_STYLE === 'empty' ? 'bg-slate-800/50' : 'bg-slate-600'
         } else if (cell?.status === 'placed' && cell.pieceType) {
           className += cell.color ? gapFillClass(cell.color) : getPieceColor(cell.pieceType)
         } else if (cell?.status === 'preview') {

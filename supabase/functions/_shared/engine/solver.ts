@@ -175,10 +175,9 @@ export function bestFit(pieceCount: PieceCount, grid: Grid): BestFitResult {
 }
 
 export function solve(pieceCount: PieceCount, grid: Grid, _gaps: Gap[]): SolveResult {
-  const totalPieceCells = Object.entries(pieceCount).reduce((sum, [type, count]) => {
+  const totalPieceCells = Object.entries(pieceCount).reduce((sum, [, count]) => {
     if ((count ?? 0) === 0) return sum
-    const cellsPerPiece = type === 'SINGLE' ? 1 : 4
-    return sum + (count ?? 0) * cellsPerPiece
+    return sum + (count ?? 0) * 4
   }, 0)
   const totalEmpty = grid.flat().filter(c => c.status === 'empty').length
 

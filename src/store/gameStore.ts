@@ -318,7 +318,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Failed round: no negative penalty — a failed round scores 0, never below.
       const uncovered = res.totalCells - res.filledCells
       const selectedCells = selection.reduce(
-        (sum, e) => sum + e.freeCount * (e.pieceType === 'SINGLE' ? 1 : 4), 0)
+        (sum, e) => sum + e.freeCount * 4, 0)
       let reason: ResolutionReason
       // Sequential rounds fail atomically on any count/shape/order mismatch; the
       // shape-vs-count heuristic below would misreport a right-shapes/wrong-order

@@ -7,7 +7,6 @@ import { NeonButton, ArcadePanel } from './ui'
 const PILLARS: { key: keyof typeof PILLAR_MAX; label: string; color: string }[] = [
   { key: 'accuracy', label: 'Accuracy', color: 'bg-neon-green shadow-neon-green' },
   { key: 'speed', label: 'Speed', color: 'bg-neon-cyan shadow-neon-cyan' },
-  { key: 'efficiency', label: 'Efficiency', color: 'bg-neon-magenta shadow-neon-magenta' },
   { key: 'attempts', label: 'Attempts', color: 'bg-neon-yellow' },
 ]
 

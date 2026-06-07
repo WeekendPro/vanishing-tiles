@@ -19,9 +19,9 @@ beforeEach(() => {
 })
 
 describe('SelectingPhase — sequential queue menu', () => {
-  it('renders all 8 piece-type buttons', () => {
+  it('renders all 7 piece-type buttons', () => {
     render(<SelectingPhase />)
-    expect(document.querySelectorAll('[data-queue-option]')).toHaveLength(8)
+    expect(document.querySelectorAll('[data-queue-option]')).toHaveLength(7)
   })
 
   it('appends to the queue in tap order', () => {

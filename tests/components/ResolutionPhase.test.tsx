@@ -286,24 +286,24 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
     expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
   })
 
-  it('shows Speed and Efficiency rows (and no Accuracy/Attempts) on a clear', () => {
-    showPerfect(300)
+  it('shows the Speed row (and no Accuracy/Attempts/Efficiency) on a clear', () => {
+    showPerfect(800)
     render(<ResolutionPhase />)
     expect(screen.getByText('Speed')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency')).toBeInTheDocument()
+    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument()
     expect(screen.queryByText('Accuracy')).not.toBeInTheDocument()
     expect(screen.queryByText('Attempts')).not.toBeInTheDocument()
   })
 
   it('shows a turtle on the Speed row when a successful round was slow', () => {
-    showPerfect(50) // <= 100 (20% of 500)
+    showPerfect(50) // <= 400 (20% of 2000)
     render(<ResolutionPhase />)
     const speedRow = screen.getByText('Speed').closest('div')!
     expect(speedRow.textContent).toContain('🐢')
   })
 
   it('shows a lightning bolt when a successful round was fast', () => {
-    showPerfect(400)
+    showPerfect(800) // > 400 threshold
     render(<ResolutionPhase />)
     const speedRow = screen.getByText('Speed').closest('div')!
     expect(speedRow.textContent).toContain('⚡')

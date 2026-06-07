@@ -29,13 +29,12 @@ beforeEach(() => {
 })
 
 describe('ResultsScreen', () => {
-  it('renders the four pillar bars with raw points', () => {
+  it('renders the three pillar bars with raw points', () => {
     seedResult()
     render(<ResultsScreen />)
     expect(screen.getByText(/Accuracy/i)).toBeInTheDocument()
     expect(screen.getByText(/800\s*\/\s*800/)).toBeInTheDocument()
-    expect(screen.getByText(/250\s*\/\s*500/)).toBeInTheDocument()
-    expect(screen.getByText(/150\s*\/\s*300/)).toBeInTheDocument()
+    expect(screen.getByText(/250\s*\/\s*800/)).toBeInTheDocument()
     expect(screen.getByText(/400\s*\/\s*400/)).toBeInTheDocument()
   })
 

@@ -126,8 +126,10 @@ describe('submitSelection — perfect', () => {
 describe('submitSelection — partial', () => {
   it('goes to resolving, spends a pooled life, and scores zero (no negative penalty)', () => {
     act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
     act(() => useGameStore.getState().endViewing())
-    act(() => useGameStore.getState().incrementSelection('SINGLE')) // 1 cell, never a full fill
+    // One correct piece for a multi-gap puzzle: fills one gap, leaves the rest.
+    act(() => useGameStore.getState().incrementSelection(gaps[0].pieceType))
     act(() => useGameStore.getState().submitSelection())
     const s = useGameStore.getState()
     expect(s.phase).toBe('resolving')
@@ -146,9 +148,10 @@ describe('submitSelection — partial', () => {
 describe('tries and game over', () => {
   it('a wrong selection on the last try routes through resolving (not game-over) and does not over-advance', () => {
     act(() => useGameStore.getState().startGame())
+    const { gaps } = useGameStore.getState()
     useGameStore.setState({ triesUsed: 3 })   // last of 3 tries
     act(() => useGameStore.getState().endViewing())
-    act(() => useGameStore.getState().incrementSelection('SINGLE'))
+    act(() => useGameStore.getState().incrementSelection(gaps[0].pieceType)) // partial fill
     act(() => useGameStore.getState().submitSelection())
     const s = useGameStore.getState()
     expect(s.phase).toBe('resolving')
@@ -169,18 +172,19 @@ describe('tries and game over', () => {
 })
 
 describe('scoring', () => {
-  it('a perfect clear scores Speed+Efficiency only (no accuracy/attempts)', () => {
+  it('a perfect clear scores Speed only (efficiency retired; no accuracy/attempts)', () => {
     act(() => useGameStore.getState().startGame())
     const { gaps } = useGameStore.getState()
     act(() => useGameStore.getState().endViewing())
     act(() => { for (const gap of gaps) useGameStore.getState().incrementSelection(gap.pieceType) })
     act(() => useGameStore.getState().submitSelection())
-    // Multi-round model: Accuracy/Attempts are gone; the round total is Speed + Efficiency.
+    // Multi-round model: Accuracy/Attempts/Efficiency are gone; the round total is Speed.
     const { roundScore } = useGameStore.getState()
     expect(roundScore?.accuracy).toBe(0)
     expect(roundScore?.attemptsBonus).toBe(0)
-    expect(roundScore?.efficiencyBonus).toBeGreaterThan(0) // exact-fit selection ⇒ max efficiency
-    expect(roundScore?.total).toBe(roundScore!.speedBonus + roundScore!.efficiencyBonus)
+    expect(roundScore?.efficiencyBonus).toBe(0) // retired pillar
+    expect(roundScore?.speedBonus).toBeGreaterThan(0)
+    expect(roundScore?.total).toBe(roundScore!.speedBonus)
   })
 })
 

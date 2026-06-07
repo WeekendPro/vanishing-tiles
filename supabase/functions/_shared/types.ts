@@ -1,6 +1,6 @@
 // ── Pieces ──────────────────────────────────────────────────────────────────
 
-export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L' | 'SINGLE'
+export type PieceType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L'
 
 export type Rotation = 0 | 1 | 2 | 3  // 0=0°, 1=90°, 2=180°, 3=270°
 
