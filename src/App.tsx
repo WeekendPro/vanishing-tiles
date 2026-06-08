@@ -4,7 +4,7 @@ import { getSession } from './lib/auth'
 import { useNavStore } from './store/navStore'
 import { AuthScreen } from './components/AuthScreen'
 import { JourneyScreen } from './components/JourneyScreen'
-import { LevelDetailScreen } from './components/LevelDetailScreen'
+import { LevelScreen } from './components/LevelScreen'
 import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
 import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
@@ -33,8 +33,7 @@ export default function App() {
     switch (appView) {
       case 'auth': return <AuthScreen />
       case 'journey': return <JourneyScreen />
-      case 'levelDetail':
-        return <><JourneyScreen /><LevelDetailScreen /></>
+      case 'levelDetail': return <LevelScreen />
       case 'results': return <ResultsScreen />
       case 'playing':
       case 'practice':
