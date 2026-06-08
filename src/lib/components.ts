@@ -1,7 +1,5 @@
-import type { RoundTheme } from '@shared/types'
-
-/** A playable puzzle within a level. `riddle` is a placeholder (not yet playable). */
-export type ComponentKey = 'main' | 'colors' | 'inSequence' | 'flash' | 'riddle'
+import type { RoundTheme, ComponentKey } from '@shared/types'
+export type { ComponentKey }
 export type PlayableComponent = Exclude<ComponentKey, 'riddle'>
 
 /** Display order on the level hub (main first, then the four badges). */

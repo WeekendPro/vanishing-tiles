@@ -74,6 +74,9 @@ export interface RoundScore {
 
 // ── Multi-round levels ────────────────────────────────────────────────────────
 
+/** A playable puzzle within a Journey level (client concept). `riddle` is a placeholder. */
+export type ComponentKey = 'main' | 'colors' | 'inSequence' | 'flash' | 'riddle'
+
 /** Themes are fixed by round position within a level. */
 export type RoundTheme = 'basic' | 'colorCoded' | 'sequential' | 'flashMob'
 
@@ -146,4 +149,7 @@ export interface GameState {
   livesRemaining: number        // 3 pooled across the level; a FAIL decrements, a clear does not
   roundResults: number[]        // cleared round totals so far (drives the level total)
   levelComplete: boolean        // true once all rounds are cleared
+  // ── Journey single-play (new model) ──
+  activeComponent: ComponentKey | null  // which component this play targets; null in practice
+  livesLost: number                     // wrong submissions in the CURRENT play (0..2 when solved)
 }
