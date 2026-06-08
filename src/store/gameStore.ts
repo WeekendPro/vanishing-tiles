@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   GameState, PieceType, RoundTheme,
   DifficultyConfig, Placement, Resolution, ResolutionReason,
+  ComponentKey,
 } from '@shared/types'
 import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
@@ -9,6 +10,9 @@ import { resolveSelection } from '@shared/core/themeResolution'
 import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
 import { scoreRound, MAX_TRIES, levelTotal, levelStars, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { submitLevelResult } from '../lib/api'
+import { COMPONENT_THEME, isPlayable } from '../lib/components'
+import { componentScore } from '../lib/journeyScoring'
+import { useProgressStore } from './progressStore'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -86,6 +90,9 @@ interface GameStore extends GameState {
   startJourneyLevel: (levelId: string, difficulty: DifficultyConfig, priorPr: number, displayNumber: number, levelName?: string | null) => void
   submitJourneyLevel: () => Promise<void>
   submit: () => void | Promise<void>
+  startComponent: (levelId: string, component: ComponentKey, difficulty: DifficultyConfig, displayNumber: number, levelName?: string | null) => void
+  retryComponent: () => void
+  replayComponent: () => void
 }
 
 const INITIAL_STATE: GameState = {
@@ -112,6 +119,8 @@ const INITIAL_STATE: GameState = {
   livesRemaining: MAX_LIVES,
   roundResults: [],
   levelComplete: false,
+  activeComponent: null,
+  livesLost: 0,
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -148,8 +157,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startGame: () => {
-    const { round, roundIndex, mode, levelDifficulty } = get()
-    const roundTheme = THEME_SEQUENCE[roundIndex]
+    const { round, roundIndex, mode, levelDifficulty, activeComponent } = get()
+    const roundTheme = mode === 'journey' && activeComponent && isPlayable(activeComponent)
+      ? COMPONENT_THEME[activeComponent]
+      : THEME_SEQUENCE[roundIndex]
     // Journey: every round in a level shares the level's fixed difficulty profile.
     // Practice: difficulty escalates by round via the DIFFICULTY_TABLE.
     const difficulty = mode === 'journey' && levelDifficulty
@@ -294,6 +305,48 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const res = resolveSelection({ selection, grid, gaps, theme: roundTheme })
     const selectedPieces = selection.reduce((s, e) => s + e.freeCount, 0)
 
+    const { activeComponent, levelId } = get()
+    if (get().mode === 'journey') {
+      const selectOnly = roundTheme === 'flashMob'
+      const viewBudget = effectiveViewDuration(roundTheme, difficulty)
+      const consumed = selectOnly
+        ? difficulty.selectDuration - selectTimeRemaining
+        : (viewBudget - viewTimeRemaining) + (difficulty.selectDuration - selectTimeRemaining)
+      const allotted = selectOnly ? difficulty.selectDuration : viewBudget + difficulty.selectDuration
+
+      if (res.solvable) {
+        const score = componentScore({ solved: true, livesLost: get().livesLost, consumed, allotted })
+        if (levelId && activeComponent) useProgressStore.getState().recordPlay(levelId, activeComponent, score)
+        set({
+          phase: 'resolving',
+          _resolution: { kind: 'perfect', placements: res.placements, coverage: 1 },
+          roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: score },
+        })
+        return
+      }
+
+      // Failure: spend a life.
+      get().loseLife()
+      set(state => ({ livesLost: Math.min(2, state.livesLost + 1) }))
+      const outOfLives = get().livesRemaining <= 0
+      const uncovered = res.totalCells - res.filledCells
+      let reason: ResolutionReason
+      if (roundTheme === 'sequential') reason = 'wrong-order'
+      else if (uncovered === 0) reason = 'too-many'
+      else reason = Math.max(1, Math.round(uncovered / 4)) === 1 ? 'missed-one' : 'missed-many'
+
+      if (outOfLives && levelId && activeComponent) {
+        useProgressStore.getState().recordPlay(levelId, activeComponent, 0) // bumps timesPlayed/lastPlayed; best unchanged
+      }
+      set({
+        phase: 'resolving',
+        _resolution: { kind: 'partial', placements: res.placements, coverage: res.coverage, reason },
+        roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
+      })
+      return
+    }
+    // ── existing practice path continues unchanged below ──
+
     if (res.solvable) {
       // Per-round scoring: Speed + Efficiency only (no Accuracy/Attempts in the
       // multi-round model — lives are pooled per level, not per round).
@@ -434,6 +487,51 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearJourneyError: () => set({ journeyError: null }),
+
+  // Start a single-component Journey play: pin difficulty, set the component,
+  // reset lives, and run ONE puzzle (no gauntlet).
+  startComponent: (levelId, component, difficulty, displayNumber, levelName = null) => {
+    set({
+      mode: 'journey',
+      levelId,
+      activeComponent: component,
+      levelDifficulty: difficulty,
+      levelDisplayNumber: displayNumber,
+      levelName,
+      livesRemaining: MAX_LIVES,
+      livesLost: 0,
+      roundIndex: 0,
+      score: 0,
+      roundResults: [],
+      levelComplete: false,
+      journeyError: null,
+      submitting: false,
+    })
+    get().startGame()
+  },
+
+  // Failed attempt with lives left: replay the SAME puzzle (pristine board),
+  // re-run the countdown. livesRemaining/livesLost already advanced in submit.
+  retryComponent: () => {
+    set(state => ({
+      phase: 'countdown',
+      paused: false,
+      selection: [],
+      roundScore: null,
+      _resolution: null,
+      grid: state.sessionGrid.map(row => row.map(cell => ({ ...cell }))),
+      phaseStartTime: 0,
+      phaseDuration: 0,
+      viewTimeRemaining: 0,
+    }))
+  },
+
+  // "Play Again" from the result screen: fresh puzzle, full lives, same component.
+  replayComponent: () => {
+    const { levelId, activeComponent, levelDifficulty, levelDisplayNumber, levelName } = get()
+    if (!levelId || !activeComponent || !levelDifficulty) return
+    get().startComponent(levelId, activeComponent, levelDifficulty, levelDisplayNumber ?? 1, levelName)
+  },
 
   // Both modes now score client-side via submitSelection; mode only affects which
   // difficulty profile feeds the rounds (handled in startGame) and where the level
