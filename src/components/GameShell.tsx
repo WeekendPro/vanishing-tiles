@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { MAX_LIVES } from '@shared/core/scoring'
+import { COMPONENT_LABEL } from '../lib/components'
 import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
@@ -23,7 +24,7 @@ function Hearts({ count, total }: { count: number; total: number }) {
 }
 
 export function GameShell() {
-  const { phase, paused, score, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining } =
+  const { phase, paused, score, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
@@ -36,6 +37,7 @@ export function GameShell() {
       submitting: s.submitting,
       roundIndex: s.roundIndex,
       livesRemaining: s.livesRemaining,
+      activeComponent: s.activeComponent,
     })))
 
   const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
@@ -49,10 +51,14 @@ export function GameShell() {
     <div className="min-h-dvh bg-arcade-bg text-white flex flex-col">
       <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 py-3 border-b-2 border-arcade-edge">
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
-          {mode === 'journey' && (
-            <strong className="text-white mr-2">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
+          {mode === 'journey' ? (
+            <>
+              <strong className="text-white mr-2">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
+              {activeComponent ? COMPONENT_LABEL[activeComponent] : ''}
+            </>
+          ) : (
+            <>ROUND <strong className="text-white">{roundIndex + 1} / 4</strong></>
           )}
-          ROUND <strong className="text-white">{roundIndex + 1} / 4</strong>
         </span>
         <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
         <Hearts count={livesRemaining} total={MAX_LIVES} />

@@ -38,4 +38,14 @@ describe('GameShell header', () => {
     expect(screen.getByText(/ROUND/i)).toBeInTheDocument()
     expect(screen.getByText(/2\s*\/\s*4|2 OF 4/i)).toBeInTheDocument()
   })
+
+  it('journey header shows the component label, not "round n/4"', () => {
+    useGameStore.setState({
+      mode: 'journey', activeComponent: 'colors', levelName: 'Cellar Door',
+      phase: 'viewing', livesRemaining: 3,
+    } as any)
+    render(<GameShell />)
+    expect(screen.getByText(/Colors/i)).toBeTruthy()
+    expect(screen.queryByText(/\/ 4/)).toBeNull()
+  })
 })
