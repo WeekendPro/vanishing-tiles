@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import { PIECE_DEFINITIONS } from '@shared/engine/pieces'
 import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
@@ -27,8 +26,6 @@ export function SelectingPhase() {
     roundTheme: s.roundTheme,
     gaps: s.gaps,
   })))
-  const journeyError = useGameStore(s => s.journeyError)
-  const backToMap = useNavStore(s => s.backToMap)
 
   const colorMatters = THEME_CONFIG[roundTheme].colorMatters
   const orderMatters = THEME_CONFIG[roundTheme].orderMatters
@@ -42,14 +39,6 @@ export function SelectingPhase() {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
-      {journeyError && (
-        <div className="bg-arcade-panel border-2 border-neon-red rounded-md p-3 text-sm text-neon-red flex items-center justify-between gap-3">
-          <span>Couldn’t submit: {journeyError}</span>
-          <NeonButton variant="danger" size="sm" onClick={backToMap} className="shrink-0">
-            Back to Map
-          </NeonButton>
-        </div>
-      )}
       {/* Selection box */}
       <ArcadePanel className="p-3">
         <div className="flex justify-between items-center mb-2">

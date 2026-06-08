@@ -12,25 +12,47 @@ the Apple App Store.
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, progress through themed neighborhoods across the districts of Gap City, a fictional metropolis (The Hollows → The Sticks → Gridlock), with each district containing a group of increasingly difficult levels.
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, tap a station on the transit map to enter a **level hub** (`LevelScreen`), solve the main puzzle, then tackle optional badge challenges. In Practice mode the legacy 4-round gauntlet is still active (Training rework is a separate future effort).
 
-### Round loop
+### Journey mode — level hub
 
-Every round — the first start, a **Next Round →**, and a **Try Again ↺** — opens with a brief **countdown** (bold "Round N" with a 3-2-1 fade), which is a **pre-roll** (the view timer starts only when `viewing` begins, so the countdown never costs memorize time). Flow: `startGame` → `countdown` → `beginViewing` → `viewing`.
+Tapping a station on the map opens `LevelScreen`. Each level has **five components**:
+
+- **Main puzzle** — always playable from the start; must be solved to unlock the badges.
+- **Four opt-in badges** — Colors, In-Sequence, Flash, and Riddle (a "Coming soon" placeholder) — locked until the main puzzle is solved, then playable in any order and freely replayable.
+
+Each component play (main or badge) has **3 lives** and runs one puzzle round end-to-end. Flow: `startComponent` → `countdown` → `beginViewing` → `viewing` → `selecting` → `resolving`.
+
+### Round loop (shared by Journey and Practice)
+
+Every round opens with a brief **countdown** (bold "Round N" with a 3-2-1 fade), a **pre-roll** (the view timer starts only when `viewing` begins, so the countdown never costs memorize time). Flow: `startGame` → `countdown` → `beginViewing` → `viewing`.
 
 When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the memorization timer: a soft, cool-white glare band sweeps diagonally once, **masked to the gap shapes** (`GapShimmer.tsx`) so the light is only visible where it crosses a gap, never the filled board. It uses no piece colors and doesn't touch game state — purely a subtle visual crutch that draws the eye to the gap shapes. The gaps are visible from the start; the timer runs the whole time.
 
 1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
 2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
 3. **Resolution:**
-   - **Perfect** (solver confirms the selection exactly fills all gaps): pieces fly in automatically, full scoring, green **Perfect!** badge, **Next Round →** CTA. The round counter advances.
-   - **Failed round** (selection doesn't fit): player loses 1 life, the game auto-runs a best-fit placement (good pieces fly in, leftover pieces get a red ✕), and the round is scored as a **failure** (see Scoring). The badge tiers by coverage — amber **So Close!** (≥66%), red **Tough Round** (33–66%), red **Yikes** (<33%). The CTA is **Try Again ↺**, which regenerates a *fresh puzzle at the same round* (the round counter advances **only on a perfect clear**). On the last life the CTA is **Game Over →**.
-4. **Scoring** — Three pillars on a perfect clear; a penalty on a failure:
-   - ✓ Accuracy: **+800** pts on a perfect clear. On a **failure** it is a **negative penalty** — `-50` per wrong/missing piece (`extra + missing`), floored at `-400` — shown in red; Speed/Efficiency are zeroed and their rows hidden.
-   - ⚡ Speed bonus: up to 500 pts (perfect clear only, based on time remaining). A slow-but-successful round shows a 🐢 instead of ⚡ when the bonus is in the bottom ~20%.
-   - ◆ Efficiency bonus: up to 300 pts (perfect clear only, piece count vs. minimum needed).
-   - The running **grand total is floored at 0** — a net-negative round never pushes the score below zero.
-5. **Next Round** / **Try Again** / **Game Over** (at 0 lives; 3 lives total).
+   - **Perfect** (solver confirms the selection exactly fills all gaps): pieces fly in automatically, **ComponentScorePanel** shows the result, **Next →** CTA.
+   - **Failed attempt** (selection doesn't fit): player loses 1 life, the game auto-runs a best-fit placement (good pieces fly in, leftover pieces get a red ✕). Badge tiers by coverage — amber **So Close!** (≥66%), red **Tough Round** (33–66%), red **Yikes** (<33%). CTA is **Try Again ↺** (same puzzle, fresh clock). On the last life the CTA is **Back to Level →**.
+
+### Scoring
+
+#### Journey — per-component model (`src/lib/journeyScoring.ts`)
+
+- **Solved:** `base = 65 − 10 × livesLost` (giving 65 / 55 / 45) `+ speed`, where `speed = ceil(35 × (1 − consumed / allotted))`, capped at 100. Unsolved (all 3 lives lost) = **0**.
+- `consumed` = time used; `allotted` = `viewDuration + selectDuration` for most components, `selectDuration` only for Flash Mob (no view phase). Speed is measured on the **successful attempt** — retries each get a fresh clock.
+- **Level total** = sum of best-score-per-component (0–500 across 5 × 100).
+- **Stars**: 1★ when main is solved; then 2★ ≥ 150 / 3★ ≥ 250 / 4★ ≥ 350 / 5★ ≥ 450.
+- **Difficulty pips** 1–5 are derived from gap count.
+- **Persistence**: per-component best scores live client-side in `progressStore` (localStorage, key `gapcity:progress:v1`); the global record is mocked for now. The level catalog (station list, difficulty) still comes from `get_journey` / `get_level` (Supabase, unchanged).
+
+#### Practice — legacy 4-round gauntlet (`@shared/core/scoring`)
+
+Practice mode still runs 4 themed rounds with pooled lives and the old per-round `scoreRound` / `levelTotal` / `levelStars` scoring. This code is intentionally unchanged — a Training-mode rework is pending.
+
+- Per round on a perfect clear: **Speed bonus** (up to ~500 pts, ratio-based on time remaining) + **Efficiency bonus** (up to ~300 pts, piece count vs. minimum). A slow-but-successful round shows a turtle emoji instead of lightning when the speed bonus is in the bottom ~20%.
+- Failed rounds score 0 for that round; lives are pooled across all 4 rounds.
+- **Next Round** / **Try Again** / **Game Over** (at 0 lives; 3 lives total).
 
 ### Piece types
 
@@ -46,19 +68,25 @@ When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the 
 src/
   types.ts              — PieceType, Rotation, Cell, Phase, GameState
   store/
-    gameStore.ts        — Zustand store; all game state + actions
+    gameStore.ts        — Zustand store; all game state + actions (startComponent / retryComponent / replayComponent for Journey; startLevel for Practice)
+    progressStore.ts    — Zustand + localStorage store for per-component best scores and level progress (key: gapcity:progress:v1)
+  lib/
+    components.ts       — ComponentKey types, LEVEL_COMPONENTS, BADGE_COMPONENTS, COMPONENT_THEME, COMPONENT_LABEL, isPlayable helpers
+    journeyScoring.ts   — componentScore(), levelStarsFromTotal(), difficultyPips(), sumBests() — Journey scoring math
   engine/
     pieces.ts           — PIECE_DEFINITIONS, getRotatedCells(), getPieceColor()
     puzzleGenerator.ts  — generatePuzzle(difficulty) → { grid, gaps }
     solver.ts           — solve(pieceCount, grid, gaps) backtracking solver
   components/
-    GameShell.tsx       — Top bar (round/score/lives), phase router, idle screen
+    GameShell.tsx       — Top bar (component label/score/lives), phase router, idle screen; TrickleBar shown while submitting
     CountdownPhase.tsx  — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
     GapShimmer.tsx      — One-time glare sweep masked to the gap shapes; overlaid on the viewing grid (no game-state change)
     ViewingPhase.tsx    — Grid + GapShimmer overlay + Ready button (timer bar lives in GameShell)
     SelectingPhase.tsx  — Piece menu + selection cart + Done button
-    ResolutionPhase/    — Auto-placement animation; perfect/failure badge; Try Again / Next Round / Game Over CTA (index.tsx + PartialBadge, CelebrationBadge, ScorePanel, NextRoundButton, FlyerOverlay, SelectionCart)
-    ScoringPhase.tsx    — Game Over screen with Play Again button
+    ResolutionPhase/    — Auto-placement animation; perfect/failure badge; Try Again / Back to Level CTA (index.tsx + PartialBadge, CelebrationBadge, ScorePanel, ComponentScorePanel, NextRoundButton, FlyerOverlay, SelectionCart)
+      ComponentScorePanel.tsx — Journey resolution card: component score breakdown + running level total + stars
+    ScoringPhase.tsx    — Practice Game Over screen with Play Again button
+    LevelScreen.tsx     — Journey level hub: main puzzle + 4 badge tiles, level progress (stars/total), badge lock state
     Grid.tsx            — 12×12 inline-grid, 28px cells; onCellClick / onCellHover props
     PieceShape.tsx      — Renders a single piece at a given rotation + cell size
     ProgressBar.tsx     — Animated countdown bar
@@ -114,8 +142,8 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 - **Grid size:** 12 rows × 12 columns (square)
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
-- **Scoring philosophy:** Reward speed AND precision; a failed round is penalized (negative accuracy), not partially rewarded
-- **Lives:** 3 hearts; a failed round costs 1 life and is retried at the same round (round advances only on a perfect clear)
+- **Scoring philosophy:** Reward speed AND precision. Journey: per-component 0–100 score (base 65 − 10·livesLost + up to 35 speed); unsolved = 0. Practice: per-round speed+efficiency bonuses; failed rounds score 0 for that round.
+- **Lives:** 3 hearts per component/level. In Journey, a failed attempt replays the same puzzle (fresh clock); in Practice, a failed round costs a life and retries the same board.
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 
 ---

@@ -8,8 +8,7 @@ import { THEME_SEQUENCE } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import { resolveSelection } from '@shared/core/themeResolution'
 import { THEME_CONFIG, GAP_COLOR_IDS } from '@shared/core/themeConfig'
-import { scoreRound, MAX_TRIES, levelTotal, levelStars, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
-import { submitLevelResult } from '../lib/api'
+import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '@shared/core/scoring'
 import { COMPONENT_THEME, isPlayable } from '../lib/components'
 import { componentScore } from '../lib/journeyScoring'
 import { useProgressStore } from './progressStore'
@@ -78,17 +77,14 @@ interface GameStore extends GameState {
   resumeGame: () => void
   pausedElapsed: number
   _resolution: Resolution | null
-  // Journey mode plays 4 themed rounds locally with a FIXED per-level difficulty
-  // profile (levelDifficulty), then submits one aggregate result at level end.
+  // Journey mode uses a FIXED per-level difficulty profile (levelDifficulty) for
+  // each component play. submitting drives the GameShell TrickleBar while a
+  // server write is in-flight (currently unused for component plays, kept for
+  // future global-record submissions).
   levelDifficulty: DifficultyConfig | null
-  journeyError: string | null
-  priorPr: number
   levelDisplayNumber: number | null
   levelName: string | null
   submitting: boolean
-  clearJourneyError: () => void
-  startJourneyLevel: (levelId: string, difficulty: DifficultyConfig, priorPr: number, displayNumber: number, levelName?: string | null) => void
-  submitJourneyLevel: () => Promise<void>
   submit: () => void | Promise<void>
   startComponent: (levelId: string, component: ComponentKey, difficulty: DifficultyConfig, displayNumber: number, levelName?: string | null) => void
   retryComponent: () => void
@@ -128,13 +124,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pausedElapsed: 0,
   _resolution: null,
   levelDifficulty: null,
-  journeyError: null,
-  priorPr: 0,
   levelDisplayNumber: null,
   levelName: null,
   submitting: false,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, levelDifficulty: null, journeyError: null, priorPr: 0, levelDisplayNumber: null, levelName: null, submitting: false }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, levelDifficulty: null, levelDisplayNumber: null, levelName: null, submitting: false }),
 
   pauseGame: () => set(state => {
     if (state.paused) return {}
@@ -451,43 +445,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startGame()
   },
 
-  // Start a Journey level: pin the level's fixed difficulty profile, then run the
-  // SAME 4-round / pooled-lives machinery as Practice (startLevel → startGame).
-  // The 4 rounds are generated, played, and scored entirely client-side; only one
-  // aggregate result is submitted at level end (submitJourneyLevel).
-  startJourneyLevel: (levelId, difficulty, priorPr, displayNumber, levelName = null) => {
-    set({
-      mode: 'journey',
-      levelId,
-      levelDifficulty: difficulty,
-      priorPr,
-      levelDisplayNumber: displayNumber,
-      levelName,
-      journeyError: null,
-      submitting: false,
-    })
-    get().startLevel()
-  },
-
-  // Submit ONE aggregate level result (best_total/best_stars/cleared) once the
-  // level ends — a perfect 4-round clear (levelComplete) OR a game over. Called by
-  // the Journey ResultsScreen on mount. Client-trusted (leaderboard deferred).
-  submitJourneyLevel: async () => {
-    const { roundResults, livesRemaining, levelComplete, levelId } = get()
-    if (!levelId) return
-    const total = levelTotal(roundResults, livesRemaining)
-    const stars = levelComplete ? levelStars(total) : 0
-    set({ submitting: true, journeyError: null })
-    try {
-      await submitLevelResult({ levelId, total, stars, cleared: levelComplete })
-      set({ submitting: false })
-    } catch (e) {
-      set({ journeyError: e instanceof Error ? e.message : 'Submit failed', submitting: false })
-    }
-  },
-
-  clearJourneyError: () => set({ journeyError: null }),
-
   // Start a single-component Journey play: pin difficulty, set the component,
   // reset lives, and run ONE puzzle (no gauntlet).
   startComponent: (levelId, component, difficulty, displayNumber, levelName = null) => {
@@ -504,7 +461,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       score: 0,
       roundResults: [],
       levelComplete: false,
-      journeyError: null,
       submitting: false,
     })
     get().startGame()
@@ -533,8 +489,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().startComponent(levelId, activeComponent, levelDifficulty, levelDisplayNumber ?? 1, levelName)
   },
 
-  // Both modes now score client-side via submitSelection; mode only affects which
-  // difficulty profile feeds the rounds (handled in startGame) and where the level
-  // result is recorded (submitJourneyLevel).
+  // Both modes score client-side via submitSelection; mode only affects which
+  // difficulty profile feeds the puzzle (handled in startGame) and how the result
+  // is persisted (progressStore for journey, no-op for practice).
   submit: () => get().submitSelection(),
 }))
