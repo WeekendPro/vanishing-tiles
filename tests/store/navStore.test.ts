@@ -42,3 +42,32 @@ describe('navStore', () => {
     expect(useNavStore.getState().appView).toBe('auth')
   })
 })
+
+describe('level order + next level', () => {
+  beforeEach(() => useNavStore.getState().reset())
+
+  it('stores the ordered level ids', () => {
+    useNavStore.getState().setLevelOrder(['a', 'b', 'c'])
+    expect(useNavStore.getState().levelOrder).toEqual(['a', 'b', 'c'])
+  })
+
+  it('goNextLevel opens the following level, no-op at the end', () => {
+    const nav = useNavStore.getState()
+    nav.setLevelOrder(['a', 'b', 'c'])
+    nav.openLevel('b')
+    nav.goNextLevel()
+    expect(useNavStore.getState().selectedLevelId).toBe('c')
+    expect(useNavStore.getState().appView).toBe('levelDetail')
+    nav.goNextLevel() // already at last → stays
+    expect(useNavStore.getState().selectedLevelId).toBe('c')
+  })
+
+  it('hasNextLevel reflects position', () => {
+    const nav = useNavStore.getState()
+    nav.setLevelOrder(['a', 'b'])
+    nav.openLevel('a')
+    expect(useNavStore.getState().hasNextLevel()).toBe(true)
+    nav.openLevel('b')
+    expect(useNavStore.getState().hasNextLevel()).toBe(false)
+  })
+})

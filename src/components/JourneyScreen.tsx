@@ -28,6 +28,7 @@ function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'loc
 
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
+  const setLevelOrder = useNavStore(s => s.setLevelOrder)
   const [themes, setThemes] = useState<JourneyTheme[] | null>(null)
   const [error, setError] = useState(false)
 
@@ -35,11 +36,13 @@ export function JourneyScreen() {
     setError(false)
     setThemes(null)
     try {
-      setThemes((await track(getJourney())) as JourneyTheme[])
+      const data = (await track(getJourney())) as JourneyTheme[]
+      setThemes(data)
+      setLevelOrder(data.flatMap(t => (t.levels ?? []).map(l => l.level_id)))
     } catch {
       setError(true)
     }
-  }, [])
+  }, [setLevelOrder])
 
   useEffect(() => { load() }, [load])
 
