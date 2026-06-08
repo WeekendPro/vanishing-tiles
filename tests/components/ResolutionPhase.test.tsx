@@ -338,6 +338,44 @@ describe('ResolutionPhase — journey single play', () => {
   })
 })
 
+describe('ResolutionPhase — journey failure CTA', () => {
+  it('journey failure WITH lives left shows Try Again (retries same puzzle), not Play Again', async () => {
+    useNavStore.getState().reset()
+    useNavStore.getState().setLevelOrder(['L1', 'L2'])
+    useNavStore.getState().openLevel('L1')
+    act(() => {
+      useGameStore.setState({
+        mode: 'journey', activeComponent: 'main', levelId: 'L1', phase: 'resolving',
+        selection: [], gaps: [], grid: [], livesRemaining: 2, livesLost: 1,
+        _resolution: { kind: 'partial', placements: [], coverage: 0.5, reason: 'missed-one' },
+        roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
+      } as any)
+    })
+    render(<ResolutionPhase />)
+    expect(await screen.findByText(/Try Again/i)).toBeTruthy()
+    expect(screen.getByText(/Back to Level/i)).toBeTruthy()
+    expect(screen.queryByText(/Play Again/i)).toBeNull()
+    expect(screen.queryByText(/Next Level/i)).toBeNull()
+  })
+
+  it('journey failure OUT of lives shows Play Again, not Try Again', async () => {
+    useNavStore.getState().reset()
+    useNavStore.getState().setLevelOrder(['L1', 'L2'])
+    useNavStore.getState().openLevel('L1')
+    act(() => {
+      useGameStore.setState({
+        mode: 'journey', activeComponent: 'main', levelId: 'L1', phase: 'resolving',
+        selection: [], gaps: [], grid: [], livesRemaining: 0, livesLost: 2,
+        _resolution: { kind: 'partial', placements: [], coverage: 0.3, reason: 'missed-many' },
+        roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
+      } as any)
+    })
+    render(<ResolutionPhase />)
+    expect(await screen.findByText(/Play Again/i)).toBeTruthy()
+    expect(screen.queryByText(/Try Again/i)).toBeNull()
+  })
+})
+
 describe('ResolutionPhase in journey mode', () => {
   it('shows the journey per-component CTAs (Play Again / Back to Level) on a clear — NOT a practice-style Next Round', () => {
     useNavStore.getState().reset()

@@ -29,7 +29,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, activeComponent, levelId, livesLost, replayComponent } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, activeComponent, levelId, livesLost, replayComponent, retryComponent } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       gaps: s.gaps,
@@ -47,6 +47,7 @@ export function ResolutionPhase() {
       levelId: s.levelId,
       livesLost: s.livesLost,
       replayComponent: s.replayComponent,
+      retryComponent: s.retryComponent,
     })))
   const { showResults, openLevel, goNextLevel, hasNextLevel } = useNavStore(useShallow(s => ({
     showResults: s.showResults,
@@ -90,7 +91,8 @@ export function ResolutionPhase() {
   const reduceMotion = useReducedMotion()
 
   const isJourney = mode === 'journey'
-  const journeyProgress = isJourney && levelId ? useProgressStore.getState().getLevel(levelId) : null
+  const progressEntry = useProgressStore(s => (levelId ? s.byLevel[levelId] : undefined))
+  const journeyProgress = progressEntry ?? null
   const jLevelTotal = journeyProgress ? progressLevelTotal(journeyProgress) : 0
   const jStars = journeyProgress ? progressLevelStars(journeyProgress) : 0
 
@@ -281,10 +283,32 @@ export function ResolutionPhase() {
       {stage === 'cta' && isJourney && (
         <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
           <div className="w-full max-w-sm pointer-events-auto flex flex-col gap-3">
-            <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
-            <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
-            {hasNextLevel() && (
-              <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
+            {/* Case 1: Solve — Play Again, Back to Level, Next Level (if available) */}
+            {!isFailure && (
+              <>
+                <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
+                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
+                {hasNextLevel() && (
+                  <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
+                )}
+              </>
+            )}
+            {/* Case 2: Failure with lives left — Try Again (same puzzle), Back to Level */}
+            {isFailure && !outOfLives && (
+              <>
+                <NeonButton fullWidth variant="primary" onClick={() => retryComponent()}>Try Again ↺</NeonButton>
+                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
+              </>
+            )}
+            {/* Case 3: Failure, out of lives — Play Again (fresh puzzle), Back to Level, Next Level (if available) */}
+            {isFailure && outOfLives && (
+              <>
+                <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
+                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
+                {hasNextLevel() && (
+                  <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
+                )}
+              </>
             )}
           </div>
         </div>
