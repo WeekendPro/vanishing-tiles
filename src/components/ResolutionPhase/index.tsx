@@ -14,6 +14,10 @@ import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
 import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX } from '@shared/core/scoring'
+import { useProgressStore, levelTotal as progressLevelTotal, levelStars as progressLevelStars } from '../../store/progressStore'
+import { COMPONENT_LABEL } from '../../lib/components'
+import { ComponentScorePanel } from './ComponentScorePanel'
+import { NeonButton } from '../ui'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -25,7 +29,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, activeComponent, levelId, livesLost, replayComponent } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       gaps: s.gaps,
@@ -38,8 +42,18 @@ export function ResolutionPhase() {
       roundIndex: s.roundIndex,
       livesRemaining: s.livesRemaining,
       advanceRound: s.advanceRound,
+      mode: s.mode,
+      activeComponent: s.activeComponent,
+      levelId: s.levelId,
+      livesLost: s.livesLost,
+      replayComponent: s.replayComponent,
     })))
-  const showResults = useNavStore(s => s.showResults)
+  const { showResults, openLevel, goNextLevel, hasNextLevel } = useNavStore(useShallow(s => ({
+    showResults: s.showResults,
+    openLevel: s.openLevel,
+    goNextLevel: s.goNextLevel,
+    hasNextLevel: s.hasNextLevel,
+  })))
   const solution = resolution?.placements ?? null
 
   const slots = useMemo(() => expandCartSlots(selection), [selection])
@@ -75,6 +89,11 @@ export function ResolutionPhase() {
 
   const reduceMotion = useReducedMotion()
 
+  const isJourney = mode === 'journey'
+  const journeyProgress = isJourney && levelId ? useProgressStore.getState().getLevel(levelId) : null
+  const jLevelTotal = journeyProgress ? progressLevelTotal(journeyProgress) : 0
+  const jStars = journeyProgress ? progressLevelStars(journeyProgress) : 0
+
   // Reduced motion: skip the flight. Apply all placements immediately,
   // fill consumed/rejected, then jump straight to the CTA (with the badge + score visible).
   useEffect(() => {
@@ -85,9 +104,9 @@ export function ResolutionPhase() {
     for (const s of slots) (slotToPlacement.has(s.slotIndex) ? good : bad).add(s.slotIndex)
     setConsumed(good)
     setRejected(bad)
-    commitRoundScore()
+    if (!isJourney) commitRoundScore()
     setStage('cta')
-  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement])
+  }, [reduceMotion, stage, solution, applyPlacement, commitRoundScore, slots, slotToPlacement, isJourney])
 
   // Measure the container rect, then kick off the walk.
   useLayoutEffect(() => {
@@ -152,11 +171,11 @@ export function ResolutionPhase() {
     // finishes counting up — that way the GameShell header's running
     // total updates at the same moment the panel total settles.
     const t = window.setTimeout(() => {
-      commitRoundScore()
+      if (!isJourney) commitRoundScore()
       setStage('cta')
     }, SCORING_DURATION)
     return () => clearTimeout(t)
-  }, [stage, commitRoundScore])
+  }, [stage, commitRoundScore, isJourney])
 
   const badgeShown = stage === 'badge' || stage === 'scoring' || stage === 'cta'
 
@@ -224,23 +243,49 @@ export function ResolutionPhase() {
         )}
 
         {/* Score breakdown flows in normal document flow beneath the board. */}
-        {roundScore && (
-          <ScorePanel
-            roundScore={roundScore}
-            grandTotal={grandTotal}
-            show={stage === 'scoring' || stage === 'cta'}
-            isFailure={isFailure}
-            speedSlow={speedSlow}
-          />
+        {isJourney ? (
+          roundScore && (
+            <ComponentScorePanel
+              show={stage === 'scoring' || stage === 'cta'}
+              componentLabel={COMPONENT_LABEL[activeComponent ?? 'main']}
+              solved={!isFailure}
+              livesLost={livesLost}
+              componentTotal={roundScore.total}
+              levelTotal={jLevelTotal}
+              stars={jStars}
+            />
+          )
+        ) : (
+          roundScore && (
+            <ScorePanel
+              roundScore={roundScore}
+              grandTotal={grandTotal}
+              show={stage === 'scoring' || stage === 'cta'}
+              isFailure={isFailure}
+              speedSlow={speedSlow}
+            />
+          )
         )}
       </div>
 
       {/* Action button pinned to the bottom of the screen — always tappable
           without scrolling, with a gradient scrim so content scrolls under it. */}
-      {stage === 'cta' && (
+      {stage === 'cta' && !isJourney && (
         <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
           <div className="w-full max-w-sm pointer-events-auto">
             <NextRoundButton show onClick={handleCta} label={ctaLabel} variant={ctaVariant} />
+          </div>
+        </div>
+      )}
+
+      {stage === 'cta' && isJourney && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
+          <div className="w-full max-w-sm pointer-events-auto flex flex-col gap-3">
+            <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
+            <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
+            {hasNextLevel() && (
+              <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
+            )}
           </div>
         </div>
       )}

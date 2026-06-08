@@ -312,17 +312,47 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
 
 import { useNavStore } from '../../src/store/navStore'
 
-describe('ResolutionPhase in journey mode', () => {
-  it('shows the per-round Next Round CTA (NOT an immediate results hand-off) on a non-final round clear', () => {
+describe('ResolutionPhase — journey single play', () => {
+  it('shows Play Again / Back to Level / Next Level after a solved component', async () => {
     useNavStore.getState().reset()
-    // Journey now runs the SAME per-round machinery as practice: a non-final
-    // clear shows "Next Round →" and does NOT jump to the results screen.
+    useNavStore.getState().setLevelOrder(['L1', 'L2'])
+    useNavStore.getState().openLevel('L1')
     act(() => {
       useGameStore.setState({
         mode: 'journey',
+        activeComponent: 'main',
+        levelId: 'L1',
+        phase: 'resolving',
+        selection: [],
+        gaps: [],
+        grid: [],
+        _resolution: { kind: 'perfect', placements: [], coverage: 1 },
+        roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 90 },
+        livesLost: 0,
+      } as any)
+    })
+    render(<ResolutionPhase />)
+    expect(await screen.findByText(/Play Again/i)).toBeTruthy()
+    expect(screen.getByText(/Back to Level/i)).toBeTruthy()
+    expect(screen.getByText(/Next Level/i)).toBeTruthy()
+  })
+})
+
+describe('ResolutionPhase in journey mode', () => {
+  it('shows the journey per-component CTAs (Play Again / Back to Level) on a clear — NOT a practice-style Next Round', () => {
+    useNavStore.getState().reset()
+    useNavStore.getState().setLevelOrder(['L1'])
+    useNavStore.getState().openLevel('L1')
+    // Journey shows the component-result CTAs, not the practice round-by-round gauntlet.
+    act(() => {
+      useGameStore.setState({
+        mode: 'journey',
+        activeComponent: 'main',
+        levelId: 'L1',
         phase: 'resolving',
         roundIndex: 1,
         livesRemaining: 3,
+        livesLost: 0,
         selection: [{ pieceType: 'O', freeCount: 1 }],
         grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
         roundScore: { accuracy: 0, speedBonus: 1200, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 1200 },
@@ -334,19 +364,25 @@ describe('ResolutionPhase in journey mode', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    expect(screen.getByText(/Next Round/)).toBeInTheDocument()
+    expect(screen.getByText(/Play Again/i)).toBeInTheDocument()
+    expect(screen.getByText(/Back to Level/i)).toBeInTheDocument()
     expect(useNavStore.getState().appView).not.toBe('results')
   })
 
-  it('routes to results on the final round clear in journey mode', async () => {
+  it('Back to Level navigates to the level detail screen', async () => {
     const user = userEvent.setup()
     useNavStore.getState().reset()
+    useNavStore.getState().setLevelOrder(['L1'])
+    useNavStore.getState().openLevel('L1')
     act(() => {
       useGameStore.setState({
         mode: 'journey',
+        activeComponent: 'main',
+        levelId: 'L1',
         phase: 'resolving',
         roundIndex: 3,
         livesRemaining: 3,
+        livesLost: 0,
         roundResults: [1200, 1200, 1200],
         selection: [{ pieceType: 'O', freeCount: 1 }],
         grid: emptyAt(fullGrid(), [[0, 0], [0, 1], [1, 0], [1, 1]]),
@@ -359,8 +395,8 @@ describe('ResolutionPhase in journey mode', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    await user.click(screen.getByText(/Level Complete/i))
-    expect(useGameStore.getState().levelComplete).toBe(true)
-    expect(useNavStore.getState().appView).toBe('results')
+    await user.click(screen.getByText(/Back to Level/i))
+    expect(useNavStore.getState().appView).toBe('levelDetail')
+    expect(useNavStore.getState().selectedLevelId).toBe('L1')
   })
 })
