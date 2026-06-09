@@ -174,7 +174,7 @@ export function LevelScreen() {
             {/* Last Attempt */}
             <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
               <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⏱ LAST ATTEMPT</div>
-              <div className="text-sm font-bold text-zinc-200">{relativeTime(lastPlayedStr)}</div>
+              <div className="text-sm font-bold text-zinc-200 first-letter:uppercase">{relativeTime(lastPlayedStr)}</div>
             </div>
 
             {/* Difficulty */}
@@ -184,8 +184,8 @@ export function LevelScreen() {
             </div>
           </div>
 
-          {/* PLAY badge — centered, half-width */}
-          <div className="w-1/2 mx-auto">
+          {/* PLAY badge — centered; ~half width but grows to fit the level name (never wraps) */}
+          <div className="w-fit min-w-[50%] max-w-full mx-auto">
             <RibbonBadge
               data-testid="badge-main"
               glyph={<PlayGlyph />}
@@ -197,6 +197,7 @@ export function LevelScreen() {
               foldColor="#0e7a36"
               cardAccent="green"
               vibrant
+              caption={level.name}
               onClick={() => play('main')}
             />
           </div>

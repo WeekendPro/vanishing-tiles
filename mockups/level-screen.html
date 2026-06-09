@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Level Screen — v5 (ribbon overlap, light border, sans title)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;}
+  .glow-cyan{text-shadow:0 0 8px rgba(34,211,238,.6);}
+  .glow-mag{text-shadow:0 0 8px rgba(255,45,149,.7);}
+  .glow-gold{text-shadow:0 0 10px rgba(250,204,21,.8);}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .phone{width:412px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;}
+  .star-fill{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+</style>
+</head>
+<body class="bg-zinc-950 text-white p-8">
+
+<h1 class="text-2xl font-black mb-1">Level Screen · v5 — ribbon overlaps circle · sans title · light border</h1>
+<p class="text-zinc-400 mb-8 text-sm max-w-3xl">Ribbon now sits higher and overlaps the emblem; the puzzle name uses a normal bold sans (Inter), not the pixel font; the circle has a light-colored border. Pick the border color from the row on the right.</p>
+
+<div class="flex gap-10 items-start flex-wrap">
+
+  <!-- FULL SCREEN -->
+  <div>
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Full screen · border = WHITE</div>
+    <div class="phone relative rounded-[1.6rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+      <div class="relative px-5 py-5">
+        <button class="text-arcade-edge text-sm mb-4">&larr; Map</button>
+        <div class="text-center mb-4">
+          <div class="font-pixel text-[9px] tracking-[0.25em] text-neon-magenta glow-mag mb-3">THE HOLLOWS</div>
+          <h2 class="font-pixel text-[19px] leading-tight tracking-[0.04em] text-neon-cyan glow-cyan mb-3">VACANT<br>HEIGHTS</h2>
+          <div class="text-4xl leading-none"><span class="text-neon-yellow glow-gold">★</span><span class="text-neon-yellow glow-gold">★</span><span class="text-zinc-700">★</span><span class="text-zinc-700">★</span><span class="text-zinc-700">★</span></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-5">
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">🏆 WORLD RECORD</div><div class="font-pixel text-base text-white">456</div></div>
+          <div class="rounded-lg border border-neon-cyan/40 bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⭐ YOUR RECORD</div><div class="font-pixel text-base text-neon-cyan glow-cyan">200</div></div>
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⏱ LAST ATTEMPT</div><div class="text-sm font-bold text-zinc-200">just now</div></div>
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">DIFFICULTY</div><div class="flex items-end gap-1.5 h-5"><span class="w-2 h-5 rounded-sm bg-neon-magenta" style="box-shadow:0 0 6px #ff2d95"></span><span class="w-2 h-5 rounded-sm bg-neon-magenta" style="box-shadow:0 0 6px #ff2d95"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span></div></div>
+        </div>
+        <div class="w-1/2 mx-auto" id="main"></div>
+        <div class="text-center text-[8px] font-pixel tracking-[0.28em] text-zinc-500 my-4">ADDITIONAL CHALLENGES</div>
+        <div class="grid grid-cols-2 gap-3 mb-3" id="row2"></div>
+        <div class="grid grid-cols-2 gap-3" id="row3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BORDER COLOR OPTIONS -->
+  <div>
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Border color · pick one</div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-6 grid grid-cols-2 gap-5" id="borders"></div>
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mt-6 mb-2 font-bold">States (white border)</div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-6 grid grid-cols-3 gap-4" id="states"></div>
+  </div>
+
+</div>
+
+<script>
+const glyph = {
+  play:`<svg width="34" height="34" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>`,
+  wheel:`<div class="w-full h-full rounded-full" style="background:conic-gradient(#ef4444,#f59e0b,#facc15,#22c55e,#06b6d4,#6366f1,#a855f7,#ef4444)"></div>`,
+  seq:`<div class="flex items-center">
+      <div style="transform:rotate(-9deg)" class="w-[19px] h-[19px] rounded-[5px] bg-red-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"><span class="font-black text-[12px] text-white">1</span></div>
+      <div style="transform:rotate(5deg);margin-left:-2px" class="w-[19px] h-[19px] rounded-[5px] bg-sky-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"><span class="font-black text-[12px] text-white">2</span></div>
+      <div style="transform:rotate(-4deg);margin-left:-2px" class="w-[19px] h-[19px] rounded-[5px] bg-amber-400 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"><span class="font-black text-[12px] text-white">3</span></div></div>`,
+  eyes:`<span style="font-size:44px;line-height:1">👀</span>`,
+  riddle:`<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>`,
+};
+const centerBg = { play:'linear-gradient(135deg,#34d399,#16a34a)', wheel:'#0a1226', seq:'linear-gradient(135deg,#334155,#0f172a)', eyes:'radial-gradient(circle at 50% 38%,#16233f,#070b18)', riddle:'linear-gradient(135deg,#2dd4bf,#0f766e)' };
+
+/* double-ring emblem with LIGHT border color */
+function medallion(kind,border){
+  const inner = kind==='wheel' ? glyph.wheel : `<div class="grid place-items-center w-full h-full">${glyph[kind]}</div>`;
+  return `<div class="relative shrink-0" style="width:104px;height:104px">
+    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120" style="filter:drop-shadow(0 0 4px ${border}66)">
+      <circle cx="60" cy="60" r="57" fill="none" stroke="${border}" stroke-width="2.5"/>
+      <circle cx="60" cy="60" r="49" fill="none" stroke="${border}" stroke-width="6"/></svg>
+    <div class="absolute rounded-full overflow-hidden" style="inset:13px;background:${centerBg[kind]}">${inner}</div></div>`;
+}
+
+/* ribbon overlapping the circle; title in normal bold sans */
+function ribbon(title,col){
+  const c=col||'#c81e3a', fold=col?'#0e7a36':'#7f1226';
+  return `<svg viewBox="0 0 200 78" class="absolute" style="width:150%;left:-25%;top:42%">
+    <path d="M46 6 L78 6 L70 30 L42 25 Z" fill="${fold}"/>
+    <path d="M154 6 L122 6 L130 30 L158 25 Z" fill="${fold}"/>
+    <path d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z" fill="${c}" stroke="rgba(255,255,255,.30)" stroke-width="1.5"/>
+    <text x="100" y="40" text-anchor="middle" fill="white" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-weight="800" font-size="15" letter-spacing=".5">${title}</text></svg>`;
+}
+
+function foot(state,score){
+  if(state==='locked')   return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>`;
+  if(state==='incomplete')return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.8 5.5 21 7.5 13.5 2 9h7z"/></svg>`;
+  if(state==='complete') return `<div class="relative w-9 h-9"><div class="absolute inset-0 star-fill" style="background:linear-gradient(160deg,#fde047,#f59e0b);filter:drop-shadow(0 0 6px rgba(250,204,21,.8))"></div><span class="absolute inset-0 grid place-items-center text-[11px] font-black text-amber-950">${score}</span></div>`;
+  if(state==='soon')     return `<span class="text-[8px] font-pixel tracking-wider text-zinc-500">SOON</span>`;
+}
+
+function badge(kind,title,state,score,opts){
+  opts=opts||{};
+  const vibrant = opts.alwaysVibrant || state==='complete';
+  const dull = vibrant?'':'opacity-50 grayscale-[.5]';
+  const bd = opts.border || '#ffffff';
+  const cardBorder = opts.green?'border-neon-green shadow-[0_0_14px_rgba(57,217,138,.4)]':(vibrant?'border-neon-cyan shadow-[0_0_12px_rgba(34,211,238,.35)]':'border-arcade-edge');
+  return `<button class="relative rounded-xl border-2 ${cardBorder} bg-arcade-panel panel-inset px-3 pt-4 pb-3 flex flex-col items-center w-full">
+    <div class="relative ${dull}" style="padding-bottom:40px">${medallion(kind,bd)}${ribbon(title,opts.ribCol)}</div>
+    <div class="h-9 grid place-items-center mt-1">${foot(state,score)}</div></button>`;
+}
+
+document.getElementById('main').innerHTML  = badge('play','PLAY','complete',100,{green:true,alwaysVibrant:true,ribCol:'#16a34a',border:'#ffffff'});
+document.getElementById('row2').innerHTML  = badge('wheel','COLORS','complete',100,{border:'#ffffff'}) + badge('seq','SEQUENCE','incomplete',0,{border:'#ffffff'});
+document.getElementById('row3').innerHTML  = badge('eyes',"DON'T BLINK",'incomplete',0,{border:'#ffffff'}) + badge('riddle','RIDDLE','soon',0,{border:'#ffffff'});
+
+function bcol(lbl,hex){return `<div class="flex flex-col items-center gap-2"><div class="text-[9px] font-pixel text-zinc-400">${lbl}</div><div style="width:188px">${badge('wheel','COLORS','complete',100,{border:hex})}</div></div>`;}
+document.getElementById('borders').innerHTML =
+  bcol('WHITE','#ffffff') + bcol('LIGHT CYAN','#a5f3fc') +
+  bcol('LIGHT YELLOW','#fde68a') + bcol('LIGHT SLATE','#cbd5e1');
+
+document.getElementById('states').innerHTML =
+  `<div>${badge('seq','SEQUENCE','locked',0,{border:'#ffffff'})}</div>`+
+  `<div>${badge('seq','SEQUENCE','incomplete',0,{border:'#ffffff'})}</div>`+
+  `<div>${badge('seq','SEQUENCE','complete',74,{border:'#ffffff'})}</div>`;
+</script>
+</body>
+</html>

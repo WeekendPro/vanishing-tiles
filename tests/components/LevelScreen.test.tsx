@@ -23,8 +23,8 @@ beforeEach(() => {
 describe('LevelScreen', () => {
   it('renders name, difficulty pips, a Play button and four badges', async () => {
     render(<LevelScreen />)
-    // Level name appears in the hero
-    expect(await screen.findByText('Cellar Door')).toBeTruthy()
+    // Level name appears in the hero (and again as the PLAY badge caption)
+    expect((await screen.findAllByText('Cellar Door')).length).toBeGreaterThan(0)
     // PLAY badge button
     expect(screen.getByTestId('badge-main')).toBeTruthy()
     // Four challenge badges by testid
@@ -43,7 +43,7 @@ describe('LevelScreen', () => {
 
   it('locks badges until the main puzzle is solved', async () => {
     render(<LevelScreen />)
-    await screen.findByText('Cellar Door')
+    await screen.findAllByText('Cellar Door')
     const colors = screen.getByTestId('badge-colors')
     expect(colors).toBeDisabled()
     useProgressStore.getState().recordPlay('L1', 'main', 90)
@@ -53,13 +53,13 @@ describe('LevelScreen', () => {
   it('Riddle stays a Coming soon placeholder even after main is solved', async () => {
     useProgressStore.getState().recordPlay('L1', 'main', 90)
     render(<LevelScreen />)
-    await screen.findByText('Cellar Door')
+    await screen.findAllByText('Cellar Door')
     expect(screen.getByTestId('badge-riddle')).toBeDisabled()
   })
 
   it("Don't Blink badge renders (formerly Flash)", async () => {
     render(<LevelScreen />)
-    await screen.findByText('Cellar Door')
+    await screen.findAllByText('Cellar Door')
     expect(screen.getByTestId('badge-flash')).toBeTruthy()
     expect(screen.getByText("DON'T BLINK")).toBeTruthy()
   })

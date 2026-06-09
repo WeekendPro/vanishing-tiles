@@ -22,6 +22,8 @@ export interface RibbonBadgeProps {
   cardAccent?: 'cyan' | 'green'
   /** Force vibrant state regardless of completion (e.g. PLAY badge) */
   vibrant?: boolean
+  /** Optional caption rendered below the footer (e.g. the level name on the PLAY badge) */
+  caption?: string
   disabled?: boolean
   onClick?: () => void
   'data-testid'?: string
@@ -60,7 +62,7 @@ function FooterContent({ state, score }: { state: RibbonBadgeProps['state']; sco
   }
   if (state === 'complete') {
     return (
-      <div className="relative w-9 h-9">
+      <div className="relative w-[46px] h-[46px]">
         <div
           className="absolute inset-0"
           style={{
@@ -89,12 +91,15 @@ export function RibbonBadge({
   foldColor = '#7f1226',
   cardAccent = 'cyan',
   vibrant: vibrantProp,
+  caption,
   disabled,
   onClick,
   'data-testid': testId,
 }: RibbonBadgeProps) {
   const vibrant = vibrantProp || state === 'complete'
-  const dull = vibrant ? '' : 'opacity-50 grayscale-[.5]'
+  // Dim ONLY when the puzzle isn't available yet (locked, or "coming soon").
+  // Unlocked puzzles — incomplete or complete — render at full color.
+  const dull = state === 'locked' || state === 'soon' ? 'opacity-50 grayscale-[.5]' : ''
 
   let cardBorderClass: string
   if (cardAccent === 'green') {
@@ -156,6 +161,7 @@ export function RibbonBadge({
             x="100"
             y="40"
             textAnchor="middle"
+            dominantBaseline="central"
             fill="white"
             fontFamily="ui-sans-serif, system-ui, sans-serif"
             fontWeight="800"
@@ -168,9 +174,16 @@ export function RibbonBadge({
       </div>
 
       {/* Footer: lock / hollow star / gold star with score / SOON */}
-      <div className="h-9 grid place-items-center mt-1">
+      <div className="h-12 grid place-items-center mt-1">
         <FooterContent state={state} score={score} />
       </div>
+
+      {/* Optional caption (e.g. the level name on the PLAY badge) — never wraps */}
+      {caption && (
+        <div className="text-[13px] font-bold tracking-wide text-neon-cyan whitespace-nowrap leading-tight">
+          {caption}
+        </div>
+      )}
     </button>
   )
 }

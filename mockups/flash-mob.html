@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Don't Blink — icon round 3 (two eyes)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .star-fill{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+</style>
+</head>
+<body class="bg-zinc-950 text-white p-8">
+
+<h1 class="text-2xl font-black mb-1">“Don't Blink” — round 3 · two eyes &amp; emoji</h1>
+<p class="text-zinc-400 mb-8 text-sm max-w-3xl">Dark navy backing so the eyes pop. Custom flat <b>pair of eyes</b> (matches the badge art) vs the <b>👀 / 👁 emoji</b> vs a single flat eye. Badge shown complete/vibrant; big preview under each.</p>
+
+<div class="flex gap-7 flex-wrap" id="opts"></div>
+
+<script>
+function seal(points,r1,r2){let p='';for(let i=0;i<points*2;i++){const a=Math.PI*i/points-Math.PI/2;const r=i%2?r2:r1;p+=(i?'L':'M')+(60+r*Math.cos(a)).toFixed(1)+' '+(60+r*Math.sin(a)).toFixed(1);}return p+'Z';}
+const SEAL=seal(18,57,49);
+
+/* ===== one flat eye (looking up) ===== */
+function oneEye(id){
+  return `<svg viewBox="0 0 100 64" width="84" height="54">
+    <defs><clipPath id="o${id}"><path d="M6 32 Q50 0 94 32 Q50 64 6 32 Z"/></clipPath>
+      <radialGradient id="oi${id}" cx="46%" cy="38%" r="60%"><stop offset="0" stop-color="#bae6fd"/><stop offset="45%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e1b4b"/></radialGradient></defs>
+    <path d="M6 32 Q50 0 94 32 Q50 64 6 32 Z" fill="#fbfdff"/>
+    <g clip-path="url(#o${id})"><circle cx="50" cy="28" r="20" fill="url(#oi${id})"/>
+      <circle cx="50" cy="28" r="8.5" fill="#0a0f1c"/><circle cx="43" cy="22" r="4" fill="#fff"/></g>
+    <path d="M6 32 Q50 0 94 32 Q50 64 6 32 Z" fill="none" stroke="#0b1020" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M6 32 Q50 0 94 32" fill="none" stroke="#0b1020" stroke-width="5" stroke-linecap="round"/></svg>`;
+}
+
+/* ===== two flat eyes (looking up, 👀-ish) ===== */
+function twoEyes(id){
+  function eye(cx,sfx){
+    const x0=cx-20, x1=cx+20;
+    return `<defs><clipPath id="c${sfx}"><path d="M${x0} 33 Q${cx} 15 ${x1} 33 Q${cx} 51 ${x0} 33 Z"/></clipPath>
+        <radialGradient id="g${sfx}" cx="46%" cy="40%" r="62%"><stop offset="0" stop-color="#bae6fd"/><stop offset="45%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e1b4b"/></radialGradient></defs>
+      <path d="M${x0} 33 Q${cx} 15 ${x1} 33 Q${cx} 51 ${x0} 33 Z" fill="#fbfdff"/>
+      <g clip-path="url(#c${sfx})"><circle cx="${cx}" cy="29" r="11" fill="url(#g${sfx})"/>
+        <circle cx="${cx}" cy="29" r="5" fill="#0a0f1c"/><circle cx="${cx-4}" cy="25" r="2.4" fill="#fff"/></g>
+      <path d="M${x0} 33 Q${cx} 15 ${x1} 33 Q${cx} 51 ${x0} 33 Z" fill="none" stroke="#0b1020" stroke-width="3.4" stroke-linejoin="round"/>
+      <path d="M${x0} 33 Q${cx} 15 ${x1} 33" fill="none" stroke="#0b1020" stroke-width="4.2" stroke-linecap="round"/>`;
+  }
+  return `<svg viewBox="0 0 116 60" width="92" height="48">${eye(33,id+'L')}${eye(83,id+'R')}</svg>`;
+}
+
+function medallion(innerHTML,bg){
+  return `<div class="relative shrink-0" style="width:104px;height:104px">
+    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120"><defs>
+      <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset=".5" stop-color="#f59e0b"/><stop offset="1" stop-color="#b45309"/></linearGradient></defs>
+      <path d="${SEAL}" fill="url(#gold)" stroke="#92400e" stroke-width="1.5"/>
+      <circle cx="60" cy="60" r="44" fill="none" stroke="#fff7ed" stroke-opacity=".35" stroke-width="2"/></svg>
+    <div class="absolute inset-[15px] rounded-full grid place-items-center overflow-hidden" style="background:${bg}">${innerHTML}</div></div>`;
+}
+function ribbon(t){return `<svg viewBox="0 0 190 40" class="w-full"><path d="M14 6 H176 L162 20 H176 L162 34 H14 L28 20 L14 6 Z" fill="#e11d48" stroke="#fb7185" stroke-opacity=".5" stroke-width="1.5"/><text x="92" y="25" text-anchor="middle" fill="white" font-family="'Press Start 2P'" font-size="8.5">${t}</text></svg>`;}
+function tails(){return `<svg viewBox="0 0 190 50" class="absolute left-0 right-0 -bottom-1"><path d="M60 0 L48 46 L64 36 L78 46 L78 8 Z" fill="#9f1239"/><path d="M130 0 L142 46 L126 36 L112 46 L112 8 Z" fill="#9f1239"/></svg>`;}
+function star(){return `<div class="relative w-9 h-9"><div class="absolute inset-0 star-fill" style="background:linear-gradient(160deg,#fde047,#f59e0b);filter:drop-shadow(0 0 6px rgba(250,204,21,.8))"></div><span class="absolute inset-0 grid place-items-center text-[11px] font-black text-amber-950">92</span></div>`;}
+
+function badge(innerHTML,bg){
+  return `<button class="rounded-xl border-2 border-neon-cyan shadow-[0_0_12px_rgba(34,211,238,.35)] bg-arcade-panel panel-inset px-4 pt-4 pb-3 flex flex-col items-center" style="width:194px">
+    <div class="flex flex-col items-center">${medallion(innerHTML,bg)}
+      <div class="relative w-[170px] -mt-2">${tails()}<div class="relative">${ribbon("DON'T BLINK")}</div></div></div>
+    <div class="h-9 grid place-items-center mt-2">${star()}</div></button>`;
+}
+function col(lbl,inner,bg){
+  return `<div class="flex flex-col items-center gap-3">
+    <div class="text-[9px] font-pixel text-zinc-400 text-center h-6">${lbl}</div>
+    ${badge(inner,bg)}
+    <div class="rounded-full grid place-items-center overflow-hidden" style="width:120px;height:120px;background:${bg}"><div class="scale-[1.35]">${inner}</div></div>
+    <div class="text-[8px] text-zinc-500">big preview</div></div>`;
+}
+
+const NAVY='#0a1226', NAVY2='radial-gradient(circle at 50% 38%,#16233f,#070b18)';
+document.getElementById('opts').innerHTML =
+  col('A · TWO FLAT EYES', twoEyes('a'), NAVY2) +
+  col('B · 👀 EMOJI',       `<span style="font-size:52px;line-height:1">👀</span>`, NAVY2) +
+  col('C · ONE FLAT EYE',  oneEye('c'), NAVY2) +
+  col('D · 👁 EMOJI',       `<span style="font-size:56px;line-height:1">👁️</span>`, NAVY2);
+</script>
+</body>
+</html>
