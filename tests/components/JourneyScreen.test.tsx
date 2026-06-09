@@ -6,6 +6,18 @@ vi.mock('../../src/lib/api', () => ({ getJourney: vi.fn() }))
 import * as api from '../../src/lib/api'
 import { JourneyScreen } from '../../src/components/JourneyScreen'
 import { useNavStore } from '../../src/store/navStore'
+import { useProgressStore, emptyLevelProgress, type ProgressMap } from '../../src/store/progressStore'
+
+/** Build a client-progress map that marks the given level ids' Main puzzle solved. */
+function clearedProgress(levelIds: string[]): ProgressMap {
+  const out: ProgressMap = {}
+  for (const id of levelIds) {
+    const p = emptyLevelProgress()
+    p.best.main = 80
+    out[id] = p
+  }
+  return out
+}
 
 const JOURNEY = [
   { theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: 'standard', sort_order: 1,
@@ -27,6 +39,8 @@ const ALL_CLEAR = JOURNEY.map(t => ({
 
 beforeEach(() => {
   useNavStore.getState().reset()
+  useProgressStore.setState({ byLevel: {} })
+  localStorage.clear()
   vi.clearAllMocks()
 })
 
@@ -74,6 +88,8 @@ describe('JourneyScreen', () => {
 
   it('shows the all-clear badge when every level is cleared', async () => {
     ;(api.getJourney as any).mockResolvedValue(ALL_CLEAR)
+    // Completion is client-derived: mark every level's Main solved.
+    useProgressStore.setState({ byLevel: clearedProgress(['l1', 'l2', 'l11']) })
     render(<JourneyScreen />)
     expect(await screen.findByText(/Gap City cleared/i)).toBeInTheDocument()
   })

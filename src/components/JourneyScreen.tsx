@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getJourney } from '../lib/api'
 import { useNavStore } from '../store/navStore'
+import { useProgressStore } from '../store/progressStore'
+import { applyClientProgress } from '../lib/journeyProgress'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
 import { LockIcon } from './ui'
@@ -29,15 +31,18 @@ function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'loc
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
   const setLevelOrder = useNavStore(s => s.setLevelOrder)
-  const [themes, setThemes] = useState<JourneyTheme[] | null>(null)
+  // Completion lives in client progress (localStorage), not the server, so we
+  // re-derive the map's cleared/current/locked from it (see applyClientProgress).
+  const progress = useProgressStore(s => s.byLevel)
+  const [rawThemes, setRawThemes] = useState<JourneyTheme[] | null>(null)
   const [error, setError] = useState(false)
 
   const load = useCallback(async () => {
     setError(false)
-    setThemes(null)
+    setRawThemes(null)
     try {
       const data = (await track(getJourney())) as JourneyTheme[]
-      setThemes(data)
+      setRawThemes(data)
       setLevelOrder(data.flatMap(t => (t.levels ?? []).map(l => l.level_id)))
     } catch {
       setError(true)
@@ -45,6 +50,11 @@ export function JourneyScreen() {
   }, [setLevelOrder])
 
   useEffect(() => { load() }, [load])
+
+  const themes = useMemo(
+    () => (rawThemes ? applyClientProgress(rawThemes, progress) : null),
+    [rawThemes, progress],
+  )
 
   if (error) {
     return (
