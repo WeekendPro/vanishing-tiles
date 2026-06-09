@@ -36,6 +36,41 @@ const STAR_CLIP =
 /** Ring border color (light cyan per spec) */
 const RING_COLOR = '#a5f3fc'
 
+/** Star outline polygon (same proportions as STAR_CLIP, in a 0..100 box) */
+const STAR_POINTS = '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35'
+
+/** A gold star that fills from the bottom in proportion to the score (0–100). */
+function ScoreStar({ score = 0 }: { score?: number }) {
+  const pct = Math.max(0, Math.min(100, score))
+  return (
+    <div className="relative w-[46px] h-[46px]">
+      {/* Fill area, clipped to the star shape: faint track + gold fill rising from the bottom */}
+      <div className="absolute inset-0" style={{ clipPath: STAR_CLIP }}>
+        <div className="absolute inset-0" style={{ background: 'rgba(250,204,21,0.18)' }} />
+        <div
+          className="absolute inset-x-0 bottom-0"
+          style={{ height: `${pct}%`, background: 'linear-gradient(0deg,#f59e0b,#fde047)' }}
+        />
+      </div>
+      {/* Crisp star outline (overflow visible so the stroke isn't clipped) */}
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 100 100"
+        style={{ overflow: 'visible', filter: 'drop-shadow(0 0 5px rgba(250,204,21,.55))' }}
+      >
+        <polygon points={STAR_POINTS} fill="none" stroke="#fbbf24" strokeWidth="5" strokeLinejoin="round" />
+      </svg>
+      {/* Score, readable over both the gold fill and the faint track */}
+      <span
+        className="absolute inset-0 grid place-items-center text-[11px] font-black text-white"
+        style={{ textShadow: '0 1px 2px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.7)' }}
+      >
+        {score}
+      </span>
+    </div>
+  )
+}
+
 function FooterContent({ state, score }: { state: RibbonBadgeProps['state']; score?: number }) {
   if (state === 'locked') {
     return (
@@ -61,21 +96,7 @@ function FooterContent({ state, score }: { state: RibbonBadgeProps['state']; sco
     )
   }
   if (state === 'complete') {
-    return (
-      <div className="relative w-[46px] h-[46px]">
-        <div
-          className="absolute inset-0"
-          style={{
-            clipPath: STAR_CLIP,
-            background: 'linear-gradient(160deg,#fde047,#f59e0b)',
-            filter: 'drop-shadow(0 0 6px rgba(250,204,21,.8))',
-          }}
-        />
-        <span className="absolute inset-0 grid place-items-center text-[11px] font-black text-amber-950">
-          {score}
-        </span>
-      </div>
-    )
+    return <ScoreStar score={score} />
   }
   // soon
   return <span className="text-[8px] font-pixel tracking-wider text-zinc-500">SOON</span>
@@ -118,7 +139,7 @@ export function RibbonBadge({
       className={`relative rounded-xl border-2 ${cardBorderClass} bg-arcade-panel shadow-panel-inset px-3 pt-4 pb-3 flex flex-col items-center w-full transition`}
     >
       {/* Emblem + ribbon wrapper */}
-      <div className={`relative ${dull}`} style={{ paddingBottom: '40px' }}>
+      <div className={`relative ${dull}`} style={{ paddingBottom: '8px' }}>
         {/* Double-ring SVG — light cyan rings with soft glow */}
         <div className="relative shrink-0" style={{ width: '104px', height: '104px' }}>
           <svg
@@ -143,7 +164,7 @@ export function RibbonBadge({
         <svg
           viewBox="0 0 200 78"
           className="absolute"
-          style={{ width: '150%', left: '-25%', top: '42%' }}
+          style={{ width: '150%', left: '-25%', top: '54px' }}
         >
           {/* Left fold tab */}
           <path d="M46 6 L78 6 L70 30 L42 25 Z" fill={foldColor} />

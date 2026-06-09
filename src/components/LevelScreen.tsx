@@ -62,8 +62,8 @@ type BadgeRow = {
 
 const BADGE_ROWS: [BadgeRow, BadgeRow][] = [
   [
-    { key: 'colors',     glyphKind: 'wheel',  ribbonTitle: 'COLORS'   },
-    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'SEQUENCE' },
+    { key: 'colors',     glyphKind: 'wheel',  ribbonTitle: 'TRUE COLORS' },
+    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'IN ORDER'    },
   ],
   [
     { key: 'flash',      glyphKind: 'eyes',   ribbonTitle: "DON'T BLINK" },

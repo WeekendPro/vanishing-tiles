@@ -32,9 +32,9 @@ describe('LevelScreen', () => {
     expect(screen.getByTestId('badge-inSequence')).toBeTruthy()
     expect(screen.getByTestId('badge-flash')).toBeTruthy()
     expect(screen.getByTestId('badge-riddle')).toBeTruthy()
-    // Ribbon text: COLORS / SEQUENCE / DON'T BLINK / RIDDLE
-    expect(screen.getByText('COLORS')).toBeTruthy()
-    expect(screen.getByText('SEQUENCE')).toBeTruthy()
+    // Ribbon text: TRUE COLORS / IN ORDER / DON'T BLINK / RIDDLE
+    expect(screen.getByText('TRUE COLORS')).toBeTruthy()
+    expect(screen.getByText('IN ORDER')).toBeTruthy()
     expect(screen.getByText("DON'T BLINK")).toBeTruthy()
     expect(screen.getByText('RIDDLE')).toBeTruthy()
     // Exactly 5 difficulty pips

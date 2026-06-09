@@ -19,7 +19,7 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 Tapping a station on the map opens `LevelScreen`. Each level has **five components**:
 
 - **Main puzzle** — always playable from the start; must be solved to unlock the badges.
-- **Four opt-in badges** — Colors, In-Sequence, Flash, and Riddle (a "Coming soon" placeholder) — locked until the main puzzle is solved, then playable in any order and freely replayable.
+- **Four opt-in badges** — True Colors, In Order, Don't Blink, and Riddle (a "Coming soon" placeholder) — locked until the main puzzle is solved, then playable in any order and freely replayable. (Internal component keys remain `colors` / `inSequence` / `flash` / `riddle`.)
 
 Each component play (main or badge) has **3 lives** and runs one puzzle round end-to-end. Flow: `startComponent` → `countdown` → `beginViewing` → `viewing` → `selecting` → `resolving`.
 
@@ -39,8 +39,9 @@ When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the 
 
 #### Journey — per-component model (`src/lib/journeyScoring.ts`)
 
-- **Solved:** `base = 65 − 10 × livesLost` (giving 65 / 55 / 45) `+ speed`, where `speed = ceil(35 × (1 − consumed / allotted))`, capped at 100. Unsolved (all 3 lives lost) = **0**.
-- `consumed` = time used; `allotted` = `viewDuration + selectDuration` for most components, `selectDuration` only for Flash Mob (no view phase). Speed is measured on the **successful attempt** — retries each get a fresh clock.
+- **Solved:** `completion + time`, `ceil`, capped at 100. **Completion** = `50 − 10 × livesLost` (giving 50 / 40 / 30). **Time** = `50 × (1 − consumed / allotted)` (e.g. 10% of the clock consumed → 45; 50% → 25). Unsolved (all 3 lives lost) = **0**.
+- `consumed` = time used; `allotted` = `viewDuration + selectDuration` for most components, `selectDuration` only for Don't Blink (flash reveal, no skippable view phase). Time bonus is measured on the **successful attempt** — retries each get a fresh clock.
+- The completed badge's **star fills from the bottom in proportion to the score** (a 70 → a star ~70% full).
 - **Level total** = sum of best-score-per-component (0–500 across 5 × 100).
 - **Stars**: 1★ when main is solved; then 2★ ≥ 150 / 3★ ≥ 250 / 4★ ≥ 350 / 5★ ≥ 450.
 - **Difficulty pips** 1–5 are derived from gap count.
@@ -142,7 +143,7 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 - **Grid size:** 12 rows × 12 columns (square)
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
-- **Scoring philosophy:** Reward speed AND precision. Journey: per-component 0–100 score (base 65 − 10·livesLost + up to 35 speed); unsolved = 0. Practice: per-round speed+efficiency bonuses; failed rounds score 0 for that round.
+- **Scoring philosophy:** Reward speed AND precision. Journey: per-component 0–100 score (completion 50 − 10·livesLost + time up to 50); unsolved = 0. Practice: per-round speed+efficiency bonuses; failed rounds score 0 for that round.
 - **Lives:** 3 hearts per component/level. In Journey, a failed attempt replays the same puzzle (fresh clock); in Practice, a failed round costs a life and retries the same board.
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 

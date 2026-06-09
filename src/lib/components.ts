@@ -18,8 +18,8 @@ export const COMPONENT_THEME: Record<PlayableComponent, RoundTheme> = {
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
   main: 'Main',
-  colors: 'Colors',
-  inSequence: 'In-Sequence',
+  colors: 'True Colors',
+  inSequence: 'In Order',
   flash: "Don't Blink",
   riddle: 'Riddle',
 }

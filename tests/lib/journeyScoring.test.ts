@@ -7,19 +7,20 @@ describe('componentScore', () => {
   it('returns 0 when unsolved', () => {
     expect(componentScore({ solved: false, livesLost: 0, consumed: 0, allotted: 1000 })).toBe(0)
   })
-  it('the 97 example: no lives lost, 10% consumed → ceil(65 + 31.5) = 97', () => {
-    expect(componentScore({ solved: true, livesLost: 0, consumed: 100, allotted: 1000 })).toBe(97)
+  it('time half: 10% consumed → time 45 (total 95), 50% consumed → time 25 (total 75)', () => {
+    expect(componentScore({ solved: true, livesLost: 0, consumed: 100, allotted: 1000 })).toBe(95)
+    expect(componentScore({ solved: true, livesLost: 0, consumed: 500, allotted: 1000 })).toBe(75)
   })
-  it('subtracts 10 per life lost from the base', () => {
+  it('completion base is 50 / 40 / 30 for 0 / 1 / 2 lives lost (with full time bonus)', () => {
+    expect(componentScore({ solved: true, livesLost: 0, consumed: 0, allotted: 1000 })).toBe(100)
     expect(componentScore({ solved: true, livesLost: 1, consumed: 0, allotted: 1000 })).toBe(90)
     expect(componentScore({ solved: true, livesLost: 2, consumed: 0, allotted: 1000 })).toBe(80)
   })
-  it('caps at 100 and floors speed at 0', () => {
-    expect(componentScore({ solved: true, livesLost: 0, consumed: 0, allotted: 1000 })).toBe(100)
-    expect(componentScore({ solved: true, livesLost: 0, consumed: 5000, allotted: 1000 })).toBe(65)
+  it('caps at 100 and floors the time bonus at 0 (base only when out of time)', () => {
+    expect(componentScore({ solved: true, livesLost: 0, consumed: 5000, allotted: 1000 })).toBe(50)
   })
-  it('treats a zero/negative allotted as fully consumed (speed 0)', () => {
-    expect(componentScore({ solved: true, livesLost: 0, consumed: 0, allotted: 0 })).toBe(65)
+  it('treats a zero/negative allotted as fully consumed (time 0 → base only)', () => {
+    expect(componentScore({ solved: true, livesLost: 0, consumed: 0, allotted: 0 })).toBe(50)
   })
 })
 

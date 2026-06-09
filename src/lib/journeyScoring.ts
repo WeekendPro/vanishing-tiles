@@ -2,9 +2,9 @@ import type { ComponentKey } from './components'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-export const COMPLETION_BASE = 65
+export const COMPLETION_BASE = 50
 export const LIFE_PENALTY = 10
-export const SPEED_MAX = 35
+export const SPEED_MAX = 50
 export const COMPONENT_MAX = 100
 export const COMPONENT_COUNT = 5
 export const LEVEL_MAX = COMPONENT_MAX * COMPONENT_COUNT // 500
@@ -19,7 +19,7 @@ export interface ComponentScoreInput {
   allotted: number
 }
 
-/** base(65 − 10·livesLost) + speed(35·(1 − consumed/allotted)), ceil, 0..100; 0 if unsolved. */
+/** completion(50 − 10·livesLost) + time(50·(1 − consumed/allotted)), ceil, 0..100; 0 if unsolved. */
 export function componentScore(i: ComponentScoreInput): number {
   if (!i.solved) return 0
   const base = COMPLETION_BASE - LIFE_PENALTY * clamp(i.livesLost, 0, 2)
