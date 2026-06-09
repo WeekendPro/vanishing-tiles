@@ -7,10 +7,14 @@ import {
   useProgressStore, emptyLevelProgress, levelTotal, levelStars, badgesUnlocked, isEarned,
 } from '../store/progressStore'
 import { difficultyPips, mockGlobalRecord } from '../lib/journeyScoring'
-import { BADGE_COMPONENTS, COMPONENT_LABEL, isPlayable, type ComponentKey } from '../lib/components'
+import { COMPONENT_LABEL, isPlayable, type ComponentKey } from '../lib/components'
 import { track } from '../store/asyncStatus'
 import { NeonButton, ScanlineOverlay } from './ui'
 import type { DifficultyConfig } from '@shared/types'
+import { RibbonBadge } from './level/RibbonBadge'
+import {
+  PlayGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
+} from './level/badgeGlyphs'
 
 interface LevelDetail {
   level_id: string; display_number: number; name: string; theme_name: string
@@ -23,28 +27,57 @@ interface LevelDetail {
 // Zustand selector (which would cause an infinite render loop in Zustand 5).
 const EMPTY_PROGRESS = emptyLevelProgress()
 
-function Pips({ value }: { value: number }) {
+function DifficultyBars({ value }: { value: number }) {
   return (
-    <span className="inline-flex gap-1" aria-label={`Difficulty ${value} of 5`}>
+    <div className="flex items-end gap-1.5 h-5">
       {[0, 1, 2, 3, 4].map(i => (
         <span
           key={i}
           data-testid="difficulty-pip"
-          className={`h-2 w-2 rounded-full ${i < value ? 'bg-neon-magenta shadow-[0_0_6px_#f0f]' : 'bg-arcade-edge'}`}
+          className={`w-2 h-5 rounded-sm ${i < value ? 'bg-neon-magenta' : 'bg-zinc-700'}`}
+          style={i < value ? { boxShadow: '0 0 6px #ff2d95' } : undefined}
         />
       ))}
-    </span>
+    </div>
   )
 }
 
 function Stars({ value }: { value: number }) {
   return (
-    <span className="text-base">
+    <div className="text-4xl leading-none">
       {[0, 1, 2, 3, 4].map(i => (
-        <span key={i} className={i < value ? 'text-neon-yellow text-glow-yellow' : 'text-arcade-edge'}>★</span>
+        <span key={i} className={i < value ? 'text-neon-yellow text-glow-yellow' : 'text-zinc-700'}>
+          ★
+        </span>
       ))}
-    </span>
+    </div>
   )
+}
+
+type BadgeRow = {
+  key: ComponentKey
+  glyphKind: 'wheel' | 'seq' | 'eyes' | 'riddle'
+  ribbonTitle: string
+}
+
+const BADGE_ROWS: [BadgeRow, BadgeRow][] = [
+  [
+    { key: 'colors',     glyphKind: 'wheel',  ribbonTitle: 'COLORS'   },
+    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'SEQUENCE' },
+  ],
+  [
+    { key: 'flash',      glyphKind: 'eyes',   ribbonTitle: "DON'T BLINK" },
+    { key: 'riddle',     glyphKind: 'riddle', ribbonTitle: 'RIDDLE'   },
+  ],
+]
+
+function glyphForKind(kind: BadgeRow['glyphKind']) {
+  switch (kind) {
+    case 'wheel':  return <ColorWheelGlyph />
+    case 'seq':    return <SequenceBlocksGlyph />
+    case 'eyes':   return <EyesGlyph />
+    case 'riddle': return <RiddleGlyph />
+  }
 }
 
 export function LevelScreen() {
@@ -94,9 +127,13 @@ export function LevelScreen() {
   const lastPlayedStr = p.lastPlayed ? new Date(p.lastPlayed).toISOString() : null
 
   return (
-    <div className="min-h-dvh bg-arcade-bg text-white arcade-scanlines px-4 py-6">
+    <div className="min-h-dvh bg-arcade-bg text-white arcade-scanlines px-5 py-5">
       <ScanlineOverlay />
-      <button onClick={goJourney} className="mb-4 text-arcade-edge hover:text-neon-cyan text-sm">← Map</button>
+
+      {/* Back button */}
+      <button onClick={goJourney} className="mb-4 text-arcade-edge hover:text-neon-cyan text-sm">
+        ← Map
+      </button>
 
       {error && (
         <div className="text-center py-10">
@@ -107,72 +144,99 @@ export function LevelScreen() {
 
       {level && (
         <div className="max-w-sm mx-auto">
-          <div className="font-pixel text-[9px] uppercase tracking-[0.15em] text-neon-magenta text-glow-magenta mb-1">
-            {level.theme_name}
-          </div>
-          <h2 className="font-pixel text-lg uppercase tracking-[0.08em] text-neon-cyan text-glow-cyan mb-2">
-            {level.name}
-          </h2>
-          <div className="flex items-center gap-4 mb-5">
-            <Pips value={difficultyPips(level.gap_count)} />
+          {/* Hero: district / name / stars */}
+          <div className="text-center mb-4">
+            <div className="font-pixel text-[9px] tracking-[0.25em] text-neon-magenta text-glow-magenta mb-3">
+              {level.theme_name}
+            </div>
+            <h2 className="font-pixel text-[19px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan mb-3">
+              {level.name}
+            </h2>
             <Stars value={levelStars(p)} />
           </div>
 
-          <dl className="text-sm text-gray-300 space-y-1 mb-6">
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Global Record</dt>
-              <dd>{mockGlobalRecord(level.level_id)}</dd>
+          {/* Stat cards 2×2 */}
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            {/* World Record */}
+            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
+              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">🏆 WORLD RECORD</div>
+              <div className="font-pixel text-base text-white">{mockGlobalRecord(level.level_id)}</div>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Personal Record</dt>
-              <dd>{levelTotal(p) || '—'}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Stars</dt>
-              <dd>{levelStars(p)} / 5</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Last played</dt>
-              <dd>{relativeTime(lastPlayedStr)}</dd>
-            </div>
-          </dl>
 
-          <NeonButton fullWidth variant="go" onClick={() => play('main')} className="mb-2">
-            {p.best.main > 0 ? `▶ Play  ·  Best ${p.best.main}` : '▶ Play'}
-          </NeonButton>
+            {/* Your Record */}
+            <div className="rounded-lg border border-neon-cyan/40 bg-arcade-panel shadow-panel-inset p-3">
+              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⭐ YOUR RECORD</div>
+              <div className="font-pixel text-base text-neon-cyan text-glow-cyan">
+                {levelTotal(p) || '—'}
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {BADGE_COMPONENTS.map(c => {
-              const playable = isPlayable(c)
-              const disabled = !unlocked || !playable
-              const earned = isEarned(p, c)
-              return (
-                <button
-                  key={c}
-                  disabled={disabled}
-                  onClick={() => play(c)}
-                  aria-label={COMPONENT_LABEL[c]}
-                  className={`relative rounded-md border-2 p-3 text-left transition
-                    ${disabled
-                      ? 'border-arcade-edge text-gray-500 opacity-60'
-                      : 'border-neon-cyan text-white hover:shadow-[0_0_8px_#0ff]'}`}
-                >
-                  <div className="font-pixel text-[10px] uppercase tracking-[0.08em]">
-                    {COMPONENT_LABEL[c]}
-                  </div>
-                  <div className="text-[11px] mt-1 text-gray-400">
-                    {!playable
-                      ? 'Coming soon'
-                      : !unlocked
-                        ? '🔒 Solve main'
-                        : earned
-                          ? `Best ${p.best[c]}`
-                          : 'Not earned'}
-                  </div>
-                </button>
-              )
-            })}
+            {/* Last Attempt */}
+            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
+              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⏱ LAST ATTEMPT</div>
+              <div className="text-sm font-bold text-zinc-200">{relativeTime(lastPlayedStr)}</div>
+            </div>
+
+            {/* Difficulty */}
+            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
+              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">DIFFICULTY</div>
+              <DifficultyBars value={difficultyPips(level.gap_count)} />
+            </div>
           </div>
+
+          {/* PLAY badge — centered, half-width */}
+          <div className="w-1/2 mx-auto">
+            <RibbonBadge
+              data-testid="badge-main"
+              glyph={<PlayGlyph />}
+              centerBg={BADGE_CENTER_BG.play}
+              title="PLAY"
+              state={p.best.main > 0 ? 'complete' : 'incomplete'}
+              score={p.best.main > 0 ? p.best.main : undefined}
+              ribbonColor="#16a34a"
+              foldColor="#0e7a36"
+              cardAccent="green"
+              vibrant
+              onClick={() => play('main')}
+            />
+          </div>
+
+          {/* Additional challenges divider */}
+          <div className="text-center text-[8px] font-pixel tracking-[0.28em] text-zinc-500 my-4">
+            ADDITIONAL CHALLENGES
+          </div>
+
+          {/* Badge rows */}
+          {BADGE_ROWS.map((row, ri) => (
+            <div key={ri} className={`grid grid-cols-2 gap-3 ${ri < BADGE_ROWS.length - 1 ? 'mb-3' : ''}`}>
+              {row.map(({ key: c, glyphKind, ribbonTitle }) => {
+                const playable = isPlayable(c)
+                const badgeDisabled = !unlocked || !playable
+                const badgeState = !playable
+                  ? 'soon'
+                  : !unlocked
+                    ? 'locked'
+                    : isEarned(p, c)
+                      ? 'complete'
+                      : 'incomplete'
+                const score = p.best[c]
+                return (
+                  <RibbonBadge
+                    key={c}
+                    data-testid={`badge-${c}`}
+                    glyph={glyphForKind(glyphKind)}
+                    centerBg={BADGE_CENTER_BG[glyphKind]}
+                    title={ribbonTitle}
+                    state={badgeState}
+                    score={score > 0 ? score : undefined}
+                    disabled={badgeDisabled}
+                    onClick={() => play(c)}
+                    aria-label={COMPONENT_LABEL[c]}
+                  />
+                )
+              })}
+            </div>
+          ))}
         </div>
       )}
     </div>

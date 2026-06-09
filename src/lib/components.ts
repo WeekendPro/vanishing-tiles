@@ -20,7 +20,7 @@ export const COMPONENT_LABEL: Record<ComponentKey, string> = {
   main: 'Main',
   colors: 'Colors',
   inSequence: 'In-Sequence',
-  flash: 'Flash',
+  flash: "Don't Blink",
   riddle: 'Riddle',
 }
 

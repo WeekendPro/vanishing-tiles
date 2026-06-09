@@ -23,27 +23,44 @@ beforeEach(() => {
 describe('LevelScreen', () => {
   it('renders name, difficulty pips, a Play button and four badges', async () => {
     render(<LevelScreen />)
+    // Level name appears in the hero
     expect(await screen.findByText('Cellar Door')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /play/i })).toBeTruthy()
-    for (const b of ['Colors', 'In-Sequence', 'Flash', 'Riddle']) {
-      expect(screen.getByText(b)).toBeTruthy()
-    }
+    // PLAY badge button
+    expect(screen.getByTestId('badge-main')).toBeTruthy()
+    // Four challenge badges by testid
+    expect(screen.getByTestId('badge-colors')).toBeTruthy()
+    expect(screen.getByTestId('badge-inSequence')).toBeTruthy()
+    expect(screen.getByTestId('badge-flash')).toBeTruthy()
+    expect(screen.getByTestId('badge-riddle')).toBeTruthy()
+    // Ribbon text: COLORS / SEQUENCE / DON'T BLINK / RIDDLE
+    expect(screen.getByText('COLORS')).toBeTruthy()
+    expect(screen.getByText('SEQUENCE')).toBeTruthy()
+    expect(screen.getByText("DON'T BLINK")).toBeTruthy()
+    expect(screen.getByText('RIDDLE')).toBeTruthy()
+    // Exactly 5 difficulty pips
     expect(screen.getAllByTestId('difficulty-pip')).toHaveLength(5)
   })
 
   it('locks badges until the main puzzle is solved', async () => {
     render(<LevelScreen />)
     await screen.findByText('Cellar Door')
-    const colors = screen.getByRole('button', { name: /Colors/i })
+    const colors = screen.getByTestId('badge-colors')
     expect(colors).toBeDisabled()
     useProgressStore.getState().recordPlay('L1', 'main', 90)
-    await waitFor(() => expect(screen.getByRole('button', { name: /Colors/i })).not.toBeDisabled())
+    await waitFor(() => expect(screen.getByTestId('badge-colors')).not.toBeDisabled())
   })
 
   it('Riddle stays a Coming soon placeholder even after main is solved', async () => {
     useProgressStore.getState().recordPlay('L1', 'main', 90)
     render(<LevelScreen />)
     await screen.findByText('Cellar Door')
-    expect(screen.getByRole('button', { name: /Riddle/i })).toBeDisabled()
+    expect(screen.getByTestId('badge-riddle')).toBeDisabled()
+  })
+
+  it("Don't Blink badge renders (formerly Flash)", async () => {
+    render(<LevelScreen />)
+    await screen.findByText('Cellar Door')
+    expect(screen.getByTestId('badge-flash')).toBeTruthy()
+    expect(screen.getByText("DON'T BLINK")).toBeTruthy()
   })
 })
