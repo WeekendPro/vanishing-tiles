@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 const STAR_CLIP =
   'polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)'
 const STAR_POINTS = '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35'
 const LIFE_VALUE = 20
+
+// Fixed sparkle "rain" slots — horizontal offset + stagger delay. Rendered as a
+// continuous loop during the leftover-time phase (no per-frame spawning), so the
+// nodes provably exist while it rains regardless of frame timing.
+const SPARKLES = [
+  { x: -24, delay: 0.00 }, { x: 18, delay: 0.10 }, { x: -8, delay: 0.20 },
+  { x: 26, delay: 0.32 }, { x: -18, delay: 0.44 }, { x: 6, delay: 0.08 },
+  { x: -28, delay: 0.55 }, { x: 14, delay: 0.66 }, { x: -2, delay: 0.50 },
+  { x: 22, delay: 0.28 },
+]
 
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 function tween(
@@ -35,14 +45,18 @@ interface Props {
 /**
  * Gold "shooting star" scoring visual. Drops in and springs to a stop (hollow,
  * 0 inside); each remaining life floats up and sparks (+20% fill / +20 score);
- * then leftover time tweens fill + score to the final value. The star fill % is
- * the score. Reduced motion renders the final state immediately.
+ * then leftover time tweens fill + score to the final value while cyan sparkles
+ * rain into the star. The star fill % is the score.
+ *
+ * This is the celebratory score reveal — core feedback, not decoration — so it
+ * plays regardless of `prefers-reduced-motion` (notably iOS Low Power Mode,
+ * which forces that media query on even with the accessibility toggle off).
  */
 export function ScoreStar({ show, score, livesRemaining }: Props) {
-  const reduce = useReducedMotion()
   const [display, setDisplay] = useState(0)
   const [fill, setFill] = useState(0)
   const [landed, setLanded] = useState(0)
+  const [raining, setRaining] = useState(false)
   const started = useRef(false)
 
   useEffect(() => {
@@ -51,14 +65,6 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
     started.current = true
     const token = { cancelled: false }
     const run = async () => {
-      if (reduce) {
-        // Reduced motion (notably iOS Low Power Mode, which forces this even
-        // with the accessibility toggle off): skip the drop-in, lives, and
-        // sparks, but STILL reveal the score with a quick, calm count-up — a
-        // score reveal is core feedback, not decoration.
-        await tween(0, score, 650, v => { setDisplay(Math.round(v)); setFill(v) }, token)
-        return
-      }
       await wait(700) // drop-in spring settles
       let running = 0
       for (let i = 0; i < livesRemaining; i++) {
@@ -71,11 +77,16 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
         await wait(120)
       }
       if (token.cancelled) return
-      await tween(running, score, 900, v => { setDisplay(Math.round(v)); setFill(v) }, token) // leftover time
+      // Leftover time: count up to the final score while cyan sparkles rain in.
+      setRaining(true)
+      await tween(running, score, 1300, v => { setDisplay(Math.round(v)); setFill(v) }, token)
+      if (token.cancelled) return
+      await wait(450)                   // let the last sparkles fall
+      setRaining(false)
     }
     run()
     return () => { token.cancelled = true }
-  }, [show, reduce, score, livesRemaining])
+  }, [show, score, livesRemaining])
 
   if (!show) return null
 
@@ -85,9 +96,9 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
       <motion.div
         className="relative"
         style={{ width: 128, height: 128 }}
-        initial={reduce ? { opacity: 0 } : { y: -220, scale: 0.7, opacity: 0 }}
+        initial={{ y: -220, scale: 0.7, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
-        transition={reduce ? { duration: 0.3 } : { type: 'spring', stiffness: 320, damping: 16 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 16 }}
       >
         {/* fill clipped to the star shape */}
         <div className="absolute inset-0" style={{ clipPath: STAR_CLIP }}>
@@ -115,10 +126,23 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           {display}
         </span>
 
-        {/* spark on each landing */}
-        {landed > 0 && !reduce && (
+        {/* cyan sparkles raining into the star during the leftover-time phase */}
+        {raining && SPARKLES.map((s, i) => (
           <motion.span
-            key={landed}
+            key={`rain-${i}`}
+            data-testid="score-star-sparkle"
+            className="absolute left-1/2 top-1/2 rounded-full"
+            style={{ width: 7, height: 7, marginLeft: -3.5, marginTop: -3.5, background: '#fff', boxShadow: '0 0 10px 4px rgba(34,211,238,.9)' }}
+            initial={{ x: s.x, y: -36, opacity: 0, scale: 0.3 }}
+            animate={{ x: s.x * 0.45, y: 12, opacity: [0, 1, 0], scale: [0.3, 1.6, 0.5] }}
+            transition={{ duration: 0.7, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.3, delay: s.delay }}
+          />
+        ))}
+
+        {/* spark on each life landing */}
+        {landed > 0 && (
+          <motion.span
+            key={`life-${landed}`}
             className="absolute left-1/2 top-1/2 rounded-full"
             style={{ width: 10, height: 10, margin: -5, background: '#fff', boxShadow: '0 0 12px 5px rgba(250,204,21,.9)' }}
             initial={{ scale: 0.2, opacity: 1 }}
@@ -128,7 +152,7 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
         )}
 
         {/* life tokens float up from below and disappear into the star as they land */}
-        {!reduce && Array.from({ length: livesRemaining }, (_, i) => (
+        {Array.from({ length: livesRemaining }, (_, i) => (
           <motion.span
             key={i}
             className="absolute left-1/2 top-1/2 text-neon-red text-glow-red text-sm"
