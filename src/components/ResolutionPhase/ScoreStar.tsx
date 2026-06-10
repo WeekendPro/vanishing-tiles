@@ -47,11 +47,18 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
 
   useEffect(() => {
     if (!show) { started.current = false; return }
-    if (reduce) { setDisplay(score); setFill(score); setLanded(livesRemaining); return }
     if (started.current) return // props are frozen at resolution time; mid-animation prop changes are not supported
     started.current = true
     const token = { cancelled: false }
     const run = async () => {
+      if (reduce) {
+        // Reduced motion (notably iOS Low Power Mode, which forces this even
+        // with the accessibility toggle off): skip the drop-in, lives, and
+        // sparks, but STILL reveal the score with a quick, calm count-up — a
+        // score reveal is core feedback, not decoration.
+        await tween(0, score, 650, v => { setDisplay(Math.round(v)); setFill(v) }, token)
+        return
+      }
       await wait(700) // drop-in spring settles
       let running = 0
       for (let i = 0; i < livesRemaining; i++) {
@@ -78,9 +85,9 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
       <motion.div
         className="relative"
         style={{ width: 128, height: 128 }}
-        initial={reduce ? false : { y: -220, scale: 0.7, opacity: 0 }}
+        initial={reduce ? { opacity: 0 } : { y: -220, scale: 0.7, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 16 }}
+        transition={reduce ? { duration: 0.3 } : { type: 'spring', stiffness: 320, damping: 16 }}
       >
         {/* fill clipped to the star shape */}
         <div className="absolute inset-0" style={{ clipPath: STAR_CLIP }}>
