@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scoring Star — animation mockup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;}
+  .glow-cyan{text-shadow:0 0 8px rgba(34,211,238,.6);}
+  .glow-gold{text-shadow:0 0 12px rgba(250,204,21,.85);}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .phone{width:390px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;z-index:50;}
+  .star-clip{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+
+  /* board cells */
+  .cell{width:26px;height:26px;border-radius:3px;background:#0b1620;box-shadow:inset 0 0 0 1px #0e2b33;}
+  .cell.filled{background:#15324a;box-shadow:inset 0 0 0 1px #1d4a6b;}
+
+  /* the star wrapper that flies in */
+  .starwrap{position:absolute;left:50%;top:46%;width:128px;height:128px;margin:-64px 0 0 -64px;will-change:transform,opacity;}
+
+  /* comet tail */
+  .tail{position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(closest-side, rgba(250,204,21,.55), rgba(250,204,21,0) 70%);
+    filter:blur(2px);opacity:0;}
+
+  /* spark burst */
+  .spark{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;
+    background:#fff;box-shadow:0 0 10px 4px rgba(250,204,21,.9);opacity:0;pointer-events:none;}
+
+  /* a single life token */
+  .life{position:absolute;width:22px;height:22px;will-change:transform,opacity;}
+
+  /* time ring (variant A) */
+  .timering{position:absolute;inset:-14px;border-radius:50%;}
+
+  @keyframes sparkPop{0%{transform:scale(.2);opacity:1}100%{transform:scale(2.4);opacity:0}}
+  @keyframes settlePulse{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+  @keyframes floatHint{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+</style>
+</head>
+<body class="bg-zinc-950 text-white p-6">
+
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-xl font-black mb-1">Scoring Star — arrival + lives + time animation</h1>
+  <p class="text-zinc-400 mb-5 text-sm">score = 20 × livesRemaining + 40 × (1 − consumed/allotted), capped 100. Star fill % = score. Pick a variant, set the scenario, press <b>Replay</b>. (Final build uses Framer Motion.)</p>
+
+  <div class="flex gap-8 items-start flex-wrap">
+
+    <!-- PHONE -->
+    <div class="phone relative rounded-[1.6rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+      <!-- metadata bar (new spec) -->
+      <div class="flex items-center px-4 py-3 border-b border-arcade-edge">
+        <div class="font-pixel text-[11px] tracking-wide text-neon-cyan glow-cyan">01: VACANT HEIGHTS</div>
+      </div>
+
+      <!-- board + star overlay -->
+      <div class="relative px-4 pt-4 pb-2">
+        <div id="board" class="grid mx-auto opacity-40 transition-opacity duration-300"
+             style="grid-template-columns:repeat(12,26px);gap:2px;width:fit-content;"></div>
+
+        <!-- star animation layer -->
+        <div id="stage" class="absolute inset-0">
+          <div id="starwrap" class="starwrap">
+            <div class="tail" id="tail"></div>
+            <!-- time ring (variant A) -->
+            <svg class="timering" id="timering" viewBox="0 0 100 100" style="opacity:0">
+              <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(34,211,238,.25)" stroke-width="3"/>
+              <circle id="timeringfill" cx="50" cy="50" r="46" fill="none" stroke="#22d3ee" stroke-width="3"
+                      stroke-linecap="round" transform="rotate(-90 50 50)"
+                      stroke-dasharray="289" stroke-dashoffset="289" style="filter:drop-shadow(0 0 4px #22d3ee)"/>
+            </svg>
+
+            <!-- the star itself -->
+            <div class="absolute inset-0" id="star">
+              <!-- fill clipped to star -->
+              <div class="absolute inset-0 star-clip">
+                <div class="absolute inset-0" style="background:rgba(250,204,21,.14)"></div>
+                <div id="starfill" class="absolute inset-x-0 bottom-0" style="height:0%;background:linear-gradient(0deg,#f59e0b,#fde047)"></div>
+              </div>
+              <!-- outline -->
+              <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style="overflow:visible;filter:drop-shadow(0 0 8px rgba(250,204,21,.6))">
+                <polygon points="50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35"
+                         fill="none" stroke="#fbbf24" stroke-width="4.5" stroke-linejoin="round"/>
+              </svg>
+              <!-- score -->
+              <span id="score" class="absolute inset-0 grid place-items-center font-pixel text-[20px] text-white"
+                    style="text-shadow:0 2px 4px rgba(0,0,0,.85)">0</span>
+            </div>
+          </div>
+
+          <!-- lives tokens float up from here -->
+          <div id="lives" class="absolute left-1/2 -translate-x-1/2" style="bottom:8px"></div>
+
+          <!-- floating +TIME label (variant B) -->
+          <div id="timelabel" class="absolute left-1/2 -translate-x-1/2 font-pixel text-[10px] text-neon-cyan glow-cyan"
+               style="top:14%;opacity:0">+0.0s</div>
+        </div>
+      </div>
+
+      <!-- icon button grid -->
+      <div id="ctaRow" class="grid grid-cols-3 gap-3 px-4 pt-3 pb-5"></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="bg-zinc-900 rounded-xl p-5 w-[320px] space-y-4">
+      <div>
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Variant</div>
+        <div class="flex gap-2">
+          <button data-variant="comet" class="vbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-neon-cyan text-black">A · Comet</button>
+          <button data-variant="drop" class="vbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-zinc-700 text-white">B · Drop</button>
+        </div>
+        <p id="vdesc" class="text-[11px] text-zinc-400 mt-2"></p>
+      </div>
+
+      <div>
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Lives remaining at solve</div>
+        <div class="flex gap-2" id="livesBtns">
+          <button data-l="1" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-zinc-700">1</button>
+          <button data-l="2" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-zinc-700">2</button>
+          <button data-l="3" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-neon-yellow text-black">3</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Time saved (slider)</div>
+        <input id="timeSlider" type="range" min="0" max="100" value="65" class="w-full">
+        <div class="text-[11px] text-zinc-400 mt-1">saved <span id="timePct">65</span>% of the clock → +<span id="timeBonus">26</span> time pts</div>
+      </div>
+
+      <div class="border-t border-zinc-700 pt-3">
+        <div class="text-sm text-zinc-300">Final score: <span id="finalScore" class="font-black text-neon-yellow text-lg">86</span> / 100</div>
+        <div class="text-[11px] text-zinc-500">= 20×<span id="lvOut">3</span> lives + <span id="tbOut">26</span> time</div>
+      </div>
+
+      <button id="replay" class="w-full px-4 py-3 rounded-lg bg-neon-green text-black font-black text-base">▶ Replay</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// ---- build a static board with a few gaps (all filled here = solved) ----
+const board = $('#board');
+const GAPS = new Set(); // solved board: everything filled
+for (let r=0;r<10;r++) for(let c=0;c<12;c++){
+  const d=document.createElement('div');
+  d.className='cell filled';
+  board.appendChild(d);
+}
+
+// ---- icon buttons ----
+const ICONS = {
+  back:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  repeat:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>',
+  fwd:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+};
+function renderCtas(){
+  const row=$('#ctaRow');
+  row.innerHTML='';
+  const defs=[
+    {icon:ICONS.back,  cls:'border-arcade-edge text-zinc-300'},
+    {icon:ICONS.repeat,cls:'border-neon-cyan text-neon-cyan'},
+    {icon:ICONS.fwd,   cls:'border-neon-green text-neon-green'},
+  ];
+  defs.forEach(d=>{
+    const b=document.createElement('button');
+    b.className=`grid place-items-center py-3 rounded-xl border-2 ${d.cls} bg-arcade-panel`;
+    b.innerHTML=d.icon;
+    row.appendChild(b);
+  });
+}
+renderCtas();
+
+// ---- state ----
+let variant='comet', lives=3, timeFrac=0.65;
+const VDESC={
+  comet:'Star streaks in from the top with a comet tail and decelerates to center. A cyan time-ring around the star sweeps as leftover time pours into the fill.',
+  drop:'Star drops in and springs to a stop. Leftover time appears as a floating “+Xs” that counts down and rains sparkles into the star as the fill rises.',
+};
+
+function setScore(v){ $('#score').textContent=Math.round(v); }
+function setFill(pct){ $('#starfill').style.height=Math.max(0,Math.min(100,pct))+'%'; }
+
+function spark(x=64,y=64,color='250,204,21'){
+  const s=document.createElement('div');
+  s.className='spark';
+  s.style.left=x+'px'; s.style.top=y+'px';
+  s.style.boxShadow=`0 0 10px 4px rgba(${color},.9)`;
+  s.style.animation='sparkPop .5s ease-out forwards';
+  $('#starwrap').appendChild(s);
+  setTimeout(()=>s.remove(),520);
+}
+
+function computeFinal(){
+  const tb=Math.round(40*timeFrac);
+  return {tb, total:Math.min(100,20*lives+tb)};
+}
+function syncReadout(){
+  const {tb,total}=computeFinal();
+  $('#timePct').textContent=Math.round(timeFrac*100);
+  $('#timeBonus').textContent=tb;
+  $('#finalScore').textContent=total;
+  $('#lvOut').textContent=lives;
+  $('#tbOut').textContent=tb;
+}
+
+function resetStage(){
+  const w=$('#starwrap');
+  w.style.transition='none';
+  w.style.opacity='0';
+  $('#tail').style.opacity='0';
+  setScore(0); setFill(0);
+  $('#timering').style.opacity='0';
+  $('#timeringfill').style.strokeDashoffset='289';
+  $('#timelabel').style.opacity='0';
+  $('#lives').innerHTML='';
+  // pre-place life tokens at the bottom
+  for(let i=0;i<lives;i++){
+    const t=document.createElement('div');
+    t.className='life';
+    t.style.left=(i*28-(lives-1)*14)+'px';
+    t.innerHTML='<svg viewBox="0 0 24 24" fill="#ff4d4d" stroke="#ff8a8a" stroke-width="1.5"><path d="M12 21s-7-4.6-9.3-8.4C1 9.5 2.4 6 5.7 6c2 0 3.2 1.2 4.3 2.6C11 7.2 12.3 6 14.3 6 17.6 6 19 9.5 21.3 12.6 19 16.4 12 21 12 21z"/></svg>';
+    t.style.opacity='0';
+    $('#lives').appendChild(t);
+  }
+}
+
+// center of starwrap in stage coords
+function starCenter(){
+  const sw=$('#starwrap').getBoundingClientRect();
+  const st=$('#stage').getBoundingClientRect();
+  return {x:sw.left-st.left+sw.width/2, y:sw.top-st.top+sw.height/2};
+}
+
+async function arriveComet(){
+  const w=$('#starwrap');
+  // start off the top-right with a tail, scaled small
+  w.style.transition='none';
+  w.style.transform='translate(120px,-260px) scale(.5) rotate(18deg)';
+  $('#tail').style.opacity='.9';
+  await wait(40);
+  w.style.transition='transform 850ms cubic-bezier(.18,.7,.2,1), opacity 300ms';
+  w.style.opacity='1';
+  w.style.transform='translate(0,0) scale(1) rotate(0deg)';
+  await wait(560);
+  $('#tail').style.transition='opacity 350ms'; $('#tail').style.opacity='0';
+  await wait(320);
+}
+
+async function arriveDrop(){
+  const w=$('#starwrap');
+  w.style.transition='none';
+  w.style.transform='translateY(-220px) scale(.7)';
+  await wait(40);
+  w.style.transition='transform 700ms cubic-bezier(.3,1.5,.5,1), opacity 250ms';
+  w.style.opacity='1';
+  w.style.transform='translateY(0) scale(1)';
+  await wait(740);
+}
+
+async function floatLives(){
+  let score=0, fill=0;
+  const tokens=[...document.querySelectorAll('#lives .life')];
+  for(let i=0;i<tokens.length;i++){
+    const t=tokens[i];
+    // measure travel from token to star center
+    const lr=$('#lives').getBoundingClientRect();
+    const tr=t.getBoundingClientRect();
+    const sc=starCenter();
+    const st=$('#stage').getBoundingClientRect();
+    const fromX=tr.left-st.left+tr.width/2, fromY=tr.top-st.top+tr.height/2;
+    t.style.opacity='1';
+    t.style.transition='transform 480ms cubic-bezier(.4,.0,.2,1), opacity 480ms';
+    t.style.transform=`translate(${sc.x-fromX}px, ${sc.y-fromY}px) scale(.5)`;
+    await wait(430);
+    t.style.opacity='0';
+    spark(64,64);
+    // bump
+    score+=20; fill+=20;
+    const w=$('#starwrap'); w.style.animation='settlePulse .35s ease-out';
+    setTimeout(()=>w.style.animation='',360);
+    animateNumber(score-20,score,fill-20,fill,260);
+    await wait(360);
+  }
+  return {score,fill};
+}
+
+function animateNumber(s0,s1,f0,f1,dur){
+  const t0=performance.now();
+  function step(now){
+    const k=Math.min(1,(now-t0)/dur);
+    setScore(s0+(s1-s0)*k);
+    setFill(f0+(f1-f0)*k);
+    if(k<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+async function drainTime(score0, fill0){
+  const {tb}=computeFinal();
+  if(tb<=0) return;
+  const nominalSecs=(timeFrac*14).toFixed(1);
+  if(variant==='comet'){
+    $('#timering').style.opacity='1';
+    // ring sweeps from full (showing saved time) down to 0 as it pours in
+    const ring=$('#timeringfill');
+    ring.style.transition='none';
+    ring.style.strokeDashoffset=String(289*(1-timeFrac));
+    await wait(40);
+    ring.style.transition='stroke-dashoffset 1100ms ease-in-out';
+    ring.style.strokeDashoffset='289';
+  } else {
+    const lbl=$('#timelabel');
+    lbl.textContent='+'+nominalSecs+'s';
+    lbl.style.transition='opacity 200ms'; lbl.style.opacity='1';
+  }
+  // count score/fill up to final over the drain
+  const dur=1100;
+  const t0=performance.now();
+  const lbl=$('#timelabel');
+  return new Promise(res=>{
+    function step(now){
+      const k=Math.min(1,(now-t0)/dur);
+      const e=1-Math.pow(1-k,2);
+      setScore(score0+tb*e);
+      setFill(fill0+tb*e);
+      if(variant==='drop'){
+        lbl.textContent='+'+(nominalSecs*(1-k)).toFixed(1)+'s';
+        if(Math.random()<0.3) spark(64+(Math.random()*40-20), 30+Math.random()*20,'34,211,238');
+      }
+      if(k<1) requestAnimationFrame(step);
+      else { if(variant==='drop'){lbl.style.opacity='0';} res(); }
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+let running=false;
+async function play(){
+  if(running) return; running=true;
+  resetStage();
+  await wait(120);
+  if(variant==='comet') await arriveComet(); else await arriveDrop();
+  await wait(150);
+  const {score,fill}=await floatLives();
+  await wait(150);
+  await drainTime(score,fill);
+  // settle
+  const w=$('#starwrap'); w.style.animation='settlePulse .5s ease-out';
+  setTimeout(()=>w.style.animation='',520);
+  running=false;
+}
+
+// ---- controls ----
+document.querySelectorAll('.vbtn').forEach(b=>b.onclick=()=>{
+  variant=b.dataset.variant;
+  document.querySelectorAll('.vbtn').forEach(x=>{x.className=x.className.replace('bg-neon-cyan text-black','bg-zinc-700 text-white');});
+  b.className=b.className.replace('bg-zinc-700 text-white','bg-neon-cyan text-black');
+  $('#vdesc').textContent=VDESC[variant];
+  play();
+});
+document.querySelectorAll('.lbtn').forEach(b=>b.onclick=()=>{
+  lives=+b.dataset.l;
+  document.querySelectorAll('.lbtn').forEach(x=>{x.className=x.className.replace('bg-neon-yellow text-black','bg-zinc-700');});
+  b.className=b.className.replace('bg-zinc-700','bg-neon-yellow text-black');
+  syncReadout(); play();
+});
+$('#timeSlider').oninput=e=>{ timeFrac=+e.target.value/100; syncReadout(); };
+$('#timeSlider').onchange=()=>play();
+$('#replay').onclick=play;
+
+$('#vdesc').textContent=VDESC[variant];
+syncReadout();
+play();
+</script>
+</body>
+</html>
