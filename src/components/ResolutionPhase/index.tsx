@@ -13,11 +13,9 @@ import { PartialBadge } from './PartialBadge'
 import { ScorePanel } from './ScorePanel'
 import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
-import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX } from '@shared/core/scoring'
-import { useProgressStore, levelTotal as progressLevelTotal, levelStars as progressLevelStars } from '../../store/progressStore'
-import { COMPONENT_LABEL } from '../../lib/components'
-import { ComponentScorePanel } from './ComponentScorePanel'
-import { NeonButton } from '../ui'
+import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX, MAX_LIVES } from '@shared/core/scoring'
+import { ScoreStar } from './ScoreStar'
+import { IconButton, BackIcon, RepeatIcon, ForwardIcon } from './IconButton'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -29,7 +27,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, activeComponent, levelId, livesLost, replayComponent, retryComponent } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, levelId, livesLost, replayComponent, retryComponent } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       gaps: s.gaps,
@@ -43,7 +41,6 @@ export function ResolutionPhase() {
       livesRemaining: s.livesRemaining,
       advanceRound: s.advanceRound,
       mode: s.mode,
-      activeComponent: s.activeComponent,
       levelId: s.levelId,
       livesLost: s.livesLost,
       replayComponent: s.replayComponent,
@@ -91,10 +88,6 @@ export function ResolutionPhase() {
   const reduceMotion = useReducedMotion()
 
   const isJourney = mode === 'journey'
-  const progressEntry = useProgressStore(s => (levelId ? s.byLevel[levelId] : undefined))
-  const journeyProgress = progressEntry ?? null
-  const jLevelTotal = journeyProgress ? progressLevelTotal(journeyProgress) : 0
-  const jStars = journeyProgress ? progressLevelStars(journeyProgress) : 0
 
   // Reduced motion: skip the flight. Apply all placements immediately,
   // fill consumed/rejected, then jump straight to the CTA (with the badge + score visible).
@@ -227,9 +220,13 @@ export function ResolutionPhase() {
                 placed pieces cover the border instead of it sitting on top. */}
             <GapBorder gaps={gaps} grid={grid} />
           </div>
-          {resolution?.kind === 'partial'
-            ? <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />
-            : <CelebrationBadge show={badgeShown} />}
+          {resolution?.kind === 'partial' ? (
+            <PartialBadge show={badgeShown} coverage={resolution.coverage} reason={resolution.reason} />
+          ) : isJourney ? (
+            <ScoreStar show={badgeShown} score={roundScore?.total ?? 0} livesRemaining={MAX_LIVES - livesLost} />
+          ) : (
+            <CelebrationBadge show={badgeShown} />
+          )}
         </div>
 
         {/* The cart is the launch pad for the fly-in AND the record of the
@@ -244,29 +241,15 @@ export function ResolutionPhase() {
           />
         )}
 
-        {/* Score breakdown flows in normal document flow beneath the board. */}
-        {isJourney ? (
-          roundScore && (
-            <ComponentScorePanel
-              show={stage === 'scoring' || stage === 'cta'}
-              componentLabel={COMPONENT_LABEL[activeComponent ?? 'main']}
-              solved={!isFailure}
-              livesLost={livesLost}
-              componentTotal={roundScore.total}
-              levelTotal={jLevelTotal}
-              stars={jStars}
-            />
-          )
-        ) : (
-          roundScore && (
-            <ScorePanel
-              roundScore={roundScore}
-              grandTotal={grandTotal}
-              show={stage === 'scoring' || stage === 'cta'}
-              isFailure={isFailure}
-              speedSlow={speedSlow}
-            />
-          )
+        {/* Practice shows its multi-pillar score panel; Journey's score lives in the star. */}
+        {!isJourney && roundScore && (
+          <ScorePanel
+            roundScore={roundScore}
+            grandTotal={grandTotal}
+            show={stage === 'scoring' || stage === 'cta'}
+            isFailure={isFailure}
+            speedSlow={speedSlow}
+          />
         )}
       </div>
 
@@ -280,39 +263,26 @@ export function ResolutionPhase() {
         </div>
       )}
 
-      {stage === 'cta' && isJourney && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
-          <div className="w-full max-w-sm pointer-events-auto flex flex-col gap-3">
-            {/* Case 1: Solve — Play Again, Back to Level, Next Level (if available) */}
-            {!isFailure && (
-              <>
-                <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
-                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
-                {hasNextLevel() && (
-                  <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
-                )}
-              </>
-            )}
-            {/* Case 2: Failure with lives left — Try Again (same puzzle), Back to Level */}
-            {isFailure && !outOfLives && (
-              <>
-                <NeonButton fullWidth variant="primary" onClick={() => retryComponent()}>Try Again ↺</NeonButton>
-                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
-              </>
-            )}
-            {/* Case 3: Failure, out of lives — Play Again (fresh puzzle), Back to Level, Next Level (if available) */}
-            {isFailure && outOfLives && (
-              <>
-                <NeonButton fullWidth variant="primary" onClick={() => replayComponent()}>Play Again ↺</NeonButton>
-                <NeonButton fullWidth variant="ghost" onClick={() => { if (levelId) openLevel(levelId) }}>Back to Level</NeonButton>
-                {hasNextLevel() && (
-                  <NeonButton fullWidth variant="go" onClick={() => goNextLevel()}>Next Level →</NeonButton>
-                )}
-              </>
-            )}
+      {stage === 'cta' && isJourney && (() => {
+        const showNext = (!isFailure || outOfLives) && hasNextLevel()
+        const repeatLabel = isFailure && !outOfLives ? 'Try Again' : 'Play Again'
+        const onRepeat = isFailure && !outOfLives ? retryComponent : replayComponent
+        const buttons = [
+          <IconButton key="back" label="Back to Level" accent="edge" onClick={() => { if (levelId) openLevel(levelId) }}>{BackIcon}</IconButton>,
+          <IconButton key="repeat" label={repeatLabel} accent="cyan" onClick={() => onRepeat()}>{RepeatIcon}</IconButton>,
+          ...(showNext ? [<IconButton key="next" label="Next Level" accent="green" onClick={() => goNextLevel()}>{ForwardIcon}</IconButton>] : []),
+        ]
+        return (
+          <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
+            <div
+              className="w-full max-w-sm pointer-events-auto grid gap-3"
+              style={{ gridTemplateColumns: `repeat(${buttons.length}, minmax(0, 1fr))` }}
+            >
+              {buttons}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </>
   )
 }
