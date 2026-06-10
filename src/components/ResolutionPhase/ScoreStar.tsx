@@ -7,10 +7,15 @@ const STAR_POINTS = '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35'
 const LIFE_VALUE = 20
 
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
-function tween(from: number, to: number, ms: number, onUpdate: (v: number) => void) {
+function tween(
+  from: number, to: number, ms: number,
+  onUpdate: (v: number) => void,
+  signal?: { cancelled: boolean },
+) {
   return new Promise<void>(res => {
     const t0 = performance.now()
     const step = (now: number) => {
+      if (signal?.cancelled) { res(); return }
       const k = Math.min(1, (now - t0) / ms)
       const e = 1 - Math.pow(1 - k, 2) // easeOut
       onUpdate(from + (to - from) * e)
@@ -43,26 +48,26 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
   useEffect(() => {
     if (!show) { started.current = false; return }
     if (reduce) { setDisplay(score); setFill(score); setLanded(livesRemaining); return }
-    if (started.current) return
+    if (started.current) return // props are frozen at resolution time; mid-animation prop changes are not supported
     started.current = true
-    let cancelled = false
+    const token = { cancelled: false }
     const run = async () => {
       await wait(700) // drop-in spring settles
       let running = 0
       for (let i = 0; i < livesRemaining; i++) {
-        if (cancelled) return
+        if (token.cancelled) return
         await wait(420)                 // life travels up
         setLanded(i + 1)                // spark + token consumed
         const from = running
         running = Math.min(score, running + LIFE_VALUE)
-        await tween(from, running, 280, v => { setDisplay(Math.round(v)); setFill(v) })
+        await tween(from, running, 280, v => { setDisplay(Math.round(v)); setFill(v) }, token)
         await wait(120)
       }
-      if (cancelled) return
-      await tween(running, score, 900, v => { setDisplay(Math.round(v)); setFill(v) }) // leftover time
+      if (token.cancelled) return
+      await tween(running, score, 900, v => { setDisplay(Math.round(v)); setFill(v) }, token) // leftover time
     }
     run()
-    return () => { cancelled = true }
+    return () => { token.cancelled = true }
   }, [show, reduce, score, livesRemaining])
 
   if (!show) return null
