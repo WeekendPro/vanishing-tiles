@@ -9,26 +9,11 @@ import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
 import { TrickleBar } from './TrickleBar'
 
-function Hearts({ count, total }: { count: number; total: number }) {
-  return (
-    <div className="flex gap-1">
-      {Array.from({ length: total }, (_, i) => i + 1).map(i =>
-        i <= count ? (
-          <span key={i} className="text-neon-red text-glow-red">♥</span>
-        ) : (
-          <span key={i} className="text-arcade-edge">♥</span>
-        )
-      )}
-    </div>
-  )
-}
-
 export function GameShell() {
-  const { phase, paused, score, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent } =
+  const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
-      score: s.score,
       phaseStartTime: s.phaseStartTime,
       phaseDuration: s.phaseDuration,
       mode: s.mode,
@@ -53,17 +38,22 @@ export function GameShell() {
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
           {mode === 'journey' ? (
             <>
-              <strong className="text-white mr-2">{levelName ?? `LEVEL ${levelDisplayNumber}`}</strong>
-              {activeComponent ? COMPONENT_LABEL[activeComponent] : ''}
+              <strong className="text-white">
+                {levelDisplayNumber != null ? `${String(levelDisplayNumber).padStart(2, '0')}: ` : ''}
+                {levelName ?? `Level ${levelDisplayNumber ?? ''}`}
+              </strong>
+              {activeComponent && activeComponent !== 'main' && (
+                <>
+                  <span className="text-arcade-edge px-2" aria-hidden>|</span>
+                  <span>{COMPONENT_LABEL[activeComponent]}</span>
+                </>
+              )}
             </>
           ) : (
             <>ROUND <strong className="text-white">{roundIndex + 1} / 4</strong></>
           )}
         </span>
-        <span className="font-pixel text-[10px] text-neon-yellow text-glow-yellow">{score.toLocaleString()}</span>
-        <Hearts count={livesRemaining} total={MAX_LIVES} />
         <span className="flex-1" />
-        <span className="w-10" aria-hidden />
       </div>
 
       {/* Timer bar docked directly beneath the metadata bar. The 6px slot is

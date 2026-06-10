@@ -30,7 +30,7 @@ describe('GameShell loading slot', () => {
 })
 
 describe('GameShell header', () => {
-  it('shows round-of-4 and pooled lives in practice level mode', () => {
+  it('shows round-of-4 in practice level mode', () => {
     act(() => {
       useGameStore.setState({ mode: 'practice', phase: 'viewing', roundIndex: 1, livesRemaining: 2, score: 1400, levelComplete: false })
     })
@@ -39,13 +39,25 @@ describe('GameShell header', () => {
     expect(screen.getByText(/2\s*\/\s*4|2 OF 4/i)).toBeInTheDocument()
   })
 
-  it('journey header shows the component label, not "round n/4"', () => {
+  it('journey header shows "NN: Name | Badge" and no score', () => {
     useGameStore.setState({
       mode: 'journey', activeComponent: 'colors', levelName: 'Cellar Door',
-      phase: 'viewing', livesRemaining: 3,
+      levelDisplayNumber: 3, phase: 'viewing', livesRemaining: 3, score: 1400,
     } as any)
     render(<GameShell />)
-    expect(screen.getByText(/Colors/i)).toBeTruthy()
+    expect(screen.getByText(/03: Cellar Door/i)).toBeTruthy()
+    expect(screen.getByText(/True Colors/i)).toBeTruthy()
     expect(screen.queryByText(/\/ 4/)).toBeNull()
+    expect(screen.queryByText('1,400')).toBeNull()   // score no longer in the bar
+  })
+
+  it('journey main puzzle shows no badge suffix', () => {
+    useGameStore.setState({
+      mode: 'journey', activeComponent: 'main', levelName: 'Cellar Door',
+      levelDisplayNumber: 1, phase: 'viewing', livesRemaining: 3,
+    } as any)
+    render(<GameShell />)
+    expect(screen.getByText(/01: Cellar Door/i)).toBeTruthy()
+    expect(screen.queryByText(/Main/)).toBeNull()    // 'main' has no suffix
   })
 })
