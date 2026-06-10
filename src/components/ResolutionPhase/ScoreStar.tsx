@@ -162,14 +162,15 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           {display}
         </span>
 
-        {/* cyan sparkles rising from the Speed line into the star during the time phase */}
+        {/* cyan sparkles flying from the Speed VALUE (right side of the Speed row,
+            ~x:92 / y:108 from the star centre) up into the star during the time phase */}
         {raining && SPARKLES.map((s, i) => (
           <motion.span
             key={`rain-${i}`}
             data-testid="score-star-sparkle"
             className="absolute left-1/2 top-1/2 rounded-full"
             style={{ width: 7, height: 7, marginLeft: -3.5, marginTop: -3.5, background: '#fff', boxShadow: '0 0 10px 4px rgba(34,211,238,.9)' }}
-            initial={{ x: s.x, y: 108, opacity: 0, scale: 0.3 }}
+            initial={{ x: 92 + s.x * 0.15, y: 108, opacity: 0, scale: 0.3 }}
             animate={{ x: s.x * 0.4, y: -6, opacity: [0, 1, 0], scale: [0.3, 1.4, 0.5] }}
             transition={{ duration: 0.8, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.3, delay: s.delay }}
           />
