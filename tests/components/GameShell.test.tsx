@@ -63,3 +63,16 @@ describe('GameShell header', () => {
     expect(screen.queryByText(/Main/)).toBeNull()    // 'main' has no suffix
   })
 })
+
+describe('GameShell lives row', () => {
+  it('renders a centered lives row during viewing, hidden in resolving', () => {
+    act(() => { useGameStore.setState({ mode: 'journey', phase: 'viewing', livesRemaining: 2 }) })
+    const { rerender } = render(<GameShell />)
+    const row = screen.getByTestId('lives-row')
+    expect(row).toBeInTheDocument()
+    expect(row.textContent).toContain('♥')
+    act(() => { useGameStore.setState({ phase: 'resolving' }) })
+    rerender(<GameShell />)
+    expect(screen.queryByTestId('lives-row')).toBeNull()
+  })
+})

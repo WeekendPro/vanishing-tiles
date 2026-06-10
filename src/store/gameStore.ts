@@ -78,7 +78,7 @@ interface GameStore extends GameState {
   pausedElapsed: number
   _resolution: Resolution | null
   // Journey mode uses a FIXED per-level difficulty profile (levelDifficulty) for
-  // each component play. submitting drives the GameShell TrickleBar while a
+  // each component play. submitting drives the GameShell ArcadeLoader while a
   // server write is in-flight (currently unused for component plays, kept for
   // future global-record submissions).
   levelDifficulty: DifficultyConfig | null

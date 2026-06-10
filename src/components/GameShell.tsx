@@ -26,6 +26,7 @@ export function GameShell() {
     })))
 
   const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
+  const showLives = (phase === 'viewing' || phase === 'selecting') && !paused
   // Countdown is a full-screen flourish (keep it centered). Every gameplay phase
   // anchors its content to the top so the grid sits high and — crucially — holds
   // the SAME vertical position across reveal → viewing → resolving (no shift when
@@ -69,6 +70,14 @@ export function GameShell() {
           />
         ) : null}
       </div>
+
+      {showLives && (
+        <div data-testid="lives-row" className="flex justify-center gap-1 pt-2 text-sm">
+          {Array.from({ length: MAX_LIVES }, (_, i) => (
+            <span key={i} className={i < livesRemaining ? 'text-neon-red text-glow-red' : 'text-arcade-edge'}>♥</span>
+          ))}
+        </div>
+      )}
 
       <div className={`flex-1 flex justify-center px-4 pb-4 ${centerContent ? 'items-center pt-4' : 'items-start pt-8'}`}>
         {!paused && phase === 'countdown'  && <CountdownPhase />}
