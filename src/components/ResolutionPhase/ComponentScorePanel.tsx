@@ -1,5 +1,6 @@
 import { ArcadePanel } from '../ui'
-import { COMPLETION_BASE, LIFE_PENALTY } from '../../lib/journeyScoring'
+// (temporary until ComponentScorePanel is removed in a later task)
+const LIVES_TOTAL = 3, LIFE_VALUE = 20
 
 export function ComponentScorePanel({
   show, componentLabel, solved, livesLost, componentTotal, levelTotal, stars,
@@ -12,7 +13,7 @@ export function ComponentScorePanel({
   levelTotal: number
   stars: number
 }) {
-  const base = solved ? COMPLETION_BASE - LIFE_PENALTY * Math.min(2, livesLost) : 0
+  const base = solved ? LIFE_VALUE * (LIVES_TOTAL - Math.min(2, livesLost)) : 0
   const speed = Math.max(0, componentTotal - base)
   return (
     <ArcadePanel className={`p-4 w-full transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}>

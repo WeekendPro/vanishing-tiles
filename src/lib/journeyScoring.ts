@@ -2,9 +2,9 @@ import type { ComponentKey } from './components'
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
-export const COMPLETION_BASE = 50
-export const LIFE_PENALTY = 10
-export const SPEED_MAX = 50
+export const LIFE_VALUE = 20            // points per life remaining at solve
+export const LIVES_TOTAL = 3            // lives per component play
+export const TIME_MAX = 40              // max points from leftover time
 export const COMPONENT_MAX = 100
 export const COMPONENT_COUNT = 5
 export const LEVEL_MAX = COMPONENT_MAX * COMPONENT_COUNT // 500
@@ -19,13 +19,18 @@ export interface ComponentScoreInput {
   allotted: number
 }
 
-/** completion(50 − 10·livesLost) + time(50·(1 − consumed/allotted)), ceil, 0..100; 0 if unsolved. */
+/**
+ * score = LIFE_VALUE·livesRemaining + TIME_MAX·(1 − consumed/allotted),
+ * ceil, clamped 0..100; 0 if unsolved. Star fill % equals this score.
+ * livesRemaining = LIVES_TOTAL − livesLost (3/2/1 for 0/1/2 lost).
+ */
 export function componentScore(i: ComponentScoreInput): number {
   if (!i.solved) return 0
-  const base = COMPLETION_BASE - LIFE_PENALTY * clamp(i.livesLost, 0, 2)
+  const livesRemaining = LIVES_TOTAL - clamp(i.livesLost, 0, LIVES_TOTAL - 1)
+  const base = LIFE_VALUE * livesRemaining
   const fraction = i.allotted > 0 ? clamp(i.consumed / i.allotted, 0, 1) : 1
-  const speed = SPEED_MAX * (1 - fraction)
-  return clamp(Math.ceil(base + speed), 0, COMPONENT_MAX)
+  const time = TIME_MAX * (1 - fraction)
+  return clamp(Math.ceil(base + time), 0, COMPONENT_MAX)
 }
 
 export type ComponentBests = Record<ComponentKey, number>
