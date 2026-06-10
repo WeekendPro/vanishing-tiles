@@ -202,8 +202,8 @@ export function ResolutionPhase() {
 
   return (
     <>
-      {/* pb-24 reserves clearance so the score panel never hides behind the
-          bottom-pinned action button. */}
+      {/* pb-24 reserves clearance so content (Practice's score panel, the cart)
+          never hides behind the bottom-pinned action buttons. */}
       <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center pb-24">
         {/* Board with the badge centered over it. The grid dims at the end of the
             round (~40%) so the badge pops against it. */}

@@ -26,7 +26,8 @@ export function GameShell() {
     })))
 
   const showTimer = (phase === 'viewing' || phase === 'selecting') && !paused
-  const showLives = (phase === 'viewing' || phase === 'selecting') && !paused
+  // The lives row appears and disappears together with the timer bar.
+  const showLives = showTimer
   // Countdown is a full-screen flourish (keep it centered). Every gameplay phase
   // anchors its content to the top so the grid sits high and — crucially — holds
   // the SAME vertical position across reveal → viewing → resolving (no shift when
