@@ -47,7 +47,7 @@ describe('GameShell header', () => {
       levelDisplayNumber: 3, phase: 'viewing', livesRemaining: 3, score: 1400,
     } as any)
     render(<GameShell />)
-    expect(screen.getByText(/03: Cellar Door/i)).toBeTruthy()
+    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === '03: Cellar Door')).toBeTruthy()
     expect(screen.getByText(/True Colors/i)).toBeTruthy()
     expect(screen.queryByText(/\/ 4/)).toBeNull()
     expect(screen.queryByText('1,400')).toBeNull()   // score no longer in the bar
@@ -59,7 +59,7 @@ describe('GameShell header', () => {
       levelDisplayNumber: 1, phase: 'viewing', livesRemaining: 3,
     } as any)
     render(<GameShell />)
-    expect(screen.getByText(/01: Cellar Door/i)).toBeTruthy()
+    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === '01: Cellar Door')).toBeTruthy()
     expect(screen.queryByText(/Main/)).toBeNull()    // 'main' has no suffix
   })
 })

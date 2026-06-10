@@ -41,7 +41,9 @@ export function GameShell() {
           {mode === 'journey' ? (
             <>
               <strong className="text-white">
-                {levelDisplayNumber != null ? `${String(levelDisplayNumber).padStart(2, '0')}: ` : ''}
+                {levelDisplayNumber != null && (
+                  <span className="font-sans normal-case tracking-normal">{String(levelDisplayNumber).padStart(2, '0')}: </span>
+                )}
                 {levelName ?? `Level ${levelDisplayNumber ?? ''}`}
               </strong>
               {activeComponent && activeComponent !== 'main' && (

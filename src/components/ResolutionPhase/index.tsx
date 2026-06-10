@@ -265,11 +265,10 @@ export function ResolutionPhase() {
 
       {stage === 'cta' && isJourney && (() => {
         const showNext = (!isFailure || outOfLives) && hasNextLevel()
-        const repeatLabel = isFailure && !outOfLives ? 'Try Again' : 'Play Again'
         const onRepeat = isFailure && !outOfLives ? retryComponent : replayComponent
         const buttons = [
-          <IconButton key="back" label="Back to Level" accent="edge" onClick={() => { if (levelId) openLevel(levelId) }}>{BackIcon}</IconButton>,
-          <IconButton key="repeat" label={repeatLabel} accent="cyan" onClick={() => onRepeat()}>{RepeatIcon}</IconButton>,
+          <IconButton key="back" label="More Puzzles" accent="edge" onClick={() => { if (levelId) openLevel(levelId) }}>{BackIcon}</IconButton>,
+          <IconButton key="repeat" label="Replay" accent="cyan" onClick={() => onRepeat()}>{RepeatIcon}</IconButton>,
           ...(showNext ? [<IconButton key="next" label="Next Level" accent="green" onClick={() => goNextLevel()}>{ForwardIcon}</IconButton>] : []),
         ]
         return (

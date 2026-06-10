@@ -313,7 +313,7 @@ describe('ResolutionPhase — score panel (reduced motion)', () => {
 import { useNavStore } from '../../src/store/navStore'
 
 describe('ResolutionPhase — journey single play', () => {
-  it('shows Play Again / Back to Level / Next Level after a solved component', async () => {
+  it('shows Replay / More Puzzles / Next Level after a solved component', async () => {
     useNavStore.getState().reset()
     useNavStore.getState().setLevelOrder(['L1', 'L2'])
     useNavStore.getState().openLevel('L1')
@@ -332,8 +332,8 @@ describe('ResolutionPhase — journey single play', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    expect(await screen.findByLabelText(/Play Again/i)).toBeTruthy()
-    expect(screen.getByLabelText(/Back to Level/i)).toBeTruthy()
+    expect(await screen.findByLabelText(/Replay/i)).toBeTruthy()
+    expect(screen.getByLabelText(/More Puzzles/i)).toBeTruthy()
     expect(screen.getByLabelText(/Next Level/i)).toBeTruthy()
     // the flat score card is gone — no "Level Total" / "Completion" rows
     expect(screen.queryByText(/Level Total/i)).toBeNull()
@@ -342,7 +342,7 @@ describe('ResolutionPhase — journey single play', () => {
 })
 
 describe('ResolutionPhase — journey failure CTA', () => {
-  it('journey failure WITH lives left shows Try Again (retries same puzzle), not Play Again', async () => {
+  it('journey failure WITH lives left shows Replay (retries same puzzle), not Next Level', async () => {
     useNavStore.getState().reset()
     useNavStore.getState().setLevelOrder(['L1', 'L2'])
     useNavStore.getState().openLevel('L1')
@@ -355,16 +355,18 @@ describe('ResolutionPhase — journey failure CTA', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    expect(await screen.findByLabelText(/Try Again/i)).toBeTruthy()
-    expect(screen.getByLabelText(/Back to Level/i)).toBeTruthy()
-    expect(screen.queryByLabelText(/Play Again/i)).toBeNull()
+    expect(await screen.findByLabelText(/Replay/i)).toBeTruthy()
+    expect(screen.getByLabelText(/More Puzzles/i)).toBeTruthy()
     expect(screen.queryByLabelText(/Next Level/i)).toBeNull()
   })
 
-  it('journey failure OUT of lives shows Play Again, not Try Again', async () => {
+  it('journey failure OUT of lives shows Replay (replayComponent), not retryComponent', async () => {
     useNavStore.getState().reset()
-    useNavStore.getState().setLevelOrder(['L1', 'L2'])
+    useNavStore.getState().setLevelOrder(['L1'])   // no next level
     useNavStore.getState().openLevel('L1')
+    const replaySpy = vi.fn()
+    const retrySpy = vi.fn()
+    useGameStore.setState({ replayComponent: replaySpy, retryComponent: retrySpy } as any)
     act(() => {
       useGameStore.setState({
         mode: 'journey', activeComponent: 'main', levelId: 'L1', phase: 'resolving',
@@ -373,14 +375,18 @@ describe('ResolutionPhase — journey failure CTA', () => {
         roundScore: { accuracy: 0, speedBonus: 0, efficiencyBonus: 0, attemptsBonus: 0, stars: 0, total: 0 },
       } as any)
     })
+    const user = userEvent.setup()
     render(<ResolutionPhase />)
-    expect(await screen.findByLabelText(/Play Again/i)).toBeTruthy()
-    expect(screen.queryByLabelText(/Try Again/i)).toBeNull()
+    const btn = await screen.findByLabelText(/Replay/i)
+    expect(btn).toBeTruthy()
+    await user.click(btn)
+    expect(replaySpy).toHaveBeenCalled()
+    expect(retrySpy).not.toHaveBeenCalled()
   })
 })
 
 describe('ResolutionPhase in journey mode', () => {
-  it('shows the journey per-component CTAs (Play Again / Back to Level) on a clear — NOT a practice-style Next Round', () => {
+  it('shows the journey per-component CTAs (Replay / More Puzzles) on a clear — NOT a practice-style Next Round', () => {
     useNavStore.getState().reset()
     useNavStore.getState().setLevelOrder(['L1'])
     useNavStore.getState().openLevel('L1')
@@ -405,12 +411,12 @@ describe('ResolutionPhase in journey mode', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    expect(screen.getByLabelText(/Play Again/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Back to Level/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Replay/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/More Puzzles/i)).toBeInTheDocument()
     expect(useNavStore.getState().appView).not.toBe('results')
   })
 
-  it('Back to Level navigates to the level detail screen', async () => {
+  it('More Puzzles navigates to the level detail screen', async () => {
     const user = userEvent.setup()
     useNavStore.getState().reset()
     useNavStore.getState().setLevelOrder(['L1'])
@@ -436,7 +442,7 @@ describe('ResolutionPhase in journey mode', () => {
       } as any)
     })
     render(<ResolutionPhase />)
-    await user.click(screen.getByLabelText(/Back to Level/i))
+    await user.click(screen.getByLabelText(/More Puzzles/i))
     expect(useNavStore.getState().appView).toBe('levelDetail')
     expect(useNavStore.getState().selectedLevelId).toBe('L1')
   })

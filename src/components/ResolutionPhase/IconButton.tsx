@@ -15,9 +15,10 @@ export function IconButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className={`grid place-items-center py-3 rounded-xl border-2 bg-arcade-panel transition-colors active:translate-y-px ${ACCENT[accent]}`}
+      className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 bg-arcade-panel transition-colors active:translate-y-px ${ACCENT[accent]}`}
     >
       {children}
+      <span className="font-pixel text-[10px] uppercase tracking-wide leading-tight whitespace-nowrap">{label}</span>
     </button>
   )
 }
