@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { MAX_LIVES } from '@shared/core/scoring'
 
 const STAR_CLIP =
   'polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)'
 const STAR_POINTS = '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35'
 const LIFE_VALUE = 20
 
-// Fixed sparkle "rain" slots — horizontal offset + stagger delay. Rendered as a
-// continuous loop during the leftover-time phase (no per-frame spawning), so the
-// nodes provably exist while it rains regardless of frame timing.
+// Fixed sparkle slots — horizontal offset + stagger delay. Rendered as a
+// continuous loop during the leftover-time phase, rising from the Speed line
+// up into the star to visualise the time points evaporating.
 const SPARKLES = [
   { x: -24, delay: 0.00 }, { x: 18, delay: 0.10 }, { x: -8, delay: 0.20 },
   { x: 26, delay: 0.32 }, { x: -18, delay: 0.44 }, { x: 6, delay: 0.08 },
@@ -36,6 +37,13 @@ function tween(
   })
 }
 
+function perfWord(s: number) {
+  if (s >= 90) return 'Excellent!'
+  if (s >= 75) return 'Great!'
+  if (s >= 60) return 'Good Job!'
+  return 'Pretty Good'
+}
+
 interface Props {
   show: boolean
   score: number
@@ -43,56 +51,84 @@ interface Props {
 }
 
 /**
- * Gold "shooting star" scoring visual. Drops in and springs to a stop (hollow,
- * 0 inside); each remaining life floats up and sparks (+20% fill / +20 score);
- * then leftover time tweens fill + score to the final value while cyan sparkles
- * rain into the star. The star fill % is the score.
+ * Gold "shooting star" scoring visual for Journey mode.
  *
- * This is the celebratory score reveal — core feedback, not decoration — so it
- * plays regardless of `prefers-reduced-motion` (notably iOS Low Power Mode,
- * which forces that media query on even with the accessibility toggle off).
+ * Layout: vertical stack — star (128×128) → accounting panel (Lives + Speed
+ * key/value rows) → performance text (gold gradient, bold italic).
+ *
+ * Choreography:
+ *   1. Star drops in (spring).
+ *   2. Accounting panel fades in.
+ *   3. Each remaining life token flies up from the Lives row into the star,
+ *      incrementing the score by LIFE_VALUE (+20) with a gold spark.
+ *   4. The Speed value evaporates to 0 (cyan sparkles rise from the Speed row
+ *      up into the star) as the score counts up to the final value.
+ *   5. Performance text springs in.
+ *
+ * Plays regardless of `prefers-reduced-motion` — this is the core score reveal,
+ * not decoration.
  */
 export function ScoreStar({ show, score, livesRemaining }: Props) {
   const [display, setDisplay] = useState(0)
   const [fill, setFill] = useState(0)
   const [landed, setLanded] = useState(0)
+  const [speedLeft, setSpeedLeft] = useState(0)
   const [raining, setRaining] = useState(false)
+  const [acctIn, setAcctIn] = useState(false)
+  const [perfIn, setPerfIn] = useState(false)
   const started = useRef(false)
+
+  // speed = points attributed to leftover time (score minus lives contribution)
+  const speed = Math.max(0, score - LIFE_VALUE * livesRemaining)
 
   useEffect(() => {
     if (!show) { started.current = false; return }
-    if (started.current) return // props are frozen at resolution time; mid-animation prop changes are not supported
+    if (started.current) return // props frozen at resolution time; mid-animation prop changes not supported
     started.current = true
     const token = { cancelled: false }
     const run = async () => {
-      await wait(700) // drop-in spring settles
+      // Show the speed value immediately so the Speed line is already populated
+      // when the accounting panel fades in.
+      setSpeedLeft(speed)
+
+      await wait(450) // star drop-in
+      setAcctIn(true)
+      await wait(350)
+
+      // Lives phase: each remaining life flies up and sparks (+20 each)
       let running = 0
       for (let i = 0; i < livesRemaining; i++) {
         if (token.cancelled) return
-        await wait(420)                 // life travels up
-        setLanded(i + 1)                // spark + token consumed
+        await wait(380)
+        setLanded(i + 1)
         const from = running
         running = Math.min(score, running + LIFE_VALUE)
-        await tween(from, running, 280, v => { setDisplay(Math.round(v)); setFill(v) }, token)
+        await tween(from, running, 260, v => { setDisplay(Math.round(v)); setFill(v) }, token)
         await wait(120)
       }
+
+      // Time phase: speed evaporates into the star (cyan sparkles rise up)
       if (token.cancelled) return
-      // Leftover time: count up to the final score while cyan sparkles rain in.
       setRaining(true)
-      await tween(running, score, 1300, v => { setDisplay(Math.round(v)); setFill(v) }, token)
+      await Promise.all([
+        tween(running, score, 1300, v => { setDisplay(Math.round(v)); setFill(v) }, token),
+        tween(speed, 0, 1300, v => setSpeedLeft(Math.round(v)), token),
+      ])
       if (token.cancelled) return
-      await wait(450)                   // let the last sparkles fall
       setRaining(false)
+
+      // Performance text springs in
+      setPerfIn(true)
     }
     run()
     return () => { token.cancelled = true }
-  }, [show, score, livesRemaining])
+  }, [show, score, livesRemaining, speed])
 
   if (!show) return null
 
-  const spread = 26
   return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-20">
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-20 gap-3">
+      {/* ── Star ── */}
       <motion.div
         className="relative"
         style={{ width: 128, height: 128 }}
@@ -117,7 +153,7 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
         >
           <polygon points={STAR_POINTS} fill="none" stroke="#fbbf24" strokeWidth="4.5" strokeLinejoin="round" />
         </svg>
-        {/* score */}
+        {/* score value */}
         <span
           data-testid="score-star-value"
           className="absolute inset-0 grid place-items-center font-pixel text-[20px] text-white"
@@ -126,20 +162,20 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           {display}
         </span>
 
-        {/* cyan sparkles raining into the star during the leftover-time phase */}
+        {/* cyan sparkles rising from the Speed line into the star during the time phase */}
         {raining && SPARKLES.map((s, i) => (
           <motion.span
             key={`rain-${i}`}
             data-testid="score-star-sparkle"
             className="absolute left-1/2 top-1/2 rounded-full"
             style={{ width: 7, height: 7, marginLeft: -3.5, marginTop: -3.5, background: '#fff', boxShadow: '0 0 10px 4px rgba(34,211,238,.9)' }}
-            initial={{ x: s.x, y: -36, opacity: 0, scale: 0.3 }}
-            animate={{ x: s.x * 0.45, y: 12, opacity: [0, 1, 0], scale: [0.3, 1.6, 0.5] }}
-            transition={{ duration: 0.7, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.3, delay: s.delay }}
+            initial={{ x: s.x, y: 108, opacity: 0, scale: 0.3 }}
+            animate={{ x: s.x * 0.4, y: -6, opacity: [0, 1, 0], scale: [0.3, 1.4, 0.5] }}
+            transition={{ duration: 0.8, ease: 'easeIn', repeat: Infinity, repeatDelay: 0.3, delay: s.delay }}
           />
         ))}
 
-        {/* spark on each life landing */}
+        {/* gold spark on each life landing */}
         {landed > 0 && (
           <motion.span
             key={`life-${landed}`}
@@ -151,18 +187,63 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           />
         )}
 
-        {/* life tokens float up from below and disappear into the star as they land */}
+        {/* life tokens fly up from the Lives-line area into the star as they land */}
         {Array.from({ length: livesRemaining }, (_, i) => (
           <motion.span
             key={i}
             className="absolute left-1/2 top-1/2 text-neon-red text-glow-red text-sm"
-            initial={{ x: (i - (livesRemaining - 1) / 2) * spread - 6, y: 86, opacity: 1, scale: 1 }}
+            initial={{ x: (i - (livesRemaining - 1) / 2) * 26 - 6, y: 96, opacity: 1, scale: 1 }}
             animate={i < landed
               ? { x: -6, y: -6, opacity: 0, scale: 0.4 }
-              : { x: (i - (livesRemaining - 1) / 2) * spread - 6, y: 86, opacity: 1, scale: 1 }}
+              : { x: (i - (livesRemaining - 1) / 2) * 26 - 6, y: 96, opacity: 1, scale: 1 }}
             transition={{ duration: 0.42, ease: 'easeIn' }}
           >♥</motion.span>
         ))}
+      </motion.div>
+
+      {/* ── Accounting panel ── */}
+      <motion.div
+        data-testid="score-acct"
+        className="w-[210px] flex flex-col gap-1.5"
+        initial={false}
+        animate={{ opacity: acctIn ? 1 : 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* Lives row */}
+        <div className="flex justify-between items-center">
+          <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Lives</span>
+          <span data-testid="acct-lives" className="text-sm leading-none flex gap-0.5">
+            {Array.from({ length: MAX_LIVES }, (_, i) => (
+              i < livesRemaining
+                ? <span key={i} className="text-neon-red text-glow-red">♥</span>
+                : <span key={i} className="text-arcade-edge">♥</span>
+            ))}
+          </span>
+        </div>
+        {/* Speed row */}
+        <div className="flex justify-between items-center">
+          <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Speed</span>
+          <span data-testid="acct-speed" className="font-pixel text-[11px] tabular-nums text-neon-cyan text-glow-cyan">{speedLeft}</span>
+        </div>
+      </motion.div>
+
+      {/* ── Performance text ── */}
+      <motion.div
+        data-testid="score-perf"
+        className="font-sans font-black italic text-2xl"
+        style={{
+          letterSpacing: '.5px',
+          background: 'linear-gradient(180deg,#fffbe6,#fde047 55%,#f59e0b)',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+          filter: 'drop-shadow(0 0 10px rgba(250,204,21,.7)) drop-shadow(0 1px 0 rgba(0,0,0,.5))',
+        }}
+        initial={false}
+        animate={perfIn ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.8, y: 6 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 14 }}
+      >
+        {perfWord(score)}
       </motion.div>
     </div>
   )
