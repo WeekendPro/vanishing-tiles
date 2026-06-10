@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scoring — accounting lines + performance text</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'], sans:['Inter','ui-sans-serif','system-ui','sans-serif'] },
+  }}}
+</script>
+<style>
+  body{font-family:Inter,ui-rounded,system-ui,sans-serif;}
+  .glow-gold{text-shadow:0 0 12px rgba(250,204,21,.85);}
+  .phone{width:390px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;z-index:60;}
+  .star-clip{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+  .cell{width:26px;height:26px;border-radius:3px;background:#15324a;box-shadow:inset 0 0 0 1px #1d4a6b;}
+
+  /* performance text — arcade-y bold glare */
+  .perf{font-family:Inter,sans-serif;font-weight:900;font-style:italic;letter-spacing:.5px;
+    background:linear-gradient(180deg,#fffbe6,#fde047 55%,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 10px rgba(250,204,21,.7)) drop-shadow(0 1px 0 rgba(0,0,0,.5));}
+
+  @keyframes sparkPop{0%{transform:scale(.2);opacity:1}100%{transform:scale(2.3);opacity:0}}
+  @keyframes riseIn{0%{transform:translateY(0) scale(.5);opacity:0}25%{opacity:1}100%{transform:translateY(-72px) scale(1.1);opacity:0}}
+</style>
+</head>
+<body class="bg-zinc-950 text-white p-6">
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-xl font-black mb-1">Scoring — accounting lines (Lives + Speed) + performance text</h1>
+  <p class="text-zinc-400 mb-5 text-sm">Under the star: two key/value lines. <b>Lives</b> = 3 hearts (red = remaining, gray = lost); the red hearts fly up into the star (+20 each). <b>Speed</b> = the time points; the value evaporates up into the star (cyan sparkles rising) as the score climbs. Then the performance word appears. score = 20×lives + speed.</p>
+
+  <div class="flex gap-8 items-start flex-wrap">
+    <!-- PHONE -->
+    <div class="phone relative rounded-[1.6rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+      <!-- metadata bar (note: 01 in sans, name in pixel) -->
+      <div class="flex items-center px-4 py-3 border-b border-arcade-edge">
+        <div class="text-[10px] uppercase tracking-[0.1em] text-neon-cyan font-pixel">
+          <span class="font-sans font-bold normal-case tracking-normal text-white">01: </span><span class="text-white">VACANT HEIGHTS</span>
+        </div>
+      </div>
+
+      <!-- board + score overlay -->
+      <div class="relative px-4 pt-4 pb-3">
+        <div id="board" class="grid mx-auto opacity-40" style="grid-template-columns:repeat(12,26px);gap:2px;width:fit-content;"></div>
+
+        <!-- overlay: star + accounting + perf, in one positioned stack -->
+        <div class="absolute inset-0 flex flex-col items-center pt-6">
+          <!-- star -->
+          <div id="starwrap" class="relative" style="width:120px;height:120px;opacity:0;transform:translateY(-40px) scale(.7)">
+            <div class="absolute inset-0 star-clip">
+              <div class="absolute inset-0" style="background:rgba(250,204,21,.14)"></div>
+              <div id="starfill" class="absolute inset-x-0 bottom-0" style="height:0%;background:linear-gradient(0deg,#f59e0b,#fde047)"></div>
+            </div>
+            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style="overflow:visible;filter:drop-shadow(0 0 8px rgba(250,204,21,.6))">
+              <polygon points="50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35" fill="none" stroke="#fbbf24" stroke-width="4.5" stroke-linejoin="round"/>
+            </svg>
+            <span id="score" class="absolute inset-0 grid place-items-center font-pixel text-[19px] text-white" style="text-shadow:0 2px 4px rgba(0,0,0,.85)">0</span>
+          </div>
+
+          <!-- accounting panel -->
+          <div id="acct" class="mt-3 w-[210px] space-y-1.5" style="opacity:0">
+            <div class="flex justify-between items-center">
+              <span class="font-pixel text-[9px] uppercase tracking-[0.1em] text-zinc-400">Lives</span>
+              <span id="livesVal" class="text-lg leading-none"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-pixel text-[9px] uppercase tracking-[0.1em] text-zinc-400">Speed</span>
+              <span id="speedVal" class="font-pixel text-[13px] tabular-nums text-neon-cyan" style="text-shadow:0 0 8px rgba(34,211,238,.6)">0</span>
+            </div>
+          </div>
+
+          <!-- performance text -->
+          <div id="perf" class="perf text-2xl mt-4" style="opacity:0;transform:translateY(6px)">Great!</div>
+        </div>
+      </div>
+
+      <!-- icon buttons with labels -->
+      <div id="cta" class="grid grid-cols-3 gap-3 px-4 pt-2 pb-5"></div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="bg-zinc-900 rounded-xl p-5 w-[320px] space-y-4">
+      <div>
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Lives remaining</div>
+        <div class="flex gap-2" id="livesBtns">
+          <button data-l="1" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-zinc-700">1</button>
+          <button data-l="2" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-zinc-700">2</button>
+          <button data-l="3" class="lbtn flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-neon-yellow text-black">3</button>
+        </div>
+      </div>
+      <div>
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Speed points (time)</div>
+        <input id="speedSlider" type="range" min="0" max="40" value="26" class="w-full">
+        <div class="text-[11px] text-zinc-400 mt-1">speed = <span id="speedOut">26</span></div>
+      </div>
+      <div class="border-t border-zinc-700 pt-3">
+        <div class="text-sm text-zinc-300">Final score: <span id="finalScore" class="font-black text-neon-yellow text-lg">86</span> / 100</div>
+        <div class="text-[11px] text-zinc-500">= 20×<span id="lvOut">3</span> + <span id="spOut">26</span> → <span id="bandOut">Great!</span></div>
+      </div>
+      <button id="replay" class="w-full px-4 py-3 rounded-lg bg-neon-green text-black font-black text-base">▶ Replay</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const HEART = '<svg viewBox="0 0 24 24" width="18" height="18" style="display:inline-block;vertical-align:middle" fill="COLOR" stroke="STROKE" stroke-width="1.3"><path d="M12 21s-7-4.6-9.3-8.4C1 9.5 2.4 6 5.7 6c2 0 3.2 1.2 4.3 2.6C11 7.2 12.3 6 14.3 6 17.6 6 19 9.5 21.3 12.6 19 16.4 12 21 12 21z"/></svg>';
+
+// board
+const board = $('#board');
+for (let i=0;i<120;i++){ const d=document.createElement('div'); d.className='cell'; board.appendChild(d); }
+
+// cta buttons (icon + label)
+const ICONS = {
+  back:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  rep:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>',
+  fwd:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+};
+[['back','More Puzzles','border-arcade-edge text-zinc-300'],['rep','Replay','border-neon-cyan text-neon-cyan'],['fwd','Next Level','border-neon-green text-neon-green']].forEach(([k,lbl,cls])=>{
+  const b=document.createElement('button');
+  b.className=`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 ${cls} bg-arcade-panel`;
+  b.innerHTML=ICONS[k]+`<span class="font-pixel text-[9px] uppercase tracking-wide whitespace-nowrap">${lbl}</span>`;
+  $('#cta').appendChild(b);
+});
+
+let lives=3, speed=26, running=false;
+const band = s => s>=90?'Excellent!':s>=75?'Great!':s>=60?'Good Job!':'Pretty Good';
+
+function renderLives(){
+  // Static accounting: red = remaining life, gray = lost life. Stays solid; the
+  // fly-up is a separate copied heart so the line keeps showing the final state.
+  let html='';
+  for(let i=0;i<3;i++){
+    if(i < lives) html += HEART.replace('COLOR','#ff4d4d').replace('STROKE','#ff8a8a');
+    else html += HEART.replace('COLOR','#3f4756').replace('STROKE','#4b5563');
+  }
+  $('#livesVal').innerHTML = html;
+}
+function setScore(v){ $('#score').textContent=Math.round(v); }
+function setFill(p){ $('#starfill').style.height=Math.max(0,Math.min(100,p))+'%'; }
+function setSpeed(v){ $('#speedVal').textContent=Math.round(v); }
+
+function syncReadout(){
+  const total=20*lives+speed;
+  $('#speedOut').textContent=speed; $('#finalScore').textContent=total;
+  $('#lvOut').textContent=lives; $('#spOut').textContent=speed; $('#bandOut').textContent=band(total);
+}
+
+function flyHeart(){
+  // a red heart copy flying from the Lives row up into the star
+  const lv=$('#livesVal').getBoundingClientRect(); const st=$('#starwrap').getBoundingClientRect();
+  const host=$('#starwrap').parentElement.parentElement; const hb=host.getBoundingClientRect();
+  const el=document.createElement('div'); el.style.position='absolute'; el.style.zIndex=40;
+  el.innerHTML=HEART.replace('COLOR','#ff4d4d').replace('STROKE','#ff8a8a');
+  el.style.left=(lv.left-hb.left+lv.width-22)+'px'; el.style.top=(lv.top-hb.top)+'px';
+  el.style.transition='transform .5s cubic-bezier(.4,0,.2,1), opacity .5s';
+  host.appendChild(el);
+  requestAnimationFrame(()=>{ el.style.transform=`translate(${(st.left-lv.left)+(st.width/2)- (lv.width-12)}px, ${(st.top-lv.top)+st.height/2}px) scale(.5)`; el.style.opacity='0'; });
+  setTimeout(()=>el.remove(),520);
+}
+function spark(host, x, y, color='250,204,21', size=8){
+  const s=document.createElement('div'); s.style.position='absolute'; s.style.left=x+'px'; s.style.top=y+'px';
+  s.style.width=size+'px'; s.style.height=size+'px'; s.style.borderRadius='50%'; s.style.background='#fff';
+  s.style.boxShadow=`0 0 10px 4px rgba(${color},.9)`; s.style.zIndex=45; s.style.animation='sparkPop .5s ease-out forwards';
+  host.appendChild(s); setTimeout(()=>s.remove(),520);
+}
+function riseSpark(){
+  // cyan spark rising from the Speed row up into the star
+  const sp=$('#speedVal').getBoundingClientRect(); const host=$('#starwrap').parentElement.parentElement; const hb=host.getBoundingClientRect();
+  const el=document.createElement('div'); el.style.position='absolute'; el.style.zIndex=44; el.style.width='6px'; el.style.height='6px';
+  el.style.borderRadius='50%'; el.style.background='#fff'; el.style.boxShadow='0 0 9px 3px rgba(34,211,238,.9)';
+  el.style.left=(sp.left-hb.left+Math.random()*30-4)+'px'; el.style.top=(sp.top-hb.top)+'px';
+  el.style.animation='riseIn .8s ease-in forwards';
+  host.appendChild(el); setTimeout(()=>el.remove(),820);
+}
+
+async function play(){
+  if(running) return; running=true;
+  // reset
+  $('#starwrap').style.transition='none'; $('#starwrap').style.opacity='0'; $('#starwrap').style.transform='translateY(-40px) scale(.7)';
+  $('#acct').style.transition='none'; $('#acct').style.opacity='0';
+  $('#perf').style.opacity='0'; $('#perf').style.transform='translateY(6px)';
+  setScore(0); setFill(0); setSpeed(speed); renderLives();
+  await wait(60);
+  // 1. star drops in
+  $('#starwrap').style.transition='transform .6s cubic-bezier(.3,1.5,.5,1), opacity .3s';
+  $('#starwrap').style.opacity='1'; $('#starwrap').style.transform='translateY(0) scale(1)';
+  await wait(350);
+  // 2. accounting appears
+  $('#acct').style.transition='opacity .3s'; $('#acct').style.opacity='1';
+  await wait(450);
+  // 3. lives fly up
+  let sc=0;
+  const host=$('#starwrap').parentElement.parentElement;
+  for(let i=0;i<lives;i++){
+    flyHeart(); 
+    await wait(380);
+    const sb=$('#starwrap').getBoundingClientRect(); const hb=host.getBoundingClientRect();
+    spark(host, sb.left-hb.left+sb.width/2-4, sb.top-hb.top+sb.height/2-4);
+    const from=sc; sc=Math.min(20*lives, sc+20);
+    await tweenN(from,sc,260);
+    await wait(120);
+  }
+  // 4. speed evaporates into the star
+  const rainTimer=setInterval(riseSpark,80);
+  const total=20*lives+speed;
+  await tweenSpeed(sc, total, speed, 0, 1300);
+  clearInterval(rainTimer);
+  // 5. performance text
+  $('#perf').textContent=band(total);
+  $('#perf').style.transition='opacity .4s, transform .4s'; $('#perf').style.opacity='1'; $('#perf').style.transform='translateY(0) scale(1)';
+  $('#perf').animate([{transform:'scale(.8)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],{duration:420,easing:'cubic-bezier(.34,1.56,.64,1)'});
+  running=false;
+}
+function tweenN(from,to,ms){ return new Promise(res=>{ const t0=performance.now(); (function s(n){ const k=Math.min(1,(n-t0)/ms); const e=1-Math.pow(1-k,2); setScore(from+(to-from)*e); setFill(from+(to-from)*e); k<1?requestAnimationFrame(s):res(); })(performance.now()); }); }
+function tweenSpeed(s0,s1,sp0,sp1,ms){ return new Promise(res=>{ const t0=performance.now(); (function s(n){ const k=Math.min(1,(n-t0)/ms); const e=1-Math.pow(1-k,2); const v=s0+(s1-s0)*e; setScore(v); setFill(v); setSpeed(sp0+(sp1-sp0)*e); k<1?requestAnimationFrame(s):res(); })(performance.now()); }); }
+
+document.querySelectorAll('.lbtn').forEach(b=>b.onclick=()=>{ lives=+b.dataset.l; document.querySelectorAll('.lbtn').forEach(x=>x.className=x.className.replace('bg-neon-yellow text-black','bg-zinc-700')); b.className=b.className.replace('bg-zinc-700','bg-neon-yellow text-black'); syncReadout(); play(); });
+$('#speedSlider').oninput=e=>{ speed=+e.target.value; syncReadout(); };
+$('#speedSlider').onchange=()=>play();
+$('#replay').onclick=play;
+syncReadout(); play();
+</script>
+</body>
+</html>
