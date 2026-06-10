@@ -51,7 +51,6 @@ export function ViewingPhase() {
         <GapNumbers gaps={gaps} />
         <GapShimmer containerRef={gridWrapRef} cellRects={cellRects} gaps={gaps} />
       </div>
-      <p className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan text-center">Memorize the gaps</p>
       <NeonButton fullWidth variant="primary" onClick={endViewing}>
         Ready →
       </NeonButton>
