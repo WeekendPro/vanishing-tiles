@@ -8,13 +8,11 @@ describe('ScoreStar', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows the Lives accounting line with red remaining + gray lost hearts', () => {
+  it('shows the Lives accounting line with remaining + lost hearts', () => {
     render(<ScoreStar show score={80} livesRemaining={2} />)
     const lives = screen.getByTestId('acct-lives')
-    const red = lives.querySelectorAll('.text-neon-red')
-    const gray = lives.querySelectorAll('.text-arcade-edge')
-    expect(red).toHaveLength(2)   // livesRemaining = 2
-    expect(gray).toHaveLength(1)  // MAX_LIVES - livesRemaining = 1
+    expect(lives.children).toHaveLength(3)                              // MAX_LIVES slots
+    expect(lives.querySelectorAll('.text-arcade-edge')).toHaveLength(1) // lost = 3 - livesRemaining
   })
 
   it('starts the star at 0 and counts up (no hard snap)', async () => {

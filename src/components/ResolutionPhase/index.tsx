@@ -208,7 +208,7 @@ export function ResolutionPhase() {
         {/* Board with the badge centered over it. The grid dims at the end of the
             round (~40%) so the badge pops against it. */}
         <div className="relative">
-          <div className={`relative transition-opacity duration-300 ${badgeShown ? 'opacity-40' : 'opacity-100'}`}>
+          <div className={`relative transition-opacity duration-300 ${badgeShown ? 'opacity-25' : 'opacity-100'}`}>
             <Grid
               cellRef={(row, col, el) => {
                 if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())

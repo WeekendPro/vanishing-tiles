@@ -187,18 +187,6 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           />
         )}
 
-        {/* life tokens fly up from the Lives-line area into the star as they land */}
-        {Array.from({ length: livesRemaining }, (_, i) => (
-          <motion.span
-            key={i}
-            className="absolute left-1/2 top-1/2 text-neon-red text-glow-red text-sm"
-            initial={{ x: (i - (livesRemaining - 1) / 2) * 26 - 6, y: 96, opacity: 1, scale: 1 }}
-            animate={i < landed
-              ? { x: -6, y: -6, opacity: 0, scale: 0.4 }
-              : { x: (i - (livesRemaining - 1) / 2) * 26 - 6, y: 96, opacity: 1, scale: 1 }}
-            transition={{ duration: 0.42, ease: 'easeIn' }}
-          >♥</motion.span>
-        ))}
       </motion.div>
 
       {/* ── Accounting panel ── */}
@@ -214,9 +202,21 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
           <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Lives</span>
           <span data-testid="acct-lives" className="text-sm leading-none flex gap-0.5">
             {Array.from({ length: MAX_LIVES }, (_, i) => (
-              i < livesRemaining
-                ? <span key={i} className="text-neon-red text-glow-red">♥</span>
-                : <span key={i} className="text-arcade-edge">♥</span>
+              i >= livesRemaining
+                ? <span key={i} className="text-arcade-edge">♥</span>
+                : (
+                  <span key={i} className="relative inline-block">
+                    <span className="text-neon-red opacity-20">♥</span>
+                    <motion.span
+                      className="absolute left-0 top-0 text-neon-red text-glow-red"
+                      initial={false}
+                      animate={landed > i
+                        ? { y: -130, x: -70, opacity: 0, scale: 0.5 }
+                        : { y: 0, x: 0, opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.45, ease: 'easeIn' }}
+                    >♥</motion.span>
+                  </span>
+                )
             ))}
           </span>
         </div>

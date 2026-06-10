@@ -18,7 +18,7 @@ export function IconButton({
       className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 bg-arcade-panel transition-colors active:translate-y-px ${ACCENT[accent]}`}
     >
       {children}
-      <span className="font-pixel text-[10px] uppercase tracking-wide leading-tight whitespace-nowrap">{label}</span>
+      <span className="font-sans text-[11px] font-semibold tracking-tight leading-tight whitespace-nowrap">{label}</span>
     </button>
   )
 }
