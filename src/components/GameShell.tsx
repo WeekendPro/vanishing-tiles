@@ -7,7 +7,7 @@ import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
-import { TrickleBar } from './TrickleBar'
+import { ArcadeLoader } from './ArcadeLoader'
 
 export function GameShell() {
   const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent } =
@@ -60,9 +60,7 @@ export function GameShell() {
           reserved in EVERY phase so the grid below never shifts when the timer
           appears (viewing/selecting) or disappears (reveal/resolve). */}
       <div className="h-1.5">
-        {submitting ? (
-          <TrickleBar active height="h-1.5" className="rounded-none" />
-        ) : showTimer ? (
+        {showTimer ? (
           <ProgressBar
             startTime={phaseStartTime}
             duration={phaseDuration}
@@ -78,6 +76,7 @@ export function GameShell() {
         {!paused && phase === 'selecting'  && <SelectingPhase />}
         {!paused && phase === 'resolving'  && <ResolutionPhase />}
       </div>
+      <ArcadeLoader active={submitting} />
     </div>
   )
 }

@@ -14,17 +14,19 @@ beforeEach(() => { vi.useFakeTimers(); useGameStore.getState().resetGame() })
 afterEach(() => { vi.useRealTimers() })
 
 describe('GameShell loading slot', () => {
-  it('shows the trickle bar in the timer slot while submitting', () => {
+  it('shows the full-screen loader (not the timer slot) while submitting', () => {
     act(() => { useGameStore.setState({ phase: 'selecting', mode: 'journey', submitting: true }) })
     render(<GameShell />)
     act(() => { vi.advanceTimersByTime(120) })
-    expect(screen.getByTestId('trickle-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('arcade-loader')).toBeInTheDocument()
+    expect(screen.queryByTestId('trickle-bar')).toBeNull()
   })
 
-  it('does not show the trickle bar when not submitting', () => {
+  it('shows no loader when not submitting', () => {
     act(() => { useGameStore.setState({ phase: 'selecting', mode: 'journey', submitting: false }) })
     render(<GameShell />)
     act(() => { vi.advanceTimersByTime(120) })
+    expect(screen.queryByTestId('arcade-loader')).toBeNull()
     expect(screen.queryByTestId('trickle-bar')).toBeNull()
   })
 })
