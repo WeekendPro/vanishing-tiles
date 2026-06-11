@@ -2,6 +2,7 @@ import { useGameStore } from '../store/gameStore'
 import { useShallow } from 'zustand/shallow'
 import { MAX_LIVES } from '@shared/core/scoring'
 import { COMPONENT_LABEL } from '../lib/components'
+import { BriefingPhase } from './BriefingPhase'
 import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
 import { SelectingPhase } from './SelectingPhase'
@@ -32,7 +33,7 @@ export function GameShell() {
   // anchors its content to the top so the grid sits high and — crucially — holds
   // the SAME vertical position across reveal → viewing → resolving (no shift when
   // the resolution UI appears).
-  const centerContent = phase === 'countdown'
+  const centerContent = phase === 'countdown' || phase === 'briefing'
 
   return (
     <div className="min-h-dvh bg-arcade-bg text-white flex flex-col">
@@ -83,6 +84,7 @@ export function GameShell() {
       )}
 
       <div className={`flex-1 flex justify-center px-4 pb-4 ${centerContent ? 'items-center pt-4' : 'items-start pt-8'}`}>
+        {!paused && phase === 'briefing'   && <BriefingPhase />}
         {!paused && phase === 'countdown'  && <CountdownPhase />}
         {!paused && phase === 'viewing'    && <ViewingPhase />}
         {!paused && phase === 'selecting'  && <SelectingPhase />}
