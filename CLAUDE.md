@@ -31,9 +31,9 @@ When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the 
 
 1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
 2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
-3. **Resolution:**
-   - **Perfect** (solver confirms the selection exactly fills all gaps): pieces fly in automatically, **ComponentScorePanel** shows the result, **Next →** CTA.
-   - **Failed attempt** (selection doesn't fit): player loses 1 life, the game auto-runs a best-fit placement (good pieces fly in, leftover pieces get a red ✕). Badge tiers by coverage — amber **So Close!** (≥66%), red **Tough Round** (33–66%), red **Yikes** (<33%). CTA is **Try Again ↺** (same puzzle, fresh clock). On the last life the CTA is **Back to Level →**.
+3. **Resolution** — resolved by **strict assignment** (`themeResolution.ts`): a selected piece may only fill a gap of the **exact same shape** (and **color** in color-coded rounds); it never lands on mismatched cells or spans adjacent gaps. Sequential rounds match each pick against its **position** (the gap with `order == k`). A piece with no available matching gap is rejected.
+   - **Perfect** (every gap matched, no leftover picks): pieces fly in automatically, **ComponentScorePanel** shows the result, **Next →** CTA.
+   - **Failed attempt** (some gap unmatched or some pick rejected): player loses 1 life; matched pieces fly into their gaps, rejected pieces get a red ✕. Badge tiers by coverage — amber **So Close!** (≥66%), red **Tough Round** (33–66%), red **Yikes** (<33%). CTA is **Try Again ↺** (same puzzle, fresh clock). On the last life the CTA is **Back to Level →**.
 
 ### Scoring
 
