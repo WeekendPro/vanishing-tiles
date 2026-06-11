@@ -57,6 +57,7 @@ export function effectiveViewDuration(roundTheme: RoundTheme, difficulty: Diffic
 interface GameStore extends GameState {
   startPractice: () => void
   startGame: () => void
+  beginCountdown: () => void
   beginViewing: () => void
   endViewing: () => void
   submitSelection: () => void
@@ -177,8 +178,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // The round opens with a 3-2-1 countdown; the view timer starts only
     // once beginViewing fires, so memorization time isn't eaten by the count.
     // sessionGrid keeps the pristine board so all 3 tries replay the same puzzle.
+    // Journey component entry opens on the briefing (puzzle-detail) page;
+    // Practice rounds go straight to the countdown.
     set({
-      phase: 'countdown',
+      phase: get().mode === 'journey' ? 'briefing' : 'countdown',
       paused: false,
       grid,
       sessionGrid: grid.map(row => row.map(cell => ({ ...cell }))),
@@ -229,6 +232,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   loseLife: () => set(state => ({ livesRemaining: Math.max(0, state.livesRemaining - 1) })),
+
+  beginCountdown: () => set({ phase: 'countdown', paused: false }),
 
   beginViewing: () => {
     const { difficulty, roundTheme } = get()

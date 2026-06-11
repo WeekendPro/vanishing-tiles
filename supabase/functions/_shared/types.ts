@@ -117,6 +117,7 @@ export interface DifficultyConfig {
 
 export type GamePhase =
   | 'idle'
+  | 'briefing'
   | 'countdown'
   | 'viewing'
   | 'selecting'

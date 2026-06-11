@@ -29,7 +29,7 @@ describe('startComponent', () => {
     expect(s.roundTheme).toBe('basic')
     expect(s.livesRemaining).toBe(3)
     expect(s.livesLost).toBe(0)
-    expect(s.phase).toBe('countdown')
+    expect(s.phase).toBe('briefing')
   })
 })
 
