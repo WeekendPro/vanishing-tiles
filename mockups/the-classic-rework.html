@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Classic — rework mockups</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;}
+  .glow-cyan{text-shadow:0 0 8px rgba(34,211,238,.6);}
+  .glow-gold{text-shadow:0 0 10px rgba(250,204,21,.8);}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .phone{width:412px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;}
+  .star-fill{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
+  .playbtn{font-family:'Press Start 2P',monospace;}
+
+  .cell{width:15px;height:15px;border-radius:3px;}
+  .filled{background:linear-gradient(135deg,#1f3a44,#0c2027);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .gap{background:transparent;border:1.5px dashed rgba(34,211,238,.85);box-shadow:0 0 8px rgba(34,211,238,.25) inset;}
+
+  /* ===== shared demo board ===== */
+  .board{position:relative;width:170px;height:170px}
+  .bcell{width:34px;height:34px;border-radius:5px;background:linear-gradient(135deg,#1f3a44,#0c2027);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .bgap{background:transparent;border:2px dashed rgba(34,211,238,.85);box-shadow:0 0 10px rgba(34,211,238,.3) inset}
+  .piece{position:absolute;width:34px;height:34px;border-radius:5px}
+  .ov{position:absolute}
+
+  /* ===== CLASSIC: memorize -> pieces fly in -> check ===== */
+  @keyframes cl-eye{0%,28%{opacity:1}40%,100%{opacity:0}}
+  @keyframes cl-a{0%,38%{transform:translate(-55px,-55px);opacity:0}54%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes cl-b{0%,46%{transform:translate(60px,-45px);opacity:0}62%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes cl-chk{0%,72%{opacity:0;transform:scale(.4)}82%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+  .cl-eye{animation:cl-eye 4.4s infinite}.cl-a{animation:cl-a 4.4s infinite}.cl-b{animation:cl-b 4.4s infinite}.cl-chk{animation:cl-chk 4.4s infinite}
+
+  /* ===== TRUE COLORS: colored gaps, wrong color bounces, right color locks ===== */
+  @keyframes tc-cyan{0%,40%{transform:translate(-55px,-55px);opacity:0}56%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes tc-wrong{0%,44%{transform:translate(55px,-20px);opacity:0}54%{transform:translate(0,0);opacity:1}
+                      60%{transform:translate(0,0);opacity:1}66%{transform:translate(40px,-20px);opacity:0}100%{opacity:0}}
+  @keyframes tc-x{0%,55%{opacity:0}58%{opacity:1}65%{opacity:1}68%,100%{opacity:0}}
+  @keyframes tc-amber{0%,68%{transform:translate(50px,40px);opacity:0}82%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes tc-chk{0%,84%{opacity:0;transform:scale(.4)}92%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+  .tc-cyan{animation:tc-cyan 4.6s infinite}.tc-wrong{animation:tc-wrong 4.6s infinite}.tc-x{animation:tc-x 4.6s infinite}
+  .tc-amber{animation:tc-amber 4.6s infinite}.tc-chk{animation:tc-chk 4.6s infinite}
+
+  /* ===== IN ORDER: numbered gaps fill 1->2->3 ===== */
+  @keyframes io-1{0%,24%{transform:translate(-50px,-50px);opacity:0}36%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes io-2{0%,44%{transform:translate(55px,-40px);opacity:0}56%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes io-3{0%,62%{transform:translate(-40px,55px);opacity:0}74%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes io-n1{0%,24%{color:#fde047;text-shadow:0 0 8px #facc15}40%,100%{color:#0b1520;text-shadow:none}}
+  @keyframes io-n2{0%,44%{color:#94a3b8}45%{color:#fde047;text-shadow:0 0 8px #facc15}60%,100%{color:#0b1520;text-shadow:none}}
+  @keyframes io-n3{0%,62%{color:#94a3b8}63%{color:#fde047;text-shadow:0 0 8px #facc15}78%,100%{color:#0b1520;text-shadow:none}}
+  @keyframes io-chk{0%,80%{opacity:0;transform:scale(.4)}90%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+  .io-1{animation:io-1 4.8s infinite}.io-2{animation:io-2 4.8s infinite}.io-3{animation:io-3 4.8s infinite}
+  .io-chk{animation:io-chk 4.8s infinite}
+
+  /* ===== DON'T BLINK: flash gaps -> hide -> fill from memory ===== */
+  @keyframes db-flash{0%{opacity:0}4%{opacity:1}16%{opacity:1}22%{opacity:0}100%{opacity:0}}        /* gap glow visible briefly */
+  @keyframes db-cover{0%,18%{opacity:0}24%{opacity:1}100%{opacity:1}}                                  /* board goes solid (gaps hidden) */
+  @keyframes db-blind{0%,22%{opacity:0}30%{opacity:1}48%{opacity:1}54%,100%{opacity:0}}               /* 🙈 */
+  @keyframes db-a{0%,52%{transform:translate(-55px,-55px);opacity:0}66%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes db-b{0%,58%{transform:translate(55px,-45px);opacity:0}72%,100%{transform:translate(0,0);opacity:1}}
+  @keyframes db-chk{0%,80%{opacity:0;transform:scale(.4)}90%{opacity:1;transform:scale(1.15)}100%{opacity:1;transform:scale(1)}}
+  .db-flash{animation:db-flash 4.6s infinite}.db-cover{animation:db-cover 4.6s infinite}.db-blind{animation:db-blind 4.6s infinite}
+  .db-a{animation:db-a 4.6s infinite}.db-b{animation:db-b 4.6s infinite}.db-chk{animation:db-chk 4.6s infinite}
+</style>
+</head>
+<body class="bg-zinc-950 text-white p-8">
+
+<h1 class="text-2xl font-black mb-1">“The Classic” rework — mockups</h1>
+<p class="text-zinc-400 mb-8 text-sm max-w-3xl">Approved: <b>Ghost-piece</b> icon · <b>per-puzzle</b> how-to animations · puzzle-detail page for <b>all components</b>. District names dropped (lines stay), 5-star map, brighter ← Map.</p>
+
+<!-- ============ SECTION 4 (lead with it): per-puzzle detail + animations ============ -->
+<div class="text-xs uppercase tracking-widest text-zinc-500 mb-3 font-bold">NEW puzzle-detail page · per-puzzle how-to animation (loops)</div>
+<div class="flex gap-6 flex-wrap items-start mb-12">
+
+  <!-- THE CLASSIC (full layout w/ PLAY) -->
+  <div class="w-[300px] relative rounded-[1.4rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+    <div class="flex items-center gap-3 px-4 py-3 border-b-2 border-arcade-edge">
+      <span class="font-sans text-[13px] text-white font-bold">07:<span class="text-neon-cyan font-pixel text-[9px] tracking-wide ml-2">THE CLASSIC</span></span>
+    </div>
+    <div class="px-5 pt-5 pb-6 flex flex-col items-center text-center">
+      <div class="font-pixel text-[13px] text-neon-cyan glow-cyan tracking-wide mb-2">THE CLASSIC</div>
+      <p class="text-zinc-300 text-[13.5px] leading-snug max-w-[250px] mb-4">Memorize where the <b class="text-neon-cyan">gaps</b> are, then pick the exact pieces to fill them — before the clock runs out.</p>
+      <div class="board mb-5">
+        <div class="grid grid-cols-4 gap-[6px]">
+          <span class="bcell"></span><span class="bcell bgap"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell bgap"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+        </div>
+        <span class="piece cl-a" style="left:40px;top:0;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <span class="piece cl-b" style="left:80px;top:40px;background:#ff2d95;box-shadow:0 0 10px #ff2d95"></span>
+        <span class="ov cl-eye text-2xl" style="top:-6px;right:-6px">👀</span>
+        <span class="ov cl-chk inset-0 grid place-items-center text-5xl text-neon-green" style="text-shadow:0 0 16px #39d98a">✓</span>
+      </div>
+      <button class="playbtn w-full text-[14px] tracking-[0.15em] text-white rounded-2xl py-4"
+              style="background:linear-gradient(135deg,#22d3ee,#2563eb);box-shadow:0 0 22px rgba(34,211,238,.55),inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.25)">PLAY</button>
+      <div class="text-zinc-600 text-[10px] mt-2">3 lives · Play starts the countdown</div>
+    </div>
+  </div>
+
+  <!-- TRUE COLORS -->
+  <div class="w-[300px] relative rounded-[1.4rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+    <div class="flex items-center gap-3 px-4 py-3 border-b-2 border-arcade-edge">
+      <span class="font-sans text-[13px] text-white font-bold">07:<span class="text-neon-cyan font-pixel text-[9px] tracking-wide ml-2">TRUE COLORS</span></span>
+    </div>
+    <div class="px-5 pt-5 pb-6 flex flex-col items-center text-center">
+      <div class="font-pixel text-[13px] text-neon-cyan glow-cyan tracking-wide mb-2">TRUE COLORS</div>
+      <p class="text-zinc-300 text-[13.5px] leading-snug max-w-[250px] mb-4">Like The Classic — but the gaps are <b style="color:#22d3ee">co</b><b style="color:#facc15">lor</b><b style="color:#ff2d95">ed</b>. Match each piece to its gap's color, not just its shape.</p>
+      <div class="board mb-5">
+        <div class="grid grid-cols-4 gap-[6px]">
+          <span class="bcell"></span><span class="bcell" style="background:transparent;border:2px dashed #22d3ee;box-shadow:0 0 10px #22d3ee55 inset"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell" style="background:transparent;border:2px dashed #facc15;box-shadow:0 0 10px #facc1555 inset"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+        </div>
+        <!-- cyan correct -->
+        <span class="piece tc-cyan" style="left:40px;top:0;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <!-- wrong-color (magenta) tries amber gap, bounces -->
+        <span class="piece tc-wrong" style="left:80px;top:80px;background:#ff2d95;box-shadow:0 0 10px #ff2d95"></span>
+        <span class="ov tc-x text-2xl text-neon-red font-black" style="left:84px;top:78px">✕</span>
+        <!-- amber correct -->
+        <span class="piece tc-amber" style="left:80px;top:80px;background:#facc15;box-shadow:0 0 10px #facc15"></span>
+        <span class="ov tc-chk inset-0 grid place-items-center text-5xl text-neon-green" style="text-shadow:0 0 16px #39d98a">✓</span>
+      </div>
+      <button class="playbtn w-full text-[14px] tracking-[0.15em] text-white rounded-2xl py-4"
+              style="background:linear-gradient(135deg,#22d3ee,#2563eb);box-shadow:0 0 22px rgba(34,211,238,.55),inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.25)">PLAY</button>
+      <div class="text-zinc-600 text-[10px] mt-2">wrong color bounces (✕) · right color locks</div>
+    </div>
+  </div>
+
+  <!-- IN ORDER -->
+  <div class="w-[300px] relative rounded-[1.4rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+    <div class="flex items-center gap-3 px-4 py-3 border-b-2 border-arcade-edge">
+      <span class="font-sans text-[13px] text-white font-bold">07:<span class="text-neon-cyan font-pixel text-[9px] tracking-wide ml-2">IN ORDER</span></span>
+    </div>
+    <div class="px-5 pt-5 pb-6 flex flex-col items-center text-center">
+      <div class="font-pixel text-[13px] text-neon-cyan glow-cyan tracking-wide mb-2">IN ORDER</div>
+      <p class="text-zinc-300 text-[13.5px] leading-snug max-w-[250px] mb-4">Fill the gaps in the right <b class="text-white">sequence</b>. Each gap is numbered — place 1, then 2, then 3.</p>
+      <div class="board mb-5">
+        <div class="grid grid-cols-4 gap-[6px]">
+          <span class="bcell"></span>
+          <span class="bcell bgap grid place-items-center font-black text-[15px] io-n1">1</span>
+          <span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell bgap grid place-items-center font-black text-[15px] io-n2">2</span>
+          <span class="bcell"></span>
+          <span class="bcell"></span>
+          <span class="bcell bgap grid place-items-center font-black text-[15px] io-n3">3</span>
+          <span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+        </div>
+        <span class="piece io-1" style="left:40px;top:0;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <span class="piece io-2" style="left:80px;top:40px;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <span class="piece io-3" style="left:40px;top:80px;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <span class="ov io-chk inset-0 grid place-items-center text-5xl text-neon-green" style="text-shadow:0 0 16px #39d98a">✓</span>
+      </div>
+      <button class="playbtn w-full text-[14px] tracking-[0.15em] text-white rounded-2xl py-4"
+              style="background:linear-gradient(135deg,#22d3ee,#2563eb);box-shadow:0 0 22px rgba(34,211,238,.55),inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.25)">PLAY</button>
+      <div class="text-zinc-600 text-[10px] mt-2">numbers light in turn · pieces drop 1→2→3</div>
+    </div>
+  </div>
+
+  <!-- DON'T BLINK -->
+  <div class="w-[300px] relative rounded-[1.4rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+    <div class="flex items-center gap-3 px-4 py-3 border-b-2 border-arcade-edge">
+      <span class="font-sans text-[13px] text-white font-bold">07:<span class="text-neon-cyan font-pixel text-[9px] tracking-wide ml-2">DON'T BLINK</span></span>
+    </div>
+    <div class="px-5 pt-5 pb-6 flex flex-col items-center text-center">
+      <div class="font-pixel text-[13px] text-neon-cyan glow-cyan tracking-wide mb-2">DON'T BLINK</div>
+      <p class="text-zinc-300 text-[13.5px] leading-snug max-w-[250px] mb-4">The gaps <b class="text-white">flash once</b>, then vanish. Memorize fast — you only get a glimpse.</p>
+      <div class="board mb-5">
+        <!-- base board: all solid -->
+        <div class="grid grid-cols-4 gap-[6px]">
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+          <span class="bcell"></span><span class="bcell"></span><span class="bcell"></span><span class="bcell"></span>
+        </div>
+        <!-- flashing gap glows at the two positions -->
+        <span class="ov db-flash" style="left:40px;top:0;width:34px;height:34px;border-radius:5px;border:2px dashed #22d3ee;box-shadow:0 0 14px #22d3ee inset,0 0 14px #22d3ee"></span>
+        <span class="ov db-flash" style="left:80px;top:40px;width:34px;height:34px;border-radius:5px;border:2px dashed #22d3ee;box-shadow:0 0 14px #22d3ee inset,0 0 14px #22d3ee"></span>
+        <!-- 🙈 while hidden -->
+        <span class="ov db-blind text-3xl" style="left:50%;top:46px;transform:translateX(-50%)">🙈</span>
+        <!-- recall: pieces fly in -->
+        <span class="piece db-a" style="left:40px;top:0;background:#22d3ee;box-shadow:0 0 10px #22d3ee"></span>
+        <span class="piece db-b" style="left:80px;top:40px;background:#ff2d95;box-shadow:0 0 10px #ff2d95"></span>
+        <span class="ov db-chk inset-0 grid place-items-center text-5xl text-neon-green" style="text-shadow:0 0 16px #39d98a">✓</span>
+      </div>
+      <button class="playbtn w-full text-[14px] tracking-[0.15em] text-white rounded-2xl py-4"
+              style="background:linear-gradient(135deg,#22d3ee,#2563eb);box-shadow:0 0 22px rgba(34,211,238,.55),inset 0 2px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.25)">PLAY</button>
+      <div class="text-zinc-600 text-[10px] mt-2">gaps flash → hide (🙈) → fill from memory</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ SECTION 2: revised level card (ghost-piece icon) ============ -->
+<div class="flex gap-10 items-start flex-wrap">
+  <div>
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Level detail — revised main card (ghost-piece icon)</div>
+    <div class="phone relative rounded-[1.6rem] overflow-hidden bg-arcade-bg ring-1 ring-arcade-edge scan">
+      <div class="relative px-5 py-5">
+        <button class="text-neon-cyan glow-cyan text-sm mb-4 font-semibold">&larr; Map</button>
+        <div class="text-center mb-4">
+          <h2 class="font-pixel text-[19px] leading-tight tracking-[0.04em] text-neon-cyan glow-cyan mb-3">VACANT<br>HEIGHTS</h2>
+          <div class="text-4xl leading-none"><span class="text-neon-yellow glow-gold">★</span><span class="text-neon-yellow glow-gold">★</span><span class="text-zinc-700">★</span><span class="text-zinc-700">★</span><span class="text-zinc-700">★</span></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-5">
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">🏆 WORLD RECORD</div><div class="font-pixel text-base text-white">456</div></div>
+          <div class="rounded-lg border border-neon-cyan/40 bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⭐ YOUR RECORD</div><div class="font-pixel text-base text-neon-cyan glow-cyan">200</div></div>
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⏱ LAST ATTEMPT</div><div class="text-sm font-bold text-zinc-200">just now</div></div>
+          <div class="rounded-lg border border-arcade-edge bg-arcade-panel panel-inset p-3"><div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">DIFFICULTY</div><div class="flex items-end gap-1.5 h-5"><span class="w-2 h-5 rounded-sm bg-neon-magenta" style="box-shadow:0 0 6px #ff2d95"></span><span class="w-2 h-5 rounded-sm bg-neon-magenta" style="box-shadow:0 0 6px #ff2d95"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span><span class="w-2 h-5 rounded-sm bg-zinc-700"></span></div></div>
+        </div>
+        <div class="w-fit min-w-[55%] max-w-full mx-auto">
+          <div class="relative rounded-xl border-2 px-3 pt-4 pb-3 flex flex-col items-center" style="border-color:#39d98a;box-shadow:0 0 14px rgba(57,217,138,.4);background:#060d12">
+            <div class="relative" style="padding-bottom:8px">
+              <div class="relative" style="width:104px;height:104px">
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 120 120" style="filter:drop-shadow(0 0 4px #a5f3fc66)">
+                  <circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/>
+                  <circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/>
+                </svg>
+                <!-- GHOST PIECE icon (upright T-tetromino as empty dashed outline) -->
+                <div class="absolute rounded-full overflow-hidden grid place-items-center" style="inset:13px;background:linear-gradient(135deg,#0a1622,#05080f)">
+                  <div class="grid grid-cols-3 gap-[3px]">
+                    <span class="cell gap"></span><span class="cell gap"></span><span class="cell gap"></span>
+                    <span class="cell"></span><span class="cell gap"></span><span class="cell"></span>
+                  </div>
+                </div>
+              </div>
+              <svg viewBox="0 0 200 78" class="absolute" style="width:150%;left:-25%;top:54px">
+                <path d="M46 6 L78 6 L70 30 L42 25 Z" fill="#0e7a36"/>
+                <path d="M154 6 L122 6 L130 30 L158 25 Z" fill="#0e7a36"/>
+                <path d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z" fill="#16a34a" stroke="rgba(255,255,255,.30)" stroke-width="1.5"/>
+                <text x="100" y="40" text-anchor="middle" dominant-baseline="central" fill="white" font-family="Inter,sans-serif" font-weight="800" font-size="14" letter-spacing=".5">THE CLASSIC</text>
+              </svg>
+            </div>
+            <div class="h-12 grid place-items-center mt-1">
+              <div class="relative w-[46px] h-[46px]">
+                <div class="absolute inset-0 star-fill"><div class="absolute inset-0" style="background:rgba(250,204,21,.18)"></div><div class="absolute inset-x-0 bottom-0" style="height:70%;background:linear-gradient(0deg,#f59e0b,#fde047)"></div></div>
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style="overflow:visible;filter:drop-shadow(0 0 5px rgba(250,204,21,.55))"><polygon points="50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35" fill="none" stroke="#fbbf24" stroke-width="5" stroke-linejoin="round"/></svg>
+                <span class="absolute inset-0 grid place-items-center text-[11px] font-black text-white" style="text-shadow:0 1px 2px rgba(0,0,0,.85)">70</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="text-center text-[8px] font-pixel tracking-[0.28em] text-zinc-500 my-4">ADDITIONAL CHALLENGES</div>
+        <div class="text-center text-zinc-600 text-xs pb-2">(True Colors · In Order · Don't Blink · Riddle — unchanged)</div>
+      </div>
+    </div>
+    <p class="text-zinc-500 text-xs mt-2 w-[412px]">Brighter ← Map · district name gone · ghost-piece icon + “THE CLASSIC” ribbon replaces PLAY · no name caption.</p>
+  </div>
+
+  <!-- icon row + map stars -->
+  <div class="space-y-8">
+    <div>
+      <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Chosen icon: Ghost piece (vs. alternatives)</div>
+      <div class="flex gap-5 items-start">
+        <div class="text-center">
+          <div class="w-[88px] h-[88px] rounded-full grid place-items-center mb-1" style="background:linear-gradient(135deg,#0a1622,#05080f);border:5px solid #39d98a;box-shadow:0 0 8px #39d98a66">
+            <div class="grid grid-cols-3 gap-[3px]">
+              <span class="cell gap"></span><span class="cell gap"></span><span class="cell gap"></span>
+              <span class="cell"></span><span class="cell gap"></span><span class="cell"></span>
+            </div>
+          </div>
+          <div class="text-[10px] font-bold text-neon-green">Ghost T ✓</div>
+        </div>
+        <div class="text-center opacity-60">
+          <div class="w-[88px] h-[88px] rounded-full grid place-items-center mb-1" style="background:radial-gradient(circle at 50% 38%,#0b1a22,#05080f);border:5px solid #a5f3fc;box-shadow:0 0 6px #a5f3fc66">
+            <div class="grid grid-cols-4 gap-[2px]">
+              <span class="cell filled" style="width:12px;height:12px"></span><span class="cell gap" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span>
+              <span class="cell filled" style="width:12px;height:12px"></span><span class="cell gap" style="width:12px;height:12px"></span><span class="cell gap" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span>
+              <span class="cell filled" style="width:12px;height:12px"></span><span class="cell gap" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span>
+              <span class="cell filled" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span><span class="cell filled" style="width:12px;height:12px"></span>
+            </div>
+          </div>
+          <div class="text-[10px] text-zinc-500">Punched board</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">Map station — 5-star completed count</div>
+      <div class="rounded-xl border border-neon-cyan/40 bg-arcade-panel panel-inset px-6 py-5">
+        <div class="flex items-center gap-2">
+          <span class="block h-4 w-4 rounded-full" style="background:#22d3ee;border:3px solid #22d3ee"></span>
+          <span class="text-[13px] text-gray-200">Vacant Heights</span>
+          <span class="text-[11px] ml-1"><span class="text-yellow-400">★★★</span><span class="text-gray-700">★★</span></span>
+        </div>
+        <div class="text-[10px] text-zinc-500 mt-2">3 of 5 components cleared · name watermarks removed, lines stay</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
