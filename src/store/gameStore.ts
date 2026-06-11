@@ -44,6 +44,16 @@ function getDifficulty(round: number): DifficultyConfig {
   return DIFFICULTY_TABLE[Math.min(round - 1, DIFFICULTY_TABLE.length - 1)]
 }
 
+/** Chromatic shape variety scales with board size: a gentle 1-shape on-ramp on
+ *  the smallest boards (e.g. the first level), up to a 4-shape mix on the busiest.
+ *  Capped downstream by the generator's available complexity pieces. */
+export function colorShapeTypeCount(gapCount: number): number {
+  if (gapCount <= 3) return 1
+  if (gapCount <= 6) return 2
+  if (gapCount <= 10) return 3
+  return 4
+}
+
 // Flash Mob's viewing is a forced, unskippable flash sequence whose length is
 // derived from the gap count (gapCount × 1000ms), NOT the difficulty table's
 // viewDuration. Every consumer of the view-phase length — the flash sequence,
@@ -169,7 +179,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             gapCount: difficulty.gapCount,
             complexity: difficulty.complexity,
             adjacency: difficulty.adjacency,
-            colorCoded: { shapeTypeCount: 1, palette: [...GAP_COLOR_IDS] },
+            colorCoded: { shapeTypeCount: colorShapeTypeCount(difficulty.gapCount), palette: [...GAP_COLOR_IDS] },
           }
         : orderMatters
           ? { gapCount: difficulty.gapCount, complexity: difficulty.complexity, adjacency: difficulty.adjacency, sequential: true }

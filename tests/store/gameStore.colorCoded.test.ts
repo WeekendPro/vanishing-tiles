@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useGameStore } from '../../src/store/gameStore'
+import { useGameStore, colorShapeTypeCount } from '../../src/store/gameStore'
 import type { Gap, Cell, Grid } from '@shared/types'
 import { ROWS, COLS } from '@shared/types'
 
@@ -16,6 +16,18 @@ const redO: Gap = { pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: 4,
   cells: [[0, 4], [0, 5], [1, 4], [1, 5]], color: 'red' }
 
 beforeEach(() => { useGameStore.getState().resetGame() })
+
+describe('colorShapeTypeCount', () => {
+  it('scales 1→4 by gap count, starting at 1', () => {
+    expect(colorShapeTypeCount(3)).toBe(1)
+    expect(colorShapeTypeCount(4)).toBe(2)
+    expect(colorShapeTypeCount(6)).toBe(2)
+    expect(colorShapeTypeCount(7)).toBe(3)
+    expect(colorShapeTypeCount(10)).toBe(3)
+    expect(colorShapeTypeCount(11)).toBe(4)
+    expect(colorShapeTypeCount(16)).toBe(4)
+  })
+})
 
 describe('color-aware selection cart', () => {
   it('keys selection entries by (pieceType, color)', () => {
@@ -91,7 +103,7 @@ describe('applyPlacement color', () => {
 })
 
 describe('round 2 is color-coded', () => {
-  it('startPractice→advance to round 2 generates colored gaps of a single shape', () => {
+  it('startPractice→advance to round 2 generates colored gaps (single-shape at round-1 difficulty)', () => {
     const store = useGameStore.getState()
     store.startPractice()             // round 1 (basic)
     // Force a clear of round 1 by setting a non-null roundScore so advanceRound banks it.
@@ -102,6 +114,8 @@ describe('round 2 is color-coded', () => {
     expect(s.roundTheme).toBe('colorCoded')
     expect(s.gaps.length).toBeGreaterThan(0)
     expect(s.gaps.every(g => g.color !== undefined)).toBe(true)
+    // Practice round 2 reuses round-1 difficulty (gapCount 3 → colorShapeTypeCount 1),
+    // so this board is single-shape; the multi-shape ramp kicks in on larger boards.
     expect(new Set(s.gaps.map(g => g.pieceType)).size).toBe(1)
   })
 })
