@@ -138,8 +138,8 @@ export function RibbonBadge({
       onClick={onClick}
       className={`relative rounded-xl border-2 ${cardBorderClass} bg-arcade-panel shadow-panel-inset px-3 pt-4 pb-3 flex flex-col items-center w-full transition`}
     >
-      {/* Emblem + ribbon wrapper */}
-      <div className={`relative ${dull}`} style={{ paddingBottom: '8px' }}>
+      {/* Emblem + nameplate wrapper */}
+      <div className={`relative flex flex-col items-center ${dull}`}>
         {/* Double-ring SVG — light cyan rings with soft glow */}
         <div className="relative shrink-0" style={{ width: '104px', height: '104px' }}>
           <svg
@@ -159,39 +159,34 @@ export function RibbonBadge({
           </div>
         </div>
 
-        {/* Swallowtail ribbon — overlaps the lower portion of the circle */}
-        {/* width:150%, left:-25% so the swallowtail tails extend past the circle edges */}
-        <svg
-          viewBox="0 0 200 78"
-          className="absolute"
-          style={{ width: '150%', left: '-25%', top: '54px' }}
+        {/* Beveled nameplate — a glossy plate that overlaps the circle's lower
+            edge (no swallowtail tails, so the disc never peeks through). The
+            top→bottom gradient + inset highlight/shadow match the icon blocks. */}
+        <div
+          className="relative z-10 grid place-items-center whitespace-nowrap"
+          style={{
+            marginTop: '-14px',
+            height: '30px',
+            padding: '0 14px',
+            borderRadius: '9px',
+            background: `linear-gradient(180deg, ${ribbonColor}, ${foldColor})`,
+            boxShadow: `0 0 10px ${ribbonColor}55, inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.28)`,
+            border: '1px solid rgba(255,255,255,0.18)',
+          }}
         >
-          {/* Left fold tab */}
-          <path d="M46 6 L78 6 L70 30 L42 25 Z" fill={foldColor} />
-          {/* Right fold tab */}
-          <path d="M154 6 L122 6 L130 30 L158 25 Z" fill={foldColor} />
-          {/* Main ribbon body with swallowtail cutouts */}
-          <path
-            d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z"
-            fill={ribbonColor}
-            stroke="rgba(255,255,255,.30)"
-            strokeWidth="1.5"
-          />
-          {/* Title in normal bold sans — not pixel font */}
-          <text
-            x="100"
-            y="40"
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="white"
-            fontFamily="ui-sans-serif, system-ui, sans-serif"
-            fontWeight="800"
-            fontSize="15"
-            letterSpacing=".5"
+          <span
+            style={{
+              fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+              fontWeight: 900,
+              fontSize: '14px',
+              letterSpacing: '.5px',
+              color: '#fff',
+              textShadow: '0 1px 1px rgba(0,0,0,.4)',
+            }}
           >
             {title.toUpperCase()}
-          </text>
-        </svg>
+          </span>
+        </div>
       </div>
 
       {/* Footer: lock / hollow star / gold star with score / SOON */}

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge ribbon options</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#070b12;color:#fff}
+  .card{width:200px;border-radius:14px;border:2px solid #0e2b33;background:#060d12;
+    box-shadow:inset 0 0 14px rgba(0,0,0,.6);padding:16px 12px 14px;display:flex;flex-direction:column;align-items:center}
+  .emblem{position:relative;width:104px;height:104px}
+  .ring{position:absolute;inset:0;filter:drop-shadow(0 0 4px #a5f3fc66)}
+  .disc{position:absolute;inset:13px;border-radius:9999px;display:grid;place-items:center;overflow:hidden;
+    background:radial-gradient(circle at 50% 38%,#16233f,#070b18)}
+  .glyph{font-size:40px;line-height:1}
+  /* beveled block for a sample glyph */
+  .seqwrap{display:flex;align-items:center;transform:translateY(-2px)}
+  .seqblk{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:900;font-size:13px;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.22)}
+  .ftr{height:36px;display:grid;place-items:center;margin-top:6px}
+  .lbl{font-size:11px;color:#a1a1aa;text-align:center;margin-top:6px}
+</style>
+</head>
+<body class="p-10">
+<h1 class="text-xl font-black mb-1">Badge ribbon — options</h1>
+<p class="text-zinc-400 text-sm mb-8 max-w-2xl">Same emblem (Sequential), different title treatments. Crimson is the default badge color (main/The Classic uses green). The current swallowtail lets the circle bottom peek through; alternatives B–E sit cleanly below it.</p>
+
+<div class="flex gap-7 flex-wrap items-start">
+
+  <!-- CURRENT (swallowtail), lowered 4px -->
+  <div>
+    <div class="card">
+      <div class="emblem">
+        <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div class="disc"><div class="seqwrap" id="g1"></div></div>
+        <!-- swallowtail, top:58 (was 54 → +4px lower) -->
+        <svg viewBox="0 0 200 78" style="position:absolute;width:150%;left:-25%;top:58px">
+          <path d="M46 6 L78 6 L70 30 L42 25 Z" fill="#7f1226"/>
+          <path d="M154 6 L122 6 L130 30 L158 25 Z" fill="#7f1226"/>
+          <path d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z" fill="#c81e3a" stroke="rgba(255,255,255,.30)" stroke-width="1.5"/>
+          <text x="100" y="40" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter" font-weight="800" font-size="15" letter-spacing=".5">SEQUENTIAL</text>
+        </svg>
+      </div>
+      <div class="ftr"><span style="color:#52525b;font-size:22px">☆</span></div>
+    </div>
+    <div class="lbl"><b>Current</b> · swallowtail (+4px)</div>
+  </div>
+
+  <!-- A: refined swallowtail (gradient + highlight + shadow) -->
+  <div>
+    <div class="card">
+      <div class="emblem">
+        <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div class="disc"><div class="seqwrap" id="g2"></div></div>
+        <svg viewBox="0 0 200 78" style="position:absolute;width:150%;left:-25%;top:60px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))">
+          <defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8324f"/><stop offset="1" stop-color="#a3162e"/></linearGradient></defs>
+          <path d="M46 4 L78 4 L70 30 L42 25 Z" fill="#6d0f20"/>
+          <path d="M154 4 L122 4 L130 30 L158 25 Z" fill="#6d0f20"/>
+          <path d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z" fill="url(#rg)" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>
+          <path d="M10 21 Q100 30 190 21" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.4"/>
+          <text x="100" y="40" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter" font-weight="900" font-size="15" letter-spacing=".6">SEQUENTIAL</text>
+        </svg>
+      </div>
+      <div class="ftr"><span style="color:#52525b;font-size:22px">☆</span></div>
+    </div>
+    <div class="lbl"><b>A</b> · refined swallowtail<br>(gradient, sheen, drop shadow)</div>
+  </div>
+
+  <!-- B: beveled nameplate (matches icon blocks) -->
+  <div>
+    <div class="card">
+      <div class="emblem">
+        <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div class="disc"><div class="seqwrap" id="g3"></div></div>
+      </div>
+      <div style="margin-top:-14px;width:170px;height:30px;border-radius:9px;display:grid;place-items:center;
+        background:linear-gradient(180deg,#e8324f,#a3162e);
+        box-shadow:0 0 10px rgba(200,30,58,.45), inset 0 2px 0 rgba(255,255,255,.4), inset 0 -3px 0 rgba(0,0,0,.28);
+        border:1px solid rgba(255,255,255,.18)">
+        <span style="font-weight:900;font-size:14px;letter-spacing:.5px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.4)">SEQUENTIAL</span>
+      </div>
+      <div class="ftr"><span style="color:#52525b;font-size:22px">☆</span></div>
+    </div>
+    <div class="lbl"><b>B</b> · beveled nameplate<br>(glossy, matches the icons)</div>
+  </div>
+
+  <!-- C: folded banner (rectangular center + folded tails behind) -->
+  <div>
+    <div class="card">
+      <div class="emblem">
+        <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div class="disc"><div class="seqwrap" id="g4"></div></div>
+        <svg viewBox="0 0 200 64" style="position:absolute;width:150%;left:-25%;top:60px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))">
+          <!-- folded tails -->
+          <path d="M20 30 L40 18 L40 46 Z" fill="#6d0f20"/>
+          <path d="M180 30 L160 18 L160 46 Z" fill="#6d0f20"/>
+          <!-- center band -->
+          <rect x="34" y="14" width="132" height="34" rx="4" fill="#c81e3a" stroke="rgba(255,255,255,.4)" stroke-width="1.4"/>
+          <path d="M40 19 H160" stroke="rgba(255,255,255,.3)" stroke-width="1.3"/>
+          <text x="100" y="32" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter" font-weight="900" font-size="15" letter-spacing=".5">SEQUENTIAL</text>
+        </svg>
+      </div>
+      <div class="ftr"><span style="color:#52525b;font-size:22px">☆</span></div>
+    </div>
+    <div class="lbl"><b>C</b> · folded banner<br>(crisp rectangular flag)</div>
+  </div>
+
+  <!-- D: pill -->
+  <div>
+    <div class="card">
+      <div class="emblem">
+        <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div class="disc"><div class="seqwrap" id="g5"></div></div>
+      </div>
+      <div style="margin-top:-12px;padding:6px 16px;border-radius:9999px;
+        background:linear-gradient(180deg,#e8324f,#b01933);
+        box-shadow:0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);
+        border:1px solid rgba(255,255,255,.16)">
+        <span style="font-weight:900;font-size:13px;letter-spacing:.6px;color:#fff">SEQUENTIAL</span>
+      </div>
+      <div class="ftr"><span style="color:#52525b;font-size:22px">☆</span></div>
+    </div>
+    <div class="lbl"><b>D</b> · pill<br>(minimal rounded tag)</div>
+  </div>
+
+</div>
+
+<p class="text-emerald-400/80 text-sm mt-8 max-w-2xl">My lean: <b>B (beveled nameplate)</b> — it ties the ribbon into the same glossy-block language as the new icons, and it sits cleanly under the circle (no peek-through). <b>A</b> is the choice if you love the ribbon shape and just want it to look richer.</p>
+
+<script>
+  // sample Sequential glyph (1·2·3 blocks) inside each disc
+  const C={red:['#f87171','#ef4444'],cyan:['#67e8f9','#22d3ee'],amber:['#fbbf24','#f59e0b']};
+  function blk(c,n,rot,ml){return `<div class="seqblk" style="background:linear-gradient(180deg,${C[c][0]},${C[c][1]});transform:rotate(${rot}deg);margin-left:${ml}px">${n}</div>`}
+  const seq = blk('red',1,-9,0)+blk('cyan',2,5,-3)+blk('amber',3,-4,-3);
+  ['g1','g2','g3','g4','g5'].forEach(id=>document.getElementById(id).innerHTML=seq);
+</script>
+
+</body>
+</html>
