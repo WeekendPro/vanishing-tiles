@@ -58,21 +58,21 @@ export function SequenceBlocksGlyph() {
     <div className="flex items-center">
       <div
         style={{ transform: 'rotate(-9deg)' }}
-        className="w-[23px] h-[23px] rounded-[6px] bg-red-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
+        className="w-[27px] h-[27px] rounded-[7px] bg-red-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
       >
-        <span className="font-black text-[14px] text-white">1</span>
+        <span className="font-black text-[16px] text-white">1</span>
       </div>
       <div
-        style={{ transform: 'rotate(5deg)', marginLeft: '-3px' }}
-        className="w-[23px] h-[23px] rounded-[6px] bg-sky-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
+        style={{ transform: 'rotate(5deg)', marginLeft: '-4px' }}
+        className="w-[27px] h-[27px] rounded-[7px] bg-sky-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
       >
-        <span className="font-black text-[14px] text-white">2</span>
+        <span className="font-black text-[16px] text-white">2</span>
       </div>
       <div
-        style={{ transform: 'rotate(-4deg)', marginLeft: '-3px' }}
-        className="w-[23px] h-[23px] rounded-[6px] bg-amber-400 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
+        style={{ transform: 'rotate(-4deg)', marginLeft: '-4px' }}
+        className="w-[27px] h-[27px] rounded-[7px] bg-amber-400 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
       >
-        <span className="font-black text-[14px] text-white">3</span>
+        <span className="font-black text-[16px] text-white">3</span>
       </div>
     </div>
   )
