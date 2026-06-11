@@ -4,12 +4,31 @@
  * keep all non-component exports in this file intentionally (they're tightly coupled).
  */
 /* eslint-disable react-refresh/only-export-components */
+import type { CSSProperties } from 'react'
 
 export function PlayGlyph() {
   return (
     <svg width="34" height="34" viewBox="0 0 24 24" fill="white">
       <path d="M8 5v14l11-7z" />
     </svg>
+  )
+}
+
+/** Upright-T tetromino drawn as empty/dashed "gap" cells — The Classic. */
+export function GapTetrominoGlyph() {
+  const gap: CSSProperties = {
+    width: 15,
+    height: 15,
+    borderRadius: 3,
+    border: '1.5px dashed rgba(34,211,238,0.85)',
+    boxShadow: 'inset 0 0 8px rgba(34,211,238,0.25)',
+  }
+  const empty: CSSProperties = { width: 15, height: 15 }
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 15px)', gap: 3 }}>
+      <span style={gap} /><span style={gap} /><span style={gap} />
+      <span style={empty} /><span style={gap} /><span style={empty} />
+    </div>
   )
 }
 
@@ -66,6 +85,7 @@ export function RiddleGlyph() {
 /** CSS background string for each badge center disc. */
 export const BADGE_CENTER_BG: Record<string, string> = {
   play: 'linear-gradient(135deg,#34d399,#16a34a)',
+  classic: 'linear-gradient(135deg,#0a1622,#05080f)',
   wheel: '#0a1226',
   seq: 'linear-gradient(135deg,#334155,#0f172a)',
   eyes: 'radial-gradient(circle at 50% 38%,#16233f,#070b18)',
