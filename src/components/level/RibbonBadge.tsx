@@ -1,24 +1,20 @@
 /**
- * RibbonBadge — the double-ring emblem + overlapping swallowtail ribbon badge.
- * Ported from mockups/level-screen.html (v5 design).
+ * RibbonBadge — hexagon emblem + glyph + pixel title (the "hex tile" design).
+ * Ported from mockups/badge-concepts.html (concept 2).
  */
 import type { ReactNode } from 'react'
 
 export interface RibbonBadgeProps {
   /** Center content (a glyph component or node) */
   glyph: ReactNode
-  /** CSS background string for the center disc */
+  /** CSS background string for the hex interior */
   centerBg: string
-  /** Ribbon label — rendered uppercase */
+  /** Badge label — rendered uppercase */
   title: string
   state: 'locked' | 'incomplete' | 'complete' | 'soon'
   /** Score shown inside the gold star when complete */
   score?: number
-  /** Ribbon main color (default crimson #c81e3a) */
-  ribbonColor?: string
-  /** Ribbon fold/tab color (default dark crimson #7f1226) */
-  foldColor?: string
-  /** Card border/glow accent: green = neon-green glow; default = cyan glow when vibrant */
+  /** Accent: green = The Classic; cyan = the badges (hex border + title + card glow) */
   cardAccent?: 'cyan' | 'green'
   /** Force vibrant state regardless of completion (e.g. PLAY badge) */
   vibrant?: boolean
@@ -32,9 +28,6 @@ export interface RibbonBadgeProps {
 /** Star clip-path (matches mockup .star-fill) */
 const STAR_CLIP =
   'polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)'
-
-/** Ring border color (light cyan per spec) */
-const RING_COLOR = '#a5f3fc'
 
 /** Star outline polygon (same proportions as STAR_CLIP, in a 0..100 box) */
 const STAR_POINTS = '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35'
@@ -108,8 +101,6 @@ export function RibbonBadge({
   title,
   state,
   score,
-  ribbonColor = '#c81e3a',
-  foldColor = '#7f1226',
   cardAccent = 'cyan',
   vibrant: vibrantProp,
   caption,
@@ -117,6 +108,8 @@ export function RibbonBadge({
   onClick,
   'data-testid': testId,
 }: RibbonBadgeProps) {
+  // Hex/title accent: green marks The Classic, cyan marks the badges.
+  const accent = cardAccent === 'green' ? '#39d98a' : '#22d3ee'
   const vibrant = vibrantProp || state === 'complete'
   // Dim ONLY when the puzzle isn't available yet (locked, or "coming soon").
   // Unlocked puzzles — incomplete or complete — render at full color.
@@ -138,54 +131,40 @@ export function RibbonBadge({
       onClick={onClick}
       className={`relative rounded-xl border-2 ${cardBorderClass} bg-arcade-panel shadow-panel-inset px-3 pt-4 pb-3 flex flex-col items-center w-full transition`}
     >
-      {/* Emblem + nameplate wrapper */}
+      {/* Hexagon emblem + pixel title */}
       <div className={`relative flex flex-col items-center ${dull}`}>
-        {/* Double-ring SVG — light cyan rings with soft glow */}
-        <div className="relative shrink-0" style={{ width: '104px', height: '104px' }}>
+        <div className="relative shrink-0" style={{ width: '110px', height: '120px' }}>
+          {/* Hex interior (glyph background), clipped to the hexagon */}
+          <div
+            className="absolute inset-0"
+            style={{
+              clipPath: 'polygon(50% 3%, 95.8% 26.6%, 95.8% 73.4%, 50% 96.9%, 4.2% 73.4%, 4.2% 26.6%)',
+              background: centerBg,
+            }}
+          />
+          {/* Hex border (+ faint inner outline) */}
           <svg
             className="absolute inset-0 w-full h-full"
-            viewBox="0 0 120 120"
-            style={{ filter: `drop-shadow(0 0 4px ${RING_COLOR}66)` }}
+            viewBox="0 0 118 128"
+            preserveAspectRatio="none"
+            style={{ filter: `drop-shadow(0 0 6px ${accent}55)` }}
           >
-            <circle cx="60" cy="60" r="57" fill="none" stroke={RING_COLOR} strokeWidth="2.5" />
-            <circle cx="60" cy="60" r="49" fill="none" stroke={RING_COLOR} strokeWidth="6" />
+            <polygon points="59,4 113,34 113,94 59,124 5,94 5,34" fill="none" stroke={accent} strokeWidth="3.5" />
+            <polygon points="59,15 103,40 103,88 59,113 15,88 15,40" fill="none" stroke={accent} strokeWidth="1" opacity="0.4" />
           </svg>
-          {/* Center disc */}
-          <div
-            className="absolute rounded-full overflow-hidden grid place-items-center"
-            style={{ inset: '13px', background: centerBg }}
-          >
-            {glyph}
-          </div>
+          {/* Glyph centered in the hex */}
+          <div className="absolute inset-0 grid place-items-center">{glyph}</div>
         </div>
 
-        {/* Beveled nameplate — a glossy plate that overlaps the circle's lower
-            edge (no swallowtail tails, so the disc never peeks through). The
-            top→bottom gradient + inset highlight/shadow match the icon blocks. */}
-        <div
-          className="relative z-10 grid place-items-center whitespace-nowrap"
-          style={{
-            marginTop: '-14px',
-            height: '30px',
-            padding: '0 14px',
-            borderRadius: '9px',
-            background: `linear-gradient(180deg, ${ribbonColor}, ${foldColor})`,
-            boxShadow: `0 0 10px ${ribbonColor}55, inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.28)`,
-            border: '1px solid rgba(255,255,255,0.18)',
-          }}
-        >
+        {/* Pixel title + underline accent */}
+        <div className="mt-3 flex flex-col items-center">
           <span
-            style={{
-              fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-              fontWeight: 900,
-              fontSize: '14px',
-              letterSpacing: '.5px',
-              color: '#fff',
-              textShadow: '0 1px 1px rgba(0,0,0,.4)',
-            }}
+            className="font-pixel text-[10px] tracking-[0.06em] whitespace-nowrap"
+            style={{ color: accent, textShadow: `0 0 8px ${accent}80` }}
           >
             {title.toUpperCase()}
           </span>
+          <span className="mt-1.5 h-[2px] w-10" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
         </div>
       </div>
 

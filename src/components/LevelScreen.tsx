@@ -190,8 +190,6 @@ export function LevelScreen() {
               title="THE CLASSIC"
               state={p.best.main > 0 ? 'complete' : 'incomplete'}
               score={p.best.main > 0 ? p.best.main : undefined}
-              ribbonColor="#16a34a"
-              foldColor="#0e7a36"
               cardAccent="green"
               vibrant
               onClick={() => play('main')}

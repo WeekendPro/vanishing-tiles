@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge concepts — fresh set</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  body{font-family:Inter,system-ui,sans-serif;background:#070b12;color:#fff}
+  .pixel{font-family:'Press Start 2P',monospace}
+  .card{width:190px;border-radius:16px;border:2px solid #16323b;background:#070f15;padding:18px 14px 16px;display:flex;flex-direction:column;align-items:center;box-shadow:inset 0 0 16px rgba(0,0,0,.55)}
+  .seqwrap{display:flex;align-items:center}
+  .seqblk{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-weight:900;font-size:13px;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.22)}
+  .star{width:34px;height:34px}
+  .lbl{font-size:11px;color:#71717a;margin-top:10px;text-align:center;max-width:180px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;font-weight:800;margin:0 0 10px}
+</style>
+</head>
+<body class="p-10">
+<h1 class="text-2xl font-black mb-1">Badge concepts — a fresh set</h1>
+<p class="text-zinc-400 text-sm mb-9 max-w-3xl">Each is the whole challenge tile (emblem + title + score star), not just a ribbon swap. Sample = <b>Sequential</b>. Crimson = badge default; The Classic would be green. <b>A</b> (refined swallowtail, your current fallback) is shown last for comparison.</p>
+
+<div class="flex gap-8 flex-wrap items-start">
+
+  <!-- 1 · CREST -->
+  <div>
+    <h2>1 · Crest</h2>
+    <div class="card">
+      <div style="position:relative;width:120px;height:128px">
+        <svg width="120" height="128" viewBox="0 0 120 128" style="filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))">
+          <defs><linearGradient id="cr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e2230"/><stop offset="1" stop-color="#060d14"/></linearGradient></defs>
+          <path d="M60 4 L112 22 V64 C112 96 92 116 60 126 C28 116 8 96 8 64 V22 Z" fill="url(#cr)" stroke="#a5f3fc" stroke-width="3"/>
+          <path d="M60 12 L104 27 V64 C104 92 86 109 60 118 C34 109 16 92 16 64 V27 Z" fill="none" stroke="#a5f3fc" stroke-width="1" opacity=".5"/>
+        </svg>
+        <div style="position:absolute;left:0;right:0;top:30px;display:flex;justify-content:center"><div class="seqwrap" id="g1"></div></div>
+        <!-- banner across lower third -->
+        <svg viewBox="0 0 160 40" style="position:absolute;left:50%;transform:translateX(-50%);bottom:6px;width:150px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">
+          <path d="M6 8 L154 8 L146 22 L154 36 L6 36 L14 22 Z" fill="#c81e3a" stroke="rgba(255,255,255,.4)" stroke-width="1.4"/>
+          <text x="80" y="23" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter" font-weight="900" font-size="13" letter-spacing=".4">SEQUENTIAL</text>
+        </svg>
+      </div>
+      <div class="star" id="s1" style="margin-top:8px"></div>
+    </div>
+    <div class="lbl">Shield emblem + banner. Medal / achievement feel.</div>
+  </div>
+
+  <!-- 2 · HEX -->
+  <div>
+    <h2>2 · Hex tile</h2>
+    <div class="card">
+      <div style="position:relative;width:118px;height:128px">
+        <svg width="118" height="128" viewBox="0 0 118 128" style="filter:drop-shadow(0 0 6px rgba(165,243,252,.25))">
+          <polygon points="59,4 113,34 113,94 59,124 5,94 5,34" fill="#0b1a24" stroke="#22d3ee" stroke-width="3"/>
+          <polygon points="59,14 104,40 104,88 59,114 14,88 14,40" fill="none" stroke="#22d3ee" stroke-width="1" opacity=".45"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:grid;place-items:center"><div class="seqwrap" id="g2"></div></div>
+      </div>
+      <div style="margin-top:12px;text-align:center">
+        <div class="pixel" style="font-size:11px;color:#22d3ee;text-shadow:0 0 8px rgba(34,211,238,.5)">SEQUENTIAL</div>
+        <div style="height:2px;width:40px;margin:7px auto 0;background:linear-gradient(90deg,transparent,#22d3ee,transparent)"></div>
+      </div>
+      <div class="star" id="s2" style="margin-top:12px"></div>
+    </div>
+    <div class="lbl">Hexagon + pixel title with underline. Clean, modern-gamey.</div>
+  </div>
+
+  <!-- 3 · ARCADE PLATE -->
+  <div>
+    <h2>3 · Arcade plate</h2>
+    <div class="card">
+      <div style="position:relative;width:150px;border-radius:12px;background:linear-gradient(180deg,#13242c,#0a141a);border:2px solid #1d3a44;box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 3px 6px rgba(0,0,0,.4);padding:14px 12px 12px">
+        <!-- rivets -->
+        <span style="position:absolute;top:6px;left:6px;width:5px;height:5px;border-radius:9999px;background:#0a1216;box-shadow:inset 0 1px 1px rgba(0,0,0,.8)"></span>
+        <span style="position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:9999px;background:#0a1216;box-shadow:inset 0 1px 1px rgba(0,0,0,.8)"></span>
+        <span style="position:absolute;bottom:6px;left:6px;width:5px;height:5px;border-radius:9999px;background:#0a1216;box-shadow:inset 0 1px 1px rgba(0,0,0,.8)"></span>
+        <span style="position:absolute;bottom:6px;right:6px;width:5px;height:5px;border-radius:9999px;background:#0a1216;box-shadow:inset 0 1px 1px rgba(0,0,0,.8)"></span>
+        <!-- recessed glyph well -->
+        <div style="border-radius:9px;background:radial-gradient(circle at 50% 35%,#0a1822,#04090d);box-shadow:inset 0 2px 6px rgba(0,0,0,.7);padding:16px 0;display:grid;place-items:center">
+          <div class="seqwrap" id="g3"></div>
+        </div>
+        <!-- engraved title -->
+        <div class="pixel" style="text-align:center;font-size:10px;margin-top:10px;color:#fbbf24;text-shadow:0 1px 0 rgba(0,0,0,.7)">SEQUENTIAL</div>
+      </div>
+      <div class="star" id="s3" style="margin-top:12px"></div>
+    </div>
+    <div class="lbl">Recessed glyph well + engraved title + rivets. Arcade-cabinet vibe.</div>
+  </div>
+
+  <!-- 4 · PATCH -->
+  <div>
+    <h2>4 · Patch</h2>
+    <div class="card">
+      <div style="position:relative;width:128px;height:128px;transform:rotate(-3deg)">
+        <div style="position:absolute;inset:0;border-radius:18px;background:radial-gradient(circle at 50% 40%,#13283a,#0a1722);border:3px solid #c81e3a;box-shadow:0 4px 8px rgba(0,0,0,.45)"></div>
+        <div style="position:absolute;inset:6px;border-radius:13px;border:2px dashed rgba(255,255,255,.45)"></div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+          <div class="seqwrap" id="g4"></div>
+          <div class="pixel" style="font-size:9px;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.6)">SEQUENTIAL</div>
+        </div>
+      </div>
+      <div class="star" id="s4" style="margin-top:14px"></div>
+    </div>
+    <div class="lbl">Embroidered-patch look: stitched border, slight tilt. Playful.</div>
+  </div>
+
+  <!-- A · REFINED SWALLOWTAIL (baseline) -->
+  <div>
+    <h2 style="color:#39d98a">A · Refined swallowtail</h2>
+    <div class="card">
+      <div style="position:relative;width:104px;height:104px">
+        <svg style="position:absolute;inset:0" width="104" height="104" viewBox="0 0 120 120" style2="filter:drop-shadow(0 0 4px #a5f3fc66)"><circle cx="60" cy="60" r="57" fill="none" stroke="#a5f3fc" stroke-width="2.5"/><circle cx="60" cy="60" r="49" fill="none" stroke="#a5f3fc" stroke-width="6"/></svg>
+        <div style="position:absolute;inset:13px;border-radius:9999px;display:grid;place-items:center;background:radial-gradient(circle at 50% 38%,#16233f,#070b18)"><div class="seqwrap" style="transform:translateY(-2px)" id="g5"></div></div>
+        <svg viewBox="0 0 200 78" style="position:absolute;width:150%;left:-25%;top:60px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))">
+          <defs><linearGradient id="rgA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8324f"/><stop offset="1" stop-color="#a3162e"/></linearGradient></defs>
+          <path d="M46 4 L78 4 L70 30 L42 25 Z" fill="#6d0f20"/><path d="M154 4 L122 4 L130 30 L158 25 Z" fill="#6d0f20"/>
+          <path d="M6 18 Q100 28 194 18 L176 34 L194 50 Q100 60 6 50 L24 34 Z" fill="url(#rgA)" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>
+          <path d="M10 21 Q100 30 190 21" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.4"/>
+          <text x="100" y="40" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter" font-weight="900" font-size="15">SEQUENTIAL</text>
+        </svg>
+      </div>
+      <div class="star" id="s5" style="margin-top:30px"></div>
+    </div>
+    <div class="lbl">Your fallback — the classic ribbon, richer.</div>
+  </div>
+
+</div>
+
+<script>
+  const C={red:['#f87171','#ef4444'],cyan:['#67e8f9','#22d3ee'],amber:['#fbbf24','#f59e0b']};
+  function seq(){const b=(c,n,rot,ml)=>`<div class="seqblk" style="background:linear-gradient(180deg,${C[c][0]},${C[c][1]});transform:rotate(${rot}deg);margin-left:${ml}px">${n}</div>`;return b('red',1,-9,0)+b('cyan',2,5,-3)+b('amber',3,-4,-3);}
+  ['g1','g2','g3','g4','g5'].forEach(id=>document.getElementById(id).innerHTML=seq());
+  const starSVG=`<svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 5px rgba(250,204,21,.55))"><polygon points="50,4 61,37 96,37 68,58 79,92 50,71 21,92 32,58 4,37 39,37" fill="url(#gold)" stroke="#fbbf24" stroke-width="4"/><defs><linearGradient id="gold" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#fde047"/></linearGradient></defs><text x="50" y="56" text-anchor="middle" dominant-baseline="central" font-family="Inter" font-weight="900" font-size="30" fill="#fff" style="paint-order:stroke">82</text></svg>`;
+  ['s1','s2','s3','s4','s5'].forEach(id=>document.getElementById(id).innerHTML=starSVG);
+</script>
+
+<p class="text-emerald-400/80 text-sm mt-9 max-w-2xl">If one of 1–4 clicks, we reshape the badge to it. If not, we ship <b>A</b>. Tell me which (and any tweaks — colors, the star placement, etc.).</p>
+
+</body>
+</html>
