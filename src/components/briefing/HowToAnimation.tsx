@@ -9,7 +9,7 @@ import type { PlayableComponent } from '../../lib/components'
 export function HowToAnimation({ component }: { component: PlayableComponent }) {
   const reduce = useReducedMotion()
   return (
-    <div className={`howto${reduce ? ' howto-static' : ''}`} data-testid={`howto-${component}`}>
+    <div className={`howto${reduce ? ' howto-static' : ''}`} data-testid={`howto-${component}`} aria-hidden="true">
       {component === 'main' && <ClassicDemo />}
       {component === 'colors' && <ColorsDemo />}
       {component === 'inSequence' && <OrderDemo />}
