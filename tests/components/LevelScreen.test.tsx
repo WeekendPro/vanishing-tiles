@@ -36,10 +36,10 @@ describe('LevelScreen', () => {
     expect(screen.getByTestId('badge-inSequence')).toBeTruthy()
     expect(screen.getByTestId('badge-flash')).toBeTruthy()
     expect(screen.getByTestId('badge-riddle')).toBeTruthy()
-    // Ribbon text: TRUE COLORS / IN ORDER / DON'T BLINK / RIDDLE
-    expect(screen.getByText('TRUE COLORS')).toBeTruthy()
-    expect(screen.getByText('IN ORDER')).toBeTruthy()
-    expect(screen.getByText("DON'T BLINK")).toBeTruthy()
+    // Ribbon text: CHROMATIC / SEQUENTIAL / GLIMPSE / RIDDLE
+    expect(screen.getByText('CHROMATIC')).toBeTruthy()
+    expect(screen.getByText('SEQUENTIAL')).toBeTruthy()
+    expect(screen.getByText('GLIMPSE')).toBeTruthy()
     expect(screen.getByText('RIDDLE')).toBeTruthy()
     // Exactly 5 difficulty pips
     expect(screen.getAllByTestId('difficulty-pip')).toHaveLength(5)
@@ -61,10 +61,10 @@ describe('LevelScreen', () => {
     expect(screen.getByTestId('badge-riddle')).toBeDisabled()
   })
 
-  it("Don't Blink badge renders (formerly Flash)", async () => {
+  it('Glimpse badge renders (the flash component)', async () => {
     render(<LevelScreen />)
     await screen.findAllByText('Cellar Door')
     expect(screen.getByTestId('badge-flash')).toBeTruthy()
-    expect(screen.getByText("DON'T BLINK")).toBeTruthy()
+    expect(screen.getByText('GLIMPSE')).toBeTruthy()
   })
 })

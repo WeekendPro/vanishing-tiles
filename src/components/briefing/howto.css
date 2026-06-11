@@ -21,7 +21,7 @@
 .howto .cl-eye{animation:cl-eye 4.4s infinite}.howto .cl-a{animation:cl-a 4.4s infinite}
 .howto .cl-b{animation:cl-b 4.4s infinite}.howto .cl-chk{animation:cl-chk 4.4s infinite}
 
-/* TRUE COLORS */
+/* CHROMATIC */
 @keyframes tc-cyan{0%,40%{transform:translate(-55px,-55px);opacity:0}56%,100%{transform:translate(0,0);opacity:1}}
 @keyframes tc-wrong{0%,44%{transform:translate(55px,-20px);opacity:0}54%{transform:translate(0,0);opacity:1}60%{transform:translate(0,0);opacity:1}66%{transform:translate(40px,-20px);opacity:0}100%{opacity:0}}
 @keyframes tc-x{0%,55%{opacity:0}58%{opacity:1}65%{opacity:1}68%,100%{opacity:0}}
@@ -31,7 +31,7 @@
 .howto .tc-x{animation:tc-x 4.6s infinite}.howto .tc-amber{animation:tc-amber 4.6s infinite}
 .howto .tc-chk{animation:tc-chk 4.6s infinite}
 
-/* IN ORDER */
+/* SEQUENTIAL */
 @keyframes io-1{0%,24%{transform:translate(-50px,-50px);opacity:0}36%,100%{transform:translate(0,0);opacity:1}}
 @keyframes io-2{0%,44%{transform:translate(55px,-40px);opacity:0}56%,100%{transform:translate(0,0);opacity:1}}
 @keyframes io-3{0%,62%{transform:translate(-40px,55px);opacity:0}74%,100%{transform:translate(0,0);opacity:1}}
@@ -39,7 +39,7 @@
 .howto .io-1{animation:io-1 4.8s infinite}.howto .io-2{animation:io-2 4.8s infinite}
 .howto .io-3{animation:io-3 4.8s infinite}.howto .io-chk{animation:io-chk 4.8s infinite}
 
-/* DON'T BLINK */
+/* GLIMPSE */
 @keyframes db-flash{0%{opacity:0}4%{opacity:1}16%{opacity:1}22%{opacity:0}100%{opacity:0}}
 @keyframes db-blind{0%,22%{opacity:0}30%{opacity:1}48%{opacity:1}54%,100%{opacity:0}}
 @keyframes db-a{0%,52%{transform:translate(-55px,-55px);opacity:0}66%,100%{transform:translate(0,0);opacity:1}}

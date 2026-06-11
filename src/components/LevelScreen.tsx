@@ -13,7 +13,7 @@ import { NeonButton, ScanlineOverlay } from './ui'
 import type { DifficultyConfig } from '@shared/types'
 import { RibbonBadge } from './level/RibbonBadge'
 import {
-  ClassicTetrominoGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
+  ClassicTetrominoGlyph, ColorQuadGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
 } from './level/badgeGlyphs'
 
 interface LevelDetail {
@@ -56,24 +56,24 @@ function Stars({ value }: { value: number }) {
 
 type BadgeRow = {
   key: ComponentKey
-  glyphKind: 'wheel' | 'seq' | 'eyes' | 'riddle'
+  glyphKind: 'quad' | 'seq' | 'eyes' | 'riddle'
   ribbonTitle: string
 }
 
 const BADGE_ROWS: [BadgeRow, BadgeRow][] = [
   [
-    { key: 'colors',     glyphKind: 'wheel',  ribbonTitle: 'TRUE COLORS' },
-    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'IN ORDER'    },
+    { key: 'colors',     glyphKind: 'quad',   ribbonTitle: 'CHROMATIC'  },
+    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'SEQUENTIAL' },
   ],
   [
-    { key: 'flash',      glyphKind: 'eyes',   ribbonTitle: "DON'T BLINK" },
-    { key: 'riddle',     glyphKind: 'riddle', ribbonTitle: 'RIDDLE'   },
+    { key: 'flash',      glyphKind: 'eyes',   ribbonTitle: 'GLIMPSE' },
+    { key: 'riddle',     glyphKind: 'riddle', ribbonTitle: 'RIDDLE'  },
   ],
 ]
 
 function glyphForKind(kind: BadgeRow['glyphKind']) {
   switch (kind) {
-    case 'wheel':  return <ColorWheelGlyph />
+    case 'quad':   return <ColorQuadGlyph />
     case 'seq':    return <SequenceBlocksGlyph />
     case 'eyes':   return <EyesGlyph />
     case 'riddle': return <RiddleGlyph />

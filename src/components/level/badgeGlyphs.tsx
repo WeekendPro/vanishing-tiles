@@ -34,15 +34,22 @@ export function ClassicTetrominoGlyph() {
   )
 }
 
-export function ColorWheelGlyph() {
+/** A 2×2 tetromino in the neon palette (cyan/magenta/amber/green) — Chromatic. */
+export function ColorQuadGlyph() {
+  const block = (color: string, light: string): CSSProperties => ({
+    width: 21,
+    height: 21,
+    borderRadius: 4,
+    background: `linear-gradient(180deg,${light},${color})`,
+    boxShadow: `0 0 7px ${color}99, inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.22)`,
+  })
   return (
-    <div
-      className="w-full h-full rounded-full"
-      style={{
-        background:
-          'conic-gradient(#ef4444,#f59e0b,#facc15,#22c55e,#06b6d4,#6366f1,#a855f7,#ef4444)',
-      }}
-    />
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 21px)', gap: '4px' }}>
+      <span style={block('#22d3ee', '#67e8f9')} />
+      <span style={block('#ff2d95', '#fb7bb6')} />
+      <span style={block('#f59e0b', '#fbbf24')} />
+      <span style={block('#39d98a', '#6ee7b7')} />
+    </div>
   )
 }
 
@@ -88,7 +95,7 @@ export function RiddleGlyph() {
 export const BADGE_CENTER_BG: Record<string, string> = {
   play: 'linear-gradient(135deg,#34d399,#16a34a)',
   classic: 'linear-gradient(135deg,#0a1622,#05080f)',
-  wheel: '#0a1226',
+  quad: '#0a1226',
   seq: 'linear-gradient(135deg,#334155,#0f172a)',
   eyes: 'radial-gradient(circle at 50% 38%,#16233f,#070b18)',
   riddle: 'linear-gradient(135deg,#2dd4bf,#0f766e)',

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>True Colors icon options</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{font-family:ui-rounded,"SF Pro Rounded",system-ui,sans-serif;background:#09090b;color:#fff}
+  .disc{width:104px;height:104px;border-radius:9999px;display:grid;place-items:center;position:relative;
+    border:6px solid #a5f3fc;box-shadow:0 0 6px #a5f3fc66;background:linear-gradient(135deg,#0a1622,#05080f)}
+  .blk{border-radius:3px}
+</style>
+</head>
+<body class="p-10">
+<script>
+  // beveled tetromino block, like The Classic glyph
+  function blk(color, light, size){
+    return `display:inline-block;width:${size}px;height:${size}px;border-radius:3px;`
+      + `background:linear-gradient(180deg,${light},${color});`
+      + `box-shadow:0 0 6px ${color}99, inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 0 rgba(0,0,0,.22);`;
+  }
+</script>
+
+<h1 class="text-xl font-black mb-1">“True Colors” icon — options</h1>
+<p class="text-zinc-400 text-sm mb-6 max-w-2xl">Goal: a real icon in the same filled-block family as <b>The Classic</b> (cyan T) and <b>Sequential</b> (numbered blocks) — conveying “color matters”. Current icon is the rainbow wheel (E).</p>
+
+<!-- family reference -->
+<div class="flex gap-5 items-end mb-10 pb-6 border-b border-zinc-800">
+  <div class="text-center">
+    <div class="disc"><div id="ref-classic"></div></div>
+    <div class="text-[11px] text-cyan-300 mt-2 font-bold">The Classic</div>
+  </div>
+  <div class="text-center">
+    <div class="disc" style="border-color:#a5f3fc"><div id="ref-seq" style="display:flex;align-items:center;transform:translateY(-2px)"></div></div>
+    <div class="text-[11px] text-zinc-300 mt-2 font-bold">Sequential</div>
+  </div>
+  <div class="text-[11px] text-zinc-500 self-center max-w-[160px]">← the aesthetic the new icon should match</div>
+</div>
+
+<div class="flex gap-7 flex-wrap items-start">
+
+  <!-- A: colored 2x2 O-piece -->
+  <div class="text-center">
+    <div class="disc"><div id="optA"></div></div>
+    <div class="text-[12px] font-bold text-white mt-2">A · Color Quad</div>
+    <div class="text-[10px] text-zinc-500 w-[140px]">A 2×2 piece, each block a different color.</div>
+  </div>
+
+  <!-- B: multi-color T (matches The Classic shape, colored) -->
+  <div class="text-center">
+    <div class="disc"><div id="optB"></div></div>
+    <div class="text-[12px] font-bold text-white mt-2">B · Painted T</div>
+    <div class="text-[10px] text-zinc-500 w-[140px]">The Classic’s T, but each cell a different color.</div>
+  </div>
+
+  <!-- C: fanned colored blocks (Sequential style, no numbers) -->
+  <div class="text-center">
+    <div class="disc"><div id="optC" style="display:flex;align-items:center"></div></div>
+    <div class="text-[12px] font-bold text-white mt-2">C · Color Stack</div>
+    <div class="text-[10px] text-zinc-500 w-[140px]">Fanned blocks like Sequential, in palette colors.</div>
+  </div>
+
+  <!-- D: colored S-piece -->
+  <div class="text-center">
+    <div class="disc"><div id="optD"></div></div>
+    <div class="text-[12px] font-bold text-white mt-2">D · Painted S</div>
+    <div class="text-[10px] text-zinc-500 w-[140px]">An S-piece with each cell a different color.</div>
+  </div>
+
+  <!-- E: current rainbow wheel -->
+  <div class="text-center opacity-70">
+    <div class="disc" style="background:#0a1226">
+      <div style="width:70px;height:70px;border-radius:9999px;background:conic-gradient(#ef4444,#f59e0b,#facc15,#22c55e,#06b6d4,#6366f1,#a855f7,#ef4444)"></div>
+    </div>
+    <div class="text-[12px] font-bold text-zinc-400 mt-2">E · Current wheel</div>
+    <div class="text-[10px] text-zinc-500 w-[140px]">Today’s rainbow disc (the “not really an icon” one).</div>
+  </div>
+
+</div>
+
+<script>
+  const C = { red:['#f87171','#ef4444'], amber:['#fbbf24','#f59e0b'], green:['#4ade80','#22c55e'],
+              cyan:['#67e8f9','#22d3ee'], blue:['#60a5fa','#3b82f6'], purple:['#c084fc','#a855f7'] };
+  const cell=(c,s=15)=>`<span class="blk" style="${blk(C[c][1],C[c][0],s)}"></span>`;
+  const empty=(s=15)=>`<span style="display:inline-block;width:${s}px;height:${s}px"></span>`;
+
+  // reference: classic cyan T
+  document.getElementById('ref-classic').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(3,15px);gap:3px">
+       ${cell('cyan')}${cell('cyan')}${cell('cyan')}${empty()}${cell('cyan')}${empty()}</div>`;
+
+  // reference: sequential numbered blocks (simplified)
+  const seqBlk=(c,n,rot,ml)=>`<div style="${blk(C[c][1],C[c][0],23)};transform:rotate(${rot}deg);margin-left:${ml}px;display:grid;place-items:center"><span style="font-weight:900;font-size:14px;color:#fff">${n}</span></div>`;
+  document.getElementById('ref-seq').innerHTML = seqBlk('red',1,-9,0)+seqBlk('cyan',2,5,-3)+seqBlk('amber',3,-4,-3);
+
+  // A: 2x2 quad
+  document.getElementById('optA').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(2,20px);gap:4px">
+       ${cell('red',20)}${cell('amber',20)}${cell('green',20)}${cell('cyan',20)}</div>`;
+
+  // B: painted T
+  document.getElementById('optB').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(3,15px);gap:3px">
+       ${cell('red')}${cell('amber')}${cell('green')}${empty()}${cell('cyan')}${empty()}</div>`;
+
+  // C: fanned color stack (no numbers)
+  document.getElementById('optC').innerHTML =
+    `<div style="${blk(C.red[1],C.red[0],23)};transform:rotate(-9deg)"></div>`+
+    `<div style="${blk(C.cyan[1],C.cyan[0],23)};transform:rotate(5deg);margin-left:-3px"></div>`+
+    `<div style="${blk(C.amber[1],C.amber[0],23)};transform:rotate(-4deg);margin-left:-3px"></div>`;
+
+  // D: painted S  (cells: top-mid, top-right / bottom-left, bottom-mid)
+  document.getElementById('optD').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(3,15px);gap:3px">
+       ${empty()}${cell('amber')}${cell('green')}${cell('red')}${cell('cyan')}${empty()}</div>`;
+</script>
+
+<p class="text-emerald-400/80 text-sm mt-8">My lean: <b>A (Color Quad)</b> — instantly reads “colors matter,” compact, and sits in the same block family. <b>B (Painted T)</b> is a close second since it literally rhymes with The Classic’s T.</p>
+
+</body>
+</html>

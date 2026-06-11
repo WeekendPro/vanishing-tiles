@@ -18,9 +18,9 @@ export const COMPONENT_THEME: Record<PlayableComponent, RoundTheme> = {
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
   main: 'The Classic',
-  colors: 'True Colors',
-  inSequence: 'In Order',
-  flash: "Don't Blink",
+  colors: 'Chromatic',
+  inSequence: 'Sequential',
+  flash: 'Glimpse',
   riddle: 'Riddle',
 }
 
