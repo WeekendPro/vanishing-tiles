@@ -15,6 +15,7 @@ import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
 import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX, MAX_LIVES } from '@shared/core/scoring'
 import { ScoreStar } from './ScoreStar'
+import { GameOverReveal } from './GameOverReveal'
 import { IconButton, BackIcon, ReplayIcon, ForwardIcon } from './IconButton'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
@@ -88,6 +89,10 @@ export function ResolutionPhase() {
   const reduceMotion = useReducedMotion()
 
   const isJourney = mode === 'journey'
+  // Journey, out of lives → the Game Over reveal takes over the board/cart and
+  // shows the correct answer. Defined up here so the stage effects can skip the
+  // best-fit fly-in for it.
+  const isGameOver = isJourney && resolution?.kind === 'partial' && livesRemaining <= 0
 
   // Reduced motion: skip the flight. Apply all placements immediately,
   // fill consumed/rejected, then jump straight to the CTA (with the badge + score visible).
@@ -107,11 +112,13 @@ export function ResolutionPhase() {
   useLayoutEffect(() => {
     if (stage !== 'measuring' || reduceMotion) return
     if (!rootRef.current) return
+    // Game Over skips the best-fit fly-in; GameOverReveal renders the solution.
+    if (isGameOver) { setStage('badge'); return }
     if (!solution || slots.length === 0) { setStage('badge'); return }
     setContainerRect(rootRef.current.getBoundingClientRect())
     setStep(0)
     setStage('flying')
-  }, [stage, reduceMotion, solution, slots])
+  }, [stage, reduceMotion, solution, slots, isGameOver])
 
   // The walk: process one cart slot per step.
   useEffect(() => {
@@ -205,6 +212,10 @@ export function ResolutionPhase() {
       {/* pb-24 reserves clearance so content (Practice's score panel, the cart)
           never hides behind the bottom-pinned action buttons. */}
       <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center pb-24">
+        {isGameOver ? (
+          badgeShown && <GameOverReveal />
+        ) : (
+        <>
         {/* Board with the badge centered over it. The grid dims at the end of the
             round so the badge pops against it. On a retryable loss (failed, but
             lives remain) we fade the board the rest of the way out — quietly
@@ -260,6 +271,8 @@ export function ResolutionPhase() {
             isFailure={isFailure}
             speedSlow={speedSlow}
           />
+        )}
+        </>
         )}
       </div>
 
