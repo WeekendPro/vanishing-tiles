@@ -10,6 +10,7 @@ function lvl(
   return {
     level_id: `l${n}`, display_number: n, name,
     my_pr: opts.cleared ? 900 : null, my_stars: opts.cleared ? 2 : 0,
+    completedCount: opts.cleared ? 3 : 0,
     cleared: !!opts.cleared, current: !!opts.current, locked: !!opts.locked,
     last_played: null, global_best: null,
   }
@@ -101,5 +102,13 @@ describe('TransitMap', () => {
     expect(b).toBeEnabled()
     expect(a).not.toHaveAttribute('aria-current')
     expect(b).not.toHaveAttribute('aria-current')
+  })
+
+  it('renders 5 star slots with completedCount filled for a cleared station', () => {
+    render(<TransitMap themes={themes} onSelect={() => {}} />)
+    const btn = screen.getByRole('button', { name: /Vacant Heights/i })
+    const stars = [...btn.querySelectorAll('span')].filter(s => s.textContent === '★')
+    expect(stars).toHaveLength(5)
+    expect(stars.filter(s => s.className.includes('text-yellow-400'))).toHaveLength(3)
   })
 })

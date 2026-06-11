@@ -1,4 +1,5 @@
 import type { JourneyTheme } from '../components/JourneyMap'
+import { LEVEL_COMPONENTS } from './components'
 import { type ProgressMap, emptyLevelProgress, levelTotal, levelStars } from '../store/progressStore'
 
 /**
@@ -28,6 +29,7 @@ export function applyClientProgress(themes: JourneyTheme[], progress: ProgressMa
     levels: theme.levels.map(l => {
       const p = progress[l.level_id] ?? emptyLevelProgress()
       const total = levelTotal(p)
+      const completedCount = LEVEL_COMPONENTS.filter(c => p.best[c] > 0).length
       return {
         ...l,
         cleared: p.best.main > 0,
@@ -35,6 +37,7 @@ export function applyClientProgress(themes: JourneyTheme[], progress: ProgressMa
         locked: frontier !== null && l.display_number > frontier,
         my_stars: levelStars(p),
         my_pr: total || null,
+        completedCount,
       }
     }),
   }))

@@ -8,6 +8,7 @@ export interface JourneyLevel {
   name: string
   my_pr: number | null
   my_stars: number
+  completedCount: number
   cleared: boolean
   current: boolean
   locked: boolean
@@ -34,7 +35,7 @@ interface FlatStation extends JourneyLevel {
 function Stars({ n }: { n: number }) {
   return (
     <span className="text-[10px] tracking-tight" aria-hidden="true">
-      {[0, 1, 2].map(i => (
+      {[0, 1, 2, 3, 4].map(i => (
         <span key={i} className={i < n ? 'text-yellow-400' : 'text-gray-700'}>★</span>
       ))}
     </span>
@@ -212,7 +213,7 @@ export function TransitMap({
                 {s.interchange ? <span aria-hidden="true"> ⇄</span> : ''}
                 {isNext ? <span aria-hidden="true"> ▶</span> : ''}
               </span>
-              {s.cleared && <Stars n={s.my_stars} />}
+              {s.cleared && <Stars n={s.completedCount} />}
             </span>
           </button>
         )
