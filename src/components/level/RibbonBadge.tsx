@@ -108,8 +108,10 @@ export function RibbonBadge({
   onClick,
   'data-testid': testId,
 }: RibbonBadgeProps) {
-  // Hex/title accent: green marks The Classic, cyan marks the badges.
+  // Crest accent: green marks The Classic, cyan marks the badges. The banner
+  // uses a deeper shade of the same so its white title stays readable.
   const accent = cardAccent === 'green' ? '#39d98a' : '#22d3ee'
+  const bannerColor = cardAccent === 'green' ? '#16a34a' : '#0e7490'
   const vibrant = vibrantProp || state === 'complete'
   // Dim ONLY when the puzzle isn't available yet (locked, or "coming soon").
   // Unlocked puzzles — incomplete or complete — render at full color.
@@ -131,40 +133,45 @@ export function RibbonBadge({
       onClick={onClick}
       className={`relative rounded-xl border-2 ${cardBorderClass} bg-arcade-panel shadow-panel-inset px-3 pt-4 pb-3 flex flex-col items-center w-full transition`}
     >
-      {/* Hexagon emblem + pixel title */}
+      {/* Crest: shield emblem (glyph up top) + a banner carrying the title */}
       <div className={`relative flex flex-col items-center ${dull}`}>
-        <div className="relative shrink-0" style={{ width: '110px', height: '120px' }}>
-          {/* Hex interior (glyph background), clipped to the hexagon */}
+        <div className="relative shrink-0" style={{ width: '124px', height: '132px' }}>
+          {/* Shield interior (glyph background), clipped to the shield path */}
           <div
             className="absolute inset-0"
             style={{
-              clipPath: 'polygon(50% 3%, 95.8% 26.6%, 95.8% 73.4%, 50% 96.9%, 4.2% 73.4%, 4.2% 26.6%)',
+              clipPath: "path('M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z')",
               background: centerBg,
             }}
           />
-          {/* Hex border (+ faint inner outline) */}
+          {/* Shield border (+ faint inner outline) */}
           <svg
             className="absolute inset-0 w-full h-full"
-            viewBox="0 0 118 128"
+            viewBox="0 0 124 132"
             preserveAspectRatio="none"
-            style={{ filter: `drop-shadow(0 0 6px ${accent}55)` }}
+            style={{ filter: `drop-shadow(0 3px 5px rgba(0,0,0,0.5)) drop-shadow(0 0 5px ${accent}44)` }}
           >
-            <polygon points="59,4 113,34 113,94 59,124 5,94 5,34" fill="none" stroke={accent} strokeWidth="3.5" />
-            <polygon points="59,15 103,40 103,88 59,113 15,88 15,40" fill="none" stroke={accent} strokeWidth="1" opacity="0.4" />
+            <path d="M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z" fill="none" stroke={accent} strokeWidth="3" />
+            <path d="M62 13 L108 29 V66 C108 95 89 113 62 122 C35 113 16 95 16 66 V29 Z" fill="none" stroke={accent} strokeWidth="1" opacity="0.45" />
           </svg>
-          {/* Glyph centered in the hex */}
-          <div className="absolute inset-0 grid place-items-center">{glyph}</div>
-        </div>
-
-        {/* Pixel title + underline accent */}
-        <div className="mt-3 flex flex-col items-center">
-          <span
-            className="font-pixel text-[10px] tracking-[0.06em] whitespace-nowrap"
-            style={{ color: accent, textShadow: `0 0 8px ${accent}80` }}
+          {/* Glyph in the upper portion of the shield (above the banner) */}
+          <div className="absolute left-0 right-0 grid place-items-center" style={{ top: '24px', height: '54px' }}>
+            {glyph}
+          </div>
+          {/* Banner across the lower third, carrying the title */}
+          <svg
+            viewBox="0 0 160 40"
+            className="absolute left-1/2 -translate-x-1/2"
+            style={{ bottom: '4px', width: '142px', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.5))' }}
           >
-            {title.toUpperCase()}
-          </span>
-          <span className="mt-1.5 h-[2px] w-10" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+            <path d="M4 7 L156 7 L147 22 L156 37 L4 37 L13 22 Z" fill={bannerColor} stroke="rgba(255,255,255,0.4)" strokeWidth="1.4" />
+            <text
+              x="80" y="23" textAnchor="middle" dominantBaseline="central" fill="#fff"
+              fontFamily="ui-sans-serif, system-ui, sans-serif" fontWeight="900" fontSize="12.5" letterSpacing=".3"
+            >
+              {title.toUpperCase()}
+            </text>
+          </svg>
         </div>
       </div>
 
