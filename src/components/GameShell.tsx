@@ -56,24 +56,20 @@ export function GameShell() {
         </div>
       ) : (
         <>
-          <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 h-[52px] border-b-2 border-arcade-edge">
-            <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
+          <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 pl-4 pr-12 h-[52px] border-b-2 border-arcade-edge">
+            <span className="font-pixel text-[8px] uppercase tracking-normal text-neon-cyan leading-relaxed">
               {mode === 'journey' ? (
+                // Lead with the puzzle, e.g. "CHROMATIC @ BRICKFALL | LEVEL 6".
+                // Segments stay unbreakable so a long combo wraps cleanly at "@"/"|".
                 <>
-                  <strong className="text-white">
-                    {levelDisplayNumber != null && (
-                      <>
-                        {String(levelDisplayNumber).padStart(2, '0')}
-                        <span className="text-arcade-edge px-2" aria-hidden>|</span>
-                      </>
-                    )}
-                    {levelName ?? `Level ${levelDisplayNumber ?? ''}`}
-                  </strong>
-                  {activeComponent && activeComponent !== 'main' && (
-                    <>
-                      <span className="text-arcade-edge px-2" aria-hidden>|</span>
-                      <span>{COMPONENT_LABEL[activeComponent]}</span>
-                    </>
+                  {activeComponent && <strong className="text-white whitespace-nowrap">{COMPONENT_LABEL[activeComponent]}</strong>}
+                  <span className="text-arcade-edge px-1.5" aria-hidden>@</span>
+                  <span className="whitespace-nowrap">{levelName ?? `Level ${levelDisplayNumber ?? ''}`}</span>
+                  {levelDisplayNumber != null && (
+                    <span className="text-zinc-500 whitespace-nowrap">
+                      <span className="text-arcade-edge px-1.5" aria-hidden>|</span>
+                      Level {levelDisplayNumber}
+                    </span>
                   )}
                 </>
               ) : (

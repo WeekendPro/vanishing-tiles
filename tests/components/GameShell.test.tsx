@@ -41,26 +41,29 @@ describe('GameShell header', () => {
     expect(screen.getByText(/2\s*\/\s*4|2 OF 4/i)).toBeInTheDocument()
   })
 
-  it('journey header shows "NN: Name | Badge" and no score', () => {
+  it('journey header leads with the puzzle: "PUZZLE @ Name | Level N", no score', () => {
     useGameStore.setState({
       mode: 'journey', activeComponent: 'colors', levelName: 'Cellar Door',
       levelDisplayNumber: 3, phase: 'viewing', livesRemaining: 3, score: 1400,
     } as any)
     render(<GameShell />)
-    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === '03|Cellar Door')).toBeTruthy()
-    expect(screen.getByText(/Chromatic/i)).toBeTruthy()
+    // puzzle title leads (in the <strong>)
+    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === 'Chromatic')).toBeTruthy()
+    expect(screen.getByText('Cellar Door')).toBeTruthy()
+    expect(screen.getByText(/Level 3/)).toBeTruthy()
     expect(screen.queryByText(/\/ 4/)).toBeNull()
     expect(screen.queryByText('1,400')).toBeNull()   // score no longer in the bar
   })
 
-  it('journey main puzzle shows no badge suffix', () => {
+  it('journey header shows the puzzle name even for The Classic (main)', () => {
     useGameStore.setState({
       mode: 'journey', activeComponent: 'main', levelName: 'Cellar Door',
       levelDisplayNumber: 1, phase: 'viewing', livesRemaining: 3,
     } as any)
     render(<GameShell />)
-    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === '01|Cellar Door')).toBeTruthy()
-    expect(screen.queryByText(/Main/)).toBeNull()    // 'main' has no suffix
+    expect(screen.getByText((_, el) => el?.tagName === 'STRONG' && el?.textContent === 'The Classic')).toBeTruthy()
+    expect(screen.getByText('Cellar Door')).toBeTruthy()
+    expect(screen.getByText(/Level 1/)).toBeTruthy()
   })
 })
 

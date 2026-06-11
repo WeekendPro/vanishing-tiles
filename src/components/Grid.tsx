@@ -1,7 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { getPieceColor } from '@shared/engine/pieces'
 import { ROWS, COLS } from '@shared/types'
-import type { Grid as GridType } from '@shared/types'
 import { gapFillClass } from '../lib/gapPalette'
 
 // R&D toggle for the board look. 'classic' = solid gray tiles (original);
@@ -15,13 +14,10 @@ interface Props {
   highlightCells?: [number, number][]
   /** Called with each cell's DOM node so callers can measure positions. */
   cellRef?: (row: number, col: number, el: HTMLDivElement | null) => void
-  /** Override the live store grid (e.g. the Game Over solved board / empty gaps). */
-  grid?: GridType
 }
 
-export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef, grid: gridProp }: Props) {
-  const storeGrid = useGameStore(s => s.grid)
-  const grid = gridProp ?? storeGrid
+export function Grid({ onCellClick, onCellHover, highlightCells = [], cellRef }: Props) {
+  const grid = useGameStore(s => s.grid)
   const highlighted = new Set(highlightCells.map(([r, c]) => `${r},${c}`))
 
   return (
