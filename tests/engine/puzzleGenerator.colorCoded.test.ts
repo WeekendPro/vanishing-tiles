@@ -25,6 +25,15 @@ describe('generatePuzzle color-coded mode', () => {
     colors.forEach(c => expect([...GAP_COLOR_IDS]).toContain(c))
   })
 
+  it('spans ≥2 distinct shapes when shapeTypeCount > 1', () => {
+    const { gaps } = generatePuzzle(
+      { gapCount: 6, complexity: 'medium', colorCoded: { shapeTypeCount: 3, palette: [...GAP_COLOR_IDS] } },
+      makeRng('cc-multi'),
+    )
+    expect(gaps).toHaveLength(6)
+    expect(new Set(gaps.map(g => g.pieceType)).size).toBeGreaterThanOrEqual(2)
+  })
+
   it('leaves gaps uncolored when colorCoded is omitted (basic back-compat)', () => {
     const { gaps } = generatePuzzle({ gapCount: 3, complexity: 'simple' }, makeRng('cc-seed'))
     expect(gaps.every(g => g.color === undefined)).toBe(true)

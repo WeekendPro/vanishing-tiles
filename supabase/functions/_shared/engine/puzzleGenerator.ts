@@ -144,11 +144,14 @@ export function generatePuzzle(
 
   let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng)
 
-  // Sequential variety guard: a sequential round should exercise memory across
-  // different shapes, so never let every gap be the same piece type. Re-roll the
-  // whole board (rng keeps advancing, so each retry differs) until the gaps span
-  // ≥2 types. Only attempt this when >1 allowed type can actually satisfy it.
-  if (input.sequential && allowedTypes.length > 1) {
+  // Variety guard: a round that should exercise memory across different shapes
+  // must never let every gap be the same piece type. Re-roll the whole board
+  // (rng keeps advancing, so each retry differs) until the gaps span ≥2 types.
+  // Applies to Sequential rounds and to multi-shape Color-coded rounds (so a
+  // Chromatic board with shapeTypeCount>1 shows a genuine mix, never all-identical
+  // by chance). Only attempt when >1 allowed type can actually satisfy it.
+  const wantsVariety = input.sequential || (!!input.colorCoded && input.colorCoded.shapeTypeCount > 1)
+  if (wantsVariety && allowedTypes.length > 1) {
     let retries = 0
     while (!hasTypeVariety(gaps) && retries < 50) {
       retries++
