@@ -6,8 +6,8 @@ import type { ProgressMap } from '../../src/store/progressStore'
 const themes: JourneyTheme[] = [{
   theme_id: 't1', slug: 'the_hollows', name: 'The Hollows', mechanic: '', sort_order: 1,
   levels: [
-    { level_id: 'L1', display_number: 1, name: 'A', my_pr: null, my_stars: 0, cleared: false, current: false, locked: false, last_played: null, global_best: null },
-    { level_id: 'L2', display_number: 2, name: 'B', my_pr: null, my_stars: 0, cleared: false, current: false, locked: false, last_played: null, global_best: null },
+    { level_id: 'L1', display_number: 1, name: 'A', my_pr: null, my_stars: 0, completedCount: 0, cleared: false, current: false, locked: false, last_played: null, global_best: null },
+    { level_id: 'L2', display_number: 2, name: 'B', my_pr: null, my_stars: 0, completedCount: 0, cleared: false, current: false, locked: false, last_played: null, global_best: null },
   ],
 }]
 

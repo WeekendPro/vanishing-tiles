@@ -72,8 +72,6 @@ export function TransitMap({
     nextRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
   }, [next?.level_id])
 
-  const slugToName = Object.fromEntries(themes.map(t => [t.slug, t.name]))
-
   return (
     <div className="relative w-full max-w-md mx-auto">
       <svg
@@ -81,37 +79,6 @@ export function TransitMap({
         className="w-full block"
         aria-hidden="true"
       >
-        {/* District watermarks: large, faint, vertically centred on each section
-            and placed in the dead space beside the line. Rendered first so the
-            neon lines and stations sit on top. Names come from the DB
-            (get_journey); we wrap to one word per line, as-is (no casing). */}
-        {LINES.map(line => {
-          const name = slugToName[line.slug] ?? line.slug
-          const words = name.split(' ')
-          const { x, y, align } = line.label
-          const LH = 37
-          const SIZE = 35
-          // Vertically centre the whole multi-line block on the label anchor.
-          const startY = y - ((words.length - 1) * LH) / 2 + SIZE * 0.34
-          return (
-            <text
-              key={`label-${line.slug}`}
-              x={x}
-              textAnchor={align}
-              fill={line.color}
-              fontSize={SIZE}
-              fontWeight={800}
-              letterSpacing={2}
-              opacity={0.2}
-            >
-              {words.map((w, i) => (
-                <tspan key={i} x={x} y={startY + i * LH}>
-                  {w}
-                </tspan>
-              ))}
-            </text>
-          )
-        })}
         {LINES.map(line => {
           const lineCleared = stations
             .filter(s => s.slug === line.slug)

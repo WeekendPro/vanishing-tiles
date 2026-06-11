@@ -6,7 +6,7 @@ import type { JourneyTheme } from '../../src/components/JourneyMap'
 function lvl(level_id: string, display_number: number): JourneyTheme['levels'][number] {
   return {
     level_id, display_number, name: `L${display_number}`,
-    my_pr: 999, my_stars: 3, cleared: true, current: true, locked: false,
+    my_pr: 999, my_stars: 3, completedCount: 0, cleared: true, current: true, locked: false,
     last_played: null, global_best: null,
   }
 }
