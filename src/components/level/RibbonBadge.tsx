@@ -154,8 +154,8 @@ export function RibbonBadge({
             <path d="M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z" fill="none" stroke={accent} strokeWidth="3" />
             <path d="M62 13 L108 29 V66 C108 95 89 113 62 122 C35 113 16 95 16 66 V29 Z" fill="none" stroke={accent} strokeWidth="1" opacity="0.45" />
           </svg>
-          {/* Glyph centered in the shield body (the space above the banner) */}
-          <div className="absolute left-0 right-0 grid place-items-center" style={{ top: '20px', height: '72px' }}>
+          {/* Glyph centered on the shield's center (banner sits below it) */}
+          <div className="absolute left-0 right-0 grid place-items-center" style={{ top: '30px', height: '72px' }}>
             {glyph}
           </div>
           {/* Banner across the lower third, carrying the title */}
