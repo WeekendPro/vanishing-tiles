@@ -13,7 +13,7 @@ export function SelectingPhase() {
     selection, incrementSelection, decrementSelection,
     appendQueuePiece, popQueuePiece,
     submit, phaseStartTime, phaseDuration,
-    roundTheme, gaps,
+    roundTheme,
   } = useGameStore(useShallow(s => ({
     selection: s.selection,
     incrementSelection: s.incrementSelection,
@@ -24,7 +24,6 @@ export function SelectingPhase() {
     phaseStartTime: s.phaseStartTime,
     phaseDuration: s.phaseDuration,
     roundTheme: s.roundTheme,
-    gaps: s.gaps,
   })))
 
   const colorMatters = THEME_CONFIG[roundTheme].colorMatters
