@@ -206,9 +206,19 @@ export function ResolutionPhase() {
           never hides behind the bottom-pinned action buttons. */}
       <div ref={rootRef} className="relative flex flex-col gap-4 w-full max-w-sm items-center pb-24">
         {/* Board with the badge centered over it. The grid dims at the end of the
-            round (~40%) so the badge pops against it. */}
+            round so the badge pops against it. On a retryable loss (failed, but
+            lives remain) we fade the board the rest of the way out — quietly
+            hiding it rather than dwelling on the wrong placement. */}
         <div className="relative">
-          <div className={`relative transition-opacity duration-300 ${badgeShown ? 'opacity-25' : 'opacity-100'}`}>
+          <div
+            className={`relative transition-opacity duration-500 ${
+              !badgeShown
+                ? 'opacity-100'
+                : isFailure && !outOfLives
+                  ? 'opacity-0'
+                  : 'opacity-25'
+            }`}
+          >
             <Grid
               cellRef={(row, col, el) => {
                 if (el) cellRects.current.set(`${row},${col}`, el.getBoundingClientRect())

@@ -62,7 +62,10 @@ export function GameShell() {
                 <>
                   <strong className="text-white">
                     {levelDisplayNumber != null && (
-                      <span className="font-sans text-[12px] normal-case tracking-normal">{String(levelDisplayNumber).padStart(2, '0')}: </span>
+                      <>
+                        {String(levelDisplayNumber).padStart(2, '0')}
+                        <span className="text-arcade-edge px-2" aria-hidden>|</span>
+                      </>
                     )}
                     {levelName ?? `Level ${levelDisplayNumber ?? ''}`}
                   </strong>
