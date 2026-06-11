@@ -15,9 +15,11 @@ export const THEME_CONFIG: Record<RoundTheme, ThemeConfig> = {
   flashMob:    { orderMatters: false, colorMatters: false },
 }
 
-/** The 7-color palette for color-coded gaps. Stored on gaps as plain ids so the
- *  shared logic stays free of Tailwind class strings; the client maps ids →
- *  classes in src/lib/gapPalette.ts. Decoupled from piece-type colors by design. */
+/** The 5-color neon palette for color-coded gaps. Stored on gaps as plain ids so
+ *  the shared logic stays free of Tailwind class strings; the client maps ids →
+ *  neon classes in src/lib/gapPalette.ts. Decoupled from piece-type colors by
+ *  design. (Red was dropped in favor of purple — neon-red and neon-magenta are
+ *  the hardest warm pair to disambiguate under time pressure.) */
 export const GAP_COLOR_IDS = [
-  'green', 'red', 'blue', 'yellow', 'orange', 'purple', 'cyan',
+  'cyan', 'magenta', 'green', 'purple', 'yellow',
 ] as const
