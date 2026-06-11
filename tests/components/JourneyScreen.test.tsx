@@ -45,7 +45,7 @@ beforeEach(() => {
 })
 
 describe('JourneyScreen', () => {
-  it('renders the transit map with district labels and station buttons', async () => {
+  it('renders the transit map with station buttons', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
     expect(await screen.findByRole('button', { name: /Vacant Heights/i })).toBeInTheDocument()

@@ -109,6 +109,6 @@ describe('TransitMap', () => {
     const btn = screen.getByRole('button', { name: /Vacant Heights/i })
     const stars = [...btn.querySelectorAll('span')].filter(s => s.textContent === '★')
     expect(stars).toHaveLength(5)
-    expect(stars.filter(s => s.className.includes('text-yellow-400'))).toHaveLength(3)
+    expect(stars.filter(s => s.classList.contains('text-yellow-400'))).toHaveLength(3)
   })
 })

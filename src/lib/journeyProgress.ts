@@ -35,7 +35,7 @@ export function applyClientProgress(themes: JourneyTheme[], progress: ProgressMa
         cleared: p.best.main > 0,
         current: frontier !== null && l.display_number === frontier,
         locked: frontier !== null && l.display_number > frontier,
-        my_stars: levelStars(p),
+        my_stars: levelStars(p),  // score-based; not rendered on the map (the map uses completedCount) — kept for derivation tests / future use
         my_pr: total || null,
         completedCount,
       }
