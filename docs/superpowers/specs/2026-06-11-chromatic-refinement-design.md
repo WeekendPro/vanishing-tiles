@@ -44,6 +44,13 @@ colorShapeTypeCount(gapCount):
 - **Solvability is guaranteed:** every gap is a placed tetromino, so a
   one-piece-per-gap (matching shape + color) solution always exists regardless
   of `shapeTypeCount`. Multi-shape puzzles stay solvable.
+- **Reliable mix (variety guard):** the generator already re-rolls the board for
+  the Sequential theme until the gaps span ≥2 distinct piece types
+  (`hasTypeVariety`). Generalize that guard to also fire for color-coded puzzles
+  when `shapeTypeCount > 1`, so a multi-shape Chromatic board never comes out
+  all-one-shape by chance (without it, a 2-shape / 4-gap board is all-identical
+  ~1/8 of the time). Guard condition becomes:
+  `(input.sequential || (input.colorCoded && input.colorCoded.shapeTypeCount > 1)) && allowedTypes.length > 1`.
 - The viewing render (`ViewingPhase` + `Grid` + `GapBorder`) already draws
   whatever shapes/colors the generator emits — no change needed; verify only.
 
