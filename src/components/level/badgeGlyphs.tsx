@@ -48,7 +48,7 @@ export function ColorWheelGlyph() {
 
 export function SequenceBlocksGlyph() {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" style={{ transform: 'translateY(-4px)' }}>
       <div
         style={{ transform: 'rotate(-9deg)' }}
         className="w-[23px] h-[23px] rounded-[6px] bg-red-500 grid place-items-center shadow-[inset_0_2px_0_rgba(255,255,255,.55),inset_0_-3px_0_rgba(0,0,0,.22)]"
