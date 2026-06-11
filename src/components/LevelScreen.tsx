@@ -13,7 +13,7 @@ import { NeonButton, ScanlineOverlay } from './ui'
 import type { DifficultyConfig } from '@shared/types'
 import { RibbonBadge } from './level/RibbonBadge'
 import {
-  GapTetrominoGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
+  ClassicTetrominoGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
 } from './level/badgeGlyphs'
 
 interface LevelDetail {
@@ -185,7 +185,7 @@ export function LevelScreen() {
           <div className="w-fit min-w-[55%] max-w-full mx-auto">
             <RibbonBadge
               data-testid="badge-main"
-              glyph={<GapTetrominoGlyph />}
+              glyph={<ClassicTetrominoGlyph />}
               centerBg={BADGE_CENTER_BG.classic}
               title="THE CLASSIC"
               state={p.best.main > 0 ? 'complete' : 'incomplete'}

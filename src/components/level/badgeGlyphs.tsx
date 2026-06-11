@@ -6,7 +6,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import type { CSSProperties } from 'react'
 
-/** Currently unused — kept for reference (the main badge now uses GapTetrominoGlyph). */
+/** Currently unused — kept for reference (the main badge now uses ClassicTetrominoGlyph). */
 export function PlayGlyph() {
   return (
     <svg width="34" height="34" viewBox="0 0 24 24" fill="white">
@@ -15,20 +15,21 @@ export function PlayGlyph() {
   )
 }
 
-/** Upright-T tetromino drawn as empty/dashed "gap" cells — The Classic. */
-export function GapTetrominoGlyph() {
-  const gap: CSSProperties = {
+/** Upright-T tetromino drawn as filled neon-cyan blocks — The Classic. */
+export function ClassicTetrominoGlyph() {
+  const cell: CSSProperties = {
     width: 15,
     height: 15,
     borderRadius: 3,
-    border: '1.5px dashed rgba(34,211,238,0.85)',
-    boxShadow: 'inset 0 0 8px rgba(34,211,238,0.25)',
+    background: 'linear-gradient(180deg,#67e8f9,#22d3ee)',
+    boxShadow:
+      '0 0 8px rgba(34,211,238,0.6), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.22)',
   }
   const empty: CSSProperties = { width: 15, height: 15 }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 15px)', gap: '3px' }}>
-      <span style={gap} /><span style={gap} /><span style={gap} />
-      <span style={empty} /><span style={gap} /><span style={empty} />
+      <span style={cell} /><span style={cell} /><span style={cell} />
+      <span style={empty} /><span style={cell} /><span style={empty} />
     </div>
   )
 }
