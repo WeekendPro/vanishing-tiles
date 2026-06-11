@@ -37,13 +37,13 @@ export function GameShell() {
 
   return (
     <div className="min-h-dvh bg-arcade-bg text-white flex flex-col">
-      <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 py-3 border-b-2 border-arcade-edge">
+      <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 px-4 h-[52px] border-b-2 border-arcade-edge">
         <span className="font-pixel text-[10px] uppercase tracking-[0.1em] text-neon-cyan">
           {mode === 'journey' ? (
             <>
               <strong className="text-white">
                 {levelDisplayNumber != null && (
-                  <span className="font-sans text-[12px] normal-case tracking-normal leading-none relative -top-[3px]">{String(levelDisplayNumber).padStart(2, '0')}: </span>
+                  <span className="font-sans text-[12px] normal-case tracking-normal">{String(levelDisplayNumber).padStart(2, '0')}: </span>
                 )}
                 {levelName ?? `Level ${levelDisplayNumber ?? ''}`}
               </strong>
@@ -64,7 +64,7 @@ export function GameShell() {
       {/* Timer bar docked directly beneath the metadata bar. The 6px slot is
           reserved in EVERY phase so the grid below never shifts when the timer
           appears (viewing/selecting) or disappears (reveal/resolve). */}
-      <div className="h-1.5">
+      <div className="h-1.5 mt-1.5">
         {showTimer ? (
           <ProgressBar
             startTime={phaseStartTime}
