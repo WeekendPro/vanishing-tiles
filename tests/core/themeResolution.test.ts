@@ -70,3 +70,54 @@ describe('resolveSelection — basic (colorblind passthrough)', () => {
     expect(res.coverage).toBe(1)
   })
 })
+
+describe('resolveSelection — strict shape matching (no spanning)', () => {
+  // Three O-gaps side by side and CONTIGUOUS (a 2×6 empty strip). Two T pieces
+  // physically fit across the strip, so the old "fit anywhere there's room"
+  // algorithm would span them over the O gaps — the exact behavior we kill.
+  const oAt = (col: number): Gap => ({
+    pieceType: 'O', rotation: 0, anchorRow: 0, anchorCol: col,
+    cells: [[0, col], [0, col + 1], [1, col], [1, col + 1]],
+  })
+  const threeOs = [oAt(0), oAt(2), oAt(4)]
+
+  it('rejects pieces that have no matching-shape gap (never spans gaps)', () => {
+    const selection: SelectionEntry[] = [{ pieceType: 'T', freeCount: 2 }]
+    const res = resolveSelection({ selection, grid: gridWith(threeOs), gaps: threeOs, theme: 'basic' })
+    expect(res.solvable).toBe(false)
+    expect(res.placements).toHaveLength(0)   // nothing placed — both Ts rejected
+    expect(res.filledCells).toBe(0)
+    expect(res.coverage).toBe(0)
+  })
+
+  it('places only the matching subset and rejects the rest', () => {
+    // Two O picks match two of the three O gaps; the third gap stays unfilled.
+    const selection: SelectionEntry[] = [{ pieceType: 'O', freeCount: 2 }, { pieceType: 'T', freeCount: 1 }]
+    const res = resolveSelection({ selection, grid: gridWith(threeOs), gaps: threeOs, theme: 'basic' })
+    expect(res.solvable).toBe(false)
+    expect(res.placements).toHaveLength(2)         // two O placements; T rejected
+    expect(res.placements.every(p => p.pieceType === 'O')).toBe(true)
+    expect(res.filledCells).toBe(8)
+    expect(res.totalCells).toBe(12)
+  })
+
+  it('clears when every gap has its exact matching piece', () => {
+    const selection: SelectionEntry[] = [{ pieceType: 'O', freeCount: 3 }]
+    const res = resolveSelection({ selection, grid: gridWith(threeOs), gaps: threeOs, theme: 'basic' })
+    expect(res.solvable).toBe(true)
+    expect(res.placements).toHaveLength(3)
+    expect(res.coverage).toBe(1)
+  })
+
+  it('color-coded: a right-shape wrong-color piece is rejected, not spanned', () => {
+    // greenO + redO gaps; pick two green Os. One matches greenO; the second
+    // green O has no green gap left, so it is rejected (never lands on redO).
+    const selection: SelectionEntry[] = [{ pieceType: 'O', color: 'green', freeCount: 2 }]
+    const res = resolveSelection({ selection, grid: gridWith(gaps), gaps, theme: 'colorCoded' })
+    expect(res.solvable).toBe(false)
+    expect(res.placements).toHaveLength(1)
+    expect(res.placements[0].color).toBe('green')
+    expect(res.filledCells).toBe(4)
+    expect(res.totalCells).toBe(8)
+  })
+})

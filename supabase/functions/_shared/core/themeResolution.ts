@@ -1,5 +1,4 @@
-import type { Grid, Gap, PieceType, Placement, SelectionEntry, RoundTheme } from '../types.ts'
-import { solve, bestFit } from '../engine/solver.ts'
+import type { Gap, Grid, PieceType, Placement, SelectionEntry, RoundTheme } from '../types.ts'
 import { THEME_CONFIG } from './themeConfig.ts'
 
 export interface ResolveResult {
@@ -10,126 +9,120 @@ export interface ResolveResult {
   totalCells: number
 }
 
-type PieceCount = Partial<Record<PieceType, number>>
-
-function emptyCount(grid: Grid): number {
-  return grid.flat().filter(c => c.status === 'empty').length
+interface Pick {
+  pieceType: PieceType
+  color?: string
 }
 
-function tally(entries: SelectionEntry[]): PieceCount {
-  const t: PieceCount = {}
-  for (const e of entries) if (e.freeCount > 0) t[e.pieceType] = (t[e.pieceType] ?? 0) + e.freeCount
-  return t
-}
-
-// A clone of `grid` where only `color`'s gap cells remain empty — every other
-// gap's cells are refilled, so solve/bestFit see one color group in isolation.
-function subgridForColor(grid: Grid, gaps: Gap[], color: string | undefined): Grid {
-  const g = grid.map(row => row.map(cell => ({ ...cell })))
-  for (const gap of gaps) {
-    if (gap.color !== color) for (const [r, c] of gap.cells) g[r][c] = { status: 'filled' }
+// Flatten the selection cart into an ordered list of individual picks. Each
+// SelectionEntry contributes `freeCount` picks, preserving cart/queue order.
+function expandPicks(selection: SelectionEntry[]): Pick[] {
+  const picks: Pick[] = []
+  for (const e of selection) {
+    for (let i = 0; i < e.freeCount; i++) picks.push({ pieceType: e.pieceType, color: e.color })
   }
-  return g
+  return picks
 }
 
+// A placement that exactly fills `gap` — pieces only ever land on a gap's own
+// cells, never spanning. Color is carried through for color-coded coherence
+// (undefined for monochrome themes).
+function placementForGap(gap: Gap): Placement {
+  return {
+    pieceType: gap.pieceType,
+    rotation: gap.rotation,
+    anchorRow: gap.anchorRow,
+    anchorCol: gap.anchorCol,
+    cells: gap.cells,
+    color: gap.color,
+  }
+}
+
+/**
+ * Resolve a selection against the gaps as a strict ASSIGNMENT problem: every
+ * gap is a discrete tetromino, and a selected piece may only fill a gap of the
+ * exact same shape (and color, when the theme is color-coded). A piece with no
+ * available matching gap is rejected; a gap with no matching piece stays
+ * unfilled. Pieces NEVER land on mismatched cells or span multiple gaps.
+ *
+ * Sequential rounds match positionally instead: the k-th pick is judged against
+ * the gap labelled `order = k`. Each position succeeds or fails independently —
+ * a wrong or missing pick never poisons the others.
+ */
 export function resolveSelection(args: {
   selection: SelectionEntry[]
   grid: Grid
   gaps: Gap[]
   theme: RoundTheme
 }): ResolveResult {
-  const { selection, grid, gaps, theme } = args
+  const { selection, gaps, theme } = args
   const { colorMatters, orderMatters } = THEME_CONFIG[theme]
 
-  if (orderMatters) {
-    // Sequential: the k-th pick must match the shape of the gap labelled k.
-    // Compare positionally against gaps sorted by `order`; any mismatch (count,
-    // shape, or order) fails the whole round with zero partial credit.
-    const picks: PieceType[] = []
-    for (const e of selection) for (let i = 0; i < e.freeCount; i++) picks.push(e.pieceType)
-    const orderedGaps = [...gaps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    const totalCells = orderedGaps.reduce((sum, g) => sum + g.cells.length, 0)
+  if (orderMatters) return resolveSequential(selection, gaps)
+  return resolveByShape(selection, gaps, colorMatters)
+}
 
-    const matches =
-      picks.length === orderedGaps.length &&
-      orderedGaps.every((g, k) => g.pieceType === picks[k])
-
-    if (matches) {
-      const placements: Placement[] = orderedGaps.map(g => ({
-        pieceType: g.pieceType,
-        rotation: g.rotation,
-        anchorRow: g.anchorRow,
-        anchorCol: g.anchorCol,
-        cells: g.cells,
-      }))
-      return { solvable: true, placements, coverage: 1, filledCells: totalCells, totalCells }
-    }
-    return { solvable: false, placements: [], coverage: 0, filledCells: 0, totalCells }
-  }
-
-  if (!colorMatters) {
-    const pieceCount = tally(selection)
-    const total = emptyCount(grid)
-    const res = solve(pieceCount, grid, gaps)
-    if (res.solvable) {
-      return { solvable: true, placements: res.placements ?? [], coverage: 1, filledCells: total, totalCells: total }
-    }
-    const fit = bestFit(pieceCount, grid)
-    return {
-      solvable: false,
-      placements: fit.placements,
-      coverage: fit.totalCells === 0 ? 0 : fit.filledCells / fit.totalCells,
-      filledCells: fit.filledCells,
-      totalCells: fit.totalCells,
-    }
-  }
-
-  // Color-coded: solve each color group independently against its subgrid.
-  const colors = [...new Set([
-    ...gaps.map(g => g.color),
-    ...selection.map(s => s.color),
-  ])].filter((c): c is string => c !== undefined)
+// Sequential: match pick k (1-based) against the gap whose `order == k`.
+function resolveSequential(selection: SelectionEntry[], gaps: Gap[]): ResolveResult {
+  const picks = expandPicks(selection)
+  const orderedGaps = [...gaps].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const totalCells = orderedGaps.reduce((sum, g) => sum + g.cells.length, 0)
 
   const placements: Placement[] = []
-  let allSolvable = true
-  let filled = 0
-  let total = 0
+  let filledCells = 0
+  let matched = 0
 
-  for (const color of colors) {
-    const colorGaps = gaps.filter(g => g.color === color)
-    const colorGrid = subgridForColor(grid, gaps, color)
-    const colorTally = tally(selection.filter(s => s.color === color))
-    const colorEmpty = emptyCount(colorGrid)
-    total += colorEmpty
-
-    // If there are no empty cells for this color, skip (nothing to fill).
-    // This handles the case where a selection color has no matching gaps.
-    if (colorEmpty === 0) {
-      // No gaps to fill for this color — the stray piece means we have an
-      // extra piece with nothing to match. That's a failure for this group.
-      if (Object.values(colorTally).some(n => (n ?? 0) > 0)) {
-        allSolvable = false
-      }
-      continue
+  orderedGaps.forEach((gap, k) => {
+    // A pick exists at this position AND its shape matches the gap → it lands.
+    // Otherwise (wrong shape, or no pick supplied) the gap stays unfilled.
+    if (k < picks.length && picks[k].pieceType === gap.pieceType) {
+      placements.push(placementForGap(gap))
+      filledCells += gap.cells.length
+      matched++
     }
+  })
 
-    const res = solve(colorTally, colorGrid, colorGaps)
-    if (res.solvable) {
-      filled += colorEmpty
-      placements.push(...(res.placements ?? []).map(p => ({ ...p, color })))
-    } else {
-      allSolvable = false
-      const fit = bestFit(colorTally, colorGrid)
-      filled += fit.filledCells
-      placements.push(...fit.placements.map(p => ({ ...p, color })))
+  // Perfect only when every gap is filled in order AND there are no extra picks
+  // (extras beyond N are rejected, making the round a partial).
+  const solvable = matched === orderedGaps.length && picks.length === orderedGaps.length
+  return {
+    solvable,
+    placements,
+    coverage: totalCells === 0 ? 0 : filledCells / totalCells,
+    filledCells,
+    totalCells,
+  }
+}
+
+// Basic / color-coded: greedily assign each gap the first unclaimed pick of the
+// matching shape (and color, when colorMatters).
+function resolveByShape(selection: SelectionEntry[], gaps: Gap[], colorMatters: boolean): ResolveResult {
+  const picks = expandPicks(selection)
+  const claimed = new Array<boolean>(picks.length).fill(false)
+  const totalCells = gaps.reduce((sum, g) => sum + g.cells.length, 0)
+
+  const placements: Placement[] = []
+  let filledCells = 0
+  let matchedGaps = 0
+
+  for (const gap of gaps) {
+    const idx = picks.findIndex((p, i) =>
+      !claimed[i] && p.pieceType === gap.pieceType && (!colorMatters || p.color === gap.color))
+    if (idx >= 0) {
+      claimed[idx] = true
+      matchedGaps++
+      filledCells += gap.cells.length
+      placements.push(placementForGap(gap))
     }
   }
 
+  const leftoverPicks = claimed.filter(c => !c).length
+  const solvable = matchedGaps === gaps.length && leftoverPicks === 0
   return {
-    solvable: allSolvable,
+    solvable,
     placements,
-    coverage: total === 0 ? 0 : filled / total,
-    filledCells: filled,
-    totalCells: total,
+    coverage: totalCells === 0 ? 0 : filledCells / totalCells,
+    filledCells,
+    totalCells,
   }
 }
