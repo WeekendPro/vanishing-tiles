@@ -36,9 +36,6 @@ export interface LineDef {
   color: string
   path: string        // the line itself (through its 5 stations)
   connector?: string  // dashed transfer from the previous line's interchange
-  // x is the alignment edge: with align 'end' the text grows LEFT from x
-  // (right-aligned); with 'start' it grows RIGHT from x (left-aligned).
-  label: { x: number; y: number; align: 'start' | 'end' }
 }
 
 // Paths trace the station coords above, in display order.
@@ -47,25 +44,17 @@ export const LINES: LineDef[] = [
     slug: 'the_hollows',
     color: LINE_COLOR.the_hollows,
     path: 'M70,1050 L70,960 L140,890 L140,800 L80,730',
-    // Big faint district watermark, vertically centred on the section. This line
-    // hugs the left, so the label lives in the RIGHT dead space, right-aligned to
-    // the map's right margin.
-    label: { x: 372, y: 890, align: 'end' },
   },
   {
     slug: 'the_stacks',
     color: LINE_COLOR.the_stacks,
     path: 'M160,660 L160,570 L240,510 L240,430 L170,370',
     connector: 'M80,730 L160,660',
-    // LEFT dead space, left-aligned to the map's left margin.
-    label: { x: 16, y: 515, align: 'start' },
   },
   {
     slug: 'the_grid',
     color: LINE_COLOR.the_grid,
     path: 'M260,300 L260,220 L320,170 L320,100 L250,60',
     connector: 'M170,370 L260,300',
-    // LEFT dead space, left-aligned to the map's left margin.
-    label: { x: 16, y: 176, align: 'start' },
   },
 ]
