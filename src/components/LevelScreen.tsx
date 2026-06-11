@@ -131,7 +131,7 @@ export function LevelScreen() {
       <ScanlineOverlay />
 
       {/* Back button */}
-      <button onClick={goJourney} className="mb-4 text-neon-cyan text-glow-cyan hover:text-neon-cyan text-sm font-semibold">
+      <button onClick={goJourney} className="mb-4 text-neon-cyan text-glow-cyan hover:opacity-80 text-sm font-semibold">
         ← Map
       </button>
 

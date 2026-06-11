@@ -6,6 +6,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import type { CSSProperties } from 'react'
 
+/** Currently unused — kept for reference (the main badge now uses GapTetrominoGlyph). */
 export function PlayGlyph() {
   return (
     <svg width="34" height="34" viewBox="0 0 24 24" fill="white">
@@ -25,7 +26,7 @@ export function GapTetrominoGlyph() {
   }
   const empty: CSSProperties = { width: 15, height: 15 }
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 15px)', gap: 3 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 15px)', gap: '3px' }}>
       <span style={gap} /><span style={gap} /><span style={gap} />
       <span style={empty} /><span style={gap} /><span style={empty} />
     </div>
