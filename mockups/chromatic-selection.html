@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chromatic — Selection UI mockup</title>
+<style>
+  :root{
+    --bg:#030712; --panel:#060d12; --edge:#0e2b33; --well:#0c1f25;
+    --cyan:#22d3ee; --magenta:#ff2d95; --green:#39d98a; --red:#ff4d4d; --yellow:#facc15;
+    --purple:#a855f7; --orange:#fb923c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(circle at 50% 0%, #0a1622 0%, #030712 70%);
+    color:#cbd5e1; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    min-height:100vh; padding:24px 12px 60px; display:flex; flex-direction:column; align-items:center; gap:32px;
+  }
+  .pixel{font-family:"Press Start 2P",ui-monospace,Menlo,monospace}
+  h1{font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan); margin:0 0 4px}
+  .sub{font-size:11px; color:#64748b; max-width:420px; text-align:center; line-height:1.5}
+
+  .stage{width:382px; max-width:100%; display:flex; flex-direction:column; gap:14px}
+
+  .panel{
+    background:var(--panel); border:2px solid var(--edge); border-radius:10px;
+    box-shadow:inset 0 0 14px rgba(0,0,0,.6); padding:12px;
+  }
+  .panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+  .panel-title{font-family:"Press Start 2P",monospace; font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cyan)}
+  .panel-note{font-size:10px; color:#475569}
+
+  /* ---- Selection cart ---- */
+  .cart{display:flex; gap:8px; flex-wrap:wrap; min-height:52px; align-items:center}
+  .cart .empty{font-size:12px; color:#475569; font-style:italic}
+  .chip{
+    position:relative; padding:7px 8px 6px; border-radius:8px; border:2px solid;
+    background:var(--well); display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer;
+    transition:transform .1s;
+  }
+  .chip:hover{transform:translateY(-2px)}
+  .chip .x{position:absolute; top:-7px; right:-7px; width:16px; height:16px; border-radius:50%;
+    background:#1e293b; border:1px solid #475569; color:#94a3b8; font-size:10px; line-height:14px; text-align:center}
+  .chip .cnt{font-size:10px; color:#94a3b8}
+
+  /* ---- Pieces panel ---- */
+  .pieces{display:grid; grid-template-columns:repeat(7,1fr); gap:7px}
+  .piece-btn,.color-btn{
+    position:relative; background:var(--well); border:2px solid var(--edge); border-radius:9px;
+    padding:9px 4px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;
+    transition:all .12s; -webkit-tap-highlight-color:transparent;
+  }
+  .piece-btn:hover,.color-btn:hover{border-color:#1e4953}
+  .piece-btn .lbl{font-family:"Press Start 2P",monospace; font-size:8px; color:#64748b}
+
+  /* active state — strong glowing ring */
+  .piece-btn.active{border-color:#fff; box-shadow:0 0 0 2px #fff, 0 0 14px rgba(255,255,255,.5)}
+  .piece-btn.active .lbl{color:#fff}
+
+  /* ---- Colors panel ---- */
+  .colors{display:grid; grid-template-columns:repeat(5,1fr); gap:9px}
+  .swatch{width:100%; aspect-ratio:1/1; border-radius:9px; position:relative}
+  .color-btn.active{box-shadow:0 0 0 2px #fff, 0 0 16px rgba(255,255,255,.6); border-color:#fff}
+  .color-btn.active .swatch::after{content:"●"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.55); font-size:14px}
+
+  /* status bar */
+  .status{
+    text-align:center; font-size:12px; min-height:20px; padding:8px 10px; border-radius:8px;
+    border:1px dashed var(--edge); background:rgba(255,255,255,.02); color:#94a3b8;
+  }
+  .status b{color:#fff}
+  .status.adding{border-style:solid}
+
+  .done{
+    width:100%; padding:13px; border-radius:9px; border:2px solid var(--green); background:rgba(57,217,138,.08);
+    color:var(--green); font-family:"Press Start 2P",monospace; font-size:11px; letter-spacing:.08em; cursor:pointer;
+  }
+  .done:hover{background:rgba(57,217,138,.16)}
+
+  /* tetromino mini-render */
+  .tet{display:inline-grid; gap:2px}
+  .tet i{width:9px; height:9px; border-radius:2px}
+  .tet i.on{background:currentColor}
+  .piece-btn .tet{color:#94a3b8}
+  .piece-btn.active .tet{color:#e2e8f0}
+
+  .legend{display:flex; gap:18px; flex-wrap:wrap; justify-content:center; font-size:10px; color:#64748b; max-width:420px}
+  .legend .sw{display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:5px}
+  .divider{width:382px; max-width:100%; border-top:1px solid var(--edge); margin-top:8px}
+  .opt-label{font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.12em; text-align:center}
+</style>
+</head>
+<body>
+
+<div style="text-align:center">
+  <h1>Chromatic — Two-Panel Selection</h1>
+  <div class="sub">Pick a piece <b>or</b> a color to make it <b>active</b> (white glow). Then tap the other axis to drop a colored piece into your selection. Tap the active thing again to clear it. Try it ↓</div>
+</div>
+
+<div class="stage" id="app">
+  <!-- Your Selection -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Your Selection</span>
+      <span class="panel-note">tap a chip to remove</span>
+    </div>
+    <div class="cart" id="cart"></div>
+  </div>
+
+  <!-- status / active indicator -->
+  <div class="status" id="status"></div>
+
+  <!-- Pieces -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Pieces</span>
+      <span class="panel-note" id="pieces-note">tap to make active</span>
+    </div>
+    <div class="pieces" id="pieces"></div>
+  </div>
+
+  <!-- Colors -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Colors</span>
+      <span class="panel-note" id="colors-note">tap to make active</span>
+    </div>
+    <div class="colors" id="colors"></div>
+  </div>
+
+  <button class="done">Done ✓</button>
+</div>
+
+<div class="divider"></div>
+<div class="opt-label">Palette option being shown: <b id="palopt">A — 5 neon tokens</b> &nbsp;·&nbsp; <a href="#" id="toggle" style="color:var(--cyan)">switch palette →</a></div>
+<div class="legend" id="legend"></div>
+
+<script>
+// --- tetromino cells (rotation 0), normalized to top-left ---
+const SHAPES = {
+  I: [[0,0],[0,1],[0,2],[0,3]],
+  O: [[0,0],[0,1],[1,0],[1,1]],
+  T: [[0,0],[0,1],[0,2],[1,1]],
+  S: [[0,1],[0,2],[1,0],[1,1]],
+  Z: [[0,0],[0,1],[1,1],[1,2]],
+  J: [[0,0],[1,0],[1,1],[1,2]],
+  L: [[0,2],[1,0],[1,1],[1,2]],
+};
+const PIECES = ['I','O','T','S','Z','J','L'];
+
+// --- palette options ---
+const PALETTES = {
+  F: { name:'★ FINAL — 5 neon (red→purple)', colors:[
+    {id:'cyan',   hex:'#22d3ee'},
+    {id:'magenta',hex:'#ff2d95'},
+    {id:'green',  hex:'#39d98a'},
+    {id:'purple', hex:'#a855f7'},
+    {id:'yellow', hex:'#facc15'},
+  ]},
+  A: { name:'A — 5 neon tokens', colors:[
+    {id:'cyan',   hex:'#22d3ee'},
+    {id:'magenta',hex:'#ff2d95'},
+    {id:'green',  hex:'#39d98a'},
+    {id:'red',    hex:'#ff4d4d'},
+    {id:'yellow', hex:'#facc15'},
+  ]},
+  B: { name:'B — 4 max-distinct (drop red, keep magenta)', colors:[
+    {id:'cyan',   hex:'#22d3ee'},
+    {id:'magenta',hex:'#ff2d95'},
+    {id:'green',  hex:'#39d98a'},
+    {id:'yellow', hex:'#facc15'},
+  ]},
+  C: { name:'C — 6 neon (add purple + orange)', colors:[
+    {id:'cyan',   hex:'#22d3ee'},
+    {id:'magenta',hex:'#ff2d95'},
+    {id:'green',  hex:'#39d98a'},
+    {id:'yellow', hex:'#facc15'},
+    {id:'purple', hex:'#a855f7'},
+    {id:'orange', hex:'#fb923c'},
+  ]},
+};
+let palKey = 'F';
+
+// --- state ---
+let active = undefined;          // 'O' | 'blue' ... a single value
+let selection = [];              // [{piece, colorId, hex, count}]
+
+function isPiece(v){ return v && PIECES.includes(v); }
+function curColors(){ return PALETTES[palKey].colors; }
+function colorById(id){ return curColors().find(c=>c.id===id); }
+
+function tetSVG(type, sizeOn=true){
+  const cells = SHAPES[type];
+  const maxR = Math.max(...cells.map(c=>c[0]));
+  const maxC = Math.max(...cells.map(c=>c[1]));
+  const on = new Set(cells.map(c=>c[0]+','+c[1]));
+  let html = `<div class="tet" style="grid-template-columns:repeat(${maxC+1},9px);grid-template-rows:repeat(${maxR+1},9px)">`;
+  for(let r=0;r<=maxR;r++) for(let c=0;c<=maxC;c++)
+    html += `<i class="${on.has(r+','+c)?'on':''}"></i>`;
+  return html+'</div>';
+}
+
+// colored tetromino for the cart (uses fixed hex)
+function tetColored(type, hex){
+  const cells = SHAPES[type];
+  const maxR = Math.max(...cells.map(c=>c[0]));
+  const maxC = Math.max(...cells.map(c=>c[1]));
+  const on = new Set(cells.map(c=>c[0]+','+c[1]));
+  let html = `<div class="tet" style="grid-template-columns:repeat(${maxC+1},9px);grid-template-rows:repeat(${maxR+1},9px);color:${hex}">`;
+  for(let r=0;r<=maxR;r++) for(let c=0;c<=maxC;c++)
+    html += `<i class="${on.has(r+','+c)?'on':''}"></i>`;
+  return html+'</div>';
+}
+
+function addToSelection(piece, color){
+  const ex = selection.find(s=>s.piece===piece && s.colorId===color.id);
+  if(ex) ex.count++;
+  else selection.push({piece, colorId:color.id, hex:color.hex, count:1});
+  render();
+}
+function removeChip(i){
+  if(selection[i].count>1) selection[i].count--;
+  else selection.splice(i,1);
+  render();
+}
+
+function clickPiece(p){
+  if(active===p){ active=undefined; }
+  else if(isPiece(active)){ active=p; }      // switch active piece
+  else if(active){ addToSelection(p, colorById(active)); } // color active → add
+  else { active=p; }
+  render();
+}
+function clickColor(id){
+  if(active===id){ active=undefined; }
+  else if(!isPiece(active) && active){ active=id; } // switch active color
+  else if(isPiece(active)){ addToSelection(active, colorById(id)); } // piece active → add
+  else { active=id; }
+  render();
+}
+
+function render(){
+  // pieces
+  const pe = document.getElementById('pieces'); pe.innerHTML='';
+  PIECES.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='piece-btn'+(active===p?' active':'');
+    b.innerHTML = tetSVG(p)+`<span class="lbl">${p}</span>`;
+    b.onclick=()=>clickPiece(p);
+    pe.appendChild(b);
+  });
+  // colors
+  const ce=document.getElementById('colors'); ce.innerHTML='';
+  curColors().forEach(c=>{
+    const b=document.createElement('button');
+    b.className='color-btn'+(active===c.id?' active':'');
+    b.innerHTML = `<div class="swatch" style="background:${c.hex}"></div>`;
+    b.onclick=()=>clickColor(c.id);
+    ce.appendChild(b);
+  });
+  // cart
+  const cart=document.getElementById('cart'); cart.innerHTML='';
+  if(selection.length===0){ cart.innerHTML='<span class="empty">No pieces selected</span>'; }
+  selection.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.className='chip'; d.style.borderColor=s.hex;
+    d.innerHTML = tetColored(s.piece, s.hex)+ (s.count>1?`<span class="cnt">×${s.count}</span>`:'') + `<span class="x">×</span>`;
+    d.onclick=()=>removeChip(i);
+    cart.appendChild(d);
+  });
+  // status
+  const st=document.getElementById('status');
+  if(active===undefined){
+    st.className='status';
+    st.innerHTML='Pick a piece or a color to start.';
+    document.getElementById('pieces-note').textContent='tap to make active';
+    document.getElementById('colors-note').textContent='tap to make active';
+  } else if(isPiece(active)){
+    st.className='status adding';
+    st.innerHTML=`Piece <b>${active}</b> is active — tap a <b>color</b> to add it.`;
+    document.getElementById('pieces-note').textContent='tap active piece to clear';
+    document.getElementById('colors-note').textContent='tap to drop this piece';
+  } else {
+    const c=colorById(active);
+    st.className='status adding';
+    st.innerHTML=`Color <b style="color:${c.hex}">${active}</b> is active — tap a <b>piece</b> to add it.`;
+    document.getElementById('pieces-note').textContent='tap to drop in this color';
+    document.getElementById('colors-note').textContent='tap active color to clear';
+  }
+  document.getElementById('palopt').textContent = PALETTES[palKey].name;
+  // legend
+  const lg=document.getElementById('legend'); lg.innerHTML='';
+  curColors().forEach(c=>{
+    lg.innerHTML += `<span><span class="sw" style="background:${c.hex}"></span>${c.id}</span>`;
+  });
+}
+
+document.getElementById('toggle').onclick=(e)=>{
+  e.preventDefault();
+  palKey = palKey==='F'?'A':palKey==='A'?'B':palKey==='B'?'C':'F';
+  // drop selection entries whose color no longer exists
+  selection = selection.filter(s=>colorById(s.colorId));
+  if(active && !isPiece(active) && !colorById(active)) active=undefined;
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
