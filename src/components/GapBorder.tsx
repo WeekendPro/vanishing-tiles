@@ -28,7 +28,7 @@ interface Props {
  * For each gap cell we draw only the edges that face a cell NOT in the gap, so
  * the outline hugs the tetromino silhouette rather than boxing each cell.
  */
-export function GapBorder({ gaps, colorClass = 'border-gray-300/70', grid }: Props) {
+export function GapBorder({ gaps, colorClass = 'border-neon-cyan', grid }: Props) {
   return (
     <div className="pointer-events-none absolute inset-0">
       {gaps.map((gap, gi) => {

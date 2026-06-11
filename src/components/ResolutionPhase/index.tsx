@@ -15,7 +15,7 @@ import { NextRoundButton } from './NextRoundButton'
 import { expandCartSlots, mapPlacementsToSlots } from '@shared/engine/cartSlots'
 import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX, MAX_LIVES } from '@shared/core/scoring'
 import { ScoreStar } from './ScoreStar'
-import { IconButton, BackIcon, RepeatIcon, ForwardIcon } from './IconButton'
+import { IconButton, BackIcon, ReplayIcon, ForwardIcon } from './IconButton'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -268,7 +268,7 @@ export function ResolutionPhase() {
         const onRepeat = isFailure && !outOfLives ? retryComponent : replayComponent
         const buttons = [
           <IconButton key="back" label="More Puzzles" accent="edge" onClick={() => { if (levelId) openLevel(levelId) }}>{BackIcon}</IconButton>,
-          <IconButton key="repeat" label="Replay" accent="cyan" onClick={() => onRepeat()}>{RepeatIcon}</IconButton>,
+          <IconButton key="repeat" label="Replay" accent="cyan" onClick={() => onRepeat()}>{ReplayIcon}</IconButton>,
           ...(showNext ? [<IconButton key="next" label="Next Level" accent="green" onClick={() => goNextLevel()}>{ForwardIcon}</IconButton>] : []),
         ]
         return (

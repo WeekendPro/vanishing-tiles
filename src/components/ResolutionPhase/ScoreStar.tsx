@@ -76,6 +76,8 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
   const [raining, setRaining] = useState(false)
   const [acctIn, setAcctIn] = useState(false)
   const [perfIn, setPerfIn] = useState(false)
+  const [livesGone, setLivesGone] = useState(false)
+  const [speedGone, setSpeedGone] = useState(false)
   const started = useRef(false)
 
   // speed = points attributed to leftover time (score minus lives contribution)
@@ -107,6 +109,13 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
         await wait(120)
       }
 
+      // Hearts have all flown into the star — poof the Lives row away before the
+      // Speed score starts evaporating.
+      if (token.cancelled) return
+      await wait(160)
+      setLivesGone(true)
+      await wait(440)
+
       // Time phase: speed evaporates into the star (cyan sparkles rise up)
       if (token.cancelled) return
       setRaining(true)
@@ -117,7 +126,13 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
       if (token.cancelled) return
       setRaining(false)
 
+      // Speed has hit 0 — poof the Speed row away too.
+      await wait(160)
+      setSpeedGone(true)
+      await wait(440)
+
       // Performance text springs in
+      if (token.cancelled) return
       setPerfIn(true)
     }
     run()
@@ -193,39 +208,57 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
       {/* ── Accounting panel ── */}
       <motion.div
         data-testid="score-acct"
-        className="w-[210px] flex flex-col gap-1.5"
+        className="w-[210px]"
         initial={false}
         animate={{ opacity: acctIn ? 1 : 0 }}
         transition={{ duration: 0.3 }}
       >
-        {/* Lives row */}
-        <div className="flex justify-between items-center">
-          <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Lives</span>
-          <span data-testid="acct-lives" className="text-sm leading-none flex gap-0.5">
-            {Array.from({ length: MAX_LIVES }, (_, i) => (
-              i >= livesRemaining
-                ? <span key={i} className="text-arcade-edge">♥</span>
-                : (
-                  <span key={i} className="relative inline-block">
-                    <span className="text-neon-red opacity-20">♥</span>
-                    <motion.span
-                      className="absolute left-0 top-0 text-neon-red text-glow-red"
-                      initial={false}
-                      animate={landed > i
-                        ? { y: -130, x: -70, opacity: 0, scale: 0.5 }
-                        : { y: 0, x: 0, opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.45, ease: 'easeIn' }}
-                    >♥</motion.span>
-                  </span>
-                )
-            ))}
-          </span>
-        </div>
-        {/* Speed row */}
-        <div className="flex justify-between items-center">
-          <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Speed</span>
-          <span data-testid="acct-speed" className="font-pixel text-[11px] tabular-nums text-neon-cyan text-glow-cyan">{speedLeft}</span>
-        </div>
+        {/* Lives row — collapses with a soft "poof" once its hearts have flown */}
+        <motion.div
+          className="overflow-hidden"
+          initial={false}
+          animate={livesGone
+            ? { opacity: 0, height: 0, scale: 0.9, filter: 'blur(3px)' }
+            : { opacity: 1, height: 'auto', scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.42, ease: 'easeOut' }}
+        >
+          <div className="flex justify-between items-center pb-1.5">
+            <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Lives</span>
+            <span data-testid="acct-lives" className="text-sm leading-none flex gap-0.5">
+              {Array.from({ length: MAX_LIVES }, (_, i) => (
+                i >= livesRemaining
+                  ? <span key={i} className="text-arcade-edge">♥</span>
+                  : (
+                    <span key={i} className="relative inline-block">
+                      <span className="text-neon-red opacity-20">♥</span>
+                      <motion.span
+                        className="absolute left-0 top-0 text-neon-red text-glow-red"
+                        initial={false}
+                        animate={landed > i
+                          ? { y: -130, x: -70, opacity: 0, scale: 0.5 }
+                          : { y: 0, x: 0, opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.45, ease: 'easeIn' }}
+                      >♥</motion.span>
+                    </span>
+                  )
+              ))}
+            </span>
+          </div>
+        </motion.div>
+        {/* Speed row — collapses once the value has evaporated to 0 */}
+        <motion.div
+          className="overflow-hidden"
+          initial={false}
+          animate={speedGone
+            ? { opacity: 0, height: 0, scale: 0.9, filter: 'blur(3px)' }
+            : { opacity: 1, height: 'auto', scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.42, ease: 'easeOut' }}
+        >
+          <div className="flex justify-between items-center">
+            <span className="font-pixel text-[9px] uppercase tracking-[0.1em] text-gray-400">Speed</span>
+            <span data-testid="acct-speed" className="font-pixel text-[11px] tabular-nums text-neon-cyan text-glow-cyan">{speedLeft}</span>
+          </div>
+        </motion.div>
       </motion.div>
 
       {/* ── Performance text ── */}
