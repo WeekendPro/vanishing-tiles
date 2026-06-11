@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useGameStore } from '../../src/store/gameStore'
 import { useProgressStore } from '../../src/store/progressStore'
+import { useSettingsStore } from '../../src/store/settingsStore'
 import type { DifficultyConfig } from '@shared/types'
 
 const DIFF: DifficultyConfig = {
@@ -17,6 +18,7 @@ function solveCurrent() {
 beforeEach(() => {
   localStorage.clear()
   useProgressStore.setState({ byLevel: {} })
+  useSettingsStore.setState({ settings: { hideBriefing: {} } })
   useGameStore.getState().resetGame()
 })
 
@@ -30,6 +32,12 @@ describe('startComponent', () => {
     expect(s.livesRemaining).toBe(3)
     expect(s.livesLost).toBe(0)
     expect(s.phase).toBe('briefing')
+  })
+
+  it('skips the briefing (opens on the countdown) when the user opted out of this puzzle', () => {
+    useSettingsStore.getState().setBriefingHidden('main', true)
+    useGameStore.getState().startComponent('L1', 'main', DIFF, 1, 'Test Level')
+    expect(useGameStore.getState().phase).toBe('countdown')
   })
 })
 

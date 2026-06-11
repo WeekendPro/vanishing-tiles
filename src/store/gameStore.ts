@@ -12,6 +12,7 @@ import { scoreRound, MAX_TRIES, levelTotal, ROUNDS_PER_LEVEL, MAX_LIVES } from '
 import { COMPONENT_THEME, isPlayable } from '../lib/components'
 import { componentScore } from '../lib/journeyScoring'
 import { useProgressStore } from './progressStore'
+import { useSettingsStore } from './settingsStore'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -178,10 +179,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // The round opens with a 3-2-1 countdown; the view timer starts only
     // once beginViewing fires, so memorization time isn't eaten by the count.
     // sessionGrid keeps the pristine board so all 3 tries replay the same puzzle.
-    // Journey component entry opens on the briefing (puzzle-detail) page;
-    // Practice rounds go straight to the countdown.
+    // Journey component entry opens on the briefing (puzzle-detail) page — unless
+    // the user has opted out of this puzzle's instructions ("Don't show this again").
+    // Practice rounds always go straight to the countdown.
+    const optedOutOfBriefing =
+      !!activeComponent && isPlayable(activeComponent) &&
+      useSettingsStore.getState().isBriefingHidden(activeComponent)
     set({
-      phase: get().mode === 'journey' ? 'briefing' : 'countdown',
+      phase: mode === 'journey' && !optedOutOfBriefing ? 'briefing' : 'countdown',
       paused: false,
       grid,
       sessionGrid: grid.map(row => row.map(cell => ({ ...cell }))),
