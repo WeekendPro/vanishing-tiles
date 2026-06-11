@@ -23,10 +23,14 @@ beforeEach(() => {
 describe('LevelScreen', () => {
   it('renders name, difficulty pips, a Play button and four badges', async () => {
     render(<LevelScreen />)
-    // Level name appears in the hero (and again as the PLAY badge caption)
-    expect((await screen.findAllByText('Cellar Door')).length).toBeGreaterThan(0)
-    // PLAY badge button
+    // Level name appears in the hero exactly once (caption removed from the card)
+    expect((await screen.findAllByText('Cellar Door'))).toHaveLength(1)
+    // Main badge button now reads THE CLASSIC (no PLAY)
     expect(screen.getByTestId('badge-main')).toBeTruthy()
+    expect(screen.getByText('THE CLASSIC')).toBeTruthy()
+    expect(screen.queryByText('PLAY')).toBeNull()
+    // District name is no longer shown
+    expect(screen.queryByText('The Hollows')).toBeNull()
     // Four challenge badges by testid
     expect(screen.getByTestId('badge-colors')).toBeTruthy()
     expect(screen.getByTestId('badge-inSequence')).toBeTruthy()

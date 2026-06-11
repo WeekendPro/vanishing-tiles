@@ -13,7 +13,7 @@ import { NeonButton, ScanlineOverlay } from './ui'
 import type { DifficultyConfig } from '@shared/types'
 import { RibbonBadge } from './level/RibbonBadge'
 import {
-  PlayGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
+  GapTetrominoGlyph, ColorWheelGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
 } from './level/badgeGlyphs'
 
 interface LevelDetail {
@@ -131,7 +131,7 @@ export function LevelScreen() {
       <ScanlineOverlay />
 
       {/* Back button */}
-      <button onClick={goJourney} className="mb-4 text-arcade-edge hover:text-neon-cyan text-sm">
+      <button onClick={goJourney} className="mb-4 text-neon-cyan text-glow-cyan hover:text-neon-cyan text-sm font-semibold">
         ← Map
       </button>
 
@@ -144,11 +144,8 @@ export function LevelScreen() {
 
       {level && (
         <div className="max-w-sm mx-auto">
-          {/* Hero: district / name / stars */}
+          {/* Hero: name / stars */}
           <div className="text-center mb-4">
-            <div className="font-pixel text-[9px] tracking-[0.25em] text-neon-magenta text-glow-magenta mb-3">
-              {level.theme_name}
-            </div>
             <h2 className="font-pixel text-[19px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan mb-3">
               {level.name}
             </h2>
@@ -184,20 +181,19 @@ export function LevelScreen() {
             </div>
           </div>
 
-          {/* PLAY badge — centered; ~half width but grows to fit the level name (never wraps) */}
-          <div className="w-fit min-w-[50%] max-w-full mx-auto">
+          {/* The Classic — gap glyph + ribbon; centered, ~half width */}
+          <div className="w-fit min-w-[55%] max-w-full mx-auto">
             <RibbonBadge
               data-testid="badge-main"
-              glyph={<PlayGlyph />}
-              centerBg={BADGE_CENTER_BG.play}
-              title="PLAY"
+              glyph={<GapTetrominoGlyph />}
+              centerBg={BADGE_CENTER_BG.classic}
+              title="THE CLASSIC"
               state={p.best.main > 0 ? 'complete' : 'incomplete'}
               score={p.best.main > 0 ? p.best.main : undefined}
               ribbonColor="#16a34a"
               foldColor="#0e7a36"
               cardAccent="green"
               vibrant
-              caption={level.name}
               onClick={() => play('main')}
             />
           </div>
