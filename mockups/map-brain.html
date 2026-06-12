@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Map as a Brain (concept directions)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{ --cyan:#22d3ee; --magenta:#ff2d95; --green:#39d98a; --yellow:#facc15; --violet:#a78bfa; --bg:#030510; }
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-cyan{ text-shadow:0 0 8px rgba(34,211,238,.6); }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:390px; background:var(--bg); border:2px solid #16203a; border-radius:20px; overflow:hidden; position:relative; }
+  .cap{ font-size:11px; color:#9aa6cc; }
+  .chip{ font-family:'Press Start 2P',monospace; font-size:8px; padding:3px 6px; border-radius:5px; }
+  .scan{ background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.30) 2px 3px); }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-6 max-w-5xl">
+    <div class="pixel text-white glow-vio text-lg">GAP CITY · the brain</div>
+    <p class="muted text-sm mt-2 leading-relaxed">
+      Three ways to recast the map as a <b class="text-violet-300">growing brain</b> instead of a subway line.
+      The game trains recall — so the map <i>is</i> a mind being built: every level you clear fires a new neuron and
+      grows the next connection. You start with a single lit cell. Nothing ahead is drawn until you earn it.
+    </p>
+  </header>
+
+  <div class="flex gap-7 items-start flex-wrap">
+
+    <!-- ============================================================= -->
+    <!-- DIRECTION A — SYNAPSE BLOOM (abstract dendritic growth)        -->
+    <!-- ============================================================= -->
+    <div>
+      <div class="frame scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="pixel text-[10px] text-white glow-vio">A · SYNAPSE BLOOM</span>
+          <span class="text-[11px] muted">★ 14</span>
+        </div>
+        <canvas id="bloom" width="390" height="620"></canvas>
+      </div>
+      <div class="w-[390px] mt-3">
+        <div class="pixel text-[9px] glow-vio mb-1">SYNAPSE BLOOM</div>
+        <p class="cap leading-relaxed">Pure abstraction — no brain outline. A dendrite grows from a seed at the
+          bottom, branching upward. Each <b>node = a level</b>; each branch is a memory you wired. Cleared nodes
+          glow in their region's color; the <b class="text-white">next</b> node pulses white at the growing tip.
+          Beyond it: black. The shape of your brain becomes a record of how far you've recalled. Boldest, most original.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- DIRECTION B — LIVING CONNECTOME (literal brain silhouette)     -->
+    <!-- ============================================================= -->
+    <div>
+      <div class="frame scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="pixel text-[10px] text-white glow-cyan">B · LIVING CONNECTOME</span>
+          <span class="text-[11px] muted">★ 14</span>
+        </div>
+        <canvas id="connectome" width="390" height="620"></canvas>
+      </div>
+      <div class="w-[390px] mt-3">
+        <div class="pixel text-[9px] glow-cyan mb-1">LIVING CONNECTOME</div>
+        <p class="cap leading-relaxed">A faint, recognizable <b>brain silhouette</b> sits in the dark as the
+          territory. Levels are neurons placed across three lobes (your three districts). Cleared neurons are lit
+          and wired to each other; the <b class="text-white">next</b> neuron pulses at the frontier. Un-earned
+          regions of the brain stay unlit/void. Most legible — closest to the current node-and-line data model,
+          easiest to ship.</p>
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- DIRECTION C — CONSTELLATION RECALL (sketch + starfield)        -->
+    <!-- ============================================================= -->
+    <div>
+      <div class="frame scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="pixel text-[10px] text-white" style="text-shadow:0 0 8px rgba(250,204,21,.6)">C · CONSTELLATION</span>
+          <span class="text-[11px] muted">★ 14</span>
+        </div>
+        <canvas id="constellation" width="390" height="620"></canvas>
+      </div>
+      <div class="w-[390px] mt-3">
+        <div class="pixel text-[9px] mb-1" style="color:#facc15;text-shadow:0 0 8px rgba(250,204,21,.6)">CONSTELLATION RECALL</div>
+        <p class="cap leading-relaxed">Memory as a night sky. Levels are stars; clearing one <b>draws the line</b>
+          to the next, sketching a constellation in the rough shape of a brain. Leans into the existing ★ rating
+          (a level's stars literally brighten its star). Softest / most poetic; the brain shape only emerges once
+          you're deep in. A middle path between A's abstraction and B's anatomy.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- GROWTH FILMSTRIP -->
+  <section class="mt-10 max-w-5xl">
+    <div class="pixel text-[10px] glow-vio mb-3">THE CORE IDEA · the brain grows as you remember</div>
+    <p class="muted text-sm mb-4 leading-relaxed">Whichever skin we pick, this is the hook: the map is empty at
+      level 1 and only ever draws what you've earned. Three moments from a single run (Synapse Bloom shown):</p>
+    <div class="flex gap-4 items-end flex-wrap">
+      <figure><div class="frame" style="width:230px"><canvas id="s1" width="230" height="300"></canvas></div><figcaption class="cap mt-2 text-center">L1 — one lit cell. The seed.</figcaption></figure>
+      <figure><div class="frame" style="width:230px"><canvas id="s2" width="230" height="300"></canvas></div><figcaption class="cap mt-2 text-center">L5 — first lobe wired.</figcaption></figure>
+      <figure><div class="frame" style="width:230px"><canvas id="s3" width="230" height="300"></canvas></div><figcaption class="cap mt-2 text-center">L14 — a mind taking shape.</figcaption></figure>
+    </div>
+  </section>
+
+  <footer class="mt-10 max-w-3xl cap leading-relaxed">
+    <div class="pixel text-[9px] glow-vio mb-2">CARRIED OVER FROM TODAY'S MAP</div>
+    Three regions keep their roles (now lobes, not districts): <span style="color:#22d3ee">●</span> cyan ·
+    <span style="color:#ff2d95">●</span> magenta · <span style="color:#a78bfa">●</span> violet, with
+    <span style="color:#facc15">★</span> reserved for ratings. Tap a node → the existing Level Detail / hub.
+    States map 1:1 — cleared, next (pulsing white), and <i>not-yet-drawn</i> replaces "locked."
+  </footer>
+
+<script>
+const REGION = ['#22d3ee', '#ff2d95', '#a78bfa']; // 3 lobes
+const NEXT = '#ffffff';
+
+function glow(ctx, x, y, r, color, blur){
+  ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = blur;
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+  ctx.restore();
+}
+function edge(ctx, a, b, color, w, alpha){
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = w;
+  ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.lineCap='round';
+  // gentle curve for an organic, axon-like feel
+  const mx=(a.x+b.x)/2 + (b.y-a.y)*0.10, my=(a.y+b.y)/2 + (a.x-b.x)*0.10;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.quadraticCurveTo(mx,my,b.x,b.y); ctx.stroke();
+  ctx.restore();
+}
+function node(ctx, n, state){
+  const col = state==='next' ? NEXT : REGION[n.r];
+  if(state==='next'){
+    ctx.save(); ctx.globalAlpha=.25; glow(ctx,n.x,n.y,16,NEXT,30); ctx.restore();
+    glow(ctx,n.x,n.y,6.5,NEXT,18);
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(n.x,n.y,12,0,7); ctx.stroke();
+  } else {
+    glow(ctx,n.x,n.y,5.5,col,14);
+    ctx.fillStyle='#030510'; ctx.beginPath(); ctx.arc(n.x,n.y,2.2,0,7); ctx.fill();
+  }
+}
+
+// ---- DIRECTION A: SYNAPSE BLOOM -------------------------------------------
+// A hand-placed dendritic tree. parent indices build the branch structure.
+// r = region/lobe; first 14 are cleared, index 14 is the pulsing "next".
+const BLOOM = [
+  {x:195,y:560,r:0,p:-1},                         // 0 seed (soma)
+  {x:150,y:500,r:0,p:0},  {x:240,y:498,r:0,p:0},  // 1 2
+  {x:110,y:440,r:0,p:1},  {x:185,y:445,r:0,p:1},  // 3 4
+  {x:270,y:435,r:1,p:2},                          // 5
+  {x:90,y:378,r:0,p:3},   {x:165,y:380,r:1,p:4},  // 6 7
+  {x:225,y:372,r:1,p:5},  {x:312,y:372,r:1,p:5},  // 8 9
+  {x:128,y:320,r:1,p:7},  {x:205,y:312,r:2,p:7},  // 10 11
+  {x:280,y:312,r:2,p:8},                          // 12
+  {x:165,y:255,r:2,p:11},                         // 13 (last cleared)
+  {x:235,y:235,r:2,p:11},                         // 14 NEXT (pulsing tip)
+];
+function drawBloom(ctx, W, H, count, scale, oy){
+  ctx.clearRect(0,0,W,H);
+  scale = scale||1; oy = oy||0;
+  const pts = BLOOM.map(n=>({x:n.x*scale + (W-390*scale)/2, y:n.y*scale+oy, r:n.r, p:n.p}));
+  // edges first
+  for(let i=1;i<count && i<pts.length;i++){
+    const a=pts[pts[i].p], b=pts[i];
+    edge(ctx,a,b,REGION[b.r], 2.4*scale, .85);
+  }
+  // soft cloud at the seed
+  glow(ctx, pts[0].x, pts[0].y, 10*scale, REGION[0], 26);
+  for(let i=0;i<count && i<pts.length;i++){
+    const isNext = (i===count-1 && count===pts.length);
+    node(ctx, pts[i], isNext?'next':'cleared');
+  }
+}
+
+// ---- DIRECTION B: LIVING CONNECTOME ---------------------------------------
+function brainPath(ctx, W, oy, s){
+  // a rough left-facing brain blob, scaled
+  const P=(x,y)=>({x:x*s+(W-390*s)/2, y:y*s+oy});
+  const m=[ P(70,330),P(70,250),P(120,180),P(210,150),P(300,180),P(330,250),
+            P(320,330),P(330,400),P(280,450),P(210,470),P(130,460),P(80,410) ];
+  ctx.beginPath(); ctx.moveTo(m[0].x,m[0].y);
+  for(let i=0;i<m.length;i++){ const a=m[i],b=m[(i+1)%m.length]; ctx.quadraticCurveTo(a.x,a.y,(a.x+b.x)/2,(a.y+b.y)/2);}
+  ctx.closePath();
+}
+const CONN = [
+  {x:120,y:400,r:0},{x:105,y:330,r:0},{x:150,y:300,r:0},{x:135,y:240,r:0},{x:185,y:210,r:0},
+  {x:205,y:285,r:1},{x:245,y:235,r:1},{x:255,y:320,r:1},{x:215,y:370,r:1},{x:290,y:280,r:1},
+  {x:300,y:345,r:2},{x:280,y:415,r:2},{x:210,y:420,r:2},{x:160,y:400,r:2},
+  {x:255,y:400,r:2}, // NEXT
+];
+const CONN_EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[8,13],[12,14],[13,14]];
+function drawConnectome(ctx, W, H, count){
+  ctx.clearRect(0,0,W,H);
+  // silhouette
+  ctx.save(); brainPath(ctx,W,150,1);
+  ctx.fillStyle='rgba(120,150,255,.05)'; ctx.fill();
+  ctx.strokeStyle='rgba(140,160,255,.18)'; ctx.lineWidth=1.5; ctx.setLineDash([2,5]); ctx.stroke();
+  ctx.restore();
+  const pts=CONN.map(n=>({x:n.x,y:n.y+150,r:n.r}));
+  CONN_EDGES.forEach(([a,b])=>{ if(a<count&&b<count) edge(ctx,pts[a],pts[b],REGION[pts[b].r],2,.7); });
+  for(let i=0;i<count && i<pts.length;i++){
+    node(ctx, pts[i], (i===count-1&&count===pts.length)?'next':'cleared');
+  }
+}
+
+// ---- DIRECTION C: CONSTELLATION RECALL ------------------------------------
+const STAR = [
+  {x:110,y:430,r:0},{x:95,y:360,r:0},{x:140,y:320,r:0},{x:130,y:255,r:0},{x:185,y:225,r:0},
+  {x:215,y:295,r:1},{x:255,y:250,r:1},{x:270,y:325,r:1},{x:235,y:385,r:1},{x:300,y:295,r:1},
+  {x:305,y:360,r:2},{x:280,y:420,r:2},{x:205,y:435,r:2},{x:160,y:415,r:2},
+  {x:250,y:415,r:2},
+];
+function star(ctx,x,y,col,rad,a){
+  ctx.save(); ctx.globalAlpha=a; ctx.translate(x,y); ctx.shadowColor=col; ctx.shadowBlur=12;
+  ctx.fillStyle=col; ctx.beginPath();
+  for(let i=0;i<10;i++){ const ang=Math.PI/5*i - Math.PI/2; const rr=i%2?rad*0.42:rad; ctx.lineTo(Math.cos(ang)*rr,Math.sin(ang)*rr);}
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function drawConstellation(ctx,W,H,count){
+  ctx.clearRect(0,0,W,H);
+  // faint background dust
+  for(let i=0;i<60;i++){ const x=(i*53)%W, y=(i*97)%H; ctx.fillStyle='rgba(200,210,255,'+(0.04+ (i%5)*0.01)+')'; ctx.beginPath(); ctx.arc(x,y,0.8,0,7); ctx.fill();}
+  const pts=STAR.map(n=>({x:n.x,y:n.y+150,r:n.r}));
+  for(let i=1;i<count&&i<pts.length;i++){
+    ctx.save(); ctx.globalAlpha=.55; ctx.strokeStyle='rgba(220,228,255,.7)'; ctx.lineWidth=1; ctx.setLineDash([1,4]);
+    ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y); ctx.stroke(); ctx.restore();
+  }
+  for(let i=0;i<count&&i<pts.length;i++){
+    const isNext=(i===count-1&&count===pts.length);
+    if(isNext){ star(ctx,pts[i].x,pts[i].y,'#ffffff',9,1);
+      ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,15,0,7);ctx.stroke();
+    } else star(ctx,pts[i].x,pts[i].y,REGION[pts[i].r],5.5,.95);
+  }
+}
+
+// ---- render -----------------------------------------------------------------
+drawBloom(document.getElementById('bloom').getContext('2d'),390,620,15,1,40);
+drawConnectome(document.getElementById('connectome').getContext('2d'),390,620,15);
+drawConstellation(document.getElementById('constellation').getContext('2d'),390,620,15);
+
+// filmstrip — same bloom data revealed progressively, smaller
+drawBloom(document.getElementById('s1').getContext('2d'),230,300,1,0.55,30);
+drawBloom(document.getElementById('s2').getContext('2d'),230,300,6,0.55,30);
+drawBloom(document.getElementById('s3').getContext('2d'),230,300,15,0.55,30);
+</script>
+</body>
+</html>

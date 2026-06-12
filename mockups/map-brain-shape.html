@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — make it read as a brain</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{ --cyan:#22d3ee; --magenta:#ff2d95; --violet:#a78bfa; --bg:#030510; }
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:380px; background:var(--bg); border:2px solid #16203a; border-radius:18px; overflow:hidden; position:relative; }
+  .cap{ font-size:12px; color:#9aa6cc; }
+  .tag{ font-family:'Press Start 2P',monospace; font-size:8px; }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-5 max-w-4xl">
+    <div class="pixel text-white glow-vio text-lg">make it read as a brain</div>
+    <p class="muted text-sm mt-2 leading-relaxed">Proper lateral (side-profile) brain: frontal bulge at left,
+      cerebellum + brainstem tucked at the lower back, the lateral fissure splitting off the temporal lobe, and faint
+      <b class="text-violet-300">gyri folds</b> as ghost texture. Ghost dots are there from the start; <b>connections trace
+      the folds as you solve</b>. Three progress states.</p>
+  </header>
+
+  <div class="flex gap-6 items-start flex-wrap">
+    <div>
+      <div class="frame"><div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)"><span class="tag text-white glow-vio">L1 · just woken</span><span class="text-[11px] muted">1/15</span></div><canvas id="a" width="380" height="420"></canvas></div>
+    </div>
+    <div>
+      <div class="frame"><div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)"><span class="tag text-white glow-vio">L7 · two lobes</span><span class="text-[11px] muted">7/15</span></div><canvas id="b" width="380" height="420"></canvas></div>
+    </div>
+    <div>
+      <div class="frame"><div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)"><span class="tag text-white glow-vio">L15 · fully alive</span><span class="text-[11px] muted">15/15</span></div><canvas id="c" width="380" height="420"></canvas></div>
+    </div>
+  </div>
+
+<script>
+const REGION=['#22d3ee','#ff2d95','#a78bfa'];
+const GHOST='rgba(150,165,210,0.20)', GHOST_E='rgba(140,160,255,0.12)';
+const SIL='rgba(120,150,255,0.06)', SILE='rgba(150,170,255,0.30)';
+const FOLD='rgba(150,170,255,0.10)';
+
+// ---- lateral brain silhouette (facing left). Hand-traced contour. ----
+// returns the Path2D-style trace on ctx
+function brainOutline(ctx, ox, oy, s){
+  const P=(x,y)=>[x*s+ox, y*s+oy];
+  ctx.beginPath();
+  // start at frontal pole (far left, mid)
+  ctx.moveTo(...P(48,190));
+  // up the front of the frontal lobe to the top
+  ctx.bezierCurveTo(...P(46,140), ...P(78,96),  ...P(120,90));
+  // bumpy crown: frontal -> parietal
+  ctx.bezierCurveTo(...P(150,86), ...P(165,70), ...P(196,74));
+  ctx.bezierCurveTo(...P(230,78), ...P(248,92), ...P(280,100));
+  // down the back toward occipital pole
+  ctx.bezierCurveTo(...P(312,110),...P(330,150),...P(322,188));
+  // occipital notch then cerebellum bulge (lower back)
+  ctx.bezierCurveTo(...P(316,212),...P(300,214),...P(300,232));
+  ctx.bezierCurveTo(...P(300,262),...P(286,286),...P(262,290));
+  // brainstem stub descending
+  ctx.bezierCurveTo(...P(250,292),...P(246,300),...P(238,318));
+  ctx.bezierCurveTo(...P(234,326),...P(226,326),...P(222,318));
+  ctx.bezierCurveTo(...P(216,304),...P(214,296),...P(206,290));
+  // underside of temporal lobe sweeping forward-down to temporal pole
+  ctx.bezierCurveTo(...P(180,286),...P(150,288),...P(120,278));
+  ctx.bezierCurveTo(...P(100,272),...P(86,262), ...P(78,246));
+  // temporal pole then back up underside of frontal lobe to start
+  ctx.bezierCurveTo(...P(70,232), ...P(54,224), ...P(50,206));
+  ctx.closePath();
+}
+
+// the lateral (Sylvian) fissure — the signature crease
+function lateralFissure(ctx, ox, oy, s, col, w){
+  const P=(x,y)=>[x*s+ox, y*s+oy];
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=w; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(...P(70,214));
+  ctx.bezierCurveTo(...P(120,224),...P(170,214),...P(214,196));
+  ctx.stroke(); ctx.restore();
+}
+
+// faint gyri folds (ghost texture) — a few characteristic sulci
+const FOLDS=[
+  [[96,120],[120,150],[100,180]],
+  [[150,104],[164,140],[150,178]],
+  [[206,100],[210,140],[196,176]],
+  [[252,116],[244,150],[256,184]],
+  [[120,150],[170,158],[214,150]],
+  [[150,178],[200,184],[250,176]],
+];
+function drawFolds(ctx, ox, oy, s){
+  const P=(x,y)=>[x*s+ox, y*s+oy];
+  ctx.save(); ctx.strokeStyle=FOLD; ctx.lineWidth=1.4; ctx.lineCap='round';
+  FOLDS.forEach(f=>{ ctx.beginPath(); ctx.moveTo(...P(f[0][0],f[0][1]));
+    for(let i=1;i<f.length;i++){ const m=f[i-1],n=f[i]; ctx.quadraticCurveTo(...P(m[0],m[1]),...P((m[0]+n[0])/2,(m[1]+n[1])/2)); }
+    ctx.lineTo(...P(f[f.length-1][0],f[f.length-1][1])); ctx.stroke(); });
+  ctx.restore();
+}
+
+// ---- 15 neurons placed across the brain, by lobe region ----
+const N=[
+  // frontal (cyan)
+  {x:78,y:175,r:0},{x:96,y:140,r:0},{x:128,y:120,r:0},{x:118,y:170,r:0},{x:150,y:150,r:0},
+  // parietal/top-mid (magenta)
+  {x:172,y:116,r:1},{x:206,y:120,r:1},{x:196,y:165,r:1},{x:236,y:140,r:1},{x:158,y:196,r:1},
+  // occipital + cerebellum/back (violet)
+  {x:264,y:130,r:2},{x:286,y:172,r:2},{x:272,y:216,r:2},{x:236,y:200,r:2},{x:258,y:258,r:2},
+];
+const E=[[0,1],[1,2],[2,4],[0,3],[3,4],[4,5],[5,6],[6,8],[5,9],[7,9],[6,7],[7,8],
+         [8,10],[10,11],[11,12],[12,14],[13,12],[8,13],[11,13]];
+
+function litNode(ctx,n,col,ox,oy,s){ const x=n.x*s+ox,y=n.y*s+oy;
+  ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=14; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fill(); ctx.restore();
+  ctx.fillStyle='#030510'; ctx.beginPath(); ctx.arc(x,y,1.8,0,7); ctx.fill(); }
+function ghostNode(ctx,n,ox,oy,s){ ctx.fillStyle=GHOST; ctx.beginPath(); ctx.arc(n.x*s+ox,n.y*s+oy,3.4,0,7); ctx.fill(); }
+function nextNode(ctx,n,ox,oy,s){ const x=n.x*s+ox,y=n.y*s+oy;
+  ctx.save(); ctx.globalAlpha=.2; ctx.shadowColor='#fff'; ctx.shadowBlur=26; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,14,0,7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=15; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fill(); ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,11,0,7); ctx.stroke(); }
+function edge(ctx,a,b,col,ox,oy,s,lit){ ctx.save();
+  if(lit){ ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowColor=col; ctx.shadowBlur=8; ctx.globalAlpha=.85; }
+  else { ctx.strokeStyle=GHOST_E; ctx.lineWidth=1.1; ctx.setLineDash([2,5]); }
+  ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(a.x*s+ox,a.y*s+oy); ctx.lineTo(b.x*s+ox,b.y*s+oy); ctx.stroke(); ctx.restore(); }
+
+function draw(id,cleared){ const c=document.getElementById(id),ctx=c.getContext('2d'),W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H); const s=1, ox=0, oy=40;
+  // silhouette fill + stroke
+  ctx.save(); brainOutline(ctx,ox,oy,s); ctx.fillStyle=SIL; ctx.fill();
+  ctx.strokeStyle=SILE; ctx.lineWidth=1.6; ctx.stroke(); ctx.restore();
+  drawFolds(ctx,ox,oy,s);
+  lateralFissure(ctx,ox,oy,s,'rgba(150,170,255,0.22)',1.6);
+  // ghost edges/nodes
+  E.forEach(([a,b])=>{ if(!(a<cleared&&b<cleared)) edge(ctx,N[a],N[b],null,ox,oy,s,false); });
+  N.forEach((n,i)=>{ if(i>cleared) ghostNode(ctx,n,ox,oy,s); });
+  // lit edges + nodes
+  E.forEach(([a,b])=>{ if(a<cleared&&b<cleared) edge(ctx,N[a],N[b],REGION[N[b].r],ox,oy,s,true); });
+  for(let i=0;i<cleared;i++) litNode(ctx,N[i],REGION[N[i].r],ox,oy,s);
+  if(cleared<15) nextNode(ctx,N[cleared],ox,oy,s);
+}
+draw('a',1); draw('b',7); draw('c',15);
+</script>
+</body>
+</html>

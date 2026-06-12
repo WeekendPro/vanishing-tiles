@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — how the brain reveals</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{ --cyan:#22d3ee; --magenta:#ff2d95; --violet:#a78bfa; --bg:#030510; }
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:360px; background:var(--bg); border:2px solid #16203a; border-radius:18px; overflow:hidden; position:relative; }
+  .cap{ font-size:12px; color:#9aa6cc; }
+  .scan{ background-image:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.30) 2px 3px); }
+  .tag{ font-family:'Press Start 2P',monospace; font-size:8px; }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-6 max-w-4xl">
+    <div class="pixel text-white glow-vio text-lg">how the brain reveals</div>
+    <p class="muted text-sm mt-2 leading-relaxed">
+      Same skin (Living Connectome), same moment — <b class="text-white">4 of 15 cleared, working through the first lobe</b>.
+      The only thing changing is <b class="text-violet-300">how much of what's ahead you can see</b>. There's always a
+      <i>complete</i> brain underneath — the question is whether the player glimpses it as a ghost, or has to grow into it blind.
+    </p>
+  </header>
+
+  <div class="flex gap-6 items-start flex-wrap">
+    <!-- 1. VOID -->
+    <div>
+      <div class="frame scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="tag text-white glow-vio">1 · DARK VOID</span><span class="text-[11px] muted">L4 / 15</span>
+        </div>
+        <canvas id="void" width="360" height="460"></canvas>
+      </div>
+      <div class="w-[360px] mt-3">
+        <div class="pixel text-[9px] glow-vio mb-1">DARK VOID</div>
+        <p class="cap leading-relaxed">Your literal first instinct: <b>nothing ahead is drawn.</b> Only what you've
+          earned exists; the rest is black. Maximum mystery and the purest "single point at the start." Cost: for the
+          first several levels it doesn't read as a brain at all — it's a few floating dots. The theme only pays off late.</p>
+      </div>
+    </div>
+
+    <!-- 2. GHOST BRAIN -->
+    <div>
+      <div class="frame scan" style="border-color:#2a3a6a">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="tag text-white glow-vio">2 · GHOST BRAIN ★</span><span class="text-[11px] muted">L4 / 15</span>
+        </div>
+        <canvas id="ghost" width="360" height="460"></canvas>
+      </div>
+      <div class="w-[360px] mt-3">
+        <div class="pixel text-[9px] glow-vio mb-1">GHOST BRAIN — recommended</div>
+        <p class="cap leading-relaxed">The <b>full brain is faintly visible from the start</b> as a dim, unlit ghost —
+          you see the whole mind you're going to build. Cleared neurons blaze in their lobe color; everything ahead is
+          a quiet gray outline. Progress = <b class="text-violet-300">bringing it to life, lighting it up</b>. Reads as
+          a brain on level 1, still has a clear frontier and "next" node, and the silhouette grows sharper as connections fill in.</p>
+      </div>
+    </div>
+
+    <!-- 3. WAKING LOBE -->
+    <div>
+      <div class="frame scan">
+        <div class="absolute top-0 left-0 right-0 p-3 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#030510,transparent)">
+          <span class="tag text-white glow-vio">3 · WAKING LOBE</span><span class="text-[11px] muted">L4 / 15</span>
+        </div>
+        <canvas id="lobe" width="360" height="460"></canvas>
+      </div>
+      <div class="w-[360px] mt-3">
+        <div class="pixel text-[9px] glow-vio mb-1">WAKING LOBE</div>
+        <p class="cap leading-relaxed">Middle path. Only <b>the lobe you're inside</b> is ghosted ahead of you; future
+          lobes stay pure void until you reach them. You see a little of where you're going, but each new region is a
+          reveal — the brain literally "wakes up" one lobe at a time. Keeps mystery between districts, clarity within one.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEFINITION FILMSTRIP -->
+  <section class="mt-10 max-w-4xl">
+    <div class="pixel text-[10px] glow-vio mb-3">"more defined as you progress" · Ghost Brain over one run</div>
+    <p class="muted text-sm mb-4 leading-relaxed">The ghost is always the same complete brain. Clearing levels lights it
+      up and sharpens it — by the end the whole connectome is ablaze. <i>This</i> is the answer to your question, made literal:</p>
+    <div class="flex gap-4 items-end flex-wrap">
+      <figure><div class="frame" style="width:215px"><canvas id="f1" width="215" height="270"></canvas></div><figcaption class="cap mt-2 text-center">L1 — one neuron lit, ghost behind it</figcaption></figure>
+      <figure><div class="frame" style="width:215px"><canvas id="f2" width="215" height="270"></canvas></div><figcaption class="cap mt-2 text-center">L8 — two lobes alive</figcaption></figure>
+      <figure><div class="frame" style="width:215px"><canvas id="f3" width="215" height="270"></canvas></div><figcaption class="cap mt-2 text-center">L15 — fully defined</figcaption></figure>
+    </div>
+  </section>
+
+<script>
+const REGION = ['#22d3ee', '#ff2d95', '#a78bfa'];
+const GHOST = 'rgba(150,165,210,0.22)';     // dim unlit node
+const GHOST_EDGE = 'rgba(140,160,255,0.13)';
+const SIL = 'rgba(140,160,255,0.05)';
+const SIL_LINE = 'rgba(150,170,255,0.16)';
+
+// ---- complete connectome: 15 nodes across 3 lobes, fixed edge graph ----
+const N = [
+  // lobe 0 (cyan) — lower/front
+  {x:120,y:360,r:0},{x:100,y:300,r:0},{x:150,y:270,r:0},{x:135,y:212,r:0},{x:190,y:235,r:0},
+  // lobe 1 (magenta) — upper/mid
+  {x:175,y:165,r:1},{x:235,y:160,r:1},{x:250,y:225,r:1},{x:215,y:285,r:1},{x:290,y:200,r:1},
+  // lobe 2 (violet) — back/lower
+  {x:300,y:270,r:2},{x:290,y:340,r:2},{x:225,y:355,r:2},{x:160,y:345,r:2},{x:255,y:330,r:2},
+];
+const E = [[0,1],[1,2],[2,3],[2,4],[3,4],[4,5],[5,6],[6,7],[7,8],[8,4],[6,9],[9,7],
+           [9,10],[10,11],[11,12],[12,8],[12,14],[14,11],[13,12],[13,0],[14,10]];
+const CLEARED_ORDER = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]; // reveal order == index here
+
+function brainSil(ctx, ox, oy, s){
+  const P=(x,y)=>({x:x*s+ox, y:y*s+oy});
+  const m=[P(60,300),P(60,210),P(110,150),P(190,120),P(285,140),P(330,210),
+           P(335,290),P(320,360),P(260,400),P(180,410),P(110,395),P(70,355)];
+  ctx.beginPath(); ctx.moveTo((m[11].x+m[0].x)/2,(m[11].y+m[0].y)/2);
+  for(let i=0;i<m.length;i++){ const a=m[i],b=m[(i+1)%m.length]; ctx.quadraticCurveTo(a.x,a.y,(a.x+b.x)/2,(a.y+b.y)/2);}
+  ctx.closePath();
+}
+function litNode(ctx,n,col){
+  ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=14; ctx.fillStyle=col;
+  ctx.beginPath(); ctx.arc(n.x,n.y,5,0,7); ctx.fill(); ctx.restore();
+  ctx.fillStyle='#030510'; ctx.beginPath(); ctx.arc(n.x,n.y,1.8,0,7); ctx.fill();
+}
+function nextNode(ctx,n){
+  ctx.save(); ctx.globalAlpha=.22; ctx.shadowColor='#fff'; ctx.shadowBlur=28; ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(n.x,n.y,15,0,7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=16; ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(n.x,n.y,5.5,0,7); ctx.fill(); ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(n.x,n.y,12,0,7); ctx.stroke();
+}
+function ghostNode(ctx,n){ ctx.fillStyle=GHOST; ctx.beginPath(); ctx.arc(n.x,n.y,3.5,0,7); ctx.fill(); }
+function litEdge(ctx,a,b,col){
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowColor=col; ctx.shadowBlur=8; ctx.globalAlpha=.85;
+  ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.restore();
+}
+function ghostEdge(ctx,a,b){ ctx.save(); ctx.strokeStyle=GHOST_EDGE; ctx.lineWidth=1.2; ctx.setLineDash([2,5]);
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); ctx.restore(); }
+
+// mode: 'void' | 'ghost' | 'lobe'   cleared: how many levels done (index < cleared are lit; index==cleared is NEXT)
+function draw(ctx,W,H,cleared,mode,ox,oy,s){
+  ctx.clearRect(0,0,W,H);
+  ox=ox||0; oy=oy||0; s=s||1;
+  const pts=N.map(n=>({x:n.x*s+ox,y:n.y*s+oy,r:n.r}));
+  const isVisibleGhost=(i)=>{
+    if(mode==='void') return false;
+    if(mode==='ghost') return true;
+    if(mode==='lobe') return pts[i].r === pts[Math.min(cleared,14)].r; // same lobe as the next node
+    return false;
+  };
+  // silhouette (ghost + lobe modes only)
+  if(mode!=='void'){ ctx.save(); brainSil(ctx,ox,oy,s);
+    ctx.fillStyle=SIL; ctx.fill(); ctx.strokeStyle=SIL_LINE; ctx.lineWidth=1.4; ctx.setLineDash([2,6]); ctx.stroke(); ctx.restore(); }
+  // ghost edges/nodes ahead
+  E.forEach(([a,b])=>{ const av=a<cleared, bv=b<cleared;
+    if(!(av&&bv) && isVisibleGhost(a) && isVisibleGhost(b)) ghostEdge(ctx,pts[a],pts[b]); });
+  N.forEach((_,i)=>{ if(i>cleared && isVisibleGhost(i)) ghostNode(ctx,pts[i]); });
+  // lit edges (both endpoints cleared)
+  E.forEach(([a,b])=>{ if(a<cleared&&b<cleared) litEdge(ctx,pts[a],pts[b],REGION[pts[b].r]); });
+  // lit nodes
+  for(let i=0;i<cleared;i++) litNode(ctx,pts[i],REGION[pts[i].r]);
+  // next node (pulsing white) — index == cleared
+  if(cleared<15) nextNode(ctx,pts[cleared]);
+}
+
+draw(document.getElementById('void').getContext('2d'),360,460,4,'void',0,55,1);
+draw(document.getElementById('ghost').getContext('2d'),360,460,4,'ghost',0,55,1);
+draw(document.getElementById('lobe').getContext('2d'),360,460,4,'lobe',0,55,1);
+
+draw(document.getElementById('f1').getContext('2d'),215,270,1,'ghost',-5,25,0.58);
+draw(document.getElementById('f2').getContext('2d'),215,270,8,'ghost',-5,25,0.58);
+draw(document.getElementById('f3').getContext('2d'),215,270,15,'ghost',-5,25,0.58);
+</script>
+</body>
+</html>
