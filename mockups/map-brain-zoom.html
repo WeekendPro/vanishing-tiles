@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — brain map: stages + deep zoom</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .stage-frame{ width:430px; background:#04050c; border:2px solid #161f3a; border-radius:22px; overflow:hidden; position:relative; touch-action:none; }
+  canvas{ display:block; }
+  .btn{ font-family:'Press Start 2P',monospace; font-size:9px; padding:8px 10px; border-radius:8px; background:#111934; color:#cdd6f4; border:1px solid #243056; cursor:pointer; user-select:none; }
+  .btn:hover{ background:#182250; }
+  .btn:active{ transform:translateY(1px); }
+  .pill{ font-size:11px; color:#9aa6cc; }
+  kbd{ font-size:10px; background:#111934; border:1px solid #243056; border-radius:4px; padding:1px 5px; color:#cdd6f4; }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-4 max-w-3xl">
+    <div class="pixel text-white glow-vio text-lg">brain map · stages + deep zoom</div>
+    <p class="muted text-sm mt-2 leading-relaxed">Scrub the <b class="text-violet-300">stage</b> to watch the mind light up
+      L1→L15, or hit <b>Auto-play the journey</b>. Then <b class="text-white">explore like a map</b>: drag to pan, wheel
+      or <kbd>+ −</kbd> to zoom, <b>double-click a neuron</b> to fly in. Fine dendrites and a level card emerge as you
+      zoom — that's the high-fidelity detail, redrawn crisp at every level.</p>
+  </header>
+
+  <div class="flex gap-6 items-start flex-wrap">
+    <div class="stage-frame" id="frame">
+      <div class="absolute top-0 left-0 right-0 px-3 py-2 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#04050c,transparent)">
+        <span class="pixel text-[10px] text-white glow-vio">GAP CITY</span>
+        <span class="text-[11px] muted" id="starTotal">★ 0</span>
+      </div>
+      <canvas id="map"></canvas>
+      <!-- zoom controls -->
+      <div class="absolute right-2 bottom-2 z-20 flex flex-col gap-1.5">
+        <div class="btn text-center" id="zin">＋</div>
+        <div class="btn text-center" id="zout">－</div>
+        <div class="btn text-center" id="zfit" title="overview">⤢</div>
+      </div>
+      <div class="absolute left-2 bottom-2 z-20 pill bg-black/40 rounded px-2 py-1" id="lod">overview</div>
+    </div>
+
+    <!-- controls -->
+    <div class="w-[320px]">
+      <div class="pixel text-[9px] glow-vio mb-2">STAGE OF PROGRESS</div>
+      <div class="flex items-center gap-2 mb-2">
+        <div class="btn" id="prev">◀</div>
+        <input id="slider" type="range" min="0" max="15" value="0" class="flex-1 accent-violet-400">
+        <div class="btn" id="next">▶</div>
+      </div>
+      <div class="text-sm mb-1"><b id="stageLabel" class="text-white">Stage 0 / 15</b> <span class="muted" id="stageSub">— a dim, sleeping brain</span></div>
+      <div class="btn inline-block mt-2" id="auto">▶ Auto-play the journey</div>
+
+      <div class="pixel text-[9px] glow-vio mt-6 mb-2">WHAT YOU'RE SEEING</div>
+      <ul class="text-[12px] muted space-y-2 leading-relaxed">
+        <li><b class="text-white">Ghost dots</b> are the levels ahead — present from the start, unlit.</li>
+        <li>Clearing a level <b class="text-violet-300">ignites its neuron</b> and draws the dendrites of that region in lobe color.</li>
+        <li><b class="text-cyan-300">Frontal</b> · <b class="text-pink-400">Parietal</b> · <b class="text-violet-300">Occipital</b> — three lobes, your three districts.</li>
+        <li>Zoom in on a lit path: sub-branches and the level's <b class="text-white">name / ★ / difficulty</b> fade in.</li>
+      </ul>
+      <div class="pixel text-[9px] glow-vio mt-6 mb-2">IMPLEMENTATION NOTE</div>
+      <p class="text-[12px] muted leading-relaxed">This prototype is Canvas 2D with a camera transform + level-of-detail
+        redraw — proving the map-style zoom works. For shipping I'd pair a GPU glow layer (Canvas/WebGL or
+        react-native-skia) with crisp DOM/SVG nodes on top. More below.</p>
+    </div>
+  </div>
+
+<script>
+const PR = Math.min(2, window.devicePixelRatio || 1);
+const CSS_W = 430, CSS_H = 720;
+const cv = document.getElementById('map');
+cv.style.width = CSS_W+'px'; cv.style.height = CSS_H+'px';
+cv.width = CSS_W*PR; cv.height = CSS_H*PR;
+const ctx = cv.getContext('2d');
+
+// ---------- world (brain) geometry ----------
+const REGION=['#22d3ee','#ff2d95','#a78bfa'];
+const REGION_DIM=['rgba(34,211,238,0.5)','rgba(255,45,149,0.5)','rgba(167,139,250,0.5)'];
+function brainPath(ox,oy,s){
+  const p=new Path2D(); const P=(x,y)=>[x*s+ox,y*s+oy];
+  p.moveTo(...P(48,190));
+  p.bezierCurveTo(...P(46,140),...P(78,96),...P(120,90));
+  p.bezierCurveTo(...P(150,86),...P(165,70),...P(196,74));
+  p.bezierCurveTo(...P(230,78),...P(248,92),...P(280,100));
+  p.bezierCurveTo(...P(312,110),...P(330,150),...P(322,188));
+  p.bezierCurveTo(...P(316,212),...P(300,214),...P(300,232));
+  p.bezierCurveTo(...P(300,262),...P(286,286),...P(262,290));
+  p.bezierCurveTo(...P(250,292),...P(246,300),...P(238,318));
+  p.bezierCurveTo(...P(234,326),...P(226,326),...P(222,318));
+  p.bezierCurveTo(...P(216,304),...P(214,296),...P(206,290));
+  p.bezierCurveTo(...P(180,286),...P(150,288),...P(120,278));
+  p.bezierCurveTo(...P(100,272),...P(86,262),...P(78,246));
+  p.bezierCurveTo(...P(70,232),...P(54,224),...P(50,206));
+  p.closePath(); return p;
+}
+const BRAIN = brainPath(0,0,1);              // world units ~ x:46..330, y:70..326
+const WORLD = {minX:40,minY:64,maxX:336,maxY:332};
+
+// deterministic rng for a stable bloom
+let SEED=987654; function rnd(){ SEED=(SEED*1103515245+12345)&0x7fffffff; return SEED/0x7fffffff; }
+function buildTree(){
+  SEED=424242; const segs=[]; const rootX=236, rootY=320;
+  const trunks=11, A0=-2.5, A1=-0.66;
+  for(let i=0;i<trunks;i++){
+    const a=A0+(A1-A0)*(i/(trunks-1))+(rnd()-.5)*0.08;
+    grow(rootX,rootY,a,50,0);
+  }
+  return segs;
+  function grow(x,y,ang,len,depth){
+    if(depth>9||len<2.4) return;
+    const nx=x+Math.cos(ang)*len, ny=y+Math.sin(ang)*len;
+    const midx=(x+nx)/2;
+    const frac=(midx-48)/(322-48);                  // 0 (frontal) .. 1 (occipital)
+    const lobe = frac<0.34?0 : frac<0.66?1 : 2;
+    segs.push({x1:x,y1:y,x2:nx,y2:ny,depth,frac:Math.max(0,Math.min(1,frac)),lobe});
+    const kids = depth<2?3:(rnd()<0.8?2:1);
+    for(let k=0;k<kids;k++){
+      const spread=0.5+depth*0.05;
+      const na=ang+(k-(kids-1)/2)*spread/Math.max(1,kids-1||1)+(rnd()-.5)*0.4;
+      grow(nx,ny,na,len*(0.74+rnd()*0.12),depth+1);
+    }
+  }
+}
+const SEGS = buildTree();
+
+// 15 level hubs
+const NAMES=['Broca’s Gate','Cortex Row','Synapse Springs','Gray Matter','The Sulcus',
+  'Parietal Park','Wernicke Way','Motor Mile','Sensory Strip','The Fissure',
+  'Occipital End','Visual Cortex','Cerebellum','Brainstem Base','The Medulla'];
+const HUB=[
+  {x:80,y:172,r:0},{x:104,y:138,r:0},{x:134,y:118,r:0},{x:120,y:172,r:0},{x:152,y:150,r:0},
+  {x:176,y:118,r:1},{x:208,y:120,r:1},{x:198,y:166,r:1},{x:238,y:142,r:1},{x:160,y:198,r:1},
+  {x:266,y:132,r:2},{x:288,y:174,r:2},{x:274,y:216,r:2},{x:238,y:202,r:2},{x:258,y:256,r:2},
+].map((h,i)=>({...h, name:NAMES[i], stars: 0}));
+// give cleared hubs some stars for the detail view (stable)
+HUB.forEach((h,i)=>{ h.stars = 1+((i*7)%5); h.diff = 1+((i*3+1)%5); });
+
+// ---------- camera ----------
+let cam = {scale:1, x:0, y:0};
+function fitCam(){
+  const ww=WORLD.maxX-WORLD.minX, wh=WORLD.maxY-WORLD.minY;
+  const s=Math.min(CSS_W/ww, CSS_H/wh)*0.92;
+  const x=(CSS_W-ww*s)/2 - WORLD.minX*s;
+  const y=(CSS_H-wh*s)/2 - WORLD.minY*s + 6;
+  return {scale:s, x, y};
+}
+const FIT = fitCam(); cam = {...FIT};
+const MINS = FIT.scale*0.9, MAXS = FIT.scale*7;
+function w2s(wx,wy){ return [wx*cam.scale+cam.x, wy*cam.scale+cam.y]; }
+function s2w(sx,sy){ return [(sx-cam.x)/cam.scale, (sy-cam.y)/cam.scale]; }
+function clampScale(s){ return Math.max(MINS, Math.min(MAXS, s)); }
+
+// smooth camera target (for buttons / dblclick fly-to)
+let target=null;
+function flyTo(ns, cx, cy){ // keep world point (cx,cy world) under screen center
+  const nx=CSS_W/2-cx*ns, ny=CSS_H/2-cy*ns; target={scale:ns,x:nx,y:ny};
+}
+
+// ---------- progress ----------
+let cleared = 0;            // 0..15
+let auto=false, autoT=0;
+
+// ---------- render ----------
+function lodMaxDepth(){ // how deep the dendrites draw, by zoom
+  const z = cam.scale/FIT.scale;
+  if(z<1.4) return 5; if(z<2.2) return 6; if(z<3.2) return 7; if(z<4.5) return 8; return 9;
+}
+function setWorldTransform(){ ctx.setTransform(cam.scale*PR,0,0,cam.scale*PR, cam.x*PR, cam.y*PR); }
+function setScreenTransform(){ ctx.setTransform(PR,0,0,PR,0,0); }
+
+function draw(t){
+  setScreenTransform();
+  ctx.clearRect(0,0,CSS_W,CSS_H);
+
+  // silhouette (world space)
+  setWorldTransform();
+  ctx.fillStyle='rgba(80,110,210,0.045)'; ctx.fill(BRAIN);
+
+  // clip to brain, draw bloom
+  ctx.save(); ctx.clip(BRAIN);
+  ctx.globalCompositeOperation='lighter';
+  const maxD=lodMaxDepth();
+  const litFrac = cleared/15;
+  // viewport bounds in world for culling
+  const [wx0,wy0]=s2w(-40,-40), [wx1,wy1]=s2w(CSS_W+40,CSS_H+40);
+  for(const seg of SEGS){
+    if(seg.depth>maxD) continue;
+    if(seg.x2<wx0||seg.x1>wx1||seg.y2<wy0||seg.y1>wy1) continue;
+    const lit = seg.frac < litFrac;
+    const screenW = lit ? Math.max(0.5,(9-seg.depth)*0.5) : Math.max(0.4,(9-seg.depth)*0.4);
+    ctx.lineWidth = screenW/cam.scale;
+    ctx.lineCap='round';
+    if(lit){
+      const h = 200 + seg.frac*200;
+      ctx.strokeStyle=`hsla(${h},90%,62%,0.85)`;
+      ctx.shadowColor=`hsla(${h},90%,60%,1)`; ctx.shadowBlur=7;
+    } else {
+      ctx.strokeStyle='rgba(150,165,210,0.09)'; ctx.shadowBlur=0;
+    }
+    ctx.beginPath(); ctx.moveTo(seg.x1,seg.y1);
+    const mx=(seg.x1+seg.x2)/2+(seg.y2-seg.y1)*0.06, my=(seg.y1+seg.y2)/2+(seg.x1-seg.x2)*0.06;
+    ctx.quadraticCurveTo(mx,my,seg.x2,seg.y2); ctx.stroke();
+  }
+  // sparkle tips when lit & zoomed
+  if(maxD>=8){ ctx.shadowBlur=6;
+    for(const seg of SEGS){ if(seg.depth>=7 && seg.frac<litFrac){
+      if(seg.x2<wx0||seg.x1>wx1||seg.y2<wy0||seg.y1>wy1) continue;
+      const h=200+seg.frac*200; ctx.fillStyle=`hsla(${h},95%,72%,0.9)`; ctx.shadowColor=`hsla(${h},95%,66%,1)`;
+      ctx.beginPath(); ctx.arc(seg.x2,seg.y2,1.1/cam.scale,0,7); ctx.fill();
+    }}
+  }
+  ctx.restore();
+  ctx.globalCompositeOperation='source-over';
+
+  // silhouette edge
+  setWorldTransform();
+  ctx.strokeStyle='rgba(170,190,255,0.4)'; ctx.lineWidth=1.4/cam.scale;
+  ctx.shadowColor='rgba(150,170,255,0.6)'; ctx.shadowBlur=8; ctx.stroke(BRAIN); ctx.shadowBlur=0;
+
+  // ---- hubs + labels in SCREEN space (crisp) ----
+  setScreenTransform();
+  const z = cam.scale/FIT.scale;
+  const pulse = 0.5+0.5*Math.sin(t/360);
+  HUB.forEach((n,i)=>{
+    const [sx,sy]=w2s(n.x,n.y);
+    if(sx<-30||sx>CSS_W+30||sy<-30||sy>CSS_H+30) return;
+    const state = i<cleared?'cleared':(i===cleared?'next':'ghost');
+    if(state==='ghost'){
+      ctx.fillStyle='rgba(170,185,225,0.28)'; ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.arc(sx,sy,3.4,0,7); ctx.fill();
+    } else if(state==='cleared'){
+      const col=REGION[n.r];
+      ctx.shadowColor=col; ctx.shadowBlur=14; ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(sx,sy,5.5,0,7); ctx.fill();
+      ctx.shadowBlur=0; ctx.fillStyle='#04050c'; ctx.beginPath(); ctx.arc(sx,sy,2,0,7); ctx.fill();
+    } else { // next — pulsing white
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      ctx.shadowColor='#fff'; ctx.shadowBlur=20+pulse*16; ctx.globalAlpha=.45+pulse*0.25; ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(sx,sy,11+pulse*4,0,7); ctx.fill(); ctx.restore();
+      ctx.shadowColor='#fff'; ctx.shadowBlur=12; ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(sx,sy,5,0,7); ctx.fill(); ctx.shadowBlur=0;
+      ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(sx,sy,11+pulse*3,0,7); ctx.stroke();
+    }
+    // labels: next always; cleared when zoomed; detail card when deep + near center
+    const showName = state==='next' || (state!=='ghost' && z>1.9);
+    if(showName){
+      const deep = z>3.1 && state!=='ghost';
+      labelChip(sx, sy, n, state, deep);
+    }
+  });
+
+  // LOD readout
+  document.getElementById('lod').textContent =
+    z<1.4?'overview':(z<2.2?'zoom · region':(z<3.4?'zoom · path':'zoom · synapse'));
+}
+
+function labelChip(sx,sy,n,state,deep){
+  const name=n.name;
+  ctx.font='600 12px ui-sans-serif,system-ui'; ctx.textBaseline='middle';
+  const w=ctx.measureText(name).width;
+  const pad=7, bx=sx+12, by=sy-9, bw=w+pad*2+ (state==='next'?16:0), bh=deep?44:20;
+  // card bg
+  ctx.fillStyle='rgba(8,12,26,0.82)'; ctx.strokeStyle=state==='next'?'rgba(255,255,255,0.5)':'rgba(120,140,210,0.35)'; ctx.lineWidth=1;
+  roundRect(bx,by,bw,bh,7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle= state==='next'?'#ffffff':'#dbe2ff';
+  ctx.fillText(name, bx+pad, by+11);
+  if(state==='next'){ ctx.fillStyle='#fff'; ctx.fillText('▶', bx+bw-14, by+11); }
+  if(deep){
+    // stars
+    ctx.font='11px ui-sans-serif'; let stx=bx+pad;
+    for(let s=0;s<5;s++){ ctx.fillStyle = s<n.stars?'#facc15':'#3b4467'; ctx.fillText('★', stx, by+30); stx+=12; }
+    // difficulty pips
+    ctx.fillStyle='#7c86a8'; ctx.fillText('lvl', stx+6, by+30);
+    let px=stx+30; for(let d=0;d<5;d++){ ctx.fillStyle=d<n.diff?REGION[n.r]:'#2a3354'; ctx.beginPath(); ctx.arc(px,by+27,2.4,0,7); ctx.fill(); px+=8; }
+  }
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// ---------- loop ----------
+function tick(t){
+  // camera easing toward target
+  if(target){
+    cam.scale += (target.scale-cam.scale)*0.18;
+    cam.x += (target.x-cam.x)*0.18;
+    cam.y += (target.y-cam.y)*0.18;
+    if(Math.abs(target.scale-cam.scale)<0.001 && Math.abs(target.x-cam.x)<0.3 && Math.abs(target.y-cam.y)<0.3){ cam={...target}; target=null; }
+  }
+  // auto-play progress
+  if(auto){ autoT+=1; if(autoT>26){ autoT=0; cleared++; syncStage(); if(cleared>=15){ auto=false; document.getElementById('auto').textContent='▶ Auto-play the journey'; } } }
+  draw(t);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---------- interaction ----------
+let drag=null;
+cv.addEventListener('pointerdown',e=>{ drag={x:e.offsetX,y:e.offsetY,cx:cam.x,cy:cam.y,moved:false}; cv.setPointerCapture(e.pointerId); target=null; });
+cv.addEventListener('pointermove',e=>{ if(!drag)return; const dx=e.offsetX-drag.x, dy=e.offsetY-drag.y; if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true; cam.x=drag.cx+dx; cam.y=drag.cy+dy; });
+cv.addEventListener('pointerup',e=>{ drag=null; });
+cv.addEventListener('wheel',e=>{ e.preventDefault(); const f=Math.exp(-e.deltaY*0.0015); const ns=clampScale(cam.scale*f);
+  const [wx,wy]=s2w(e.offsetX,e.offsetY); cam.scale=ns; cam.x=e.offsetX-wx*ns; cam.y=e.offsetY-wy*ns; target=null; }, {passive:false});
+cv.addEventListener('dblclick',e=>{ const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  if(cam.scale/FIT.scale>3){ target={...FIT}; } else { flyTo(clampScale(FIT.scale*4), wx, wy); } });
+
+document.getElementById('zin').onclick=()=>{ flyTo(clampScale(cam.scale*1.6), ...s2w(CSS_W/2,CSS_H/2)); };
+document.getElementById('zout').onclick=()=>{ flyTo(clampScale(cam.scale/1.6), ...s2w(CSS_W/2,CSS_H/2)); };
+document.getElementById('zfit').onclick=()=>{ target={...FIT}; };
+
+// ---------- stage controls ----------
+const slider=document.getElementById('slider');
+const SUBS=['a dim, sleeping brain','first synapse fires','frontal lobe waking','…','…','frontal lobe complete',
+  'parietal lobe lighting','…','…','…','parietal complete','occipital waking','…','…','a fully alive mind'];
+function syncStage(){
+  cleared=Math.max(0,Math.min(15,cleared));
+  slider.value=cleared;
+  document.getElementById('stageLabel').textContent=`Stage ${cleared} / 15`;
+  let sub = cleared===0?SUBS[0] : (cleared>=15?SUBS[14] : (SUBS[cleared]||'lighting up…'));
+  document.getElementById('stageSub').textContent='— '+sub;
+  let stars=0; for(let i=0;i<cleared;i++) stars+=HUB[i].stars;
+  document.getElementById('starTotal').textContent='★ '+stars;
+}
+slider.oninput=()=>{ cleared=+slider.value; syncStage(); };
+document.getElementById('prev').onclick=()=>{ cleared--; syncStage(); };
+document.getElementById('next').onclick=()=>{ cleared++; syncStage(); };
+document.getElementById('auto').onclick=function(){ if(auto){ auto=false; this.textContent='▶ Auto-play the journey'; }
+  else { if(cleared>=15)cleared=0; auto=true; autoT=0; this.textContent='⏸ Pause'; syncStage(); } };
+syncStage();
+</script>
+</body>
+</html>
