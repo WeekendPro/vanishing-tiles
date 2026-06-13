@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — low-poly brain, interactive</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/delaunator@5.0.1/delaunator.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:430px; background:#04050c; border:2px solid #161f3a; border-radius:22px; overflow:hidden; position:relative; touch-action:none; }
+  #map{ display:block; width:100%; cursor:grab; }
+  #map.grabbing{ cursor:grabbing; }
+  .btn{ font-family:'Press Start 2P',monospace; font-size:9px; padding:8px 10px; border-radius:8px; background:#111934cc; color:#cdd6f4; border:1px solid #243056; cursor:pointer; user-select:none; }
+  .btn:hover{ background:#182250; } .btn:active{ transform:translateY(1px); }
+  .pill{ font-size:11px; color:#9aa6cc; }
+  kbd{ font-size:10px; background:#111934; border:1px solid #243056; border-radius:4px; padding:1px 5px; }
+  /* node labels: hidden until zoomed in */
+  .nlabel{ opacity:0; transition:opacity .2s; }
+  #map.zoomed .nlabel{ opacity:1; }
+  @keyframes pulse{ 0%,100%{ r:7; opacity:1 } 50%{ r:10.5; opacity:.65 } }
+  .nextRing{ animation:pulse 1.4s ease-in-out infinite; }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-4 max-w-3xl">
+    <div class="pixel text-white glow-vio text-lg">low-poly brain · interactive</div>
+    <p class="muted text-sm mt-2 leading-relaxed"><b class="text-white">Drag</b> to pan · <b class="text-white">wheel</b> or
+      <kbd>＋ －</kbd> to zoom · <b class="text-white">double-click</b> a neuron to fly in · <b>Stage</b> slider / Auto-play to
+      watch it light up. Pan/zoom only moves a camera transform — the scene is <b class="text-violet-300">never redrawn while you
+      move</b>, and nothing animates at idle. Watch the counter: it only ticks when a level clears.</p>
+  </header>
+
+  <div class="flex gap-6 items-start flex-wrap">
+    <div class="frame" id="frame">
+      <div class="absolute top-0 left-0 right-0 px-3 py-2 z-20 flex justify-between items-center pointer-events-none" style="background:linear-gradient(to bottom,#04050c,transparent)">
+        <span class="pixel text-[10px] text-white glow-vio">GAP CITY</span>
+        <span class="text-[11px] muted" id="starTotal">★ 0</span>
+      </div>
+      <svg id="map" viewBox="0 0 360 380" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="g" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="cam"><g id="scene"></g></g>
+      </svg>
+      <div class="absolute right-2 bottom-2 z-20 flex flex-col gap-1.5">
+        <div class="btn text-center" id="zin">＋</div>
+        <div class="btn text-center" id="zout">－</div>
+        <div class="btn text-center" id="zfit">⤢</div>
+      </div>
+      <div class="absolute left-2 bottom-2 z-20 pill bg-black/50 rounded px-2 py-1" id="lod">overview</div>
+    </div>
+
+    <div class="w-[320px]">
+      <div class="pixel text-[9px] glow-vio mb-2">STAGE OF PROGRESS</div>
+      <div class="flex items-center gap-2 mb-2">
+        <div class="btn" id="prev">◀</div>
+        <input id="slider" type="range" min="0" max="15" value="0" class="flex-1 accent-violet-400">
+        <div class="btn" id="next">▶</div>
+      </div>
+      <div class="text-sm mb-1"><b id="stageLabel" class="text-white">Stage 0 / 15</b></div>
+      <div class="btn inline-block mt-1" id="auto">▶ Auto-play the journey</div>
+
+      <div class="pixel text-[9px] glow-vio mt-6 mb-2">CPU HONESTY</div>
+      <div class="text-[12px] muted leading-relaxed">
+        <div>Scene redraws: <b class="text-white" id="redraws">0</b> <span class="text-[10px]">(only on stage change)</span></div>
+        <div>Camera moves: <b class="text-white" id="moves">0</b> <span class="text-[10px]">(GPU transform, no redraw)</span></div>
+        <div>Idle render loop: <b class="text-emerald-400">none</b></div>
+        <p class="mt-3">Pan and zoom all you like — the “redraws” number stays put. That's the whole point: a static SVG mesh + a camera transform = a phone-friendly map.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const REGION=['#22d3ee','#ff2d95','#a78bfa'];
+const RGB={ '#22d3ee':[34,211,238], '#ff2d95':[255,45,149], '#a78bfa':[167,139,250] };
+const LIGHT={ '#22d3ee':'#bff4ff', '#ff2d95':'#ffc7e1', '#a78bfa':'#e4dcff' };
+const UNLIT=[44,58,104];
+const VIEW={w:360,h:380};
+
+const OUTLINE=[
+  [64,196],[62,166],[72,130],[98,104],[126,90],[152,84],[176,80],[200,78],[224,80],[250,86],
+  [276,96],[300,106],[320,122],[334,148],[338,176],[330,198],[320,214],[326,234],[336,260],
+  [324,286],[300,300],[280,300],[266,286],[258,302],[250,324],[243,335],[235,335],[231,318],
+  [236,292],[238,268],[224,252],[198,250],[168,250],[140,250],[114,248],[90,238],[74,220],[66,206]
+];
+const NAMES=['Broca’s Gate','Cortex Row','Synapse Springs','Gray Matter','The Sulcus',
+  'Parietal Park','Wernicke Way','Motor Mile','Sensory Strip','The Fissure',
+  'Occipital End','Visual Cortex','Cerebellum','Brainstem Base','The Medulla'];
+const HUB=[
+  [82,176,0],[106,140,0],[136,116,0],[120,176,0],[154,150,0],
+  [178,116,1],[210,120,1],[200,168,1],[240,140,1],[162,200,1],
+  [268,134,2],[290,176,2],[300,250,2],[238,206,2],[300,210,2]
+];
+HUB.forEach((h,i)=>{ h[3]=1+((i*7)%5); }); // stars
+const EDGES=[[0,1],[1,2],[2,4],[0,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[5,9],
+             [9,10],[10,11],[11,12],[12,13],[13,14],[11,14],[2,5]];
+
+function inPoly(x,y,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+  const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+  if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
+let seed=7; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+function buildPoints(){
+  const pts=[]; OUTLINE.forEach(p=>pts.push([p[0],p[1]])); HUB.forEach(h=>pts.push([h[0],h[1]]));
+  for(let gx=70; gx<334; gx+=29) for(let gy=90; gy<300; gy+=29){
+    const x=gx+(rnd()-.5)*18, y=gy+(rnd()-.5)*18; if(inPoly(x,y,OUTLINE)) pts.push([x,y]); }
+  return pts;
+}
+const POINTS=buildPoints();
+const TRIS=Delaunator.from(POINTS).triangles;
+function nearestHub(cx,cy){ let bi=0,bd=1e9; for(let i=0;i<HUB.length;i++){ const dx=HUB[i][0]-cx,dy=HUB[i][1]-cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} } return bi; }
+
+const C={x:198,y:178,rx:152,ry:112};
+const L=(()=>{ const v=[-0.45,-0.62,0.64],m=Math.hypot(...v); return v.map(n=>n/m); })();
+function shadeAt(cx,cy,hash){
+  const dx=(cx-C.x)/C.rx, dy=(cy-C.y)/C.ry, r2=Math.min(1,dx*dx+dy*dy);
+  const nz=Math.sqrt(Math.max(0.05,1-r2)), nl=Math.hypot(dx,dy,nz);
+  const diff=Math.max(0,(dx*L[0]+dy*L[1]+nz*L[2])/nl);
+  const jitter=0.90 + ((((hash*2654435761)>>>0)%18))/100;
+  return (0.42+0.72*diff)*jitter;
+}
+const FRGB=(base,k)=>`rgb(${base.map(v=>Math.max(0,Math.min(255,Math.round(v*k)))).join(',')})`;
+
+// precompute per-facet data once
+const FACETS=[];
+for(let i=0;i<TRIS.length;i+=3){
+  const a=POINTS[TRIS[i]],b=POINTS[TRIS[i+1]],c=POINTS[TRIS[i+2]];
+  const cx=(a[0]+b[0]+c[0])/3, cy=(a[1]+b[1]+c[1])/3;
+  if(!inPoly(cx,cy,OUTLINE)) continue;
+  const hub=nearestHub(cx,cy);
+  FACETS.push({d:`M${a[0]},${a[1]} L${b[0]},${b[1]} L${c[0]},${c[1]} Z`, hub, lobe:HUB[hub][2], sh:shadeAt(cx,cy,i)});
+}
+
+let redraws=0;
+function buildScene(cleared){
+  redraws++; document.getElementById('redraws').textContent=redraws;
+  let s='';
+  for(const f of FACETS){
+    if(f.hub<cleared) s+=`<path d="${f.d}" fill="${FRGB(RGB[REGION[f.lobe]],0.30+0.62*f.sh)}" stroke="#04050c" stroke-opacity="0.30" stroke-width="0.5"/>`;
+    else              s+=`<path d="${f.d}" fill="${FRGB(UNLIT,0.55*f.sh)}" stroke="#9fb0e0" stroke-opacity="0.07" stroke-width="0.4"/>`;
+  }
+  s+=`<polygon points="${OUTLINE.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#aab8ff" stroke-opacity="0.5" stroke-width="1.4"/>`;
+  // edges
+  EDGES.forEach(([a,b])=>{ const A=HUB[a],B=HUB[b];
+    if(a<cleared&&b<cleared){
+      s+=`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#04050c" stroke-opacity="0.55" stroke-width="2.8" stroke-linecap="round"/>`;
+      s+=`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="${LIGHT[REGION[HUB[b][2]]]}" stroke-opacity="0.95" stroke-width="1.3" stroke-linecap="round" filter="url(#g)"/>`;
+    } else s+=`<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#9fb0e0" stroke-opacity="0.13" stroke-width="0.8" stroke-dasharray="1.5 4"/>`;
+  });
+  // nodes + labels
+  HUB.forEach((h,i)=>{ const [x,y,r]=h; const st=i<cleared?'cleared':(i===cleared?'next':'ghost');
+    if(st==='cleared'){
+      s+=`<circle cx="${x}" cy="${y}" r="5.4" fill="${REGION[r]}" filter="url(#g)"/><circle cx="${x}" cy="${y}" r="2.4" fill="#fff"/>`;
+    } else if(st==='next'){
+      s+=`<circle class="nextRing" cx="${x}" cy="${y}" r="7" fill="none" stroke="#fff" stroke-width="2"/><circle cx="${x}" cy="${y}" r="4.4" fill="#fff" filter="url(#g)"/>`;
+    } else {
+      s+=`<circle cx="${x}" cy="${y}" r="3" fill="#aeb9da" fill-opacity="0.30"/>`;
+    }
+    if(st!=='ghost'){
+      const cls = st==='next' ? '' : 'nlabel';   // next label always on; others only when zoomed
+      s+=`<g class="${cls}"><rect x="${x+8}" y="${y-9}" width="${NAMES[i].length*6.2+10}" height="16" rx="4" fill="#080c1add" stroke="${st==='next'?'#ffffff88':'#7c8ad855'}"/><text x="${x+13}" y="${y+2}" font-size="9" fill="${st==='next'?'#fff':'#dbe2ff'}" font-family="ui-sans-serif">${NAMES[i]}</text></g>`;
+    }
+  });
+  document.getElementById('scene').innerHTML=s;
+}
+
+// ---------- camera (transform only — no scene redraw) ----------
+const svg=document.getElementById('map'), camG=document.getElementById('cam');
+let cam={s:1, x:0, y:0}, moves=0, camRAF=0;
+function applyCam(){
+  camG.setAttribute('transform', `translate(${cam.x} ${cam.y}) scale(${cam.s})`);
+  svg.classList.toggle('zoomed', cam.s>1.9);
+  document.getElementById('lod').textContent = cam.s<1.4?'overview':(cam.s<2.4?'zoom · region':(cam.s<3.6?'zoom · path':'zoom · synapse'));
+  moves++; document.getElementById('moves').textContent=moves;
+}
+function scheduleCam(){ if(!camRAF) camRAF=requestAnimationFrame(()=>{ camRAF=0; applyCam(); }); }
+applyCam();
+// pointer → viewBox coords
+function vb(e){ const r=svg.getBoundingClientRect(); return [ (e.clientX-r.left)*(VIEW.w/r.width), (e.clientY-r.top)*(VIEW.h/r.height) ]; }
+const clampS=s=>Math.max(0.8, Math.min(6, s));
+
+let drag=null;
+svg.addEventListener('pointerdown',e=>{ drag={vx:vb(e)[0],vy:vb(e)[1],cx:cam.x,cy:cam.y,moved:false}; svg.setPointerCapture(e.pointerId); svg.classList.add('grabbing'); anim=null; });
+svg.addEventListener('pointermove',e=>{ if(!drag)return; const [vx,vy]=vb(e); const dx=vx-drag.vx, dy=vy-drag.vy; if(Math.abs(dx)+Math.abs(dy)>2)drag.moved=true; cam.x=drag.cx+dx; cam.y=drag.cy+dy; scheduleCam(); });
+svg.addEventListener('pointerup',e=>{ svg.classList.remove('grabbing'); drag=null; });
+svg.addEventListener('wheel',e=>{ e.preventDefault(); const [vx,vy]=vb(e); const ns=clampS(cam.s*Math.exp(-e.deltaY*0.0015));
+  const wx=(vx-cam.x)/cam.s, wy=(vy-cam.y)/cam.s; cam.s=ns; cam.x=vx-wx*ns; cam.y=vy-wy*ns; anim=null; scheduleCam(); },{passive:false});
+svg.addEventListener('dblclick',e=>{ const [vx,vy]=vb(e); const wx=(vx-cam.x)/cam.s, wy=(vy-cam.y)/cam.s;
+  if(cam.s>2.6) flyTo(1, VIEW.w/2, VIEW.h/2); else flyTo(4, wx*4, wy*4, vx, vy); });
+
+// fly-to easing (only runs during the animation, then stops)
+let anim=null;
+function flyTo(ns, wx, wy, atVx, atVy){
+  // position so world (wx/ns? ) — compute target tx,ty to put world point under center (or under cursor)
+  const vx=atVx??VIEW.w/2, vy=atVy??VIEW.h/2;
+  const tx=vx-wx, ty=vy-wy;            // wx,wy already in scaled units when called from dblclick
+  anim={s0:cam.s,x0:cam.x,y0:cam.y, s1:clampS(ns), x1:tx, y1:ty, t:0};
+  stepAnim();
+}
+function stepAnim(){ if(!anim)return; anim.t=Math.min(1,anim.t+0.12); const k=1-Math.pow(1-anim.t,3);
+  cam.s=anim.s0+(anim.s1-anim.s0)*k; cam.x=anim.x0+(anim.x1-anim.x0)*k; cam.y=anim.y0+(anim.y1-anim.y0)*k;
+  applyCam(); if(anim.t<1) requestAnimationFrame(stepAnim); else anim=null; }
+function flyCenter(ns){ const cw=(VIEW.w/2-cam.x)/cam.s, ch=(VIEW.h/2-cam.y)/cam.s; flyTo(ns, cw*clampS(ns), ch*clampS(ns)); }
+document.getElementById('zin').onclick=()=>flyCenter(cam.s*1.6);
+document.getElementById('zout').onclick=()=>flyCenter(cam.s/1.6);
+document.getElementById('zfit').onclick=()=>{ anim={s0:cam.s,x0:cam.x,y0:cam.y,s1:1,x1:0,y1:0,t:0}; stepAnim(); };
+
+// ---------- stage ----------
+let cleared=0, auto=false, autoTimer=null;
+function syncStage(){ cleared=Math.max(0,Math.min(15,cleared));
+  document.getElementById('slider').value=cleared;
+  document.getElementById('stageLabel').textContent=`Stage ${cleared} / 15`;
+  let stars=0; for(let i=0;i<cleared;i++) stars+=HUB[i][3];
+  document.getElementById('starTotal').textContent='★ '+stars;
+  buildScene(cleared);
+}
+document.getElementById('slider').oninput=function(){ cleared=+this.value; syncStage(); };
+document.getElementById('prev').onclick=()=>{ cleared--; syncStage(); };
+document.getElementById('next').onclick=()=>{ cleared++; syncStage(); };
+document.getElementById('auto').onclick=function(){
+  if(auto){ auto=false; clearInterval(autoTimer); this.textContent='▶ Auto-play the journey'; }
+  else { if(cleared>=15)cleared=0; auto=true; this.textContent='⏸ Pause';
+    autoTimer=setInterval(()=>{ cleared++; syncStage(); if(cleared>=15){ auto=false; clearInterval(autoTimer); this.textContent='▶ Auto-play the journey'; } }, 480); }
+};
+syncStage();
+</script>
+</body>
+</html>
