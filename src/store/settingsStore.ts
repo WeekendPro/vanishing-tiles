@@ -12,13 +12,18 @@ export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
  * with minimal churn. When that lands, this store becomes the local cache/optimistic
  * layer over the server value; consumers (selectors below) shouldn't need to change.
  */
+/** Which Journey map rendering to use. R&D toggle while we compare directions. */
+export type MapStyle = 'transit' | 'mentalBrain' | 'mentalBrainComplex'
+
 export interface UserSettings {
   /** Per-puzzle-type opt-out of the instruction (briefing) page. Keyed by component. */
   hideBriefing: Partial<Record<PlayableComponent, boolean>>
+  /** Selected Journey map style. Defaults to the original transit map. */
+  mapStyle: MapStyle
 }
 
 function emptySettings(): UserSettings {
-  return { hideBriefing: {} }
+  return { hideBriefing: {}, mapStyle: 'transit' }
 }
 
 function load(): UserSettings {
@@ -42,6 +47,7 @@ interface SettingsStore {
   settings: UserSettings
   isBriefingHidden: (component: PlayableComponent) => boolean
   setBriefingHidden: (component: PlayableComponent, hidden: boolean) => void
+  setMapStyle: (style: MapStyle) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -55,6 +61,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ...state.settings,
         hideBriefing: { ...state.settings.hideBriefing, [component]: hidden },
       }
+      save(next)
+      return { settings: next }
+    })
+  },
+
+  setMapStyle: (style) => {
+    set((state) => {
+      const next: UserSettings = { ...state.settings, mapStyle: style }
       save(next)
       return { settings: next }
     })

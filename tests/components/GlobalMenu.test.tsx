@@ -12,10 +12,12 @@ import * as auth from '../../src/lib/auth'
 import { GlobalMenu } from '../../src/components/GlobalMenu'
 import { useNavStore } from '../../src/store/navStore'
 import { useGameStore } from '../../src/store/gameStore'
+import { useSettingsStore } from '../../src/store/settingsStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
   vi.clearAllMocks()
 })
 
@@ -26,8 +28,22 @@ describe('GlobalMenu', () => {
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(screen.getByRole('button', { name: /Training Mode/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Sign Out/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Resume/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the three map styles and switching persists the choice', async () => {
+    useNavStore.setState({ appView: 'journey' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(screen.getByRole('button', { name: /Subway Map/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Mental Map$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Mental Map \(Complex\)/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Mental Map \(Complex\)/i }))
+    expect(useSettingsStore.getState().settings.mapStyle).toBe('mentalBrainComplex')
+    expect(useNavStore.getState().appView).toBe('journey')
   })
 
   it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {
@@ -56,12 +72,12 @@ describe('GlobalMenu', () => {
     expect(useGameStore.getState().paused).toBe(false)
   })
 
-  it('Sign Out calls signOut and resets navigation', async () => {
+  it('Logout calls signOut and resets navigation', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: /Sign Out/i }))
+    await user.click(screen.getByRole('button', { name: /Logout/i }))
     expect(auth.signOut).toHaveBeenCalledTimes(1)
   })
 })

@@ -6,7 +6,11 @@ import { applyClientProgress } from '../lib/journeyProgress'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
 import { LockIcon } from './ui'
-import { TransitMap, type JourneyTheme } from './JourneyMap'
+import { TransitMap } from './JourneyMap'
+import type { JourneyTheme } from './JourneyMap/types'
+import { MentalMapBrain } from './JourneyMap/MentalMapBrain'
+import { MentalMapComplex } from './JourneyMap/MentalMapComplex'
+import { useSettingsStore } from '../store/settingsStore'
 
 function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
   return (
@@ -31,6 +35,7 @@ function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'loc
 export function JourneyScreen() {
   const openLevel = useNavStore(s => s.openLevel)
   const setLevelOrder = useNavStore(s => s.setLevelOrder)
+  const mapStyle = useSettingsStore(s => s.settings.mapStyle)
   // Completion lives in client progress (localStorage), not the server, so we
   // re-derive the map's cleared/current/locked from it (see applyClientProgress).
   const progress = useProgressStore(s => s.byLevel)
@@ -81,7 +86,13 @@ export function JourneyScreen() {
         )}
       </div>
       <div className="px-4 pb-10">
-        <TransitMap themes={themes} onSelect={openLevel} />
+        {mapStyle === 'mentalBrain' ? (
+          <MentalMapBrain themes={themes} onSelect={openLevel} />
+        ) : mapStyle === 'mentalBrainComplex' ? (
+          <MentalMapComplex themes={themes} onSelect={openLevel} />
+        ) : (
+          <TransitMap themes={themes} onSelect={openLevel} />
+        )}
       </div>
       <div
         className="sticky bottom-0 z-20 flex justify-center px-4 pb-3 pt-6"

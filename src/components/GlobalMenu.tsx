@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useSettingsStore, type MapStyle } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
 
@@ -31,13 +32,17 @@ function Avatar({ user }: { user: MenuUser }) {
   )
 }
 
-function Action({ label, onClick, tone = 'default' }:
-  { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger' }) {
-  const color = tone === 'danger' ? 'text-neon-red hover:text-glow-red'
+function Action({ label, onClick, tone = 'default', active }:
+  { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger'; active?: boolean }) {
+  const color = active ? 'text-neon-cyan text-glow-cyan'
+    : tone === 'danger' ? 'text-neon-red hover:text-glow-red'
     : tone === 'muted' ? 'text-arcade-edge hover:text-gray-300'
     : 'text-gray-200 hover:text-neon-cyan'
   return (
-    <button onClick={onClick} className={`text-left font-pixel uppercase tracking-[0.08em] text-base py-3 ${color}`}>
+    <button onClick={onClick} className={`flex items-center gap-2.5 text-left font-pixel uppercase tracking-[0.08em] text-base py-3 ${color}`}>
+      {active !== undefined && (
+        <span aria-hidden="true" className="text-xs leading-none">{active ? '◉' : '○'}</span>
+      )}
       {label}
     </button>
   )
@@ -56,6 +61,8 @@ export function GlobalMenu() {
     startPractice: s.startPractice,
     resetGame: s.resetGame,
   })))
+  const mapStyle = useSettingsStore(s => s.settings.mapStyle)
+  const setMapStyle = useSettingsStore(s => s.setMapStyle)
 
   const inGame = appView === 'playing' || appView === 'practice'
   const [open, setOpen] = useState(false)
@@ -91,6 +98,8 @@ export function GlobalMenu() {
   const enterPractice = () => { setOpen(false); startPractice(); goPractice() }
   const quitToMap = () => { setOpen(false); resetGame(); goJourney() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
+  // Picking a map style persists the choice and lands the player on the Journey map.
+  const chooseMap = (style: MapStyle) => { setMapStyle(style); setOpen(false); resetGame(); goJourney() }
 
   return (
     <>
@@ -131,18 +140,22 @@ export function GlobalMenu() {
             </div>
           )}
 
-          {inGame ? (
+          {inGame && (
             <>
               <Action label="Resume" onClick={close} />
               <Action label={appView === 'practice' ? 'Exit Training Mode' : 'Exit Journey Mode'} onClick={quitToMap} />
             </>
-          ) : (
-            <Action label="Training Mode" onClick={enterPractice} />
           )}
+          {!inGame && <Action label="Training Mode" onClick={enterPractice} />}
+
+          <Action label="Subway Map" active={mapStyle === 'transit'} onClick={() => chooseMap('transit')} />
+          <Action label="Mental Map" active={mapStyle === 'mentalBrain'} onClick={() => chooseMap('mentalBrain')} />
+          <Action label="Mental Map (Complex)" active={mapStyle === 'mentalBrainComplex'} onClick={() => chooseMap('mentalBrainComplex')} />
+
           <Action label="Settings" tone="muted" onClick={() => { /* no settings screen yet */ }} />
 
           <div className="mt-auto">
-            <Action label="Sign Out" tone="danger" onClick={handleSignOut} />
+            <Action label="Logout" tone="danger" onClick={handleSignOut} />
           </div>
         </div>
       )}

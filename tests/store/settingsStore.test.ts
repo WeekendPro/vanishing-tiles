@@ -3,7 +3,7 @@ import { useSettingsStore, SETTINGS_STORAGE_KEY } from '../../src/store/settings
 
 beforeEach(() => {
   localStorage.clear()
-  useSettingsStore.setState({ settings: { hideBriefing: {} } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
 })
 
 describe('settingsStore', () => {
