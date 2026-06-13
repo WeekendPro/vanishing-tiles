@@ -71,8 +71,8 @@ function buildPoints(){
   const pts=[];
   OUTLINE.forEach(p=>pts.push([p[0],p[1]]));      // boundary
   HUB.forEach(h=>pts.push([h[0],h[1]]));          // level hubs
-  for(let gx=70; gx<334; gx+=22) for(let gy=90; gy<300; gy+=22){  // interior grid (jittered)
-    const x=gx+(rnd()-.5)*16, y=gy+(rnd()-.5)*16;
+  for(let gx=70; gx<334; gx+=29) for(let gy=90; gy<300; gy+=29){  // interior grid (jittered) — coarser = chunkier facets
+    const x=gx+(rnd()-.5)*18, y=gy+(rnd()-.5)*18;
     if(inPoly(x,y,OUTLINE)) pts.push([x,y]);
   }
   return pts;
@@ -81,6 +81,22 @@ const POINTS=buildPoints();
 const HUB_INDEX=HUB.map((h,i)=>OUTLINE.length+i); // index of each hub within POINTS
 
 function facetFrac(cx){ return Math.max(0,Math.min(1,(cx-62)/(338-62))); }
+
+// ---- faux 3D depth shading: treat the brain as a domed solid lit from upper-left ----
+const RGB={ '#22d3ee':[34,211,238], '#ff2d95':[255,45,149], '#a78bfa':[167,139,250] };
+const UNLIT=[44,58,104];                         // dark slate facet base
+const C={x:198,y:178,rx:152,ry:112};             // dome center + radii
+const L=(()=>{ const v=[-0.45,-0.62,0.64]; const m=Math.hypot(...v); return v.map(n=>n/m); })();
+function shadeAt(cx,cy,hash){
+  const dx=(cx-C.x)/C.rx, dy=(cy-C.y)/C.ry;
+  const r2=Math.min(1, dx*dx+dy*dy);
+  const nz=Math.sqrt(Math.max(0.05, 1-r2));
+  const nl=Math.hypot(dx,dy,nz);
+  const diff=Math.max(0,(dx*L[0]+dy*L[1]+nz*L[2])/nl);
+  const jitter=0.90 + ((((hash*2654435761)>>>0) % 18))/100;   // per-facet plane variation
+  return (0.42 + 0.72*diff) * jitter;
+}
+function fillRGB(base,k){ return `rgb(${base.map(v=>Math.max(0,Math.min(255,Math.round(v*k)))).join(',')})`; }
 
 function render(elId, cleared){
   const tri=Delaunator.from(POINTS).triangles;
@@ -93,11 +109,14 @@ function render(elId, cleared){
     const frac=facetFrac(cx);
     const lobe= frac<0.34?0 : frac<0.66?1 : 2;
     const lit = frac < litFrac;
+    const sh=shadeAt(cx,cy,i);
     const d=`M${a[0]},${a[1]} L${b[0]},${b[1]} L${c[0]},${c[1]} Z`;
     if(lit){
-      facets+=`<path d="${d}" fill="${REGION[lobe]}" fill-opacity="0.13" stroke="${REGION[lobe]}" stroke-opacity="0.45" stroke-width="0.8"/>`;
+      const fill=fillRGB(RGB[REGION[lobe]], 0.30+0.62*sh);   // lobe color with volume
+      facets+=`<path d="${d}" fill="${fill}" stroke="#04050c" stroke-opacity="0.30" stroke-width="0.5"/>`;
     } else {
-      facets+=`<path d="${d}" fill="#1a2546" fill-opacity="0.16" stroke="#8aa0d8" stroke-opacity="0.10" stroke-width="0.6"/>`;
+      const fill=fillRGB(UNLIT, 0.55*sh);                    // dark faceted ghost
+      facets+=`<path d="${d}" fill="${fill}" stroke="#9fb0e0" stroke-opacity="0.07" stroke-width="0.4"/>`;
     }
   }
   // outline glow
