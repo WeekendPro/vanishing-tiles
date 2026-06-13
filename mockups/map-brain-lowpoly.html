@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — low-poly brain (cheap render)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/delaunator@5.0.1/delaunator.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  body{ background:#06070f; color:#e7ecff; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .pixel{ font-family:'Press Start 2P',monospace; }
+  .glow-vio{ text-shadow:0 0 10px rgba(167,139,250,.6); }
+  .muted{ color:#8c98c0; }
+  .frame{ width:300px; background:#04050c; border:2px solid #161f3a; border-radius:18px; overflow:hidden; position:relative; }
+  svg{ display:block; }
+  @keyframes pulse{ 0%,100%{ r:7; opacity:1 } 50%{ r:10; opacity:.7 } }
+  .nextRing{ animation:pulse 1.4s ease-in-out infinite; transform-origin:center; }
+</style>
+</head>
+<body class="p-6">
+  <header class="mb-4 max-w-3xl">
+    <div class="pixel text-white glow-vio text-lg">low-poly brain · the cheap path</div>
+    <p class="muted text-sm mt-2 leading-relaxed">~100 flat triangles, rendered as <b class="text-violet-300">SVG</b> — the
+      browser zooms/pans it on the GPU with <b>no per-frame JavaScript</b>. Facets light up lobe-by-lobe as you clear levels;
+      the 15 vertices are your levels. Three stages shown. This is about as light as it gets on a phone.</p>
+  </header>
+
+  <div class="flex gap-5 items-start flex-wrap">
+    <div><div class="frame" id="f1"></div><p class="muted text-[11px] mt-2 text-center">Stage 2 — frontal waking</p></div>
+    <div><div class="frame" id="f2"></div><p class="muted text-[11px] mt-2 text-center">Stage 8 — two lobes alive</p></div>
+    <div><div class="frame" id="f3"></div><p class="muted text-[11px] mt-2 text-center">Stage 15 — fully lit</p></div>
+    <div class="w-[300px] text-[12px] muted leading-relaxed">
+      <div class="pixel text-[9px] glow-vio mb-2">WHY THIS IS CHEAP</div>
+      <ul class="space-y-2">
+        <li>Static SVG mesh — drawn once, never redrawn.</li>
+        <li>Zoom/pan = one CSS transform on the GPU. No canvas loop.</li>
+        <li>Only the <b class="text-white">next</b> node animates (CSS keyframes).</li>
+        <li>Lighting a lobe = swapping a few fill classes. Trivial.</li>
+      </ul>
+      <div class="pixel text-[9px] glow-vio mt-5 mb-2">LOBES</div>
+      <span style="color:#22d3ee">●</span> Frontal · <span style="color:#ff2d95">●</span> Parietal · <span style="color:#a78bfa">●</span> Occipital
+    </div>
+  </div>
+
+<script>
+const REGION=['#22d3ee','#ff2d95','#a78bfa'];
+const VIEW={w:360,h:380};
+
+// lateral brain silhouette polygon (facing left), incl. cerebellum bump + brainstem nub
+const OUTLINE=[
+  [64,196],[62,166],[72,130],[98,104],[126,90],[152,84],[176,80],[200,78],[224,80],[250,86],
+  [276,96],[300,106],[320,122],[334,148],[338,176],[330,198],[320,214],[326,234],[336,260],
+  [324,286],[300,300],[280,300],[266,286],[258,302],[250,324],[243,335],[235,335],[231,318],
+  [236,292],[238,268],[224,252],[198,250],[168,250],[140,250],[114,248],[90,238],[74,220],[66,206]
+];
+function inPoly(x,y,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+  const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+  if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
+
+// 15 level hubs (vertices that are also levels)
+const HUB=[
+  [82,176,0],[106,140,0],[136,116,0],[120,176,0],[154,150,0],
+  [178,116,1],[210,120,1],[200,168,1],[240,140,1],[162,200,1],
+  [268,134,2],[290,176,2],[300,250,2],[238,206,2],[300,210,2]
+];
+
+// interior filler points (jittered) — kept if inside the outline
+let seed=7; const rnd=()=>{ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; };
+function buildPoints(){
+  const pts=[];
+  OUTLINE.forEach(p=>pts.push([p[0],p[1]]));      // boundary
+  HUB.forEach(h=>pts.push([h[0],h[1]]));          // level hubs
+  for(let gx=70; gx<334; gx+=22) for(let gy=90; gy<300; gy+=22){  // interior grid (jittered)
+    const x=gx+(rnd()-.5)*16, y=gy+(rnd()-.5)*16;
+    if(inPoly(x,y,OUTLINE)) pts.push([x,y]);
+  }
+  return pts;
+}
+const POINTS=buildPoints();
+const HUB_INDEX=HUB.map((h,i)=>OUTLINE.length+i); // index of each hub within POINTS
+
+function facetFrac(cx){ return Math.max(0,Math.min(1,(cx-62)/(338-62))); }
+
+function render(elId, cleared){
+  const tri=Delaunator.from(POINTS).triangles;
+  const litFrac=cleared/15;
+  let facets='';
+  for(let i=0;i<tri.length;i+=3){
+    const a=POINTS[tri[i]],b=POINTS[tri[i+1]],c=POINTS[tri[i+2]];
+    const cx=(a[0]+b[0]+c[0])/3, cy=(a[1]+b[1]+c[1])/3;
+    if(!inPoly(cx,cy,OUTLINE)) continue;
+    const frac=facetFrac(cx);
+    const lobe= frac<0.34?0 : frac<0.66?1 : 2;
+    const lit = frac < litFrac;
+    const d=`M${a[0]},${a[1]} L${b[0]},${b[1]} L${c[0]},${c[1]} Z`;
+    if(lit){
+      facets+=`<path d="${d}" fill="${REGION[lobe]}" fill-opacity="0.13" stroke="${REGION[lobe]}" stroke-opacity="0.45" stroke-width="0.8"/>`;
+    } else {
+      facets+=`<path d="${d}" fill="#1a2546" fill-opacity="0.16" stroke="#8aa0d8" stroke-opacity="0.10" stroke-width="0.6"/>`;
+    }
+  }
+  // outline glow
+  const outlinePts=OUTLINE.map(p=>p.join(',')).join(' ');
+  const outline=`<polygon points="${outlinePts}" fill="none" stroke="#aab8ff" stroke-opacity="0.5" stroke-width="1.4"/>`;
+  // hub nodes
+  let nodes='';
+  HUB.forEach((h,i)=>{
+    const [x,y,r]=h; const state=i<cleared?'cleared':(i===cleared?'next':'ghost');
+    if(state==='cleared'){
+      nodes+=`<circle cx="${x}" cy="${y}" r="4.6" fill="${REGION[r]}" filter="url(#g)"/><circle cx="${x}" cy="${y}" r="1.7" fill="#04050c"/>`;
+    } else if(state==='next'){
+      nodes+=`<circle class="nextRing" cx="${x}" cy="${y}" r="7" fill="none" stroke="#fff" stroke-width="2"/><circle cx="${x}" cy="${y}" r="4.2" fill="#fff" filter="url(#g)"/>`;
+    } else {
+      nodes+=`<circle cx="${x}" cy="${y}" r="3" fill="#aeb9da" fill-opacity="0.28"/>`;
+    }
+  });
+  document.getElementById(elId).innerHTML=
+    `<svg viewBox="0 0 ${VIEW.w} ${VIEW.h}" width="300" height="${300*VIEW.h/VIEW.w}">
+       <defs><filter id="g" x="-80%" y="-80%" width="260%" height="260%">
+         <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+       </filter></defs>
+       <g transform="translate(0,6)">${facets}${outline}${nodes}</g>
+     </svg>`;
+}
+
+render('f1',2); render('f2',8); render('f3',15);
+</script>
+</body>
+</html>
