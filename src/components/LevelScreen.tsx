@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getLevel } from '../lib/api'
-import { relativeTime } from '../lib/relativeTime'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
-import {
-  useProgressStore, emptyLevelProgress, levelTotal, levelStars, badgesUnlocked, isEarned,
-} from '../store/progressStore'
-import { difficultyPips, mockGlobalRecord } from '../lib/journeyScoring'
-import { COMPONENT_LABEL, isPlayable, type ComponentKey } from '../lib/components'
+import { useProgressStore, emptyLevelProgress, levelTotal } from '../store/progressStore'
+import { mockGlobalRecord } from '../lib/journeyScoring'
+import { LEVEL_COMPONENTS, COMPONENT_LABEL, isPlayable, type ComponentKey } from '../lib/components'
 import { track } from '../store/asyncStatus'
 import { NeonButton, ScanlineOverlay } from './ui'
 import type { DifficultyConfig } from '@shared/types'
-import { RibbonBadge } from './level/RibbonBadge'
-import {
-  ClassicTetrominoGlyph, ColorQuadGlyph, SequenceBlocksGlyph, EyesGlyph, RiddleGlyph, BADGE_CENTER_BG,
-} from './level/badgeGlyphs'
+import { ScoreBar } from './level/ScoreBar'
+import { DifficultyMeta } from './level/DifficultyMeta'
+import { PuzzleDeck, type DeckPuzzle } from './level/PuzzleDeck'
 
 interface LevelDetail {
   level_id: string; display_number: number; name: string; theme_name: string
@@ -26,59 +22,6 @@ interface LevelDetail {
 // Stable reference for unplayed levels — avoids creating a new object in the
 // Zustand selector (which would cause an infinite render loop in Zustand 5).
 const EMPTY_PROGRESS = emptyLevelProgress()
-
-function DifficultyBars({ value }: { value: number }) {
-  return (
-    <div className="flex items-end gap-1.5 h-5">
-      {[0, 1, 2, 3, 4].map(i => (
-        <span
-          key={i}
-          data-testid="difficulty-pip"
-          className={`w-2 h-5 rounded-sm ${i < value ? 'bg-neon-magenta' : 'bg-zinc-700'}`}
-          style={i < value ? { boxShadow: '0 0 6px #ff2d95' } : undefined}
-        />
-      ))}
-    </div>
-  )
-}
-
-function Stars({ value }: { value: number }) {
-  return (
-    <div className="text-4xl leading-none">
-      {[0, 1, 2, 3, 4].map(i => (
-        <span key={i} className={i < value ? 'text-neon-yellow text-glow-yellow' : 'text-zinc-700'}>
-          ★
-        </span>
-      ))}
-    </div>
-  )
-}
-
-type BadgeRow = {
-  key: ComponentKey
-  glyphKind: 'quad' | 'seq' | 'eyes' | 'riddle'
-  ribbonTitle: string
-}
-
-const BADGE_ROWS: [BadgeRow, BadgeRow][] = [
-  [
-    { key: 'colors',     glyphKind: 'quad',   ribbonTitle: 'CHROMATIC'  },
-    { key: 'inSequence', glyphKind: 'seq',    ribbonTitle: 'SEQUENTIAL' },
-  ],
-  [
-    { key: 'flash',      glyphKind: 'eyes',   ribbonTitle: 'GLIMPSE' },
-    { key: 'riddle',     glyphKind: 'riddle', ribbonTitle: 'RIDDLE'  },
-  ],
-]
-
-function glyphForKind(kind: BadgeRow['glyphKind']) {
-  switch (kind) {
-    case 'quad':   return <ColorQuadGlyph />
-    case 'seq':    return <SequenceBlocksGlyph />
-    case 'eyes':   return <EyesGlyph />
-    case 'riddle': return <RiddleGlyph />
-  }
-}
 
 export function LevelScreen() {
   const selectedLevelId = useNavStore(s => s.selectedLevelId)
@@ -121,10 +64,13 @@ export function LevelScreen() {
     enterPlaying()
   }
 
-  const unlocked = badgesUnlocked(p)
-
-  // relativeTime expects an ISO string | null. p.lastPlayed is number | null (epoch ms).
-  const lastPlayedStr = p.lastPlayed ? new Date(p.lastPlayed).toISOString() : null
+  // Every puzzle is available from the start; only Riddle is a "coming soon" placeholder.
+  const puzzles: DeckPuzzle[] = LEVEL_COMPONENTS.map(c => ({
+    component: c,
+    label: COMPONENT_LABEL[c],
+    score: p.best[c],
+    soon: !isPlayable(c),
+  }))
 
   return (
     <div className="min-h-dvh bg-arcade-bg text-white arcade-scanlines px-5 py-5">
@@ -144,94 +90,28 @@ export function LevelScreen() {
 
       {level && (
         <div className="max-w-sm mx-auto">
-          {/* Hero: name / stars */}
-          <div className="text-center mb-4">
-            <h2 className="font-pixel text-[19px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan mb-3">
+          {/* Header: district + level name */}
+          <div className="text-center mb-2">
+            <div className="font-pixel text-[8px] tracking-[0.25em] text-neon-magenta text-glow-magenta mb-2">
+              {level.theme_name.toUpperCase()}
+            </div>
+            <h2 className="font-pixel text-[17px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan">
               {level.name}
             </h2>
-            <Stars value={levelStars(p)} />
           </div>
 
-          {/* Stat cards 2×2 */}
-          <div className="grid grid-cols-2 gap-2 mb-5">
-            {/* World Record */}
-            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
-              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">🏆 WORLD RECORD</div>
-              <div className="font-pixel text-base text-white">{mockGlobalRecord(level.level_id)}</div>
-            </div>
-
-            {/* Your Record */}
-            <div className="rounded-lg border border-neon-cyan/40 bg-arcade-panel shadow-panel-inset p-3">
-              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⭐ YOUR RECORD</div>
-              <div className="font-pixel text-base text-neon-cyan text-glow-cyan">
-                {levelTotal(p) || '—'}
-              </div>
-            </div>
-
-            {/* Last Attempt */}
-            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
-              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">⏱ LAST ATTEMPT</div>
-              <div className="text-sm font-bold text-zinc-200 first-letter:uppercase">{relativeTime(lastPlayedStr)}</div>
-            </div>
-
-            {/* Difficulty */}
-            <div className="rounded-lg border border-arcade-edge bg-arcade-panel shadow-panel-inset p-3">
-              <div className="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2">DIFFICULTY</div>
-              <DifficultyBars value={difficultyPips(level.gap_count)} />
-            </div>
+          {/* Difficulty + last-played strip */}
+          <div className="mb-4">
+            <DifficultyMeta gapCount={level.gap_count} lastPlayed={p.lastPlayed} />
           </div>
 
-          {/* The Classic — gap glyph + ribbon; centered, ~half width */}
-          <div className="w-fit min-w-[55%] max-w-full mx-auto">
-            <RibbonBadge
-              data-testid="badge-main"
-              glyph={<ClassicTetrominoGlyph />}
-              centerBg={BADGE_CENTER_BG.classic}
-              title="THE CLASSIC"
-              state={p.best.main > 0 ? 'complete' : 'incomplete'}
-              score={p.best.main > 0 ? p.best.main : undefined}
-              cardAccent="green"
-              vibrant
-              onClick={() => play('main')}
-            />
+          {/* Level score bar (with world-record ghost + 65% unlock tick) */}
+          <div className="mb-5">
+            <ScoreBar total={levelTotal(p)} worldRecord={mockGlobalRecord(level.level_id)} />
           </div>
 
-          {/* Additional challenges divider */}
-          <div className="text-center text-[8px] font-pixel tracking-[0.28em] text-zinc-500 my-4">
-            ADDITIONAL CHALLENGES
-          </div>
-
-          {/* Badge rows */}
-          {BADGE_ROWS.map((row, ri) => (
-            <div key={ri} className={`grid grid-cols-2 gap-3 ${ri < BADGE_ROWS.length - 1 ? 'mb-3' : ''}`}>
-              {row.map(({ key: c, glyphKind, ribbonTitle }) => {
-                const playable = isPlayable(c)
-                const badgeDisabled = !unlocked || !playable
-                const badgeState = !playable
-                  ? 'soon'
-                  : !unlocked
-                    ? 'locked'
-                    : isEarned(p, c)
-                      ? 'complete'
-                      : 'incomplete'
-                const score = p.best[c]
-                return (
-                  <RibbonBadge
-                    key={c}
-                    data-testid={`badge-${c}`}
-                    glyph={glyphForKind(glyphKind)}
-                    centerBg={BADGE_CENTER_BG[glyphKind]}
-                    title={ribbonTitle}
-                    state={badgeState}
-                    score={score > 0 ? score : undefined}
-                    disabled={badgeDisabled}
-                    onClick={() => play(c)}
-                    aria-label={COMPONENT_LABEL[c]}
-                  />
-                )
-              })}
-            </div>
-          ))}
+          {/* Puzzle carousel + detail */}
+          <PuzzleDeck puzzles={puzzles} onPlay={play} />
         </div>
       )}
     </div>

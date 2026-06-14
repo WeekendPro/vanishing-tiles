@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  useProgressStore, emptyLevelProgress, levelTotal, levelStars, badgesUnlocked, isEarned,
+  useProgressStore, emptyLevelProgress, levelTotal, levelStars, levelCleared, isEarned,
   PROGRESS_STORAGE_KEY,
 } from '../../src/store/progressStore'
 
@@ -15,7 +15,7 @@ describe('progressStore', () => {
     expect(p).toEqual(emptyLevelProgress())
     expect(levelTotal(p)).toBe(0)
     expect(levelStars(p)).toBe(0)
-    expect(badgesUnlocked(p)).toBe(false)
+    expect(levelCleared(p)).toBe(false)
   })
 
   it('records a play: best is a max, timesPlayed/lastPlayed update', () => {
@@ -28,17 +28,20 @@ describe('progressStore', () => {
     expect(p.lastPlayed).not.toBeNull()
   })
 
-  it('unlocks badges and earns them once scored', () => {
-    const { recordPlay } = useProgressStore.getState()
-    recordPlay('L1', 'main', 90)
-    let p = useProgressStore.getState().getLevel('L1')
-    expect(badgesUnlocked(p)).toBe(true)
-    expect(isEarned(p, 'colors')).toBe(false)
-    recordPlay('L1', 'colors', 60)
-    p = useProgressStore.getState().getLevel('L1')
-    expect(isEarned(p, 'colors')).toBe(true)
-    expect(levelTotal(p)).toBe(150)
-    expect(levelStars(p)).toBe(2)
+  it('clears the level only once the total reaches the 65% threshold (325)', () => {
+    const { recordPlay, getLevel } = useProgressStore.getState()
+    recordPlay('L1', 'main', 100)
+    recordPlay('L1', 'colors', 100)
+    recordPlay('L1', 'inSequence', 100)
+    let p = getLevel('L1')
+    expect(levelTotal(p)).toBe(300)
+    expect(levelCleared(p)).toBe(false) // 300 < 325
+    recordPlay('L1', 'flash', 50)
+    p = getLevel('L1')
+    expect(levelTotal(p)).toBe(350)
+    expect(levelCleared(p)).toBe(true)
+    expect(isEarned(p, 'flash')).toBe(true)
+    expect(levelStars(p)).toBe(4) // 350 → tier ≥350
   })
 
   it('persists to localStorage and rehydrates', () => {

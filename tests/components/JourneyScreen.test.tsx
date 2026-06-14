@@ -8,12 +8,12 @@ import { JourneyScreen } from '../../src/components/JourneyScreen'
 import { useNavStore } from '../../src/store/navStore'
 import { useProgressStore, emptyLevelProgress, type ProgressMap } from '../../src/store/progressStore'
 
-/** Build a client-progress map that marks the given level ids' Main puzzle solved. */
+/** Build a client-progress map that clears the given levels (total ≥ 65% = 325). */
 function clearedProgress(levelIds: string[]): ProgressMap {
   const out: ProgressMap = {}
   for (const id of levelIds) {
     const p = emptyLevelProgress()
-    p.best.main = 80
+    p.best = { main: 100, colors: 100, inSequence: 100, flash: 50, riddle: 0 } // 350
     out[id] = p
   }
   return out

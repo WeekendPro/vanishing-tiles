@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  componentScore, levelStarsFromTotal, difficultyPips, sumBests, mockGlobalRecord,
+  componentScore, levelStarsFromTotal, difficultyPips, difficultyLabel, levelUnlocked,
+  LEVEL_UNLOCK_THRESHOLD, sumBests, mockGlobalRecord,
 } from '../../src/lib/journeyScoring'
 
 describe('componentScore', () => {
@@ -62,6 +63,26 @@ describe('difficultyPips', () => {
   it('clamps out-of-range inputs', () => {
     expect(difficultyPips(1)).toBe(1)
     expect(difficultyPips(99)).toBe(5)
+  })
+})
+
+describe('levelUnlocked', () => {
+  it('unlocks at 65% of the 500 max (325)', () => {
+    expect(LEVEL_UNLOCK_THRESHOLD).toBe(325)
+    expect(levelUnlocked(324)).toBe(false)
+    expect(levelUnlocked(325)).toBe(true)
+    expect(levelUnlocked(500)).toBe(true)
+    expect(levelUnlocked(0)).toBe(false)
+  })
+})
+
+describe('difficultyLabel', () => {
+  it('words the 1..5 pip tiers', () => {
+    expect(difficultyLabel(3)).toBe('EASY')    // 1 pip
+    expect(difficultyLabel(6)).toBe('MEDIUM')  // 2 pips
+    expect(difficultyLabel(9)).toBe('HARD')    // 3 pips
+    expect(difficultyLabel(12)).toBe('EXPERT') // 4 pips
+    expect(difficultyLabel(16)).toBe('MASTER') // 5 pips
   })
 })
 

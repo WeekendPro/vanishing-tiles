@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Level page — final</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33',well:'#0c1f25'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:"Inter",ui-rounded,system-ui,sans-serif;}
+  .glow-cyan{text-shadow:0 0 8px rgba(34,211,238,.6);}
+  .glow-mag{text-shadow:0 0 8px rgba(255,45,149,.7);}
+  .glow-gold{text-shadow:0 0 10px rgba(250,204,21,.8);}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .phone{width:392px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;z-index:40;}
+  @keyframes slideIn { 0%{transform:translateY(-26px);opacity:0} 18%{opacity:1} 55%{transform:translateY(0)} 78%{transform:translateY(0)} 100%{transform:translateY(0);opacity:1} }
+  @keyframes flash { 0%,40%{opacity:1} 55%,100%{opacity:.18} }
+  .demo-piece{animation:slideIn 2.6s ease-in-out infinite;}
+  .demo-gap{animation:flash 2.6s ease-in-out infinite;}
+  .car-item{transition:all .4s cubic-bezier(.2,.8,.2,1);}
+  @keyframes pop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+  .pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+  ::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 p-8">
+
+<h1 class="text-2xl font-black mb-1">Level page — consolidated</h1>
+<p class="text-zinc-400 mb-8 text-sm max-w-2xl">A2 score bar (65% unlock, no later milestones yet) · wide-peek deck · corner-pill % on the <b>active</b> emblem only · detail card = demo + that puzzle's bar + PLAY. Click the chevrons / peeking neighbors.</p>
+
+<div class="phone">
+  <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan min-h-[580px]">
+    <button class="text-neon-cyan text-sm mb-3 glow-cyan font-semibold">&larr; Map</button>
+    <div class="text-center mb-3">
+      <div class="font-pixel text-[8px] tracking-[0.25em] text-neon-magenta glow-mag mb-2">THE HOLLOWS</div>
+      <h2 class="font-pixel text-[17px] text-neon-cyan glow-cyan">VACANT HEIGHTS</h2>
+    </div>
+
+    <!-- A2 score bar -->
+    <div class="relative pt-5 mb-1">
+      <div class="absolute top-0 text-[8px] font-pixel whitespace-nowrap text-neon-yellow glow-gold" style="left:65%;transform:translateX(-50%)">🔓 UNLOCK</div>
+      <div class="h-5 rounded-full bg-arcade-well panel-inset overflow-hidden relative">
+        <div class="h-full rounded-full" style="width:64%;background:linear-gradient(90deg,#0891b2,#22d3ee 70%,#67e8f9);box-shadow:0 0 10px #22d3ee99"></div>
+        <div class="absolute top-0 bottom-0 w-[2px] bg-neon-yellow" style="left:65%;box-shadow:0 0 6px #facc15"></div>
+      </div>
+    </div>
+    <div class="flex justify-between text-[9px] font-pixel text-zinc-500 mb-3">
+      <span>LEVEL SCORE</span><span><span class="text-neon-cyan">320</span> / 500 · 64%</span>
+    </div>
+
+    <!-- deck -->
+    <div class="relative h-[178px] flex items-center justify-center" id="deck"></div>
+    <div class="flex justify-center gap-2 mb-3" id="dots"></div>
+    <div id="detail"></div>
+  </div>
+</div>
+
+<script>
+const PUZZLES = [
+  { key:'classic', name:'The Classic', accent:'#22d3ee', bannerC:'#0e7490', score:78, glyph:'classic', shieldBg:'linear-gradient(135deg,#0a1622,#05080f)', demoNote:'Memorize the gaps, then pick the pieces that fill them.' },
+  { key:'colors',  name:'Chromatic',   accent:'#ff2d95', bannerC:'#9d174d', score:45, glyph:'quad',    shieldBg:'#0a1226', demoNote:'Match each gap by shape <b>and</b> color.' },
+  { key:'seq',     name:'Sequential',  accent:'#f59e0b', bannerC:'#b45309', score:0,  glyph:'seq',     shieldBg:'linear-gradient(135deg,#334155,#0f172a)', demoNote:'Fill the gaps in numbered order: 1 → 2 → 3.' },
+  { key:'flash',   name:'Glimpse',     accent:'#39d98a', bannerC:'#15803d', score:92, glyph:'eyes',    shieldBg:'radial-gradient(circle at 50% 38%,#16233f,#070b18)', demoNote:'The board flashes once. Blink and you miss it.' },
+  { key:'riddle',  name:'Riddle',      accent:'#2dd4bf', bannerC:'#0f766e', score:0,  glyph:'riddle',  shieldBg:'linear-gradient(135deg,#2dd4bf,#0f766e)', soon:true, demoNote:'A new kind of puzzle. Coming soon.' },
+];
+
+function glyphHTML(kind){
+  if(kind==='classic'){
+    const c='width:14px;height:14px;border-radius:3px;background:linear-gradient(180deg,#67e8f9,#22d3ee);box-shadow:0 0 8px rgba(34,211,238,.6),inset 0 1px 0 rgba(255,255,255,.45)';
+    const e='width:14px;height:14px';
+    return `<div style="display:grid;grid-template-columns:repeat(3,14px);gap:3px"><span style="${c}"></span><span style="${c}"></span><span style="${c}"></span><span style="${e}"></span><span style="${c}"></span><span style="${e}"></span></div>`;
+  }
+  if(kind==='quad'){
+    const b=(col,lt)=>`width:20px;height:20px;border-radius:4px;background:linear-gradient(180deg,${lt},${col});box-shadow:0 0 7px ${col}99,inset 0 1px 0 rgba(255,255,255,.45)`;
+    return `<div style="display:grid;grid-template-columns:repeat(2,20px);gap:4px"><span style="${b('#22d3ee','#67e8f9')}"></span><span style="${b('#ff2d95','#fb7bb6')}"></span><span style="${b('#f59e0b','#fbbf24')}"></span><span style="${b('#39d98a','#6ee7b7')}"></span></div>`;
+  }
+  if(kind==='seq'){
+    const blk=(col,rot,ml,n)=>`<div style="transform:rotate(${rot}deg);margin-left:${ml}px"><div style="width:26px;height:26px;border-radius:7px;background:${col};box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.22);display:grid;place-items:center"><span class="font-black text-[15px] text-white">${n}</span></div></div>`;
+    return `<div class="flex items-center">${blk('#ef4444',-9,0,1)}${blk('#0ea5e9',5,-4,2)}${blk('#fbbf24',-4,-4,3)}</div>`;
+  }
+  if(kind==='eyes') return `<span style="font-size:42px;line-height:1">👀</span>`;
+  if(kind==='riddle') return `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>`;
+}
+
+// showBadge: only the active emblem shows the corner pill.
+function emblem(p, size, showBadge){
+  const k = size/124;
+  const h = size*132/124;
+  const dim = p.soon ? 'opacity:.5;filter:grayscale(.6)' : '';
+  let badge='';
+  if(showBadge && !p.soon){
+    badge = p.score>0
+      ? `<div class="pop" style="position:absolute;top:${6*k}px;right:${-2*k}px;z-index:5;padding:${2*k}px ${9*k}px;border-radius:999px;background:${p.accent};border:2px solid #030712;box-shadow:0 0 10px ${p.accent}cc"><span style="font-weight:900;font-size:${13*k}px;color:#04121a">${p.score}%</span></div>`
+      : `<div class="pop" style="position:absolute;top:${6*k}px;right:${-2*k}px;z-index:5;padding:${2*k}px ${8*k}px;border-radius:999px;background:#0b1622;border:2px solid ${p.accent}88"><span style="font-weight:800;font-size:${11*k}px;color:${p.accent}">NEW</span></div>`;
+  }
+  return `
+  <div style="position:relative;width:${size}px;height:${h}px;${dim}">
+    <div style="position:absolute;inset:0;clip-path:path('M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z');background:${p.shieldBg};transform:scale(${k});transform-origin:top left"></div>
+    <svg style="position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 6px ${p.accent}66)" viewBox="0 0 124 132" preserveAspectRatio="none">
+      <path d="M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z" fill="none" stroke="${p.accent}" stroke-width="3"/>
+      <path d="M62 13 L108 29 V66 C108 95 89 113 62 122 C35 113 16 95 16 66 V29 Z" fill="none" stroke="${p.accent}" stroke-width="1" opacity=".45"/>
+    </svg>
+    <div style="position:absolute;left:0;right:0;top:${27*k}px;height:${72*k}px;display:grid;place-items:center"><div style="transform:scale(${k})">${glyphHTML(p.glyph)}</div></div>
+    <svg viewBox="0 0 160 40" style="position:absolute;left:50%;transform:translateX(-50%);bottom:${4*k}px;width:${142*k}px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">
+      <path d="M4 7 L156 7 L147 22 L156 37 L4 37 L13 22 Z" fill="${p.bannerC}" stroke="rgba(255,255,255,.4)" stroke-width="1.4"/>
+      <text x="80" y="23" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter,sans-serif" font-weight="900" font-size="12.5" letter-spacing=".3">${p.name.toUpperCase()}</text>
+    </svg>
+    ${badge}
+  </div>`;
+}
+
+function demoAnim(p){
+  const cell='width:20px;height:20px;border-radius:3px';
+  const fill=`${cell};background:#11202a;box-shadow:inset 0 0 0 1px #18323b`;
+  const gap=`${cell};background:${p.accent}22;box-shadow:inset 0 0 0 1px ${p.accent}`;
+  return `
+  <div style="background:#0a141a;border:1px solid #16323b;border-radius:10px;padding:14px" class="relative overflow-hidden">
+    <div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2 text-center">HOW TO PLAY</div>
+    <div class="grid place-items-center">
+      <div style="display:grid;grid-template-columns:repeat(3,20px);gap:3px;position:relative">
+        <span style="${fill}"></span><span style="${fill}"></span><span style="${fill}"></span>
+        <span style="${fill}"></span><span class="demo-gap" style="${gap}"></span><span style="${fill}"></span>
+        <span style="${fill}"></span><span style="${fill}"></span><span style="${fill}"></span>
+        <span class="demo-piece" style="${cell};position:absolute;left:23px;top:23px;background:linear-gradient(180deg,#fff6,${p.accent});box-shadow:0 0 8px ${p.accent}"></span>
+      </div>
+    </div>
+    <div class="text-[10px] text-zinc-500 text-center mt-2 leading-snug">${p.demoNote}</div>
+  </div>`;
+}
+
+function detail(p){
+  const has = !p.soon && p.score>0;
+  const bar = p.soon ? '' : `
+    <div class="mt-3">
+      <div class="h-2.5 rounded-full bg-arcade-well panel-inset overflow-hidden">
+        <div style="width:${has?p.score:0}%;height:100%;border-radius:999px;background:linear-gradient(90deg,${p.accent}88,${p.accent});box-shadow:0 0 8px ${p.accent}"></div>
+      </div>
+    </div>`;
+  const playBtn = p.soon
+    ? `<button disabled class="w-full mt-3 py-3 rounded-xl font-pixel text-[11px] tracking-wider text-zinc-600 bg-white/5 cursor-not-allowed">SOON</button>`
+    : `<button class="w-full mt-3 py-3 rounded-xl font-pixel text-[11px] tracking-wider text-black" style="background:linear-gradient(180deg,#fff,${p.accent});box-shadow:0 0 16px ${p.accent}88">▶ PLAY</button>`;
+  return `
+  <div class="rounded-2xl border bg-arcade-panel panel-inset p-4" style="border-color:${p.accent}55;box-shadow:0 0 18px ${p.accent}22,inset 0 0 14px rgba(0,0,0,.6)">
+    ${demoAnim(p)}
+    ${bar}
+    ${playBtn}
+  </div>`;
+}
+
+const deck = document.getElementById('deck');
+const dots = document.getElementById('dots');
+const det = document.getElementById('detail');
+const PEEK = 64;
+let cur = 0;
+function render(){
+  deck.innerHTML = PUZZLES.map((p,idx)=>{
+    const d = idx-cur;
+    if(Math.abs(d)>1) return '';
+    if(d===0) return `<div class="car-item absolute" style="z-index:10;transform:translateX(0) scale(1)">${emblem(p,150,true)}</div>`;
+    const dir = d<0?-1:1;
+    const x = dir*(150/2 + 76 - PEEK);
+    return `<div class="car-item absolute cursor-pointer" data-go="${idx}" style="z-index:5;transform:translateX(${x}px) scale(.7);opacity:.4">${emblem(p,150,false)}</div>`;
+  }).join('') +
+  `<button class="absolute left-0 top-1/2 -translate-y-1/2 text-neon-cyan text-3xl z-20 w-8 h-12 grid place-items-center" data-nav="-1">‹</button>
+   <button class="absolute right-0 top-1/2 -translate-y-1/2 text-neon-cyan text-3xl z-20 w-8 h-12 grid place-items-center" data-nav="1">›</button>`;
+  deck.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>{cur=+el.dataset.go;render();});
+  deck.querySelectorAll('[data-nav]').forEach(el=>el.onclick=()=>{cur=(cur+ +el.dataset.nav+PUZZLES.length)%PUZZLES.length;render();});
+  dots.innerHTML = PUZZLES.map((p,idx)=>`<span class="w-2 h-2 rounded-full" style="background:${idx===cur?p.accent:'#334155'};box-shadow:${idx===cur?`0 0 6px ${p.accent}`:'none'}"></span>`).join('');
+  det.innerHTML = detail(PUZZLES[cur]);
+}
+render();
+</script>
+</body>
+</html>

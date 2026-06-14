@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('../../src/lib/api', () => ({
   getLevel: vi.fn(async () => ({
@@ -21,50 +21,34 @@ beforeEach(() => {
 })
 
 describe('LevelScreen', () => {
-  it('renders name, difficulty pips, a Play button and four badges', async () => {
+  it('renders the name, district, score bar, difficulty pips, and the deck focused on The Classic', async () => {
     render(<LevelScreen />)
-    // Level name appears in the hero exactly once (caption removed from the card)
-    expect((await screen.findAllByText('Cellar Door'))).toHaveLength(1)
-    // Main badge button now reads THE CLASSIC (no PLAY)
-    expect(screen.getByTestId('badge-main')).toBeTruthy()
-    expect(screen.getByText('THE CLASSIC')).toBeTruthy()
-    expect(screen.queryByText('PLAY')).toBeNull()
-    // District name is no longer shown
-    expect(screen.queryByText('The Hollows')).toBeNull()
-    // Four challenge badges by testid
-    expect(screen.getByTestId('badge-colors')).toBeTruthy()
-    expect(screen.getByTestId('badge-inSequence')).toBeTruthy()
-    expect(screen.getByTestId('badge-flash')).toBeTruthy()
-    expect(screen.getByTestId('badge-riddle')).toBeTruthy()
-    // Ribbon text: CHROMATIC / SEQUENTIAL / GLIMPSE / RIDDLE
-    expect(screen.getByText('CHROMATIC')).toBeTruthy()
-    expect(screen.getByText('SEQUENTIAL')).toBeTruthy()
-    expect(screen.getByText('GLIMPSE')).toBeTruthy()
-    expect(screen.getByText('RIDDLE')).toBeTruthy()
-    // Exactly 5 difficulty pips
+    expect(await screen.findByText('Cellar Door')).toBeTruthy()
+    // District is shown again (uppercased)
+    expect(screen.getByText('THE HOLLOWS')).toBeTruthy()
+    // Score bar replaces the old star row
+    expect(screen.getByTestId('score-bar')).toBeTruthy()
+    // Five difficulty pips
     expect(screen.getAllByTestId('difficulty-pip')).toHaveLength(5)
+    // The deck opens on The Classic (its detail + play button)
+    expect(screen.getByText('THE CLASSIC')).toBeTruthy()
+    expect(screen.getByTestId('puzzle-detail-main')).toBeTruthy()
+    expect(screen.getByTestId('puzzle-play-main')).toBeTruthy()
   })
 
-  it('locks badges until the main puzzle is solved', async () => {
+  it('makes every puzzle playable from the start (no main-puzzle gate)', async () => {
     render(<LevelScreen />)
-    await screen.findAllByText('Cellar Door')
-    const colors = screen.getByTestId('badge-colors')
-    expect(colors).toBeDisabled()
-    useProgressStore.getState().recordPlay('L1', 'main', 90)
-    await waitFor(() => expect(screen.getByTestId('badge-colors')).not.toBeDisabled())
+    await screen.findByText('Cellar Door')
+    // No progress at all — advance the deck to Chromatic and confirm it is playable
+    fireEvent.click(screen.getByRole('button', { name: 'Next puzzle' }))
+    expect(screen.getByTestId('puzzle-play-colors')).not.toBeDisabled()
   })
 
-  it('Riddle stays a Coming soon placeholder even after main is solved', async () => {
-    useProgressStore.getState().recordPlay('L1', 'main', 90)
+  it('keeps Riddle a coming-soon placeholder', async () => {
     render(<LevelScreen />)
-    await screen.findAllByText('Cellar Door')
-    expect(screen.getByTestId('badge-riddle')).toBeDisabled()
-  })
-
-  it('Glimpse badge renders (the flash component)', async () => {
-    render(<LevelScreen />)
-    await screen.findAllByText('Cellar Door')
-    expect(screen.getByTestId('badge-flash')).toBeTruthy()
-    expect(screen.getByText('GLIMPSE')).toBeTruthy()
+    await screen.findByText('Cellar Door')
+    // Riddle is the left neighbor of The Classic — step back to focus it
+    fireEvent.click(screen.getByRole('button', { name: 'Previous puzzle' }))
+    expect(screen.getByTestId('puzzle-play-riddle')).toBeDisabled()
   })
 })

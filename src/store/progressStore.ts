@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ComponentKey } from '../lib/components'
 import {
-  type ComponentBests, sumBests, levelStarsFromTotal,
+  type ComponentBests, sumBests, levelStarsFromTotal, levelUnlocked,
 } from '../lib/journeyScoring'
 
 export const PROGRESS_STORAGE_KEY = 'gapcity:progress:v1'
@@ -43,6 +43,8 @@ interface ProgressStore {
   byLevel: ProgressMap
   getLevel: (levelId: string) => LevelProgress
   recordPlay: (levelId: string, component: ComponentKey, score: number) => void
+  /** Admin/dev: hard-wipe all progress, returning the journey to level 1 with no scores. */
+  resetProgress: () => void
 }
 
 export const useProgressStore = create<ProgressStore>((set, get) => ({
@@ -63,10 +65,20 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
       return { byLevel }
     })
   },
+
+  resetProgress: () => {
+    try {
+      localStorage.removeItem(PROGRESS_STORAGE_KEY)
+    } catch {
+      /* ignore unavailable storage */
+    }
+    set({ byLevel: {} })
+  },
 }))
 
 // ── Derived selectors (pure over a LevelProgress) ──
 export const levelTotal = (p: LevelProgress): number => sumBests(p.best)
 export const levelStars = (p: LevelProgress): number => levelStarsFromTotal(levelTotal(p), p.best.main > 0)
-export const badgesUnlocked = (p: LevelProgress): boolean => p.best.main > 0
+/** A level is cleared (and unlocks the next) once its total reaches the 65% threshold. */
+export const levelCleared = (p: LevelProgress): boolean => levelUnlocked(levelTotal(p))
 export const isEarned = (p: LevelProgress, c: ComponentKey): boolean => p.best[c] > 0

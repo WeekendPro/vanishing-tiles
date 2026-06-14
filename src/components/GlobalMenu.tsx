@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useProgressStore } from '../store/progressStore'
 import { useSettingsStore, type MapStyle } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
@@ -61,6 +62,7 @@ export function GlobalMenu() {
     startPractice: s.startPractice,
     resetGame: s.resetGame,
   })))
+  const resetProgress = useProgressStore(s => s.resetProgress)
   const mapStyle = useSettingsStore(s => s.settings.mapStyle)
   const setMapStyle = useSettingsStore(s => s.setMapStyle)
 
@@ -100,6 +102,14 @@ export function GlobalMenu() {
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
   // Picking a map style persists the choice and lands the player on the Journey map.
   const chooseMap = (style: MapStyle) => { setMapStyle(style); setOpen(false); resetGame(); goJourney() }
+  // Admin/dev: wipe all saved scores so the journey starts fresh at level 1.
+  const resetJourney = () => {
+    if (!window.confirm('Reset Journey? This permanently wipes all level progress and scores.')) return
+    setOpen(false)
+    resetProgress()
+    resetGame()
+    goJourney()
+  }
 
   return (
     <>
@@ -155,6 +165,8 @@ export function GlobalMenu() {
           <Action label="Settings" tone="muted" onClick={() => { /* no settings screen yet */ }} />
 
           <div className="mt-auto">
+            <div className="font-pixel text-[8px] uppercase tracking-[0.2em] text-arcade-edge mb-1">Dev</div>
+            <Action label="Reset Journey" tone="danger" onClick={resetJourney} />
             <Action label="Logout" tone="danger" onClick={handleSignOut} />
           </div>
         </div>

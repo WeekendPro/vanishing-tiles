@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Level Rework — score bar + puzzle carousel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { neon:{cyan:'#22d3ee',magenta:'#ff2d95',green:'#39d98a',red:'#ff4d4d',yellow:'#facc15'}, arcade:{bg:'#030712',panel:'#060d12',edge:'#0e2b33',well:'#0c1f25'} },
+    fontFamily: { pixel:['"Press Start 2P"','monospace'] },
+  }}}
+</script>
+<style>
+  body{font-family:"Inter",ui-rounded,system-ui,sans-serif;}
+  .glow-cyan{text-shadow:0 0 8px rgba(34,211,238,.6);}
+  .glow-mag{text-shadow:0 0 8px rgba(255,45,149,.7);}
+  .glow-green{text-shadow:0 0 8px rgba(57,217,138,.6);}
+  .glow-gold{text-shadow:0 0 10px rgba(250,204,21,.8);}
+  .panel-inset{box-shadow:inset 0 0 14px rgba(0,0,0,.6);}
+  .phone{width:392px;}
+  .scan::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.18) 2px 3px);border-radius:inherit;z-index:30;}
+  /* instruction-animation: a tiny gap that a piece slides into, looping */
+  @keyframes slideIn { 0%{transform:translateY(-26px);opacity:0} 18%{opacity:1} 55%{transform:translateY(0)} 78%{transform:translateY(0)} 100%{transform:translateY(0);opacity:1} }
+  @keyframes flash { 0%,40%{opacity:1} 55%,100%{opacity:.18} }
+  .demo-piece{animation:slideIn 2.6s ease-in-out infinite;}
+  .demo-gap{animation:flash 2.6s ease-in-out infinite;}
+  .seg{transition:width .5s cubic-bezier(.2,.8,.2,1);}
+  .car-item{transition:all .35s cubic-bezier(.2,.8,.2,1);}
+  ::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 p-8">
+
+<h1 class="text-2xl font-black mb-1">Level Page Rework</h1>
+<p class="text-zinc-400 mb-8 text-sm max-w-3xl">Two decisions to make. <b>(A)</b> the thick score bar with the 65% unlock benchmark that replaces the stars, and <b>(B)</b> the puzzle carousel + PuzzleDetail layout (no card box, no star — The Classic is just one of five equal puzzles). Click the carousels.</p>
+
+<!-- ============================================================= -->
+<!-- SECTION A — SCORE BAR -->
+<!-- ============================================================= -->
+<h2 class="text-lg font-extrabold text-neon-cyan glow-cyan mb-1">A · Score bar (replaces the stars)</h2>
+<p class="text-zinc-500 mb-5 text-sm max-w-3xl">All three show the same state: <b>320 / 500 (64%)</b> — one point shy of the 65% unlock. Future milestones (80% reward, 95% superpower) shown ghosted.</p>
+
+<div class="flex gap-8 items-start flex-wrap mb-14">
+
+  <!-- A1: segmented quilt -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">A1 · Segmented quilt <span class="text-zinc-600 normal-case tracking-normal">— 5 slabs, one per puzzle, in each puzzle's color</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan">
+      <div class="flex items-end justify-between mb-2">
+        <div class="text-[10px] font-pixel tracking-wider text-zinc-400">LEVEL SCORE</div>
+        <div class="font-pixel text-sm text-white"><span class="text-neon-cyan glow-cyan">320</span><span class="text-zinc-600"> / 500</span></div>
+      </div>
+      <div class="relative">
+        <!-- bar -->
+        <div class="h-6 rounded-md bg-arcade-well panel-inset flex gap-[3px] p-[3px] overflow-hidden">
+          <div class="seg rounded-[3px]" style="width:78%;background:linear-gradient(180deg,#67e8f9,#22d3ee);box-shadow:0 0 6px #22d3ee99"></div>
+          <div class="flex-1 rounded-[3px] bg-black/40 flex gap-[3px] p-0 overflow-hidden"><div class="seg rounded-[2px]" style="width:45%;background:linear-gradient(180deg,#fb7bb6,#ff2d95)"></div></div>
+        </div>
+        <p class="text-[10px] text-zinc-600 mt-1">↑ illustrative — see real quilt below</p>
+      </div>
+      <!-- proper quilt: 5 fixed-width cells each fills internally -->
+      <div class="relative mt-3">
+        <div class="h-7 rounded-lg bg-arcade-well panel-inset grid grid-cols-5 gap-[3px] p-[3px] overflow-visible">
+          <div class="rounded-[4px] bg-black/50 overflow-hidden flex items-end"><div class="w-full" style="height:78%;background:linear-gradient(0deg,#22d3ee,#67e8f9);box-shadow:0 0 6px #22d3ee"></div></div>
+          <div class="rounded-[4px] bg-black/50 overflow-hidden flex items-end"><div class="w-full" style="height:45%;background:linear-gradient(0deg,#ff2d95,#fb7bb6)"></div></div>
+          <div class="rounded-[4px] bg-black/50 overflow-hidden flex items-end"><div class="w-full" style="height:0%;"></div></div>
+          <div class="rounded-[4px] bg-black/50 overflow-hidden flex items-end"><div class="w-full" style="height:92%;background:linear-gradient(0deg,#39d98a,#6ee7b7)"></div></div>
+          <div class="rounded-[4px] bg-black/50 overflow-hidden flex items-end"><div class="w-full" style="height:0%;"></div></div>
+          <!-- 65% flag -->
+          <div class="absolute -top-2 bottom-[-14px]" style="left:65%">
+            <div class="w-[2px] h-full bg-neon-yellow/80" style="box-shadow:0 0 6px #facc15"></div>
+            <div class="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-neon-yellow glow-gold whitespace-nowrap">🔓 65%</div>
+          </div>
+        </div>
+        <div class="flex justify-between mt-3 text-[9px] font-pixel tracking-wide text-zinc-600">
+          <span class="text-neon-cyan/70">CLA</span><span class="text-neon-magenta/60">CHR</span><span>SEQ</span><span class="text-neon-green/70">GLI</span><span>RID</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A2: continuous neon fill with milestone ticks -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">A2 · Continuous fill <span class="text-zinc-600 normal-case tracking-normal">— XP-bar, milestone ticks at 65 / 80 / 95</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan">
+      <div class="flex items-end justify-between mb-2">
+        <div class="text-[10px] font-pixel tracking-wider text-zinc-400">LEVEL SCORE</div>
+        <div class="font-pixel text-sm"><span class="text-neon-cyan glow-cyan">64%</span></div>
+      </div>
+      <div class="relative pt-5">
+        <!-- milestone flags above the bar -->
+        <div class="absolute top-0 text-[8px] font-pixel whitespace-nowrap text-neon-yellow glow-gold" style="left:65%;transform:translateX(-50%)">🔓 UNLOCK</div>
+        <div class="absolute top-0 text-[8px] font-pixel whitespace-nowrap text-zinc-600" style="left:80%;transform:translateX(-50%)">🎁</div>
+        <div class="absolute top-0 text-[8px] font-pixel whitespace-nowrap text-zinc-600" style="left:95%;transform:translateX(-50%)">⚡</div>
+        <div class="h-5 rounded-full bg-arcade-well panel-inset overflow-hidden relative">
+          <div class="seg h-full rounded-full" style="width:64%;background:linear-gradient(90deg,#0891b2,#22d3ee 70%,#67e8f9);box-shadow:0 0 10px #22d3ee99"></div>
+          <!-- ticks -->
+          <div class="absolute top-0 bottom-0 w-[2px] bg-neon-yellow" style="left:65%;box-shadow:0 0 6px #facc15"></div>
+          <div class="absolute top-0 bottom-0 w-[2px] bg-white/20" style="left:80%"></div>
+          <div class="absolute top-0 bottom-0 w-[2px] bg-white/20" style="left:95%"></div>
+        </div>
+      </div>
+      <p class="text-[11px] text-zinc-500 mt-3 leading-snug">Reach <b class="text-neon-yellow">65%</b> to unlock the next level. <span class="text-zinc-600">80% → reward · 95% → superpower (soon)</span></p>
+    </div>
+  </div>
+
+  <!-- A3: chunky beveled w/ lock pin -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">A3 · Milestone pin <span class="text-zinc-600 normal-case tracking-normal">— one hero benchmark, lock flips when passed</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan">
+      <div class="flex items-end justify-between mb-3">
+        <div class="text-[10px] font-pixel tracking-wider text-zinc-400">LEVEL SCORE</div>
+        <div class="font-pixel text-sm text-white"><span class="text-neon-cyan glow-cyan">320</span><span class="text-zinc-600">/500</span></div>
+      </div>
+      <div class="relative pt-1 pb-7">
+        <div class="h-8 rounded-xl bg-arcade-well panel-inset overflow-hidden border border-black/40 relative">
+          <div class="seg h-full" style="width:64%;background:linear-gradient(90deg,#0e7490,#22d3ee 60%,#34d399);box-shadow:0 0 14px #22d3ee88"></div>
+        </div>
+        <!-- pin -->
+        <div class="absolute" style="left:65%;top:0;bottom:0;transform:translateX(-50%)">
+          <div class="w-[3px] h-8 mt-1 bg-neon-yellow/90 rounded" style="box-shadow:0 0 8px #facc15"></div>
+          <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 flex flex-col items-center">
+            <div class="w-9 h-9 rounded-full bg-arcade-bg border-2 border-neon-yellow grid place-items-center text-base" style="box-shadow:0 0 10px #facc1577">🔒</div>
+            <div class="text-[8px] font-pixel text-neon-yellow glow-gold mt-1">NEXT LVL · 65%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- SECTION B — CAROUSEL + PUZZLE DETAIL -->
+<!-- ============================================================= -->
+<h2 class="text-lg font-extrabold text-neon-magenta glow-mag mb-1">B · Puzzle carousel + detail</h2>
+<p class="text-zinc-500 mb-5 text-sm max-w-3xl">Stripped emblems (no card box, no star). Focusing a puzzle reveals its detail: name, your score %, instruction animation, PLAY. <b>Click the emblems / thumbnails / arrows.</b></p>
+
+<div class="flex gap-8 items-start flex-wrap">
+
+  <!-- B1: peek coverflow -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">B1 · Peek coverflow <span class="text-zinc-600 normal-case tracking-normal">— neighbors peek, detail below</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan min-h-[560px]">
+      <button class="text-neon-cyan text-sm mb-3 glow-cyan font-semibold">&larr; Map</button>
+      <div class="text-center mb-1"><div class="font-pixel text-[8px] tracking-[0.25em] text-neon-magenta glow-mag">THE HOLLOWS</div></div>
+      <h2 class="text-center font-pixel text-[16px] text-neon-cyan glow-cyan mb-4">VACANT HEIGHTS</h2>
+      <!-- mini score bar reused -->
+      <div class="h-4 rounded-full bg-arcade-well panel-inset overflow-hidden relative mb-1">
+        <div class="h-full rounded-full" style="width:64%;background:linear-gradient(90deg,#0891b2,#22d3ee)"></div>
+        <div class="absolute top-0 bottom-0 w-[2px] bg-neon-yellow" style="left:65%;box-shadow:0 0 6px #facc15"></div>
+      </div>
+      <div class="text-right text-[9px] font-pixel text-zinc-500 mb-5">320/500 · 🔓65%</div>
+      <!-- coverflow track -->
+      <div class="relative h-[150px] flex items-center justify-center overflow-hidden" id="b1-track"></div>
+      <!-- dots -->
+      <div class="flex justify-center gap-2 my-3" id="b1-dots"></div>
+      <!-- detail -->
+      <div id="b1-detail"></div>
+    </div>
+  </div>
+
+  <!-- B2: filmstrip + detail -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">B2 · Filmstrip <span class="text-zinc-600 normal-case tracking-normal">— all 5 visible, big detail below</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan min-h-[560px]">
+      <button class="text-neon-cyan text-sm mb-3 glow-cyan font-semibold">&larr; Map</button>
+      <h2 class="text-center font-pixel text-[16px] text-neon-cyan glow-cyan mb-4">VACANT HEIGHTS</h2>
+      <div class="h-4 rounded-full bg-arcade-well panel-inset overflow-hidden relative mb-1">
+        <div class="h-full rounded-full" style="width:64%;background:linear-gradient(90deg,#0891b2,#22d3ee)"></div>
+        <div class="absolute top-0 bottom-0 w-[2px] bg-neon-yellow" style="left:65%;box-shadow:0 0 6px #facc15"></div>
+      </div>
+      <div class="text-right text-[9px] font-pixel text-zinc-500 mb-4">320/500 · 🔓65%</div>
+      <!-- thumbnails -->
+      <div class="flex justify-between gap-1.5 mb-5" id="b2-strip"></div>
+      <!-- detail -->
+      <div id="b2-detail"></div>
+    </div>
+  </div>
+
+  <!-- B3: full-bleed swipe deck -->
+  <div class="phone">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2 font-bold">B3 · Swipe deck <span class="text-zinc-600 normal-case tracking-normal">— emblem + detail are one page</span></div>
+    <div class="rounded-2xl bg-arcade-bg ring-1 ring-arcade-edge p-5 relative scan min-h-[560px]">
+      <button class="text-neon-cyan text-sm mb-3 glow-cyan font-semibold">&larr; Map</button>
+      <h2 class="text-center font-pixel text-[16px] text-neon-cyan glow-cyan mb-4">VACANT HEIGHTS</h2>
+      <div class="h-4 rounded-full bg-arcade-well panel-inset overflow-hidden relative mb-1">
+        <div class="h-full rounded-full" style="width:64%;background:linear-gradient(90deg,#0891b2,#22d3ee)"></div>
+        <div class="absolute top-0 bottom-0 w-[2px] bg-neon-yellow" style="left:65%;box-shadow:0 0 6px #facc15"></div>
+      </div>
+      <div class="text-right text-[9px] font-pixel text-zinc-500 mb-4">320/500 · 🔓65%</div>
+      <div class="flex items-center gap-2">
+        <button class="b3-arrow text-neon-cyan text-2xl shrink-0 w-7" data-d="-1">‹</button>
+        <div id="b3-page" class="flex-1"></div>
+        <button class="b3-arrow text-neon-cyan text-2xl shrink-0 w-7" data-d="1">›</button>
+      </div>
+      <div class="flex justify-center gap-2 mt-3" id="b3-dots"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- puzzle data ----
+const PUZZLES = [
+  { key:'classic', name:'The Classic', accent:'#22d3ee', bannerC:'#0e7490', score:78, glyph:'classic', shieldBg:'linear-gradient(135deg,#0a1622,#05080f)' },
+  { key:'colors',  name:'Chromatic',   accent:'#ff2d95', bannerC:'#9d174d', score:45, glyph:'quad',    shieldBg:'#0a1226' },
+  { key:'seq',     name:'Sequential',  accent:'#f59e0b', bannerC:'#b45309', score:0,  glyph:'seq',     shieldBg:'linear-gradient(135deg,#334155,#0f172a)' },
+  { key:'flash',   name:'Glimpse',     accent:'#39d98a', bannerC:'#15803d', score:92, glyph:'eyes',    shieldBg:'radial-gradient(circle at 50% 38%,#16233f,#070b18)' },
+  { key:'riddle',  name:'Riddle',      accent:'#2dd4bf', bannerC:'#0f766e', score:0,  glyph:'riddle',  shieldBg:'linear-gradient(135deg,#2dd4bf,#0f766e)', soon:true },
+];
+
+// ---- glyph svg/html ----
+function glyphHTML(kind){
+  if(kind==='classic'){
+    const c='width:14px;height:14px;border-radius:3px;background:linear-gradient(180deg,#67e8f9,#22d3ee);box-shadow:0 0 8px rgba(34,211,238,.6),inset 0 1px 0 rgba(255,255,255,.45)';
+    const e='width:14px;height:14px';
+    return `<div style="display:grid;grid-template-columns:repeat(3,14px);gap:3px"><span style="${c}"></span><span style="${c}"></span><span style="${c}"></span><span style="${e}"></span><span style="${c}"></span><span style="${e}"></span></div>`;
+  }
+  if(kind==='quad'){
+    const b=(col,lt)=>`width:20px;height:20px;border-radius:4px;background:linear-gradient(180deg,${lt},${col});box-shadow:0 0 7px ${col}99,inset 0 1px 0 rgba(255,255,255,.45)`;
+    return `<div style="display:grid;grid-template-columns:repeat(2,20px);gap:4px"><span style="${b('#22d3ee','#67e8f9')}"></span><span style="${b('#ff2d95','#fb7bb6')}"></span><span style="${b('#f59e0b','#fbbf24')}"></span><span style="${b('#39d98a','#6ee7b7')}"></span></div>`;
+  }
+  if(kind==='seq'){
+    const blk=(col,rot,ml,n)=>`<div style="transform:rotate(${rot}deg);margin-left:${ml}px" class="w-[26px] h-[26px] rounded-[7px] grid place-items-center" ><div style="width:100%;height:100%;border-radius:7px;background:${col};box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.22)" class="grid place-items-center"><span class="font-black text-[15px] text-white">${n}</span></div></div>`;
+    return `<div class="flex items-center">${blk('#ef4444',-9,0,1)}${blk('#0ea5e9',5,-4,2)}${blk('#fbbf24',-4,-4,3)}</div>`;
+  }
+  if(kind==='eyes') return `<span style="font-size:42px;line-height:1">👀</span>`;
+  if(kind==='riddle') return `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>`;
+}
+
+// ---- shield emblem (no card box) ----
+function emblem(p, size=124){
+  const h = size*132/124;
+  const dim = p.soon ? 'opacity:.5;filter:grayscale(.6)' : '';
+  return `
+  <div style="position:relative;width:${size}px;height:${h}px;${dim}">
+    <div style="position:absolute;inset:0;clip-path:path('M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z');background:${p.shieldBg};transform:scale(${size/124});transform-origin:top left"></div>
+    <svg style="position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 6px ${p.accent}66)" viewBox="0 0 124 132" preserveAspectRatio="none">
+      <path d="M62 4 L116 23 V66 C116 99 95 120 62 130 C29 120 8 99 8 66 V23 Z" fill="none" stroke="${p.accent}" stroke-width="3"/>
+      <path d="M62 13 L108 29 V66 C108 95 89 113 62 122 C35 113 16 95 16 66 V29 Z" fill="none" stroke="${p.accent}" stroke-width="1" opacity=".45"/>
+    </svg>
+    <div style="position:absolute;left:0;right:0;top:${27*size/124}px;height:${72*size/124}px;display:grid;place-items:center;transform:scale(${size/124})">${glyphHTML(p.glyph)}</div>
+    <svg viewBox="0 0 160 40" style="position:absolute;left:50%;transform:translateX(-50%);bottom:${4*size/124}px;width:${142*size/124}px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">
+      <path d="M4 7 L156 7 L147 22 L156 37 L4 37 L13 22 Z" fill="${p.bannerC}" stroke="rgba(255,255,255,.4)" stroke-width="1.4"/>
+      <text x="80" y="23" text-anchor="middle" dominant-baseline="central" fill="#fff" font-family="Inter,sans-serif" font-weight="900" font-size="12.5" letter-spacing=".3">${p.name.toUpperCase()}</text>
+    </svg>
+  </div>`;
+}
+
+// ---- instruction animation demo ----
+function demoAnim(p){
+  // a 3-wide mini grid; the accent piece slides into the lit gap, loops
+  const cell='width:20px;height:20px;border-radius:3px';
+  const fill=`${cell};background:#11202a;box-shadow:inset 0 0 0 1px #18323b`;
+  const gap=`${cell};background:${p.accent}22;box-shadow:inset 0 0 0 1px ${p.accent}`;
+  return `
+  <div style="background:#0a141a;border:1px solid #16323b;border-radius:10px;padding:14px" class="relative overflow-hidden">
+    <div class="text-[8px] font-pixel tracking-wider text-zinc-500 mb-2 text-center">HOW TO PLAY</div>
+    <div class="grid place-items-center">
+      <div style="display:grid;grid-template-columns:repeat(3,20px);gap:3px;position:relative">
+        <span style="${fill}"></span><span style="${fill}"></span><span style="${fill}"></span>
+        <span style="${fill}"></span><span class="demo-gap" style="${gap}"></span><span style="${fill}"></span>
+        <span style="${fill}"></span><span style="${fill}"></span><span style="${fill}"></span>
+        <!-- flying piece lands on center -->
+        <span class="demo-piece" style="${cell};position:absolute;left:${23}px;top:${23}px;background:linear-gradient(180deg,#fff6,${p.accent});box-shadow:0 0 8px ${p.accent}"></span>
+      </div>
+    </div>
+    <div class="text-[10px] text-zinc-500 text-center mt-2 leading-snug">${p.demoNote||'Memorize the gaps, then pick the pieces that fill them.'}</div>
+  </div>`;
+}
+PUZZLES[1].demoNote='Match each gap by shape <b>and</b> color.';
+PUZZLES[2].demoNote='Fill the gaps in numbered order: 1 → 2 → 3.';
+PUZZLES[3].demoNote='The board flashes once. Blink and you miss it.';
+PUZZLES[4].demoNote='A new kind of puzzle. Coming soon.';
+
+// ---- puzzle detail panel ----
+function detail(p){
+  const scoreChip = p.soon
+    ? `<span class="text-[10px] font-pixel text-zinc-500 px-2 py-1 rounded bg-white/5">COMING SOON</span>`
+    : p.score>0
+      ? `<span class="text-[11px] font-pixel px-2 py-1 rounded" style="color:${p.accent};background:${p.accent}1a">YOUR BEST · ${p.score}%</span>`
+      : `<span class="text-[10px] font-pixel text-zinc-500 px-2 py-1 rounded bg-white/5">NOT PLAYED</span>`;
+  const playBtn = p.soon
+    ? `<button disabled class="w-full mt-4 py-3 rounded-xl font-pixel text-[11px] tracking-wider text-zinc-600 bg-white/5 cursor-not-allowed">SOON</button>`
+    : `<button class="w-full mt-4 py-3 rounded-xl font-pixel text-[11px] tracking-wider text-black" style="background:linear-gradient(180deg,#fff,${p.accent});box-shadow:0 0 16px ${p.accent}88">▶ PLAY</button>`;
+  return `
+  <div class="rounded-2xl border bg-arcade-panel panel-inset p-4" style="border-color:${p.accent}55;box-shadow:0 0 18px ${p.accent}22,inset 0 0 14px rgba(0,0,0,.6)">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-lg font-extrabold" style="color:${p.accent};text-shadow:0 0 8px ${p.accent}88">${p.name}</div>
+      ${scoreChip}
+    </div>
+    ${demoAnim(p)}
+    ${playBtn}
+  </div>`;
+}
+
+// ---- thumbnail (small emblem) ----
+function thumb(p, active){
+  const ring = active ? `box-shadow:0 0 0 2px ${p.accent},0 0 12px ${p.accent}88` : 'opacity:.55';
+  return `<button class="b-thumb rounded-xl p-1 transition" data-key="${p.key}" style="${ring}">
+    <div class="scale-[.52] origin-top -mb-[34px] -mt-1">${emblem(p, 124)}</div>
+  </button>`;
+}
+
+// =============== B1 coverflow ===============
+let b1i = 0;
+function renderB1(){
+  const track = document.getElementById('b1-track');
+  track.innerHTML = PUZZLES.map((p,idx)=>{
+    const d = idx-b1i;
+    if(Math.abs(d)>1) return '';
+    const scale = d===0?1:0.62;
+    const x = d*120;
+    const z = d===0?10:5;
+    const op = d===0?1:0.4;
+    return `<div class="car-item absolute cursor-pointer" data-i="${idx}" style="transform:translateX(${x}px) scale(${scale});opacity:${op};z-index:${z}">${emblem(p,124)}</div>`;
+  }).join('');
+  track.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>{b1i=+el.dataset.i;renderB1();});
+  document.getElementById('b1-dots').innerHTML = PUZZLES.map((p,idx)=>`<span class="w-2 h-2 rounded-full transition" style="background:${idx===b1i?p.accent:'#334155'};box-shadow:${idx===b1i?`0 0 6px ${p.accent}`:'none'}"></span>`).join('');
+  document.getElementById('b1-detail').innerHTML = detail(PUZZLES[b1i]);
+}
+
+// =============== B2 filmstrip ===============
+let b2key='classic';
+function renderB2(){
+  document.getElementById('b2-strip').innerHTML = PUZZLES.map(p=>thumb(p, p.key===b2key)).join('');
+  document.querySelectorAll('#b2-strip .b-thumb').forEach(el=>el.onclick=()=>{b2key=el.dataset.key;renderB2();});
+  document.getElementById('b2-detail').innerHTML = detail(PUZZLES.find(p=>p.key===b2key));
+}
+
+// =============== B3 swipe deck ===============
+let b3i=0;
+function renderB3(){
+  const p=PUZZLES[b3i];
+  document.getElementById('b3-page').innerHTML = `
+    <div class="flex flex-col items-center">
+      <div class="-mb-2">${emblem(p,140)}</div>
+      ${detail(p)}
+    </div>`;
+  document.getElementById('b3-dots').innerHTML = PUZZLES.map((pp,idx)=>`<span class="w-2 h-2 rounded-full" style="background:${idx===b3i?pp.accent:'#334155'};box-shadow:${idx===b3i?`0 0 6px ${pp.accent}`:'none'}"></span>`).join('');
+}
+document.querySelectorAll('.b3-arrow').forEach(b=>b.onclick=()=>{b3i=(b3i+ +b.dataset.d+PUZZLES.length)%PUZZLES.length;renderB3();});
+
+renderB1(); renderB2(); renderB3();
+</script>
+</body>
+</html>

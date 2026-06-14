@@ -9,6 +9,11 @@ export const COMPONENT_MAX = 100
 export const COMPONENT_COUNT = 5
 export const LEVEL_MAX = COMPONENT_MAX * COMPONENT_COUNT // 500
 
+/** Fraction of the level total that unlocks the next level. */
+export const LEVEL_UNLOCK_RATIO = 0.65
+/** Points needed to clear a level and unlock the next one (65% of 500). */
+export const LEVEL_UNLOCK_THRESHOLD = Math.round(LEVEL_MAX * LEVEL_UNLOCK_RATIO) // 325
+
 export interface ComponentScoreInput {
   solved: boolean
   /** Wrong submissions before the successful one (0, 1, or 2). */
@@ -49,6 +54,11 @@ export function levelStarsFromTotal(total: number, mainSolved: boolean): number 
   return 1
 }
 
+/** True once a level's total clears the 65% unlock threshold. */
+export function levelUnlocked(total: number): boolean {
+  return total >= LEVEL_UNLOCK_THRESHOLD
+}
+
 /** 1..5 difficulty rating derived from the level's gap count. */
 export function difficultyPips(gapCount: number): number {
   if (gapCount <= 4) return 1
@@ -56,6 +66,12 @@ export function difficultyPips(gapCount: number): number {
   if (gapCount <= 10) return 3
   if (gapCount <= 13) return 4
   return 5
+}
+
+/** Worded difficulty tier (EASY..MASTER), keyed off the 1..5 pip rating. */
+const DIFFICULTY_LABELS = ['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'MASTER'] as const
+export function difficultyLabel(gapCount: number): string {
+  return DIFFICULTY_LABELS[difficultyPips(gapCount) - 1]
 }
 
 /** Deterministic, plausible stand-in for a future server-backed global best (300..500). */
