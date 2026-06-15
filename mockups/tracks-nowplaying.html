@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Tracks: Now Playing (playlist)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{ --edge:#1d273f; --ink:#e6ecff; --dim:#7c8bb0; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#04060c;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:18px 12px 40px}
+  .hint{font-size:12px;color:var(--dim);margin-bottom:12px;max-width:420px;text-align:center}
+
+  .phone{width:420px;max-width:100%;height:780px;border-radius:30px;border:1px solid var(--edge);
+    background:#06080f;overflow:hidden;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column}
+  /* color wash from current album */
+  .wash{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,var(--accent),transparent 55%);opacity:.22;transition:.4s}
+  .topbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:0 0 auto;position:relative;z-index:2}
+  .wordmark{font-weight:900;letter-spacing:.14em;font-size:13px;color:#cdd9ff}
+  .keychip{font-size:10px;font-weight:700;color:#fde68a;background:rgba(251,191,36,.12);
+    border:1px solid rgba(251,191,36,.35);border-radius:999px;padding:4px 9px}
+
+  .scroll{flex:1;overflow-y:auto;position:relative;z-index:2;padding:6px 20px 22px}
+  .scroll::-webkit-scrollbar{width:0}
+
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:6px 2px 14px}
+
+  /* big album art */
+  .cover{width:230px;height:230px;margin:0 auto;border-radius:18px;display:grid;grid-template-columns:repeat(6,1fr);
+    grid-template-rows:repeat(6,1fr);gap:5px;padding:16px;background:linear-gradient(150deg,#0c1430,#0a0f22);
+    border:1px solid var(--edge);box-shadow:0 24px 60px -12px var(--accent),0 0 0 1px rgba(255,255,255,.03)}
+  .cover span{border-radius:5px;background:#121a30}
+  .cover span.on{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+  .nowmeta{text-align:center;margin:20px 0 6px}
+  .nowmeta .album{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .nowmeta .track{font-size:30px;font-weight:900;color:#fff;margin:6px 0 4px}
+  .nowmeta .of{font-size:13px;color:var(--dim);font-weight:700}
+
+  /* scrubber */
+  .scrub{margin:16px 4px 4px;height:6px;border-radius:4px;background:#141d33;position:relative}
+  .scrub i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .scrub b{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 10px var(--accent)}
+  .scrubrow{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-weight:700;margin:6px 4px 0}
+
+  /* transport */
+  .transport{display:flex;align-items:center;justify-content:center;gap:22px;margin:18px 0 6px}
+  .transport button{appearance:none;border:0;background:transparent;color:#cdd9ff;font-size:22px;cursor:pointer}
+  .transport .big{width:74px;height:74px;border-radius:50%;font-size:26px;color:#04140a;
+    background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 28px rgba(34,197,94,.5);display:grid;place-items:center}
+
+  .autoplay{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-size:11px;color:var(--dim);font-weight:700}
+  .toggle{width:34px;height:19px;border-radius:999px;background:var(--accent);position:relative;box-shadow:0 0 10px var(--accent)}
+  .toggle::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+
+  .milestone{margin:18px 0 4px;display:flex;align-items:center;gap:9px;border-radius:12px;padding:11px 13px;
+    background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.32)}
+  .milestone .txt{font-size:12px;font-weight:700;color:#fde68a}
+  .milestone .txt small{display:block;color:#cda;opacity:.8;font-weight:600;font-size:10px;margin-top:1px}
+
+  /* up next queue */
+  .queue{margin-top:24px}
+  .queue h4{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 10px 2px}
+  .q-row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .q-row .qn{font-size:13px;font-weight:800;color:#cdd9ff;min-width:30px}
+  .q-row .qt{flex:1;font-size:13px;color:var(--dim)}
+  .q-row.key .qt{color:#fde68a}
+
+  /* album shelf */
+  .shelf{margin-top:26px}
+  .shelf h4{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 12px 2px}
+  .albums{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x mandatory}
+  .albums::-webkit-scrollbar{height:0}
+  .album-card{flex:0 0 auto;width:118px;cursor:pointer;scroll-snap-align:start}
+  .album-card .mini{width:118px;height:118px;border-radius:12px;display:grid;grid-template-columns:repeat(4,1fr);
+    grid-template-rows:repeat(4,1fr);gap:3px;padding:9px;background:#0a1020;border:1px solid var(--edge);position:relative}
+  .album-card .mini span{border-radius:3px;background:#121a30}
+  .album-card .mini span.on{background:var(--a);box-shadow:0 0 7px var(--a)}
+  .album-card.active .mini{box-shadow:0 0 0 2px var(--a),0 0 22px -4px var(--a)}
+  .album-card.locked .mini{opacity:.4}
+  .album-card .lk{position:absolute;inset:0;display:grid;place-items:center;font-size:26px}
+  .album-card .t{font-size:12px;font-weight:800;color:#cdd9ff;margin-top:8px}
+  .album-card .s{font-size:10px;color:var(--dim);margin-top:1px}
+</style>
+</head>
+<body>
+  <div class="hint">Path B — pure playlist. The whole experience is a <b>Now Playing</b> card with autoplay-next. Switching tracks = picking another <b>album</b> from the shelf at the bottom. New albums unlock at milestones.</div>
+  <div class="phone">
+    <div class="wash" id="wash"></div>
+    <div class="topbar"><span class="wordmark">GAP&nbsp;CITY</span><span class="keychip">🔑 1 key ready</span></div>
+    <div class="scroll" id="scroll"></div>
+  </div>
+
+<script>
+const TRACKS = [
+  { key:'classic',    name:'THE CLASSIC', floors:45, accent:'#38bdf8', progress:13, unlocked:true,  keysAt:{15:'SEQUENTIAL'} },
+  { key:'chromatic',  name:'CHROMATIC',   floors:38, accent:'#e879f9', progress:6,  unlocked:true,  keysAt:{12:'GLIMPSE'}, from:'The Classic · 9' },
+  { key:'sequential', name:'SEQUENTIAL',  floors:44, accent:'#fbbf24', progress:0,  unlocked:false, from:'The Classic · 15' },
+  { key:'glimpse',    name:'GLIMPSE',     floors:51, accent:'#34d399', progress:0,  unlocked:false, from:'Chromatic · 12' },
+];
+let active='classic';
+const scroll=document.getElementById('scroll'), wash=document.getElementById('wash');
+const T=()=>TRACKS.find(t=>t.key===active);
+const cells=(n,seed,acc)=>Array.from({length:n}).map((_,i)=>`<span class="${(seed*3+i*7)%3===0?'on':''}" style="--a:${acc}"></span>`).join('');
+
+function render(){
+  const t=T(); const cur=t.progress+1; const pct=Math.round(t.progress/t.floors*100);
+  wash.style.setProperty('--accent',t.accent);
+  let milestone='';
+  const up=Object.keys(t.keysAt||{}).map(Number).filter(l=>l>=cur).sort((a,b)=>a-b)[0];
+  if(up){const away=up-cur;
+    milestone=`<div class="milestone"><span style="font-size:16px">🔑</span><div class="txt">Unlocks the ${t.keysAt[up]} album
+      <small>${away===0?'clear this track':away===1?'next track':away+' tracks away'}</small></div></div>`;}
+  const queue=[cur+1,cur+2,cur+3,cur+4].filter(l=>l<=t.floors).map(l=>{
+    const k=t.keysAt&&t.keysAt[l];
+    return `<div class="q-row ${k?'key':''}"><span class="qn">${l}</span>
+      <span class="qt">Level ${l}${k?` · 🔑 ${k} key`:''}</span></div>`;}).join('');
+  const shelf=TRACKS.map(a=>{
+    const lockOverlay=a.unlocked?'':`<div class="lk">🔒</div>`;
+    const sub=a.unlocked?`${a.progress}/${a.floors} cleared`:`🔑 ${a.from}`;
+    return `<div class="album-card ${a.key===active?'active':''} ${a.unlocked?'':'locked'}" data-k="${a.key}">
+      <div class="mini" style="--a:${a.accent}">${cells(16,a.progress+1,a.accent)}${lockOverlay}</div>
+      <div class="t">${a.name.replace('THE ','')}</div><div class="s">${sub}</div></div>`;}).join('');
+  scroll.style.setProperty('--accent',t.accent);
+  scroll.innerHTML=`
+    <div class="eyebrow">Now Playing</div>
+    <div class="cover" style="--accent:${t.accent}">${cells(36,cur,t.accent)}</div>
+    <div class="nowmeta"><div class="album">${t.name}</div>
+      <div class="track">Level ${cur}</div><div class="of">track ${cur} of ${t.floors}</div></div>
+    <div class="scrub"><i style="width:${pct}%"></i><b style="left:${pct}%"></b></div>
+    <div class="scrubrow"><span>${t.progress} cleared</span><span>${t.floors-t.progress} to go</span></div>
+    <div class="transport"><button>↺</button><button class="big">▶</button><button>⏭</button></div>
+    <div class="autoplay"><span>Autoplay next level</span><span class="toggle"></span></div>
+    ${milestone}
+    <div class="queue"><h4>Up next</h4>${queue}</div>
+    <div class="shelf"><h4>Your albums</h4><div class="albums">${shelf}</div></div>`;
+  scroll.querySelectorAll('.album-card').forEach(c=>c.addEventListener('click',()=>{
+    const a=TRACKS.find(x=>x.key===c.dataset.k); if(!a.unlocked) return; active=c.dataset.k; render();
+    scroll.scrollTo({top:0,behavior:'smooth'});
+  }));
+}
+render();
+</script>
+</body>
+</html>

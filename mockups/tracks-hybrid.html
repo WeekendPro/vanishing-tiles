@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Tracks: Hybrid (Now Playing + Network)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{ --bg:#06080f; --panel:#0d1322; --edge:#1d273f; --ink:#e6ecff; --dim:#7c8bb0; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#04060c;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:18px 12px 40px}
+  .hint{font-size:12px;color:var(--dim);margin-bottom:12px;max-width:420px;text-align:center}
+
+  .phone{width:420px;max-width:100%;height:780px;border-radius:30px;border:1px solid var(--edge);
+    background:radial-gradient(130% 90% at 50% -10%,#101b3a,#06080f 60%);overflow:hidden;position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column}
+  .topbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:0 0 auto}
+  .wordmark{font-weight:900;letter-spacing:.14em;font-size:13px;color:#cdd9ff}
+  .keychip{font-size:10px;font-weight:700;color:#fde68a;background:rgba(251,191,36,.12);
+    border:1px solid rgba(251,191,36,.35);border-radius:999px;padding:4px 9px}
+
+  /* view switch */
+  .switch{display:flex;justify-content:center;margin:2px 0 6px}
+  .switch .seg{display:inline-flex;background:#0c1326;border:1px solid var(--edge);border-radius:999px;padding:4px}
+  .switch button{appearance:none;border:0;background:transparent;color:var(--dim);font:inherit;font-weight:800;
+    font-size:12px;padding:7px 18px;border-radius:999px;cursor:pointer}
+  .switch button.on{background:linear-gradient(180deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 0 14px rgba(37,99,235,.5)}
+
+  .body{flex:1;position:relative;overflow:hidden}
+  .pane{position:absolute;inset:0;padding:8px 18px 18px;overflow-y:auto}
+  .pane::-webkit-scrollbar{width:0}
+
+  /* ===== NOW PLAYING focus ===== */
+  .np-eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);margin:6px 2px 12px}
+  .np-eyebrow .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .np-eyebrow .name{color:#fff}
+  .np-eyebrow .count{margin-left:auto;color:var(--dim);font-weight:700;letter-spacing:.04em}
+
+  .card{border-radius:20px;border:1px solid var(--edge);background:linear-gradient(180deg,#0e1630,#0a0f22);
+    padding:18px;box-shadow:0 0 40px -10px var(--accent),inset 0 1px 0 rgba(255,255,255,.05)}
+  .card .row{display:flex;gap:16px;align-items:center}
+  .art{width:104px;height:104px;flex:0 0 auto;border-radius:14px;display:grid;grid-template-columns:repeat(4,1fr);
+    grid-template-rows:repeat(4,1fr);gap:3px;padding:8px;background:#0a1020;border:1px solid var(--edge);
+    box-shadow:0 0 24px -6px var(--accent)}
+  .art span{border-radius:3px;background:#121a30}
+  .art span.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .meta{flex:1;min-width:0}
+  .meta .lvlword{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+  .meta .lvlnum{font-size:46px;font-weight:900;line-height:1;color:#fff;margin:2px 0 6px}
+  .pips{display:flex;gap:4px;margin-bottom:8px}
+  .pips i{width:16px;height:5px;border-radius:3px;background:#243049}
+  .pips i.on{background:var(--accent);box-shadow:0 0 7px var(--accent)}
+
+  .milestone{margin-top:14px;display:flex;align-items:center;gap:9px;border-radius:12px;padding:10px 12px;
+    background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.32)}
+  .milestone .k{font-size:16px}
+  .milestone .txt{font-size:12px;font-weight:700;color:#fde68a}
+  .milestone .txt small{display:block;color:#cda;opacity:.8;font-weight:600;font-size:10px;margin-top:1px}
+
+  .play{margin-top:16px;width:100%;border:0;border-radius:14px;font:inherit;font-weight:900;font-size:16px;
+    padding:16px;cursor:pointer;color:#04140a;background:linear-gradient(180deg,#22c55e,#16a34a);
+    box-shadow:0 0 22px rgba(34,197,94,.45);letter-spacing:.04em}
+  .subbtns{display:flex;gap:8px;margin-top:8px}
+  .subbtns button{flex:1;border:1px solid var(--edge);background:#0c1326;color:var(--dim);font:inherit;font-weight:800;
+    font-size:12px;padding:11px;border-radius:11px;cursor:pointer}
+
+  .upnext{margin-top:22px}
+  .upnext h4{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 8px 2px}
+  .un-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;background:#0a1020;
+    border:1px solid rgba(255,255,255,.04);margin-bottom:7px}
+  .un-row .n{font-size:12px;font-weight:800;color:var(--dim);min-width:58px}
+  .un-row .bar{flex:1;height:6px;border-radius:4px;background:#141d33}
+  .un-row.key{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.06)}
+  .un-row.key .n{color:#fde68a}
+  .un-row .tagk{font-size:10px;font-weight:800;color:#fde68a}
+
+  /* ===== NETWORK overview ===== */
+  .net-help{font-size:11px;color:var(--dim);text-align:center;margin:4px 0 6px}
+  svg{display:block;width:100%;height:auto}
+  .legend{display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:10px;color:var(--dim)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend .sw{width:18px;height:6px;border-radius:3px}
+</style>
+</head>
+<body>
+  <div class="hint">Path A+B hybrid — <b>Now Playing</b> is the friction-free focus (just tap Play); <b>Network</b> is the zoomed-out map where interchanges let you hop tracks. Toggle below.</div>
+  <div class="phone">
+    <div class="topbar"><span class="wordmark">GAP&nbsp;CITY</span><span class="keychip">🔑 1 key ready</span></div>
+    <div class="switch"><div class="seg">
+      <button data-v="now" class="on">Now Playing</button>
+      <button data-v="net">Network</button>
+    </div></div>
+    <div class="body" id="body"></div>
+  </div>
+
+<script>
+const TRACKS = [
+  { key:'classic',    name:'THE CLASSIC', floors:45, accent:'#38bdf8', progress:13, unlocked:true,  diff:3, keysAt:{9:{to:'CHROMATIC',earned:true},15:{to:'SEQUENTIAL',earned:false}} },
+  { key:'chromatic',  name:'CHROMATIC',   floors:38, accent:'#e879f9', progress:6,  unlocked:true,  diff:4, keysAt:{12:{to:'GLIMPSE',earned:false}}, from:'The Classic · 9' },
+  { key:'sequential', name:'SEQUENTIAL',  floors:44, accent:'#fbbf24', progress:0,  unlocked:false, diff:4, from:'The Classic · 15' },
+  { key:'glimpse',    name:'GLIMPSE',     floors:51, accent:'#34d399', progress:0,  unlocked:false, diff:5, from:'Chromatic · 12' },
+];
+let view='now', active='classic';
+const body=document.getElementById('body');
+const T=()=>TRACKS.find(t=>t.key===active);
+
+function artCells(seed){
+  return Array.from({length:16}).map((_,i)=>`<span class="${(seed*3+i*5)%3===0?'on':''}"></span>`).join('');
+}
+
+function nowPlaying(){
+  const t=T(); const cur=t.progress+1;
+  const pips=Array.from({length:5}).map((_,i)=>`<i class="${i<t.diff?'on':''}"></i>`).join('');
+  // imminent milestone on this track?
+  let milestone='';
+  const ks=t.keysAt||{};
+  const upcoming=Object.keys(ks).map(Number).filter(l=>l>=cur).sort((a,b)=>a-b)[0];
+  if(upcoming){const away=upcoming-cur;
+    milestone=`<div class="milestone"><span class="k">🔑</span><div class="txt">${ks[upcoming].to} key
+      <small>${away===0?'clear this level to unlock it':away===1?'1 level away':away+' levels away'}</small></div></div>`;}
+  // up next list
+  const un=[cur+1,cur+2,cur+3].filter(l=>l<=t.floors).map(l=>{
+    const k=ks[l];
+    return `<div class="un-row ${k?'key':''}"><span class="n">Level ${l}</span>
+      ${k?`<span class="tagk">🔑 ${k.to} key</span>`:`<span class="bar"></span>`}</div>`;
+  }).join('');
+  return `<div class="pane" style="--accent:${t.accent}">
+    <div class="np-eyebrow"><span class="dot"></span><span>Now Playing ·</span><span class="name">${t.name}</span>
+      <span class="count">${t.progress}/${t.floors}</span></div>
+    <div class="card">
+      <div class="row">
+        <div class="art">${artCells(cur)}</div>
+        <div class="meta"><div class="lvlword">Level</div><div class="lvlnum">${cur}</div>
+          <div class="pips">${pips}</div></div>
+      </div>
+      ${milestone}
+      <button class="play">▶  Play Level ${cur}</button>
+      <div class="subbtns"><button>↺ Replay last</button><button>⤺ Switch track</button></div>
+    </div>
+    <div class="upnext"><h4>Up next on this line</h4>${un}</div>
+  </div>`;
+}
+
+function network(){
+  const W=384,H=520,base=478,top=46,maxF=Math.max(...TRACKS.map(t=>t.floors));
+  const xs={classic:64,chromatic:158,sequential:252,glimpse:330};
+  const hOf=t=>(t.floors/maxF)*(base-top);
+  const yOf=(t,l)=>base-(l/t.floors)*hOf(t);
+  let bridges='',cols='';
+  TRACKS.forEach(t=>{
+    const x=xs[t.key],h=hOf(t),y0=base-h,fillY=base-(t.progress/t.floors)*h;
+    const cur=t.progress+1;
+    const lock=!t.unlocked;
+    // route bar
+    cols+=`<rect x="${x-13}" y="${y0}" width="26" height="${h}" rx="13" fill="#0c1326" stroke="#1d273f"/>`;
+    if(!lock) cols+=`<rect x="${x-13}" y="${fillY}" width="26" height="${base-fillY}" rx="13" fill="${t.accent}" opacity="0.85"/>`;
+    // current marker
+    if(!lock){const cy=yOf(t,cur);
+      cols+=`<circle cx="${x}" cy="${cy}" r="9" fill="#fff" stroke="${t.accent}" stroke-width="3"/>`;
+      cols+=`<text x="${x+18}" y="${cy+4}" fill="#fff" font-size="11" font-weight="800">L${cur}</text>`;}
+    // interchange nodes
+    Object.entries(t.keysAt||{}).forEach(([l,k])=>{
+      const cy=yOf(t,+l);
+      cols+=`<circle cx="${x}" cy="${cy}" r="7" fill="${k.earned?'#fde68a':'#0c1326'}" stroke="#fde68a" stroke-width="2"/>`;
+      const tgt=TRACKS.find(z=>z.name===k.to); if(tgt){const tx=xs[tgt.key];
+        bridges+=`<path d="M ${x} ${cy} C ${(x+tx)/2} ${cy}, ${(x+tx)/2} ${base-6}, ${tx} ${base-6}"
+          fill="none" stroke="#fde68a" stroke-width="2" stroke-dasharray="${k.earned?'0':'5 4'}" opacity="${k.earned?.9:.5}"/>`;}
+    });
+    // label + lock
+    cols+=`<text x="${x}" y="${base+18}" fill="#cdd9ff" font-size="10" font-weight="800" text-anchor="middle">${t.name.replace('THE ','')}</text>`;
+    cols+=`<text x="${x}" y="${base+31}" fill="#7c8bb0" font-size="8" text-anchor="middle">${lock?'🔒 '+t.from:t.progress+'/'+t.floors}</text>`;
+    if(lock) cols+=`<rect x="${x-13}" y="${y0}" width="26" height="${h}" rx="13" fill="#04060c" opacity="0.55"/>`;
+  });
+  return `<div class="pane">
+    <div class="net-help">Filled = cleared · ◯ = where you are · ◇ gold = interchange (hop tracks) · dashed bridge = locked</div>
+    <svg viewBox="0 0 ${W} ${H+24}">${bridges}${cols}
+      <line x1="20" y1="${base+6}" x2="${W-20}" y2="${base+6}" stroke="#33415f" stroke-width="1" opacity=".5"/>
+    </svg>
+    <div class="legend"><span><span class="sw" style="background:#38bdf8"></span>cleared</span>
+      <span>🔑 interchange</span><span>🔒 locked line</span></div>
+    <div class="net-help">Tap a line to ride it</div>
+  </div>`;
+}
+
+function render(){
+  body.innerHTML = view==='now'?nowPlaying():network();
+  if(view==='net') body.querySelectorAll('text').forEach(()=>{});
+  if(view==='net'){ // make whole svg tap → focus current; click columns
+    body.querySelector('svg').addEventListener('click',()=>{ view='now'; sync(); render(); });
+  }
+  body.querySelectorAll('.subbtns button')[1]?.addEventListener('click',()=>{view='net';sync();render();});
+}
+function sync(){document.querySelectorAll('.switch button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));}
+document.querySelector('.switch').addEventListener('click',e=>{if(!e.target.dataset.v)return;view=e.target.dataset.v;sync();render();});
+render();
+</script>
+</body>
+</html>
