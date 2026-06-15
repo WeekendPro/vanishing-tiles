@@ -17,6 +17,7 @@ import { ROUNDS_PER_LEVEL, ROUND_PILLAR_MAX, MAX_LIVES } from '@shared/core/scor
 import { ScoreStar } from './ScoreStar'
 import { GameOverReveal } from './GameOverReveal'
 import { IconButton, BackIcon, ReplayIcon, ForwardIcon } from './IconButton'
+import { GIT_TRACKS } from '../../lib/gitMap'
 
 type Stage = 'measuring' | 'flying' | 'badge' | 'scoring' | 'cta'
 
@@ -28,7 +29,7 @@ const BADGE_DURATION    = 400
 const SCORING_DURATION  = 1800
 
 export function ResolutionPhase() {
-  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, levelId, livesLost, replayComponent, retryComponent } =
+  const { selection, gaps, grid, resolution, applyPlacement, roundScore, commitRoundScore, retryRound, roundIndex, livesRemaining, advanceRound, mode, levelId, livesLost, replayComponent, retryComponent, gitTrack, gitLevel, nextGitLevel, replayGitLevel } =
     useGameStore(useShallow(s => ({
       selection: s.selection,
       gaps: s.gaps,
@@ -46,12 +47,17 @@ export function ResolutionPhase() {
       livesLost: s.livesLost,
       replayComponent: s.replayComponent,
       retryComponent: s.retryComponent,
+      gitTrack: s.gitTrack,
+      gitLevel: s.gitLevel,
+      nextGitLevel: s.nextGitLevel,
+      replayGitLevel: s.replayGitLevel,
     })))
-  const { showResults, openLevel, goNextLevel, hasNextLevel } = useNavStore(useShallow(s => ({
+  const { showResults, openLevel, goNextLevel, hasNextLevel, backToMap } = useNavStore(useShallow(s => ({
     showResults: s.showResults,
     openLevel: s.openLevel,
     goNextLevel: s.goNextLevel,
     hasNextLevel: s.hasNextLevel,
+    backToMap: s.backToMap,
   })))
   const solution = resolution?.placements ?? null
 
@@ -286,7 +292,28 @@ export function ResolutionPhase() {
         </div>
       )}
 
-      {stage === 'cta' && isJourney && (() => {
+      {stage === 'cta' && isJourney && gitTrack && (() => {
+        const atTop = (gitLevel ?? 0) >= GIT_TRACKS[gitTrack].floors
+        const showNext = (!isFailure || outOfLives) && !atTop
+        const onRepeat = isFailure && !outOfLives ? retryComponent : replayGitLevel
+        const buttons = [
+          <IconButton key="home" label="Git Map" accent="edge" onClick={() => backToMap()}>{BackIcon}</IconButton>,
+          <IconButton key="repeat" label="Replay" accent="cyan" onClick={() => onRepeat()}>{ReplayIcon}</IconButton>,
+          ...(showNext ? [<IconButton key="next" label="Next Level" accent="green" onClick={() => nextGitLevel()}>{ForwardIcon}</IconButton>] : []),
+        ]
+        return (
+          <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-4 pt-10 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent pointer-events-none">
+            <div
+              className="w-full max-w-sm pointer-events-auto grid gap-3"
+              style={{ gridTemplateColumns: `repeat(${buttons.length}, minmax(0, 1fr))` }}
+            >
+              {buttons}
+            </div>
+          </div>
+        )
+      })()}
+
+      {stage === 'cta' && isJourney && !gitTrack && (() => {
         const showNext = (!isFailure || outOfLives) && hasNextLevel()
         const onRepeat = isFailure && !outOfLives ? retryComponent : replayComponent
         const buttons = [

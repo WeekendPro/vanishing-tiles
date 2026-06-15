@@ -24,7 +24,7 @@ export interface JourneyTheme {
   levels: JourneyLevel[]
 }
 
-/** The uniform contract shared by TransitMap, MentalMapBrain, MentalMapComplex. */
+/** The uniform contract shared by TransitMap and MentalMapBrain. */
 export interface JourneyMapProps {
   themes: JourneyTheme[]
   onSelect: (levelId: string, locked: boolean) => void

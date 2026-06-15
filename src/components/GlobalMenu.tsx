@@ -160,7 +160,7 @@ export function GlobalMenu() {
 
           <Action label="Subway Map" active={mapStyle === 'transit'} onClick={() => chooseMap('transit')} />
           <Action label="Mental Map" active={mapStyle === 'mentalBrain'} onClick={() => chooseMap('mentalBrain')} />
-          <Action label="Mental Map (Complex)" active={mapStyle === 'mentalBrainComplex'} onClick={() => chooseMap('mentalBrainComplex')} />
+          <Action label="Git Map" active={mapStyle === 'git'} onClick={() => chooseMap('git')} />
 
           <Action label="Settings" tone="muted" onClick={() => { /* no settings screen yet */ }} />
 

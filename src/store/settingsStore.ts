@@ -13,7 +13,7 @@ export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
  * layer over the server value; consumers (selectors below) shouldn't need to change.
  */
 /** Which Journey map rendering to use. R&D toggle while we compare directions. */
-export type MapStyle = 'transit' | 'mentalBrain' | 'mentalBrainComplex'
+export type MapStyle = 'transit' | 'mentalBrain' | 'git'
 
 export interface UserSettings {
   /** Per-puzzle-type opt-out of the instruction (briefing) page. Keyed by component. */
