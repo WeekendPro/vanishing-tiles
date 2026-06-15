@@ -9,7 +9,7 @@ import { LockIcon } from './ui'
 import { TransitMap } from './JourneyMap'
 import type { JourneyTheme } from './JourneyMap/types'
 import { MentalMapBrain } from './JourneyMap/MentalMapBrain'
-import { MentalMapComplex } from './JourneyMap/MentalMapComplex'
+import { GitMap } from './JourneyMap/GitMap'
 import { useSettingsStore } from '../store/settingsStore'
 
 function LegendItem({ variant, label }: { variant: 'complete' | 'current' | 'locked'; label: string }) {
@@ -86,24 +86,26 @@ export function JourneyScreen() {
         )}
       </div>
       <div className="px-4 pb-10">
-        {mapStyle === 'mentalBrain' ? (
+        {mapStyle === 'git' ? (
+          <GitMap />
+        ) : mapStyle === 'mentalBrain' ? (
           <MentalMapBrain themes={themes} onSelect={openLevel} />
-        ) : mapStyle === 'mentalBrainComplex' ? (
-          <MentalMapComplex themes={themes} onSelect={openLevel} />
         ) : (
           <TransitMap themes={themes} onSelect={openLevel} />
         )}
       </div>
-      <div
-        className="sticky bottom-0 z-20 flex justify-center px-4 pb-3 pt-6"
-        style={{ background: 'linear-gradient(to top, #06080f 70%, transparent)' }}
-      >
-        <div className="flex items-center justify-center gap-5 rounded-full border-2 border-arcade-edge bg-arcade-panel px-5 py-2 shadow-panel-inset">
-          <LegendItem variant="complete" label="Complete" />
-          <LegendItem variant="current" label="Current" />
-          <LegendItem variant="locked" label="Locked" />
+      {mapStyle !== 'git' && (
+        <div
+          className="sticky bottom-0 z-20 flex justify-center px-4 pb-3 pt-6"
+          style={{ background: 'linear-gradient(to top, #06080f 70%, transparent)' }}
+        >
+          <div className="flex items-center justify-center gap-5 rounded-full border-2 border-arcade-edge bg-arcade-panel px-5 py-2 shadow-panel-inset">
+            <LegendItem variant="complete" label="Complete" />
+            <LegendItem variant="current" label="Current" />
+            <LegendItem variant="locked" label="Locked" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

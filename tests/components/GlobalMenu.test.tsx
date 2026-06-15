@@ -39,10 +39,10 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(screen.getByRole('button', { name: /Subway Map/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Mental Map$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Mental Map \(Complex\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Git Map/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Mental Map \(Complex\)/i }))
-    expect(useSettingsStore.getState().settings.mapStyle).toBe('mentalBrainComplex')
+    await user.click(screen.getByRole('button', { name: /Git Map/i }))
+    expect(useSettingsStore.getState().settings.mapStyle).toBe('git')
     expect(useNavStore.getState().appView).toBe('journey')
   })
 

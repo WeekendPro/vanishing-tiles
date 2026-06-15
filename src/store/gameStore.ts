@@ -13,6 +13,7 @@ import { COMPONENT_THEME, isPlayable } from '../lib/components'
 import { componentScore } from '../lib/journeyScoring'
 import { useProgressStore } from './progressStore'
 import { useSettingsStore } from './settingsStore'
+import { GIT_TRACKS, nodeId, type GitTrackKey } from '../lib/gitMap'
 
 // ── Difficulty table (index = round - 1, capped at last entry) ──────────────
 
@@ -42,6 +43,14 @@ export const DIFFICULTY_TABLE: DifficultyConfig[] = [
 
 function getDifficulty(round: number): DifficultyConfig {
   return DIFFICULTY_TABLE[Math.min(round - 1, DIFFICULTY_TABLE.length - 1)]
+}
+
+/** Git Map node difficulty: stretch the DIFFICULTY_TABLE across the track so the
+ *  track's final level lands on the hardest rung (even ramp regardless of length). */
+export function gitDifficulty(track: GitTrackKey, level: number): DifficultyConfig {
+  const floors = GIT_TRACKS[track].floors
+  const idx = floors <= 1 ? 0 : Math.round(((level - 1) / (floors - 1)) * (DIFFICULTY_TABLE.length - 1))
+  return DIFFICULTY_TABLE[Math.min(Math.max(idx, 0), DIFFICULTY_TABLE.length - 1)]
 }
 
 /** Chromatic shape variety scales with board size: a gentle 1-shape on-ramp on
@@ -101,6 +110,11 @@ interface GameStore extends GameState {
   startComponent: (levelId: string, component: ComponentKey, difficulty: DifficultyConfig, displayNumber: number, levelName?: string | null) => void
   retryComponent: () => void
   replayComponent: () => void
+  gitTrack: GitTrackKey | null
+  gitLevel: number | null
+  startGitLevel: (track: GitTrackKey, level: number) => void
+  nextGitLevel: () => void
+  replayGitLevel: () => void
 }
 
 const INITIAL_STATE: GameState = {
@@ -139,8 +153,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   levelDisplayNumber: null,
   levelName: null,
   submitting: false,
+  gitTrack: null,
+  gitLevel: null,
 
-  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, levelDifficulty: null, levelDisplayNumber: null, levelName: null, submitting: false }),
+  resetGame: () => set({ ...INITIAL_STATE, _resolution: null, levelDifficulty: null, levelDisplayNumber: null, levelName: null, submitting: false, gitTrack: null, gitLevel: null }),
 
   pauseGame: () => set(state => {
     if (state.paused) return {}
@@ -158,7 +174,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   }),
 
   startPractice: () => {
-    set({ mode: 'practice', levelDifficulty: null })
+    set({ mode: 'practice', levelDifficulty: null, gitTrack: null, gitLevel: null })
     get().startLevel()
   },
 
@@ -482,6 +498,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roundResults: [],
       levelComplete: false,
       submitting: false,
+      gitTrack: null,
+      gitLevel: null,
     })
     get().startGame()
   },
@@ -507,6 +525,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { levelId, activeComponent, levelDifficulty, levelDisplayNumber, levelName } = get()
     if (!levelId || !activeComponent || !levelDifficulty) return
     get().startComponent(levelId, activeComponent, levelDifficulty, levelDisplayNumber ?? 1, levelName)
+  },
+
+  // Start a Git Map node: pin the track's component + stretched difficulty, run ONE
+  // puzzle with 3 lives, opening on the briefing (unless opted out) then countdown.
+  startGitLevel: (track, level) => {
+    const t = GIT_TRACKS[track]
+    set({
+      mode: 'journey',
+      gitTrack: track,
+      gitLevel: level,
+      levelId: nodeId(track, level),
+      activeComponent: t.component,
+      levelDifficulty: gitDifficulty(track, level),
+      levelDisplayNumber: level,
+      levelName: null,
+      livesRemaining: MAX_LIVES,
+      livesLost: 0,
+      roundIndex: 0,
+      score: 0,
+      roundResults: [],
+      levelComplete: false,
+      submitting: false,
+    })
+    get().startGame()
+  },
+
+  // "Next Level" on the Git Map: play the next node up the same track, if any.
+  nextGitLevel: () => {
+    const { gitTrack, gitLevel } = get()
+    if (!gitTrack || gitLevel == null) return
+    if (gitLevel >= GIT_TRACKS[gitTrack].floors) return
+    get().startGitLevel(gitTrack, gitLevel + 1)
+  },
+
+  // "Replay" on the Git Map result screen: same node, fresh puzzle + full lives.
+  replayGitLevel: () => {
+    const { gitTrack, gitLevel } = get()
+    if (!gitTrack || gitLevel == null) return
+    get().startGitLevel(gitTrack, gitLevel)
   },
 
   // Both modes score client-side via submitSelection; mode only affects which

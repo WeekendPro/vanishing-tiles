@@ -1,7 +1,7 @@
 // Shared, layout-agnostic model for the "mental map" (brain) renderers.
 //
-// Both MentalMapBrain (low-poly) and MentalMapComplex (dendrite bloom) consume
-// this instead of touching the raw JourneyTheme[] — it flattens the journey into
+// MentalMapBrain (low-poly) consumes this instead of touching the raw
+// JourneyTheme[] — it flattens the journey into
 // an ordered list of nodes, each tagged with its display state and lobe, so each
 // renderer only has to map node.index -> a hub coordinate in its own layout.
 

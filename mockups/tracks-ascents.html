@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Tracks: Parallel ascents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{ --edge:#1d273f; --ink:#e6ecff; --dim:#7c8bb0; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#04060c;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:18px 12px 40px}
+  .hint{font-size:12px;color:var(--dim);margin-bottom:12px;max-width:420px;text-align:center}
+
+  .phone{width:420px;max-width:100%;height:780px;border-radius:30px;border:1px solid var(--edge);
+    background:radial-gradient(120% 80% at 50% 100%,#0f1b3c,#05080f 60%);overflow:hidden;position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);display:flex;flex-direction:column}
+  .topbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:0 0 auto;z-index:3}
+  .wordmark{font-weight:900;letter-spacing:.14em;font-size:13px;color:#cdd9ff}
+  .mapbtn{font-size:11px;font-weight:800;color:#cdd9ff;background:#0c1326;border:1px solid var(--edge);
+    border-radius:999px;padding:7px 13px;cursor:pointer}
+  .routehdr{flex:0 0 auto;text-align:center;padding:2px 0 8px;z-index:3}
+  .routehdr .nm{font-weight:900;font-size:18px;letter-spacing:.1em;color:#fff;text-shadow:0 0 12px var(--accent)}
+  .routehdr .pr{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+
+  .climb{flex:1;overflow-y:auto;position:relative}
+  .climb::-webkit-scrollbar{width:0}
+  svg{display:block}
+
+  /* overview overlay */
+  .overlay{position:absolute;inset:0;z-index:8;background:rgba(4,6,12,.92);backdrop-filter:blur(3px);
+    display:none;flex-direction:column;padding:18px}
+  .overlay.show{display:flex}
+  .overlay h3{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#cdd9ff;text-align:center;margin:4px 0 6px}
+  .overlay .sub{font-size:11px;color:var(--dim);text-align:center;margin-bottom:8px}
+  .overlay .close{position:absolute;top:14px;right:16px;font-size:13px;font-weight:800;color:var(--dim);cursor:pointer;
+    background:#0c1326;border:1px solid var(--edge);border-radius:999px;padding:6px 12px}
+</style>
+</head>
+<body>
+  <div class="hint">Path C — you climb one route level-by-level. At milestone <b>landings</b>, the path <b>forks</b> to a gate that opens a brand-new route. The 🗺 button shows all routes + the bridges between them.</div>
+  <div class="phone">
+    <div class="topbar"><span class="wordmark">GAP&nbsp;CITY</span><span class="mapbtn" id="mapbtn">🗺 All routes</span></div>
+    <div class="routehdr" id="routehdr"></div>
+    <div class="climb" id="climb"></div>
+    <div class="overlay" id="overlay"></div>
+  </div>
+
+<script>
+const TRACKS = [
+  { key:'classic',    name:'THE CLASSIC', floors:45, accent:'#38bdf8', progress:13, unlocked:true,  keysAt:{9:{to:'CHROMATIC',earned:true},15:{to:'SEQUENTIAL',earned:false}} },
+  { key:'chromatic',  name:'CHROMATIC',   floors:38, accent:'#e879f9', progress:6,  unlocked:true,  keysAt:{12:{to:'GLIMPSE',earned:false}}, from:'The Classic · 9' },
+  { key:'sequential', name:'SEQUENTIAL',  floors:44, accent:'#fbbf24', progress:0,  unlocked:false, from:'The Classic · 15' },
+  { key:'glimpse',    name:'GLIMPSE',     floors:51, accent:'#34d399', progress:0,  unlocked:false, from:'Chromatic · 12' },
+];
+let active='classic';
+const climb=document.getElementById('climb'), hdr=document.getElementById('routehdr'), overlay=document.getElementById('overlay');
+const T=()=>TRACKS.find(t=>t.key===active);
+
+function renderClimb(){
+  const t=T(); const cur=t.progress+1;
+  const sp=46, cx=140, amp=64, top=40;
+  const H=top + (t.floors-1)*sp + 80;
+  const W=384;
+  const X=i=>cx + ((i%2)?amp:-amp);
+  const Y=l=>H-60-(l-1)*sp;
+  let path='',nodes='',gates='';
+  // connecting path
+  let d=`M ${X(1)} ${Y(1)}`;
+  for(let l=2;l<=t.floors;l++){d+=` L ${X(l)} ${Y(l)}`;}
+  path=`<path d="${d}" fill="none" stroke="#1b2747" stroke-width="6" stroke-linecap="round"/>`;
+  // completed portion of path
+  let dd=`M ${X(1)} ${Y(1)}`;
+  for(let l=2;l<=cur;l++){dd+=` L ${X(l)} ${Y(l)}`;}
+  path+=`<path d="${dd}" fill="none" stroke="${t.accent}" stroke-width="6" stroke-linecap="round" opacity=".85"/>`;
+  for(let l=1;l<=t.floors;l++){
+    const x=X(l),y=Y(l); const done=l<=t.progress, isCur=l===cur;
+    const key=t.keysAt&&t.keysAt[l];
+    if(isCur){
+      nodes+=`<circle cx="${x}" cy="${y}" r="17" fill="#fff" stroke="${t.accent}" stroke-width="4"/>`;
+      nodes+=`<text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="900" fill="#0a0f22">${l}</text>`;
+      nodes+=`<g transform="translate(${x+24},${y-9})"><rect width="58" height="20" rx="10" fill="${t.accent}"/>
+        <text x="29" y="14" text-anchor="middle" font-size="10" font-weight="800" fill="#04060c">▶ PLAY</text></g>`;
+    } else if(done){
+      nodes+=`<circle cx="${x}" cy="${y}" r="13" fill="${t.accent}" opacity=".9"/>`;
+      nodes+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="#04101e">${l}</text>`;
+    } else {
+      nodes+=`<circle cx="${x}" cy="${y}" r="11" fill="#0c1326" stroke="#26324f" stroke-width="2"/>`;
+      nodes+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="9" font-weight="700" fill="#46577d">${l}</text>`;
+    }
+    // milestone gate fork
+    if(key){
+      const gx=300, gy=y; const open=key.earned;
+      gates+=`<path d="M ${x} ${y} Q ${(x+gx)/2} ${y-4}, ${gx-6} ${gy}" fill="none" stroke="#fde68a"
+        stroke-width="3" stroke-dasharray="${open?'0':'5 4'}" opacity="${open?.95:.5}"/>`;
+      gates+=`<g transform="translate(${gx-6},${gy-16})">
+        <rect width="86" height="32" rx="8" fill="${open?'rgba(251,191,36,.16)':'rgba(124,139,176,.12)'}"
+          stroke="${open?'#fde68a':'#34415f'}"/>
+        <text x="43" y="13" text-anchor="middle" font-size="9" font-weight="800" fill="${open?'#fde68a':'#7c8bb0'}">${open?'🔑 OPEN':'🔒 L'+l}</text>
+        <text x="43" y="25" text-anchor="middle" font-size="9" font-weight="800" fill="${open?'#fff':'#9fb0d4'}">${key.to} ▸</text></g>`;
+    }
+  }
+  climb.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${path}${gates}${nodes}</svg>`;
+  hdr.style.setProperty('--accent',t.accent);
+  hdr.innerHTML=`<div class="nm" style="--accent:${t.accent}">${t.name}</div>
+    <div class="pr">climbing · level ${cur} of ${t.floors}</div>`;
+  // scroll current into view
+  const total=H, y=(H-60-(cur-1)*sp);
+  climb.scrollTop = Math.max(0, y - climb.clientHeight/2);
+  // tap open gates
+  climb.querySelectorAll('g').forEach(()=>{});
+}
+
+function renderOverview(){
+  const W=384,H=560,base=486,top=70,maxF=Math.max(...TRACKS.map(t=>t.floors));
+  const xs={classic:60,chromatic:152,sequential:244,glimpse:330};
+  const hOf=t=>(t.floors/maxF)*(base-top), yOf=(t,l)=>base-(l/t.floors)*hOf(t);
+  let bridges='',cols='';
+  TRACKS.forEach(t=>{
+    const x=xs[t.key],h=hOf(t),y0=base-h,fillY=base-(t.progress/t.floors)*h,lock=!t.unlocked,cur=t.progress+1;
+    cols+=`<rect x="${x-11}" y="${y0}" width="22" height="${h}" rx="11" fill="#0c1326" stroke="#1d273f"/>`;
+    if(!lock)cols+=`<rect x="${x-11}" y="${fillY}" width="22" height="${base-fillY}" rx="11" fill="${t.accent}" opacity=".85"/>`;
+    if(!lock){const cy=yOf(t,cur);cols+=`<circle cx="${x}" cy="${cy}" r="8" fill="#fff" stroke="${t.accent}" stroke-width="3"/>`;}
+    Object.entries(t.keysAt||{}).forEach(([l,k])=>{const cy=yOf(t,+l);
+      cols+=`<circle cx="${x}" cy="${cy}" r="6" fill="${k.earned?'#fde68a':'#0c1326'}" stroke="#fde68a" stroke-width="2"/>`;
+      const tgt=TRACKS.find(z=>z.name===k.to);if(tgt){const tx=xs[tgt.key];
+        bridges+=`<path d="M ${x} ${cy} C ${(x+tx)/2} ${cy}, ${(x+tx)/2} ${base-6}, ${tx} ${base-6}" fill="none"
+          stroke="#fde68a" stroke-width="2.5" stroke-dasharray="${k.earned?'0':'5 4'}" opacity="${k.earned?.9:.5}"/>`;}});
+    cols+=`<text x="${x}" y="${base+20}" fill="#cdd9ff" font-size="10" font-weight="800" text-anchor="middle">${t.name.replace('THE ','')}</text>`;
+    cols+=`<text x="${x}" y="${base+33}" fill="#7c8bb0" font-size="8" text-anchor="middle">${lock?'🔒':t.progress+'/'+t.floors}</text>`;
+    if(lock)cols+=`<rect x="${x-11}" y="${y0}" width="22" height="${h}" rx="11" fill="#04060c" opacity=".55"/>`;
+  });
+  overlay.innerHTML=`<span class="close" id="closeov">✕ Close</span>
+    <h3>All routes</h3><div class="sub">Bridges open new routes at milestone landings · tap a route to climb it</div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${bridges}${cols}</svg>`;
+  document.getElementById('closeov').onclick=()=>overlay.classList.remove('show');
+}
+
+document.getElementById('mapbtn').onclick=()=>{renderOverview();overlay.classList.add('show');};
+renderClimb();
+</script>
+</body>
+</html>

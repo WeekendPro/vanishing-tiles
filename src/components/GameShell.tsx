@@ -3,6 +3,7 @@ import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
 import { MAX_LIVES } from '@shared/core/scoring'
 import { COMPONENT_LABEL } from '../lib/components'
+import { GIT_TRACKS } from '../lib/gitMap'
 import { BriefingPhase } from './BriefingPhase'
 import { CountdownPhase } from './CountdownPhase'
 import { ViewingPhase } from './ViewingPhase'
@@ -12,7 +13,7 @@ import { ProgressBar } from './ProgressBar'
 import { ArcadeLoader } from './ArcadeLoader'
 
 export function GameShell() {
-  const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent } =
+  const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent, gitTrack } =
     useGameStore(useShallow(s => ({
       phase: s.phase,
       paused: s.paused,
@@ -25,9 +26,10 @@ export function GameShell() {
       roundIndex: s.roundIndex,
       livesRemaining: s.livesRemaining,
       activeComponent: s.activeComponent,
+      gitTrack: s.gitTrack,
     })))
   const levelId = useGameStore(s => s.levelId)
-  const openLevel = useNavStore(s => s.openLevel)
+  const { openLevel, backToMap } = useNavStore(useShallow(s => ({ openLevel: s.openLevel, backToMap: s.backToMap })))
 
   // The briefing (instruction) page is a pre-game screen: it gets a back button
   // to the level hub instead of the in-game metadata bar + timer.
@@ -48,10 +50,10 @@ export function GameShell() {
         // Instruction page: a back button to the level hub (← level name).
         <div className="px-5 pt-5 pb-1">
           <button
-            onClick={() => { if (levelId) openLevel(levelId) }}
+            onClick={() => { if (gitTrack) backToMap(); else if (levelId) openLevel(levelId) }}
             className="text-neon-cyan text-glow-cyan text-sm font-semibold hover:opacity-80"
           >
-            ← {levelName ?? 'Back'}
+            ← {gitTrack ? 'Git Map' : (levelName ?? 'Back')}
           </button>
         </div>
       ) : (
@@ -59,19 +61,30 @@ export function GameShell() {
           <div className="sticky top-0 z-30 bg-arcade-bg flex items-center gap-4 pl-4 pr-12 h-[52px] border-b-2 border-arcade-edge">
             <span className="font-pixel text-[8px] uppercase tracking-normal text-neon-cyan leading-relaxed">
               {mode === 'journey' ? (
-                // Lead with the puzzle, e.g. "CHROMATIC @ BRICKFALL | LEVEL 6".
-                // Segments stay unbreakable so a long combo wraps cleanly at "@"/"|".
-                <>
-                  {activeComponent && <strong className="text-white whitespace-nowrap">{COMPONENT_LABEL[activeComponent]}</strong>}
-                  <span className="text-arcade-edge px-1.5" aria-hidden>@</span>
-                  <span className="whitespace-nowrap">{levelName ?? `Level ${levelDisplayNumber ?? ''}`}</span>
-                  {levelDisplayNumber != null && (
+                gitTrack ? (
+                  // Git Map: just the track + node, e.g. "THE CLASSIC | LEVEL 14".
+                  <>
+                    <strong className="text-white whitespace-nowrap">{GIT_TRACKS[gitTrack].label}</strong>
                     <span className="text-zinc-500 whitespace-nowrap">
                       <span className="text-arcade-edge px-1.5" aria-hidden>|</span>
-                      Level {levelDisplayNumber}
+                      Level {levelDisplayNumber ?? gitTrack}
                     </span>
-                  )}
-                </>
+                  </>
+                ) : (
+                  // Level hub: lead with the puzzle, e.g. "CHROMATIC @ BRICKFALL | LEVEL 6".
+                  // Segments stay unbreakable so a long combo wraps cleanly at "@"/"|".
+                  <>
+                    {activeComponent && <strong className="text-white whitespace-nowrap">{COMPONENT_LABEL[activeComponent]}</strong>}
+                    <span className="text-arcade-edge px-1.5" aria-hidden>@</span>
+                    <span className="whitespace-nowrap">{levelName ?? `Level ${levelDisplayNumber ?? ''}`}</span>
+                    {levelDisplayNumber != null && (
+                      <span className="text-zinc-500 whitespace-nowrap">
+                        <span className="text-arcade-edge px-1.5" aria-hidden>|</span>
+                        Level {levelDisplayNumber}
+                      </span>
+                    )}
+                  </>
+                )
               ) : (
                 <>ROUND <strong className="text-white">{roundIndex + 1} / 4</strong></>
               )}

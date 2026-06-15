@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Git-graph map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{ --edge:#1d273f; --ink:#e6ecff; --dim:#7c8bb0; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#04060c;color:var(--ink);font-family:Inter,system-ui,sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:18px 12px 40px}
+  .hint{font-size:12px;color:var(--dim);margin-bottom:12px;max-width:440px;text-align:center;line-height:1.5}
+  .hint b{color:#cdd9ff}
+
+  .deck{display:flex;justify-content:center;margin-bottom:14px}
+  .seg{display:inline-flex;background:#0d1322;border:1px solid var(--edge);border-radius:999px;padding:4px;gap:2px;align-items:center}
+  .seg .lbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.12em;padding:0 8px 0 6px}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--dim);font:inherit;font-weight:800;font-size:12px;
+    padding:7px 16px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:linear-gradient(180deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 0 14px rgba(37,99,235,.5)}
+
+  .phone{width:420px;max-width:100%;height:780px;border-radius:30px;border:1px solid var(--edge);
+    background:#070b16;overflow:hidden;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .topbar{position:absolute;top:0;left:0;right:0;height:48px;display:flex;align-items:center;
+    padding:0 16px;z-index:6;background:linear-gradient(to bottom,#070b16,transparent);pointer-events:none}
+  .wordmark{font-weight:900;letter-spacing:.14em;font-size:13px;color:#cdd9ff}
+
+  .canvas{position:absolute;inset:0;touch-action:none;cursor:grab;background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0) 0 0/30px 30px,
+    radial-gradient(140% 90% at 30% 100%, #0c1838 0%, #070b16 60%)}
+  .canvas.drag{cursor:grabbing}
+  svg{width:100%;height:100%;display:block}
+
+  path.seg{stroke-dasharray:1}
+  .anim path.seg{stroke-dashoffset:1;animation:draw .5s ease-out forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .node.cur .ring{animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.5;r:24}50%{opacity:0;r:32}}
+
+  .card{position:absolute;z-index:7;width:188px;background:linear-gradient(180deg,#0f1834,#0a0f22);
+    border:1px solid var(--edge);border-radius:16px;padding:13px 14px;box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 26px -8px var(--c);
+    pointer-events:auto;transition:opacity .15s}
+  .card::before{content:"";position:absolute;left:-7px;top:calc(50% - 7px);width:13px;height:13px;rotate:45deg;
+    background:#0f1834;border-left:1px solid var(--edge);border-bottom:1px solid var(--edge)}
+  .card .nm{font-size:16px;font-weight:900;color:#fff;letter-spacing:.01em}
+  .card .meta{display:flex;align-items:center;gap:14px;margin:9px 0 12px}
+  .card .best{font-size:11px;color:var(--dim);font-weight:700}
+  .card .best b{display:block;font-size:17px;color:#fff;margin-top:1px}
+  .card .diff{font-size:11px;color:var(--dim);font-weight:700}
+  .card .pips{display:flex;gap:3px;margin-top:3px}
+  .card .pips i{width:13px;height:5px;border-radius:3px;background:#243049}
+  .card .pips i.on{background:var(--c);box-shadow:0 0 6px var(--c)}
+  .card .go{width:100%;border:0;border-radius:11px;font:inherit;font-weight:900;font-size:14px;padding:12px;cursor:pointer;
+    color:#04140a;background:linear-gradient(180deg,#22c55e,#16a34a);box-shadow:0 0 18px rgba(34,197,94,.4)}
+  .card .go.replay{background:#16203a;color:#cdd9ff;box-shadow:none}
+
+  .dock{position:absolute;left:14px;right:14px;bottom:14px;z-index:8;display:flex;align-items:center;justify-content:space-between;
+    gap:10px;background:rgba(10,15,26,.92);border:1px solid var(--edge);border-radius:16px;padding:9px 12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+  .legend{display:flex;gap:13px;font-size:10.5px;color:var(--dim);font-weight:600}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend .d{width:11px;height:11px;border-radius:50%}
+  .legend .here{background:#fff;box-shadow:0 0 0 3px rgba(56,189,248,.4)}
+  .legend .done{background:#38bdf8}
+  .legend .lock{background:#0c1326;border:2px solid #2b3a5c}
+  .zoomctl{display:flex;gap:5px}
+  .zoomctl button{width:34px;height:34px;border-radius:10px;border:1px solid var(--edge);background:#0c1326;
+    color:#cdd9ff;font-size:15px;font-weight:800;cursor:pointer;display:grid;place-items:center}
+  .zoomctl button:active{background:#16203a}
+
+  /* ===== PIXEL skin ===== */
+  .pixel{font-family:'Press Start 2P',monospace}
+  .pixel .wordmark{font-size:9px;letter-spacing:.04em}
+  .pixel .canvas{background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,.08) 1.5px, transparent 0) 0 0/32px 32px,
+    linear-gradient(180deg,#1b1140 0%,#3a1a52 50%,#6a2350 100%)}
+  .pixel .node.cur .ring{animation:pxblink .9s steps(2) infinite}
+  @keyframes pxblink{50%{opacity:.4}}
+  .pixel .card{border-radius:0;width:206px;box-shadow:5px 5px 0 #000}
+  .pixel .card::before{display:none}
+  .pixel .card .nm{font-size:11px}
+  .pixel .card .meta{margin:12px 0 14px}
+  .pixel .card .best,.pixel .card .diff{font-size:7px;line-height:1.6}
+  .pixel .card .best b{font-size:11px}
+  .pixel .card .pips i{border-radius:0;box-shadow:none}
+  .pixel .card .go{border-radius:0;font-size:9px;box-shadow:3px 3px 0 #000}
+  .pixel .dock{border-radius:0;box-shadow:5px 5px 0 #000}
+  .pixel .legend{font-size:7px;gap:9px}
+  .pixel .legend .d{border-radius:0;width:10px;height:10px}
+  .pixel .legend .here{box-shadow:0 0 0 3px rgba(56,189,248,.5)}
+  .pixel .zoomctl button{border-radius:0;font-size:12px;box-shadow:2px 2px 0 #000}
+</style>
+</head>
+<body>
+  <div class="hint">A <b>git graph</b>. <b>main</b> = The Classic. Points start as loose dots; <b>completing a level sprouts a path</b> to the next — and at branch commits a path curves out to a new puzzle type. Drag to pan · scroll/buttons to zoom · tap any cleared point to inspect it.</div>
+  <div class="deck"><div class="seg"><span class="lbl">Vibe</span>
+    <button data-v="neon" class="on">Neon</button><button data-v="pixel">Pixel-art</button></div></div>
+  <div class="phone" id="phone">
+    <div class="topbar"><span class="wordmark">GAP&nbsp;CITY</span></div>
+    <div class="canvas" id="canvas"><svg id="svg"><g id="cam"></g></svg></div>
+    <div class="card" id="card"></div>
+    <div class="dock">
+      <div class="legend">
+        <span><span class="d here"></span>Here</span>
+        <span><span class="d done"></span>Cleared</span>
+        <span><span class="d lock"></span>Locked</span>
+      </div>
+      <div class="zoomctl">
+        <button id="zout">−</button>
+        <button id="fit" title="Fit">⤢</button>
+        <button id="findme" title="Find me">◎</button>
+        <button id="zin">+</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SP=190, R=16;
+const TRACKS = {
+  classic:    { name:'Classic',    floors:45, accent:'#38bdf8', progress:13, lane:0,   baseLevel:1 },
+  sequential: { name:'Sequential', floors:44, accent:'#fbbf24', progress:0,  lane:230, parent:'classic', at:15 },
+  chromatic:  { name:'Chromatic',  floors:38, accent:'#e879f9', progress:6,  lane:460, parent:'classic', at:9  },
+  glimpse:    { name:'Glimpse',    floors:51, accent:'#34d399', progress:0,  lane:690, parent:'chromatic', at:12 },
+};
+
+const node = {};
+const yOfMain = level => -(level-1)*SP;
+function isTrackReached(track){ const t=TRACKS[track]; if(!t.parent) return true;
+  return TRACKS[t.parent].progress >= t.at && isTrackReached(t.parent); }
+function place(track,level,x,y){ const t=TRACKS[track];
+  node[`${track}-${level}`]={ id:`${track}-${level}`, track, level, x, y,
+    cleared: level<=t.progress, isCur: level===t.progress+1 && isTrackReached(track), accent:t.accent, name:t.name }; }
+function build(){
+  for(let l=1;l<=TRACKS.classic.floors;l++) place('classic', l, 0, yOfMain(l));
+  for(const key of ['sequential','chromatic','glimpse']){ const t=TRACKS[key];
+    const originY = node[`${t.parent}-${t.at}`].y - SP;
+    for(let l=1;l<=t.floors;l++) place(key, l, t.lane, originY-(l-1)*SP); }
+}
+build();
+
+const segs=[]; let order=0;
+function buildSegs(){ segs.length=0; order=0;
+  const walk=track=>{ const t=TRACKS[track];
+    for(let l=1;l<t.floors;l++) if(l<=t.progress) segs.push({a:node[`${track}-${l}`],b:node[`${track}-${l+1}`],color:t.accent,order:order++}); };
+  walk('classic');
+  for(const key of ['sequential','chromatic','glimpse']){ const t=TRACKS[key];
+    if(TRACKS[t.parent].progress>=t.at && isTrackReached(t.parent)){
+      segs.push({a:node[`${t.parent}-${t.at}`],b:node[`${key}-1`],color:t.accent,order:order++}); walk(key); } }
+}
+buildSegs();
+
+const bestOf = n => 68 + (n.level*29)%31;
+const diffOf = n => 2 + (Math.floor((n.level-1)/9)%4);
+
+const cam=document.getElementById('cam'), svg=document.getElementById('svg'),
+      canvas=document.getElementById('canvas'), card=document.getElementById('card'), phone=document.getElementById('phone');
+let selected='classic-14', vibe='neon';
+
+function curve(a,b){
+  if(Math.abs(a.x-b.x)<1) return `M${a.x},${a.y} L${b.x},${b.y}`;
+  const c1x=a.x+(b.x-a.x)*0.55, c1y=a.y, c2x=b.x, c2y=a.y+(b.y-a.y)*0.45;
+  return `M${a.x},${a.y} C ${c1x},${c1y} ${c2x},${c2y} ${b.x},${b.y}`;
+}
+function drawNode(n,sel){
+  const px=vibe==='pixel'; let s='';
+  if(n.isCur){
+    s+=px ? `<rect class="ring" x="${n.x-24}" y="${n.y-24}" width="48" height="48" fill="${n.accent}" opacity=".35"/>
+              <rect x="${n.x-16}" y="${n.y-16}" width="32" height="32" fill="#fff" stroke="${n.accent}" stroke-width="5"/>`
+          : `<circle class="ring" cx="${n.x}" cy="${n.y}" r="24" fill="${n.accent}" opacity=".4"/>
+              <circle cx="${n.x}" cy="${n.y}" r="${R}" fill="#fff" stroke="${n.accent}" stroke-width="5"/>`;
+  } else if(n.cleared){
+    s+=px ? `<rect x="${n.x-13}" y="${n.y-13}" width="26" height="26" fill="${n.accent}"/>`
+          : `<circle cx="${n.x}" cy="${n.y}" r="${R}" fill="${n.accent}"/>`;
+  } else {
+    s+=px ? `<rect x="${n.x-9}" y="${n.y-9}" width="18" height="18" fill="#171036" stroke="#4a3a72" stroke-width="2"/>`
+          : `<circle cx="${n.x}" cy="${n.y}" r="10" fill="#0c1326" stroke="#2b3a5c" stroke-width="2"/>`;
+  }
+  if(sel) s+=px ? `<rect x="${n.x-23}" y="${n.y-23}" width="46" height="46" fill="none" stroke="#fff" stroke-width="2"/>`
+                : `<circle cx="${n.x}" cy="${n.y}" r="${R+8}" fill="none" stroke="#fff" stroke-width="2" opacity=".9"/>`;
+  return `<g class="node${n.isCur?' cur':''}" data-id="${n.id}">${s}</g>`;
+}
+function render(animate){
+  const cap = vibe==='pixel' ? 'butt' : 'round';
+  let s='';
+  for(const sg of segs) s+=`<path class="seg" pathLength="1" d="${curve(sg.a,sg.b)}" fill="none" stroke="${sg.color}"
+    stroke-width="6" stroke-linecap="${cap}" opacity=".9" style="animation-delay:${sg.order*0.07}s"/>`;
+  for(const id in node) s+=drawNode(node[id], id===selected);
+  cam.innerHTML=s;
+  canvas.classList.toggle('anim', !!animate);
+  renderCard();
+}
+function pick(id){ const n=node[id]; if(!n||!(n.cleared||n.isCur)) return; selected=id; render(false); }
+
+function renderCard(){
+  const n=node[selected]; const playable=n.isCur;
+  const pips=Array.from({length:5}).map((_,i)=>`<i class="${i<diffOf(n)?'on':''}"></i>`).join('');
+  const best = `<div class="best">Best<b>${n.cleared?bestOf(n)+'%':'—'}</b></div>`;
+  card.style.setProperty('--c',n.accent);
+  card.innerHTML=`<div class="nm">${n.name} ${String(n.level).padStart(2,'0')}</div>
+    <div class="meta">${best}<div class="diff">Difficulty<div class="pips">${pips}</div></div></div>
+    <button class="go ${playable?'':'replay'}">${playable?'▶ Play':'↺ Replay'}</button>`;
+  positionCard();
+}
+function positionCard(){
+  const n=node[selected]; const sx=tx+n.x*scale, sy=ty+n.y*scale;
+  const cw=card.offsetWidth||188, ch=card.offsetHeight||120;
+  let left=sx + (R*scale) + 14, top=sy - ch/2;
+  left=Math.max(10, Math.min(canvas.clientWidth-cw-10, left));
+  top =Math.max(54, Math.min(canvas.clientHeight-ch-70, top));
+  card.style.left=left+'px'; card.style.top=top+'px';
+}
+
+let scale=1.4, tx=0, ty=0;
+function apply(){ cam.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`); positionCard(); }
+function bbox(){ let a=1e9,b=1e9,c=-1e9,d=-1e9;
+  for(const id in node){const n=node[id]; a=Math.min(a,n.x);b=Math.min(b,n.y);c=Math.max(c,n.x);d=Math.max(d,n.y);}
+  return {x:a-60,y:b-60,w:(c-a)+120,h:(d-b)+120}; }
+function fit(){ const r=svg.getBoundingClientRect(), bb=bbox();
+  scale=Math.max(.18,Math.min(Math.min(r.width/bb.w,r.height/bb.h)*0.92,2));
+  tx=r.width/2-(bb.x+bb.w/2)*scale; ty=r.height/2-(bb.y+bb.h/2)*scale; apply(); }
+function findMe(){ const r=svg.getBoundingClientRect(); const n=node[selected]||node['classic-14'];
+  scale=1.4; tx=r.width*0.42-n.x*scale; ty=(r.height*0.5)-n.y*scale; apply(); }
+function zoomAt(mx,my,f){ const ns=Math.max(.18,Math.min(scale*f,2.6));
+  tx=mx-((mx-tx)*ns/scale); ty=my-((my-ty)*ns/scale); scale=ns; apply(); }
+
+canvas.addEventListener('wheel',e=>{ e.preventDefault(); const r=svg.getBoundingClientRect();
+  zoomAt(e.clientX-r.left,e.clientY-r.top, Math.exp(-e.deltaY*0.0016)); },{passive:false});
+
+// pan with capture-after-move; tap = select via hit-test (so node clicks aren't stolen by capture)
+let dragging=false,last=null,moved=false,captured=false,startId=null;
+canvas.addEventListener('pointerdown',e=>{ if(e.target.closest('.card'))return;
+  dragging=true;moved=false;captured=false;last=[e.clientX,e.clientY];
+  startId=e.pointerId;canvas.classList.add('drag'); });
+canvas.addEventListener('pointermove',e=>{ if(!dragging)return; const dx=e.clientX-last[0],dy=e.clientY-last[1];
+  if(Math.abs(dx)+Math.abs(dy)>3){ moved=true; if(!captured){captured=true;canvas.setPointerCapture(startId);} }
+  tx+=dx;ty+=dy;last=[e.clientX,e.clientY];apply(); });
+canvas.addEventListener('pointerup',e=>{ canvas.classList.remove('drag');
+  const wasDrag=moved; dragging=false;
+  if(captured){ try{canvas.releasePointerCapture(startId);}catch(_){} captured=false; }
+  if(wasDrag) return;
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(!el || el.closest('.card')) return;
+  const g=el.closest('g.node'); if(g) pick(g.dataset.id);
+});
+
+document.getElementById('zin').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.3);};
+document.getElementById('zout').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1/1.3);};
+document.getElementById('fit').onclick=fit;
+document.getElementById('findme').onclick=findMe;
+document.querySelector('.deck').addEventListener('click',e=>{ if(!e.target.dataset.v)return;
+  vibe=e.target.dataset.v; phone.classList.toggle('pixel',vibe==='pixel');
+  document.querySelectorAll('.deck button').forEach(b=>b.classList.toggle('on',b===e.target));
+  render(false); });
+
+render(false);
+findMe();
+setTimeout(()=>{ render(true); findMe(); },400);
+</script>
+</body>
+</html>
