@@ -18,7 +18,8 @@ when the player runs out of lives.
 - **Trim the fat / reduce friction.** No briefing, no map, no "Done" button, no
   per-round resolution screen, no tap-to-continue between batches.
 - **Keep the player in the action.** Fully continuous batch-to-batch flow.
-- **A pure recall test.** Gaps vanish before selection; the board reads as solid.
+- **A pure recall test.** Gaps flash as empty hollow holes, then vanish before
+  selection; the board reads as an even, faint lattice (gaps hidden).
 - **Cumulative, escalating.** One growing score; difficulty climbs every batch.
 
 ## Mode identity & entry
@@ -96,8 +97,9 @@ Actions: `startRun()`, `beginCountdown()`, `beginReveal()`, `beginSelecting()`,
    - **Wrong** (no unfilled gap matches): a red ✕ flashes over the grid, a short
      shake, `lives -= 1`. If `lives === 0` → `endRun()` (`gameOver`).
    - When **every gap is filled** → award the batch speed bonus, then `clearBatch()`.
-   - If the **select clock expires** before all gaps are filled: the batch ends with
-     no penalty and no speed bonus (the only fail condition is lives). Continue.
+   - If the **select clock expires** before all gaps are filled: the unfinished
+     batch is abandoned, costs **one life**, and (if any remain) the next batch
+     begins. Running out of time mid-batch can therefore end the run.
 4. **continuous transition** — `clearBatch()` increments `batchIndex` and immediately
    re-enters `reveal` for the next batch (a brief ~0.5s score-tick beat is allowed,
    but no tap and no full pause).
@@ -137,6 +139,20 @@ Difficulty config is built per batch and passed to `generatePuzzle` exactly as t
 other modes do. Theme is monochrome shape-only (`'basic'` semantics) — no colors,
 no sequence/order constraint.
 
+### Shape & orientation ramp
+
+Beyond gap count, two more dials ramp the memory load (both live in
+`staggerCurve.ts`, fed to `generatePuzzle` via its `allowedTypes` / `lockedRotations`
+options):
+
+- **Shapes introduced gradually.** The run opens on `O` + `I` only; trickier shapes
+  join one at a time — `L` at batch 3, `J` at 5, `S` at 7, `T` at 9, `Z` at 11. The
+  allowed set only ever grows.
+- **Orientation locked early.** Through `ORIENTATION_FREE_FROM` (batch 6), every gap
+  uses the same orientation it's drawn at in the tray (`DISPLAY_ROTATION`: `I`/`J`/`L`
+  upright, the rest canonical), so the player maps shapes 1:1 with the cart. From
+  that batch on, gaps may appear in any rotation.
+
 ## Scoring (cumulative)
 
 Reuses the same ratio-based speed model the rest of the game uses
@@ -159,8 +175,9 @@ record is mocked elsewhere); the score resets each run.
 
 ## Lives & game over
 
-- **3 shared lives** for the whole run (consistent with the rest of the game).
-- Each wrong pick costs one life.
+- **5 shared lives** for the whole run.
+- Each wrong pick costs one life; letting the select clock expire mid-batch also
+  costs one life.
 - `lives === 0` → run ends immediately, even mid-batch → `gameOver`.
 - Game-over screen: final cumulative score, batch reached, **Replay** (restart at
   batch 1) and **Exit to menu**.
@@ -170,8 +187,9 @@ record is mocked elsewhere); the score resets each run.
 The `StaggerScreen` HUD, persistent across phases:
 
 - **Score** — top, prominent, the dominant number on screen.
-- **Lives** — three hearts; a lost life dims with a small shake.
-- **Batch indicator** — e.g. "Batch 4 · 6 gaps".
+- **Lives** — five hearts; a lost life dims.
+- **Gap progress** — a `filled / total` fraction for the current batch (e.g.
+  "2 / 6"), climbing as each gap is recalled. No batch number is shown.
 - **Timer bar** — one bar that fills during reveal (cool/cyan) and drains during
   selection (green), matching the existing bar's dimensions and the grid width.
 - **Grid** — 12×12, solid board; gap silhouettes flash over it during reveal;

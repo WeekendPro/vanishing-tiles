@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import type { Gap, PieceType } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
-import { STAGGER, difficultyForBatch, batchSpeedBonus } from '../lib/staggerCurve'
+import {
+  STAGGER, difficultyForBatch, batchSpeedBonus,
+  allowedTypesForBatch, lockedRotationsForBatch,
+} from '../lib/staggerCurve'
 
 export type StaggerPhase = 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
 
@@ -31,12 +34,19 @@ interface StaggerState {
   beginReveal: () => void     // countdown → reveal (generates batch 0)
   beginSelecting: () => void  // reveal done → selecting (starts the clock)
   pickPiece: (type: PieceType) => PickResult
-  advanceBatch: () => void    // continuous → next, harder batch's reveal
+  advanceBatch: () => void    // batch cleared → next, harder batch's reveal
+  timeoutBatch: () => void    // select clock expired → costs a life, then advance
   exit: () => void            // tear down back to idle
 }
 
 function makeBatch(batchIndex: number): StaggerGap[] {
-  const { gaps } = generatePuzzle(difficultyForBatch(batchIndex))
+  const diff = difficultyForBatch(batchIndex)
+  const { gaps } = generatePuzzle({
+    gapCount: diff.gapCount,
+    complexity: diff.complexity,
+    allowedTypes: allowedTypesForBatch(batchIndex),
+    lockedRotations: lockedRotationsForBatch(batchIndex),
+  })
   return gaps.map(g => ({ ...g, filled: false }))
 }
 
@@ -96,6 +106,18 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
   advanceBatch: () => {
     const next = get().batchIndex + 1
     set({ phase: 'reveal', batchIndex: next, gaps: makeBatch(next) })
+  },
+
+  timeoutBatch: () => {
+    // Letting the select clock run out costs a life; if it was the last, the run
+    // ends — otherwise the abandoned batch is left behind and the next begins.
+    const lives = get().lives - 1
+    if (lives <= 0) {
+      set({ lives: 0, phase: 'gameOver' })
+      return
+    }
+    const next = get().batchIndex + 1
+    set({ lives, phase: 'reveal', batchIndex: next, gaps: makeBatch(next) })
   },
 
   exit: () => set({ ...IDLE }),

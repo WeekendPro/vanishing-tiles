@@ -9,6 +9,10 @@ import {
   difficultyForBatch,
   batchSpeedBonus,
   gapRevealMs,
+  allowedTypesForBatch,
+  lockedRotationsForBatch,
+  DISPLAY_ROTATION,
+  ORIENTATION_FREE_FROM,
 } from '../../src/lib/staggerCurve'
 import type { PieceType } from '@shared/types'
 
@@ -61,6 +65,35 @@ describe('staggerCurve', () => {
     expect(d.gapCount).toBe(4)
     expect(d.complexity).toBe('simple')
     expect(d.selectDuration).toBe(selectDurationForBatch(2))
+  })
+
+  it('introduces shapes gradually, starting on O + I only', () => {
+    expect(new Set(allowedTypesForBatch(0))).toEqual(new Set(['O', 'I']))
+    expect(new Set(allowedTypesForBatch(1))).toEqual(new Set(['O', 'I']))
+    expect(allowedTypesForBatch(3)).toContain('L')
+    expect(allowedTypesForBatch(3)).not.toContain('Z')
+    expect(new Set(allowedTypesForBatch(11))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+  })
+
+  it('the allowed-shape set only ever grows', () => {
+    for (let b = 1; b <= 12; b++) {
+      const prev = new Set(allowedTypesForBatch(b - 1))
+      allowedTypesForBatch(b - 1).forEach(t => expect(allowedTypesForBatch(b)).toContain(t))
+      expect(allowedTypesForBatch(b).length).toBeGreaterThanOrEqual(prev.size)
+    }
+  })
+
+  it('locks gap orientation early, frees it once rotations open up', () => {
+    expect(lockedRotationsForBatch(0)).toEqual(DISPLAY_ROTATION)
+    expect(lockedRotationsForBatch(ORIENTATION_FREE_FROM)).toBeUndefined()
+    expect(DISPLAY_ROTATION.I).toBe(1)  // upright I/J/L
+    expect(DISPLAY_ROTATION.J).toBe(1)
+    expect(DISPLAY_ROTATION.L).toBe(1)
+    expect(DISPLAY_ROTATION.O).toBe(0)
+  })
+
+  it('starts the run with five lives', () => {
+    expect(STAGGER.START_LIVES).toBe(5)
   })
 
   it('speed bonus is the clamped time-left ratio × SPEED_MAX', () => {
@@ -146,6 +179,39 @@ describe('useStaggerStore', () => {
     expect(s.batchIndex).toBe(1)
     expect(s.phase).toBe('reveal')
     expect(s.gaps.every(g => !g.filled)).toBe(true)
+  })
+
+  it('an early batch only contains O/I gaps, each in its locked orientation', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal()
+    const gaps = useStaggerStore.getState().gaps
+    gaps.forEach(g => {
+      expect(['O', 'I']).toContain(g.pieceType)
+      expect(g.rotation).toBe(DISPLAY_ROTATION[g.pieceType])
+    })
+  })
+
+  it('timeoutBatch costs a life and advances to the next batch', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    const before = useStaggerStore.getState().lives
+    st.timeoutBatch()
+    const s = useStaggerStore.getState()
+    expect(s.lives).toBe(before - 1)
+    expect(s.batchIndex).toBe(1)
+    expect(s.phase).toBe('reveal')
+  })
+
+  it('timeoutBatch on the last life ends the run', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    for (let i = 0; i < STAGGER.START_LIVES - 1; i++) {
+      useStaggerStore.getState().pickPiece(missingType())
+    }
+    expect(useStaggerStore.getState().lives).toBe(1)
+    st.timeoutBatch()
+    expect(useStaggerStore.getState().lives).toBe(0)
+    expect(useStaggerStore.getState().phase).toBe('gameOver')
   })
 
   it('losing the last life ends the run immediately', () => {

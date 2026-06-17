@@ -1,4 +1,4 @@
-import type { DifficultyConfig } from '@shared/types'
+import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
 
 /**
  * Infinite Stagger's own difficulty + scoring curve. The run is endless, so the
@@ -16,8 +16,43 @@ export const STAGGER = {
   SELECT_PER_GAP: 1400,// ms of select clock added per gap
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap
   SPEED_MAX: 500,      // max per-batch speed bonus
-  START_LIVES: 3,      // shared lives for the whole run
+  START_LIVES: 5,      // shared lives for the whole run
 } as const
+
+/** The rotation each piece is drawn at in the tray — and the rotation its gaps
+ *  use while orientation is still locked. I / J / L stand upright (rotation 1)
+ *  as in proper Tetris; the rest sit at their canonical rotation. */
+export const DISPLAY_ROTATION: Record<PieceType, Rotation> = {
+  I: 1, J: 1, L: 1, O: 0, S: 0, Z: 0, T: 0,
+}
+
+/** Shapes are introduced gradually. The run opens on O + I only; the trickier
+ *  shapes join one at a time so memory load ramps slowly. (`from` = batch index
+ *  at which the shape becomes available.) */
+const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
+  { from: 0, type: 'O' },
+  { from: 0, type: 'I' },
+  { from: 3, type: 'L' },
+  { from: 5, type: 'J' },
+  { from: 7, type: 'S' },
+  { from: 9, type: 'T' },
+  { from: 11, type: 'Z' },
+]
+
+/** From this batch on, gaps may appear in any rotation; before it, every gap is
+ *  locked to its tray orientation so the player maps shapes 1:1 with the cart. */
+export const ORIENTATION_FREE_FROM = 6
+
+/** The piece types that may appear as gaps in a given batch. */
+export function allowedTypesForBatch(batchIndex: number): PieceType[] {
+  return SHAPE_SCHEDULE.filter(s => batchIndex >= s.from).map(s => s.type)
+}
+
+/** While orientation is locked, the fixed rotation each type's gaps must use;
+ *  `undefined` once rotations are free (the generator then varies them). */
+export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, Rotation> | undefined {
+  return batchIndex < ORIENTATION_FREE_FROM ? DISPLAY_ROTATION : undefined
+}
 
 /** Gap count climbs 3,3,4,4,5,5,… capped at MAX_GAPS. */
 export function gapCountForBatch(batchIndex: number): number {

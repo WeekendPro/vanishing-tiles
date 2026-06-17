@@ -5,7 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
-import { STAGGER, gapCountForBatch, holdMsForBatch } from '../lib/staggerCurve'
+import { STAGGER, holdMsForBatch, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ArcadePanel, ScanlineOverlay } from './ui'
 
@@ -45,11 +45,14 @@ function StaggerBoard({
           )
         }
         const revealing = revealCells.has(key)
+        // Faint board tile; a revealing gap fades in as a TRUE empty hole (the
+        // dark board shows through) ringed by a dashed neon outline — the same
+        // "empty gap" look the other modes use.
         return (
-          <div key={i} className="relative w-7 h-7 rounded-sm bg-slate-700/80">
+          <div key={i} className="relative w-7 h-7 rounded-sm bg-slate-800/50">
             {revealing && (
               <div
-                className="absolute inset-0 rounded-sm border-2 border-dashed border-neon-cyan bg-neon-cyan/20"
+                className="absolute inset-0 rounded-sm border-2 border-dashed border-neon-cyan bg-gray-900"
                 style={{ opacity: revealOn ? 1 : 0, transition: `opacity ${STAGGER.FADE_MS}ms ease` }}
               />
             )}
@@ -100,18 +103,18 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
         <span className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan">Pieces</span>
         <span className="text-[10px] text-gray-500">tap to place from memory</span>
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1.5 items-end">
         {PIECE_DEFINITIONS.map(def => (
           <button
             key={def.type}
             data-piece-option={def.type}
             disabled={disabled}
             onClick={() => onPick(def.type as PieceType)}
-            className="flex items-center justify-center p-1 rounded-md border-2 border-arcade-edge
+            className="flex items-end justify-center p-1 rounded-md border-2 border-arcade-edge
               bg-arcade-well hover:border-neon-cyan/60 cursor-pointer transition disabled:opacity-40
-              disabled:pointer-events-none"
+              disabled:pointer-events-none min-h-[40px]"
           >
-            <PieceShape pieceType={def.type as PieceType} cellSize={8} />
+            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
           </button>
         ))}
       </div>
@@ -134,12 +137,12 @@ function Hearts({ lives }: { lives: number }) {
 export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, score, lives, selectDuration,
-    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, exit,
+    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
-    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, exit: s.exit,
+    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch, exit: s.exit,
   })))
   const goJourney = useNavStore(s => s.goJourney)
 
@@ -190,10 +193,12 @@ export function StaggerScreen() {
     })
     const expiry = window.setTimeout(() => {
       if (cancelled) return
-      if (!useStaggerStore.getState().gaps.every(g => g.filled)) advanceBatch()
+      // A cleared batch is handled by the clear beat; only a genuinely-unfinished
+      // batch reaches here, and running out of time costs a life.
+      if (!useStaggerStore.getState().gaps.every(g => g.filled)) timeoutBatch()
     }, selectDuration)
     return () => { cancelled = true; cancelAnimationFrame(raf); clearTimeout(expiry) }
-  }, [phase, batchIndex, selectDuration, advanceBatch])
+  }, [phase, batchIndex, selectDuration, timeoutBatch])
 
   const onPick = (type: PieceType) => {
     if (cleared) return
@@ -241,8 +246,9 @@ export function StaggerScreen() {
         </div>
         <div className="text-right">
           <Hearts lives={lives} />
-          <div className="font-pixel text-[9px] tracking-[0.15em] uppercase text-gray-400 mt-1">
-            Batch {batchIndex + 1} · {gapCountForBatch(batchIndex)} gaps
+          <div className="font-pixel text-sm text-gray-300 mt-1.5 tabular-nums">
+            {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
+            <span className="text-[9px] text-gray-500 ml-1.5 tracking-[0.15em] uppercase">gaps</span>
           </div>
         </div>
       </div>
