@@ -1,6 +1,6 @@
-import type { Grid, Gap, Cell, DifficultyConfig, PieceType } from '../types.ts'
+import type { Grid, Gap, Cell, DifficultyConfig, PieceType, Rotation } from '../types.ts'
 import { ROWS, COLS } from '../types.ts'
-import { getAllRotations } from './pieces.ts'
+import { getAllRotations, getRotatedCells } from './pieces.ts'
 
 type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   adjacency?: number
@@ -9,6 +9,12 @@ type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   colorCoded?: { shapeTypeCount: number; palette: string[] }
   /** When true, stamp order 1..N across the gaps (Sequential theme). */
   sequential?: boolean
+  /** Restrict the gaps to exactly these piece types (overrides the complexity
+   *  band). Used by Infinite Stagger to introduce shapes gradually. */
+  allowedTypes?: PieceType[]
+  /** Force each listed type's gaps to a fixed rotation instead of varying it.
+   *  Used by Infinite Stagger to keep early gaps matching the tray orientation. */
+  lockedRotations?: Partial<Record<PieceType, Rotation>>
 }
 
 const COMPLEXITY_PIECES: Record<DifficultyConfig['complexity'], PieceType[]> = {
@@ -79,7 +85,8 @@ function placeGaps(
   gapCount: number,
   allowedTypes: PieceType[],
   adjacency: number,
-  rng: () => number
+  rng: () => number,
+  lockedRotations?: Partial<Record<PieceType, Rotation>>
 ): { grid: Grid; gaps: Gap[] } {
   const grid = makeFullGrid()
   const gaps: Gap[] = []
@@ -88,7 +95,11 @@ function placeGaps(
   while (gaps.length < gapCount && attempts < 4000) {
     attempts++
     const pieceType = allowedTypes[Math.floor(rng() * allowedTypes.length)]
-    const rotations = getAllRotations(pieceType)
+    // A locked rotation pins the gap to its tray orientation; otherwise vary it.
+    const locked = lockedRotations?.[pieceType]
+    const rotations = locked !== undefined
+      ? [{ rotation: locked, cells: getRotatedCells(pieceType, locked) }]
+      : getAllRotations(pieceType)
     const { rotation, cells } = rotations[Math.floor(rng() * rotations.length)]
 
     const maxRow = ROWS - Math.max(...cells.map(([r]) => r)) - 1
@@ -138,11 +149,13 @@ export function generatePuzzle(
 ): { grid: Grid; gaps: Gap[] } {
   const { gapCount, complexity } = input
   const adjacency = input.adjacency ?? 0
-  const allowedTypes = input.colorCoded
-    ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
-    : COMPLEXITY_PIECES[complexity]
+  const allowedTypes = input.allowedTypes
+    ? input.allowedTypes
+    : input.colorCoded
+      ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
+      : COMPLEXITY_PIECES[complexity]
 
-  let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng)
+  let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations)
 
   // Variety guard: a round that should exercise memory across different shapes
   // must never let every gap be the same piece type. Re-roll the whole board
@@ -155,7 +168,7 @@ export function generatePuzzle(
     let retries = 0
     while (!hasTypeVariety(gaps) && retries < 50) {
       retries++
-      ;({ grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng))
+      ;({ grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations))
     }
   }
 

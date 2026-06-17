@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useStaggerStore } from '../store/staggerStore'
 import { useProgressStore } from '../store/progressStore'
 import { useSettingsStore, type MapStyle } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
@@ -51,10 +52,15 @@ function Action({ label, onClick, tone = 'default', active }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goJourney, goPractice, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goJourney, goPractice, goStagger, reset: resetNav } = useNavStore(useShallow(s => ({
     goJourney: s.goJourney,
     goPractice: s.goPractice,
+    goStagger: s.goStagger,
     reset: s.reset,
+  })))
+  const { startRun: startStagger, exit: exitStagger } = useStaggerStore(useShallow(s => ({
+    startRun: s.startRun,
+    exit: s.exit,
   })))
   const { pauseGame, resumeGame, startPractice, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
@@ -66,7 +72,7 @@ export function GlobalMenu() {
   const mapStyle = useSettingsStore(s => s.settings.mapStyle)
   const setMapStyle = useSettingsStore(s => s.setMapStyle)
 
-  const inGame = appView === 'playing' || appView === 'practice'
+  const inGame = appView === 'playing' || appView === 'practice' || appView === 'stagger'
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<MenuUser | null>(null)
 
@@ -98,7 +104,8 @@ export function GlobalMenu() {
   })
 
   const enterPractice = () => { setOpen(false); startPractice(); goPractice() }
-  const quitToMap = () => { setOpen(false); resetGame(); goJourney() }
+  const enterStagger = () => { setOpen(false); startStagger(); goStagger() }
+  const quitToMap = () => { setOpen(false); resetGame(); exitStagger(); goJourney() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
   // Picking a map style persists the choice and lands the player on the Journey map.
   const chooseMap = (style: MapStyle) => { setMapStyle(style); setOpen(false); resetGame(); goJourney() }
@@ -153,10 +160,22 @@ export function GlobalMenu() {
           {inGame && (
             <>
               <Action label="Resume" onClick={close} />
-              <Action label={appView === 'practice' ? 'Exit Training Mode' : 'Exit Journey Mode'} onClick={quitToMap} />
+              <Action
+                label={
+                  appView === 'practice' ? 'Exit Training Mode'
+                  : appView === 'stagger' ? 'Exit Infinite Stagger'
+                  : 'Exit Journey Mode'
+                }
+                onClick={quitToMap}
+              />
             </>
           )}
-          {!inGame && <Action label="Training Mode" onClick={enterPractice} />}
+          {!inGame && (
+            <>
+              <Action label="Training Mode" onClick={enterPractice} />
+              <Action label="Infinite Stagger" onClick={enterStagger} />
+            </>
+          )}
 
           <Action label="Subway Map" active={mapStyle === 'transit'} onClick={() => chooseMap('transit')} />
           <Action label="Mental Map" active={mapStyle === 'mentalBrain'} onClick={() => chooseMap('mentalBrain')} />
