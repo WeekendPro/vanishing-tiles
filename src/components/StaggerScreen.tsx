@@ -7,7 +7,7 @@ import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { STAGGER, holdMsForBatch, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
-import { NeonButton, ArcadePanel, ScanlineOverlay } from './ui'
+import { NeonButton, ArcadePanel, ScanlineOverlay, LivesCounter } from './ui'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
@@ -151,15 +151,6 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 }
 
 // ── HUD ─────────────────────────────────────────────────────────────────────
-function Hearts({ lives }: { lives: number }) {
-  return (
-    <div className="flex gap-1" aria-label={`${lives} lives`}>
-      {Array.from({ length: STAGGER.START_LIVES }, (_, i) => (
-        <span key={i} className={`text-lg leading-none ${i < lives ? 'text-neon-red text-glow-red' : 'text-arcade-edge'}`}>♥</span>
-      ))}
-    </div>
-  )
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
@@ -324,7 +315,7 @@ export function StaggerScreen() {
           <div className="font-pixel text-3xl text-neon-cyan text-glow-cyan leading-none tabular-nums">{displayScore}</div>
         </div>
         <div className="text-right">
-          <Hearts lives={lives} />
+          <LivesCounter lives={lives} />
           <div className="font-sans font-semibold text-sm text-gray-300 mt-1.5 tabular-nums">
             {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
             <span className="font-sans text-[10px] text-gray-500 ml-1.5 tracking-[0.12em] uppercase">gaps</span>
