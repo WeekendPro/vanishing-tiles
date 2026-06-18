@@ -7,7 +7,7 @@
    global loading overlay; intended to be reused by the broader visual overhaul. */
 
 .font-pixel {
-  font-family: 'Press Start 2P', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'Space Grotesk', Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Segmented "power meter" block: a cyan neon cell that lights up, with a dark

@@ -333,7 +333,7 @@ export function StaggerScreen() {
       <div className="w-full max-w-sm flex items-end justify-between mb-2">
         <div>
           <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
-          <div className="font-silk text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
+          <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
         </div>
         <div className="text-right">
           <LivesCounter lives={lives} />
@@ -405,20 +405,20 @@ export function StaggerScreen() {
             <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1">Game Over</div>
             <div className="font-grotesk text-xs text-phos-dim mb-5">Memory fades.</div>
             <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Final score</div>
-            <div className="font-silk text-4xl text-phos-amber text-glow-phos-amber mb-6">{score}</div>
+            <div className="font-silk font-bold text-4xl text-phos-amber text-glow-phos-amber mb-6 tabular-nums">{score}</div>
 
             {/* Run-stats trio — shapes recalled / best combo / accuracy. */}
             <div className="flex w-full max-w-[300px] border-y border-white/10 mb-6">
               <div className="flex-1 text-center py-3.5">
-                <div className="font-silk text-base text-phos-magenta text-glow-phos-magenta">{shapesRecalled}</div>
+                <div className="font-silk font-bold text-base text-phos-magenta text-glow-phos-magenta tabular-nums">{shapesRecalled}</div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Shapes recalled</div>
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk text-base text-phos-lime text-glow-phos-lime">×{bestCombo}</div>
+                <div className="font-silk font-bold text-base text-phos-lime text-glow-phos-lime tabular-nums">×{bestCombo}</div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Best combo</div>
               </div>
               <div className="flex-1 text-center py-3.5">
-                <div className="font-silk text-base text-phos-cyan text-glow-phos-cyan">
+                <div className="font-silk font-bold text-base text-phos-cyan text-glow-phos-cyan tabular-nums">
                   {totalPicks === 0 ? 100 : Math.round((correctPicks / totalPicks) * 100)}%
                 </div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Accuracy</div>

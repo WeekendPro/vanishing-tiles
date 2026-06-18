@@ -43,7 +43,7 @@ export function ScorePanel({ roundScore, grandTotal, show, isFailure = false, sp
           transition={{ delay: ROUND_TOTAL_DELAY, duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
         >
           <span className="font-pixel text-[9px] tracking-[0.1em] text-gray-400 uppercase">Round Total</span>
-          <span className={`font-pixel text-lg tabular-nums ${roundScore.total < 0 ? 'text-neon-red text-glow-red' : 'text-neon-yellow text-glow-yellow'}`}>
+          <span className={`font-pixel font-bold text-lg tabular-nums ${roundScore.total < 0 ? 'text-neon-red text-glow-red' : 'text-neon-yellow text-glow-yellow'}`}>
             {roundScore.total >= 0 ? '+' : ''}<DelayedCountUp value={roundScore.total} delay={ROUND_TOTAL_DELAY} />
           </span>
         </motion.div>
@@ -55,7 +55,7 @@ export function ScorePanel({ roundScore, grandTotal, show, isFailure = false, sp
           transition={{ delay: GRAND_TOTAL_DELAY, duration: 0.3, ease: 'easeOut' }}
         >
           <span className="font-pixel text-[9px] tracking-[0.1em] text-gray-500 uppercase">Grand Total</span>
-          <span className="font-pixel text-sm text-neon-yellow text-glow-yellow tabular-nums">
+          <span className="font-pixel font-bold text-sm text-neon-yellow text-glow-yellow tabular-nums">
             <DelayedCountUp value={grandTotal} delay={GRAND_TOTAL_DELAY} />
           </span>
         </motion.div>

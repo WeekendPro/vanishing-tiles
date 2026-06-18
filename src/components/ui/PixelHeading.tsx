@@ -18,7 +18,7 @@ export function PixelHeading({
   return (
     <Tag
       className={[
-        'font-pixel uppercase tracking-[0.08em] text-neon-cyan',
+        'font-pixel font-bold uppercase tracking-[0.08em] text-neon-cyan',
         glow ? 'text-glow-cyan' : '',
         underline ? 'inline-block border-b-2 border-neon-magenta pb-1' : '',
         className,

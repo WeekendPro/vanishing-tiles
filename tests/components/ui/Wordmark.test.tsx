@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { Wordmark } from '../../../src/components/ui/Wordmark'
 
 describe('Wordmark', () => {
-  it('renders PHOSPHOR as a heading with pixel + cyan-glow classes', () => {
+  it('renders PHOSPHOR as a bold heading with cyan-glow classes', () => {
     render(<Wordmark />)
     const h = screen.getByRole('heading', { name: /phosphor/i })
-    expect(h.className).toContain('font-pixel')
+    expect(h.className).toContain('font-bold')
     expect(h.className).toContain('text-glow-cyan')
     expect(h.className).toContain('text-white')
   })

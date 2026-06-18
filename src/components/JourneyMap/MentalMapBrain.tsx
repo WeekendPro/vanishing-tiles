@@ -281,7 +281,7 @@ export function MentalMapBrain({ themes, onSelect }: JourneyMapProps) {
           className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-3 py-2"
           style={{ background: 'linear-gradient(to bottom,#04050c,transparent)' }}
         >
-          <span className="font-pixel text-[10px] text-white text-glow-cyan">PHOSPHOR</span>
+          <span className="font-pixel font-bold tracking-[0.05em] text-[10px] text-white text-glow-cyan">PHOSPHOR</span>
           <span className="font-pixel text-[9px] text-yellow-400" style={{ color: STAR }}>
             ★ {totalStars}
           </span>
@@ -469,8 +469,8 @@ function NodeLabel({
   className?: string
 }) {
   const label = text.toUpperCase()
-  // font-pixel ('Press Start 2P') is wide and monospaced; size it down hard so a
-  // chip fits next to a 5px dot. width ≈ chars * ~5.2 at 5px glyphs.
+  // Space Grotesk bold; size it down hard so a chip fits next to a 5px dot.
+  // width ≈ chars * ~5.2 at 5px glyphs (slight overestimate for this proportional font).
   const fontSize = 5
   const charW = 5.4
   const padX = 5
@@ -496,7 +496,8 @@ function NodeLabel({
       <text
         x={x + 8 + padX}
         y={y - 9 + chipH / 2}
-        fontFamily="'Press Start 2P', ui-monospace, monospace"
+        fontFamily="'Space Grotesk', Inter, ui-sans-serif, system-ui, sans-serif"
+        fontWeight={700}
         fontSize={fontSize}
         dominantBaseline="central"
         fill={isNext ? '#ffffff' : '#dbe2ff'}

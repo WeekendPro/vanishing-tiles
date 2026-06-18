@@ -24,7 +24,7 @@ export function BriefingPhase() {
 
   return (
     <div className="flex flex-col items-center text-center gap-5 w-full max-w-[360px]">
-      <h2 className="font-pixel text-[15px] text-neon-cyan text-glow-cyan tracking-wide">{title}</h2>
+      <h2 className="font-pixel font-bold text-[15px] text-neon-cyan text-glow-cyan tracking-wide">{title}</h2>
       <p className="text-zinc-300 text-[15px] leading-relaxed max-w-[300px]">{objective}</p>
 
       <div className="text-[9px] font-pixel tracking-[0.2em] text-zinc-500">HOW IT WORKS</div>
@@ -36,7 +36,7 @@ export function BriefingPhase() {
         <button
           data-testid="briefing-play"
           onClick={beginCountdown}
-          className="font-pixel text-[15px] tracking-[0.15em] text-white rounded-2xl py-5 w-full transition active:translate-y-px"
+          className="font-pixel font-bold text-[15px] tracking-[0.15em] text-white rounded-2xl py-5 w-full transition active:translate-y-px"
           style={{
             background: 'linear-gradient(135deg,#22d3ee,#2563eb)',
             boxShadow: '0 0 22px rgba(34,211,238,.55), inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.25)',

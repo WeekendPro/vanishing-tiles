@@ -95,7 +95,7 @@ export function LevelScreen() {
             <div className="font-pixel text-[8px] tracking-[0.25em] text-neon-magenta text-glow-magenta mb-2">
               {level.theme_name.toUpperCase()}
             </div>
-            <h2 className="font-pixel text-[17px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan">
+            <h2 className="font-pixel font-bold text-[17px] leading-tight tracking-[0.04em] text-neon-cyan text-glow-cyan">
               {level.name}
             </h2>
           </div>

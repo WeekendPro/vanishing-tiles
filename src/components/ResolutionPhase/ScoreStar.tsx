@@ -171,7 +171,7 @@ export function ScoreStar({ show, score, livesRemaining }: Props) {
         {/* score value */}
         <span
           data-testid="score-star-value"
-          className="absolute inset-0 grid place-items-center font-pixel text-[20px] text-white"
+          className="absolute inset-0 grid place-items-center font-pixel font-bold tabular-nums text-[20px] text-white"
           style={{ textShadow: '0 2px 4px rgba(0,0,0,.85)' }}
         >
           {display}

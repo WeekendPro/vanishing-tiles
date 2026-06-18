@@ -18,7 +18,7 @@ function LevelSummary({
   return (
     <>
       <div className="text-center mb-6">
-        <div className="font-pixel text-xl uppercase tracking-[0.08em] text-neon-cyan text-glow-cyan mb-1">
+        <div className="font-pixel font-bold text-xl uppercase tracking-[0.08em] text-neon-cyan text-glow-cyan mb-1">
           {title}
         </div>
         <div className="text-2xl">
@@ -41,7 +41,7 @@ function LevelSummary({
         </div>
         <div className="flex justify-between text-sm font-bold pt-2 border-t border-arcade-edge mt-2">
           <span className="font-pixel text-[10px] uppercase tracking-[0.1em]">Level Total</span>
-          <span className="font-pixel text-neon-yellow text-glow-yellow tabular-nums">{score.toLocaleString()}</span>
+          <span className="font-pixel font-bold text-neon-yellow text-glow-yellow tabular-nums">{score.toLocaleString()}</span>
         </div>
       </ArcadePanel>
     </>

@@ -96,7 +96,7 @@ export function HomeScreen() {
             >
               <span className="text-lg leading-none">‹</span> Back
             </button>
-            <h2 className="font-pixel text-sm leading-none uppercase tracking-[0.08em] text-white text-glow-magenta">
+            <h2 className="font-pixel font-bold text-sm leading-none uppercase tracking-[0.08em] text-white text-glow-magenta">
               Experimental
             </h2>
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.28em] text-gray-500">
