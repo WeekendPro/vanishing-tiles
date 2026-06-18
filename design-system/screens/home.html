@@ -1,72 +1,68 @@
-<!-- @dsCard group="Screens" name="Home / landing" -->
+<!-- @dsCard group="Screens" name="Home / landing (two-pane)" -->
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Home / landing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--filled:#2A2D3A;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--decay:cubic-bezier(.3,0,.1,1)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100vh;background:radial-gradient(120% 80% at 50% 0%,#0c0a12 0%,var(--void) 55%);display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Space Grotesk','Inter',system-ui,sans-serif;color:var(--text)}
-.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:var(--panel);border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:30px 24px 24px}
-.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:34px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.5;mix-blend-mode:overlay}
+:root{--void:#06060B;--panel:#0E0E16;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--lime:#B6FF3C;--text:#EAEAF2;--dim:#8A8AA0;--faint:#4A4A5C}
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;background:var(--void);display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap;padding:30px;font-family:'Space Grotesk',sans-serif;color:var(--text)}
+.phone{width:340px;aspect-ratio:340/710;border-radius:32px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:34px 22px 22px}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:32px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.5;mix-blend-mode:overlay}
+.home{background:radial-gradient(120% 70% at 50% 0%,#0b1016 0%,var(--void) 55%)}
+.exp{background:radial-gradient(120% 70% at 50% 0%,#160a14 0%,var(--void) 55%)}
+.cap{position:absolute;top:-22px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.wrap{position:relative}
 /* brand */
-.brand{text-align:center;margin-top:18px}
-.motif{display:grid;grid-template-columns:repeat(4,11px);gap:3px;justify-content:center;margin-bottom:14px;opacity:.85}
-.motif i{width:11px;height:11px;border-radius:2px;background:#15151f}
-.motif i.on{background:var(--magenta);box-shadow:0 0 7px var(--magenta),0 0 16px #ff2d9b88;animation:pulse 3.4s var(--decay) infinite}
-.motif i.on.b{animation-delay:.6s}
-@keyframes pulse{0%,72%,100%{opacity:.2}14%{opacity:1}}
-.mark{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:34px;letter-spacing:.05em;color:#fff;text-shadow:0 0 10px #28f0ff55,0 0 24px #28f0ff2e}
-.sub{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px var(--magenta);margin-top:9px}
-/* primary play */
-.stack{margin-top:auto;display:flex;flex-direction:column;gap:13px}
-.play{position:relative;border-radius:16px;padding:22px 20px;text-align:left;cursor:pointer;overflow:hidden;
-  background:rgba(40,240,255,.06);box-shadow:inset 0 0 0 1px rgba(40,240,255,.45),0 0 26px rgba(40,240,255,.14)}
-.play::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
-.kick{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:5px}
-.ptitle{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;color:#fff;text-shadow:0 0 10px #28f0ff66}
-.pmeta{font-size:11px;color:var(--text-dim);margin-top:8px;letter-spacing:.02em}
-.pmeta b{color:var(--lime);font-family:'Departure Mono',ui-monospace,monospace}
-.parrow{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:26px;color:var(--cyan);text-shadow:0 0 12px var(--cyan)}
-/* secondary modes */
-.row{display:flex;gap:13px}
-.mode{flex:1;border-radius:14px;padding:16px 14px;cursor:pointer;
-  background:rgba(255,45,155,.05);box-shadow:inset 0 0 0 1px rgba(255,45,155,.28)}
-.mode.alt{background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.mlabel{font-size:13px;font-weight:600;letter-spacing:.02em}
-.mhint{font-size:10px;color:var(--text-faint);margin-top:4px;letter-spacing:.02em}
-.mode .mlabel{color:var(--magenta)}
-.mode.alt .mlabel{color:var(--text)}
-/* footer */
-.foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid #ffffff0d}
-.who{font-size:11px;color:var(--text-dim)}
-.who b{color:var(--text)}
-.gear{font-size:15px;color:var(--text-faint);cursor:pointer}
+.mark{font-weight:700;font-size:30px;letter-spacing:.05em;color:#fff;text-shadow:0 0 10px #28f0ff55,0 0 24px #28f0ff2e}
+.tagline{margin-top:11px;font-size:10px;font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
+/* buttons */
+.stack{margin-top:46px;display:flex;flex-direction:column;gap:13px}
+.btn{position:relative;border-radius:18px;text-align:left;cursor:pointer;overflow:hidden;padding:18px 18px 18px 22px}
+.btn .edge{position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px}
+.play{padding:22px 18px 22px 24px;background:rgba(40,240,255,.06);box-shadow:inset 0 0 0 1px rgba(40,240,255,.45),0 0 24px rgba(40,240,255,.12)}
+.play .edge{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.play .lbl{font-weight:700;font-size:19px;color:#fff;text-shadow:0 0 10px #28f0ff55}
+.play .hint{display:block;font-size:12px;color:var(--cyan);opacity:.75;margin-top:3px}
+.exper{background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);display:flex;align-items:center;justify-content:space-between}
+.exper .edge{background:var(--cyan);opacity:.7}
+.exper .lbl{font-weight:600;font-size:15px;color:var(--text)}
+.exper .chev{color:var(--cyan);font-size:18px}
+.foot{margin-top:18px;text-align:center;font-size:11px;color:var(--faint)}
+/* experimental pane */
+.back{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--magenta);cursor:pointer;margin-bottom:26px}
+.eyebrow{font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#fff;text-shadow:0 0 10px var(--magenta)}
+.esub{margin-top:9px;font-size:10px;font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
+.modes{margin-top:30px;display:flex;flex-direction:column;gap:11px}
+.mode{position:relative;border-radius:16px;padding:15px 16px 15px 22px;cursor:pointer;background:rgba(255,45,155,.05);box-shadow:inset 0 0 0 1px rgba(255,45,155,.26);display:flex;align-items:center;justify-content:space-between}
+.mode .edge{position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--magenta);box-shadow:0 0 8px var(--magenta)}
+.mode .ml{display:block;font-weight:600;font-size:14px;color:var(--text)}
+.mode .mh{display:block;font-size:11px;color:var(--faint);margin-top:3px}
+.mode .chev{color:var(--faint);font-size:18px}
 </style></head><body>
-  <div class="phone">
-    <div class="brand">
-      <div class="motif"><i></i><i class="on"></i><i class="on b"></i><i></i></div>
-      <div class="mark">PHOSPHOR</div>
-      <div class="sub">Memory glows. Then it's gone.</div>
-    </div>
 
+  <div class="wrap"><div class="cap">Home pane</div>
+  <div class="phone home">
+    <div class="mark">PHOSPHOR</div>
+    <div class="tagline">Memory · Speed · Recall</div>
     <div class="stack">
-      <div class="play">
-        <div class="kick">▶ Play</div>
-        <div class="ptitle">INFINITE STAGGER</div>
-        <div class="pmeta">Remember, then race. Best <b>24,180</b></div>
-        <div class="parrow">→</div>
-      </div>
-
-      <div class="row">
-        <div class="mode"><div class="mlabel">Journey</div><div class="mhint">Map &amp; badges</div></div>
-        <div class="mode alt"><div class="mlabel">Practice</div><div class="mhint">Warm up</div></div>
-      </div>
-
-      <div class="foot">
-        <div class="who">Playing as <b>Guest</b></div>
-        <div class="gear">⚙</div>
-      </div>
+      <div class="btn play"><span class="edge"></span><span class="lbl">Play</span><span class="hint">Infinite Stagger</span></div>
+      <div class="btn exper"><span class="edge"></span><span class="lbl">Experimental Modes</span><span class="chev">›</span></div>
     </div>
-  </div>
+    <div class="foot">4 more ways to play, behind one tap</div>
+  </div></div>
+
+  <div class="wrap"><div class="cap">Experimental pane (slides in)</div>
+  <div class="phone exp">
+    <div class="back">‹ Back</div>
+    <div class="eyebrow">Experimental</div>
+    <div class="esub">Roads not yet taken</div>
+    <div class="modes">
+      <div class="mode"><span class="edge"></span><span><span class="ml">Training</span><span class="mh">The classic gauntlet</span></span><span class="chev">›</span></div>
+      <div class="mode"><span class="edge"></span><span><span class="ml">Subway Map</span><span class="mh">Ride the transit lines</span></span><span class="chev">›</span></div>
+      <div class="mode"><span class="edge"></span><span><span class="ml">Mind Map</span><span class="mh">Light up the neurons</span></span><span class="chev">›</span></div>
+      <div class="mode"><span class="edge"></span><span><span class="ml">Git Map</span><span class="mh">Branch through the graph</span></span><span class="chev">›</span></div>
+    </div>
+  </div></div>
+
 </body></html>
