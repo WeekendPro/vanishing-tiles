@@ -40,12 +40,16 @@ function useCountUp(value: number, durationMs = 600): number {
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
-// The board reads as SOLID during selection — gaps are hidden, so the player is
-// recalling from memory. Filled gaps light up in their piece color; during the
-// reveal, the current gap's cells flash a dashed silhouette over the solid board.
+// The phosphor board. Every empty cell renders ONE uniform surface so gaps are
+// concealed: graphite (.phos-filled) during reveal/countdown, lights-out
+// (.phos-dim) during recall. A gap is only ever exposed by a live magenta BLOOM
+// — the whole tetromino's cells get .phos-bloom at the same tick, flood magenta,
+// hold, then decay and RE-SEAL into the graphite surface (never a dark hole).
+// Filled/placed gaps keep their piece color (a correct pick lighting out of the
+// dark), ringed with a soft glow.
 function StaggerBoard({
-  gaps, revealCells, revealOn,
-}: { gaps: StaggerGap[]; revealCells: Set<string>; revealOn: boolean }) {
+  gaps, bloomCells, bloomKey, recall,
+}: { gaps: StaggerGap[]; bloomCells: Set<string>; bloomKey: number; recall: boolean }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -53,7 +57,7 @@ function StaggerBoard({
 
   return (
     <div
-      className="inline-grid gap-[2px] p-3 bg-gray-900 rounded-xl"
+      className="inline-grid gap-[2px] p-3 bg-[#04040a] rounded-xl shadow-[inset_0_2px_6px_#000,inset_0_0_0_1px_rgba(255,255,255,0.03)]"
       style={{ gridTemplateColumns: `repeat(${COLS}, ${CELL}px)` }}
     >
       {Array.from({ length: ROWS * COLS }, (_, i) => {
@@ -62,29 +66,26 @@ function StaggerBoard({
         const key = `${r},${c}`
         const piece = colorByCell.get(key)
         if (piece) {
+          // A correct pick lighting up out of the dark — keep its piece identity,
+          // add a soft glow ring. (Never recolored to lime.)
           return (
             <motion.div
               key={i}
               initial={{ scale: 0.5, opacity: 0.4 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className={`w-7 h-7 rounded-sm ${getPieceColor(piece)} ring-1 ring-white/25`}
+              className={`w-7 h-7 rounded-sm ${getPieceColor(piece)} ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
             />
           )
         }
-        const revealing = revealCells.has(key)
-        // Faint board tile; a revealing gap fades in as a TRUE empty hole (the
-        // dark board shows through) ringed by a dashed neon outline — the same
-        // "empty gap" look the other modes use.
+        // Uniform surface: graphite while revealing, lights-out while recalling.
+        // A blooming gap's cells flood magenta together then re-seal seamlessly.
+        const blooming = bloomCells.has(key)
         return (
-          <div key={i} className="relative w-7 h-7 rounded-sm bg-slate-800/50">
-            {revealing && (
-              <div
-                className="absolute inset-0 rounded-sm border-2 border-dashed border-neon-cyan bg-gray-900"
-                style={{ opacity: revealOn ? 1 : 0, transition: `opacity ${STAGGER.FADE_MS}ms ease` }}
-              />
-            )}
-          </div>
+          <div
+            key={blooming ? `${i}-bloom-${bloomKey}` : i}
+            className={`w-7 h-7 rounded-sm ${blooming ? 'phos-bloom' : recall ? 'phos-dim' : 'phos-filled'}`}
+          />
         )
       })}
     </div>
@@ -168,7 +169,7 @@ export function StaggerScreen() {
   const goHome = useNavStore(s => s.goHome)
 
   const [revealIndex, setRevealIndex] = useState(-1)
-  const [revealOn, setRevealOn] = useState(false)
+  const [bloomKey, setBloomKey] = useState(0)
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
@@ -196,25 +197,30 @@ export function StaggerScreen() {
     }
   }, [phase])
 
-  // Reveal driver: flash each gap once (fade-in → hold → fade-out), filling the
-  // bar one step per gap as a COUNT indicator, then hand off to selecting.
+  // Reveal driver (shape-bloom): bloom each gap as a WHOLE tetromino — all its
+  // cells get .phos-bloom at the same tick, flood magenta, hold, then decay and
+  // re-seal into the surface. Decays cascade (the next shape blooms before the
+  // last finishes dying), filling the bar one step per gap as a COUNT, then hand
+  // off to selecting. Because .phos-bloom forwards-fills to the graphite surface,
+  // past gaps re-seal seamlessly — no readable hole remains.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
     let cancelled = false
     const timers: number[] = []
     const n = gaps.length
-    const hold = holdMsForBatch(batchIndex)
+    // Step between shape blooms: the hold plus a short inter-shape breath. The
+    // 1.3s bloom keyframe out-runs this, so decays overlap into a cascade.
+    const step = holdMsForBatch(batchIndex) + STAGGER.FADE_MS
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(0)
-    setRevealIndex(-1); setRevealOn(false)
+    setRevealIndex(-1)
 
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) { beginSelecting(); return }
-      setRevealIndex(idx); setRevealOn(false)
+      setRevealIndex(idx)
+      setBloomKey(k => k + 1)   // re-key so the bloom animation (re)starts
       setBarPct(((idx + 1) / n) * 100)
-      timers.push(window.setTimeout(() => !cancelled && setRevealOn(true), 24))
-      timers.push(window.setTimeout(() => !cancelled && setRevealOn(false), 24 + STAGGER.FADE_MS + hold))
-      timers.push(window.setTimeout(() => show(idx + 1), 24 + STAGGER.FADE_MS + hold + STAGGER.FADE_MS))
+      timers.push(window.setTimeout(() => show(idx + 1), step))
     }
     // A short breath before the first gap (also paces continuous next batches).
     timers.push(window.setTimeout(() => show(0), 350))
@@ -299,9 +305,10 @@ export function StaggerScreen() {
     )
   }
 
-  const revealCells = phase === 'reveal' && revealIndex >= 0 && revealIndex < gaps.length
+  const bloomCells = phase === 'reveal' && revealIndex >= 0 && revealIndex < gaps.length
     ? new Set(gaps[revealIndex].cells.map(([r, c]) => `${r},${c}`))
     : new Set<string>()
+  const recall = phase === 'selecting'
   const phaseLabel =
     phase === 'countdown' ? 'get ready' :
     phase === 'reveal' ? 'memorize' :
@@ -346,7 +353,7 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} revealCells={revealCells} revealOn={revealOn} />
+          <StaggerBoard gaps={gaps} bloomCells={bloomCells} bloomKey={bloomKey} recall={recall} />
         </div>
 
         {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
