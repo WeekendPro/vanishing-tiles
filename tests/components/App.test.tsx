@@ -25,9 +25,9 @@ describe('App routing', () => {
     expect(useNavStore.getState().appView).toBe('auth')
   })
 
-  it('routes to the journey when a session exists', async () => {
+  it('routes to the Home landing page when a session exists', async () => {
     ;(auth.getSession as any).mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
     render(<App />)
-    await waitFor(() => expect(useNavStore.getState().appView).toBe('journey'))
+    await waitFor(() => expect(useNavStore.getState().appView).toBe('home'))
   })
 })

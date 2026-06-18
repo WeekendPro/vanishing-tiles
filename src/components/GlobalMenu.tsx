@@ -2,9 +2,7 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
-import { useStaggerStore } from '../store/staggerStore'
 import { useProgressStore } from '../store/progressStore'
-import { useSettingsStore, type MapStyle } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
 
@@ -34,17 +32,13 @@ function Avatar({ user }: { user: MenuUser }) {
   )
 }
 
-function Action({ label, onClick, tone = 'default', active }:
-  { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger'; active?: boolean }) {
-  const color = active ? 'text-neon-cyan text-glow-cyan'
-    : tone === 'danger' ? 'text-neon-red hover:text-glow-red'
+function Action({ label, onClick, tone = 'default' }:
+  { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger' }) {
+  const color = tone === 'danger' ? 'text-neon-red hover:text-glow-red'
     : tone === 'muted' ? 'text-arcade-edge hover:text-gray-300'
     : 'text-gray-200 hover:text-neon-cyan'
   return (
     <button onClick={onClick} className={`flex items-center gap-2.5 text-left font-pixel uppercase tracking-[0.08em] text-base py-3 ${color}`}>
-      {active !== undefined && (
-        <span aria-hidden="true" className="text-xs leading-none">{active ? '◉' : '○'}</span>
-      )}
       {label}
     </button>
   )
@@ -52,27 +46,20 @@ function Action({ label, onClick, tone = 'default', active }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goJourney, goPractice, goStagger, reset: resetNav } = useNavStore(useShallow(s => ({
-    goJourney: s.goJourney,
-    goPractice: s.goPractice,
-    goStagger: s.goStagger,
+  const { goHome, reset: resetNav } = useNavStore(useShallow(s => ({
+    goHome: s.goHome,
     reset: s.reset,
   })))
-  const { startRun: startStagger, exit: exitStagger } = useStaggerStore(useShallow(s => ({
-    startRun: s.startRun,
-    exit: s.exit,
-  })))
-  const { pauseGame, resumeGame, startPractice, resetGame } = useGameStore(useShallow(s => ({
+  const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
-    startPractice: s.startPractice,
     resetGame: s.resetGame,
   })))
   const resetProgress = useProgressStore(s => s.resetProgress)
-  const mapStyle = useSettingsStore(s => s.settings.mapStyle)
-  const setMapStyle = useSettingsStore(s => s.setMapStyle)
 
-  const inGame = appView === 'playing' || appView === 'practice' || appView === 'stagger'
+  // Stagger runs its own pause/exit, so the only in-game hosts here are the
+  // Journey/Practice round shells.
+  const inGame = appView === 'playing' || appView === 'practice'
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<MenuUser | null>(null)
 
@@ -103,19 +90,15 @@ export function GlobalMenu() {
     return () => document.removeEventListener('keydown', onKey)
   })
 
-  const enterPractice = () => { setOpen(false); startPractice(); goPractice() }
-  const enterStagger = () => { setOpen(false); startStagger(); goStagger() }
-  const quitToMap = () => { setOpen(false); resetGame(); exitStagger(); goJourney() }
+  const quitToHome = () => { setOpen(false); resetGame(); goHome() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
-  // Picking a map style persists the choice and lands the player on the Journey map.
-  const chooseMap = (style: MapStyle) => { setMapStyle(style); setOpen(false); resetGame(); goJourney() }
   // Admin/dev: wipe all saved scores so the journey starts fresh at level 1.
   const resetJourney = () => {
     if (!window.confirm('Reset Journey? This permanently wipes all level progress and scores.')) return
     setOpen(false)
     resetProgress()
     resetGame()
-    goJourney()
+    goHome()
   }
 
   return (
@@ -161,30 +144,14 @@ export function GlobalMenu() {
             <>
               <Action label="Resume" onClick={close} />
               <Action
-                label={
-                  appView === 'practice' ? 'Exit Training Mode'
-                  : appView === 'stagger' ? 'Exit Infinite Stagger'
-                  : 'Exit Journey Mode'
-                }
-                onClick={quitToMap}
+                label={appView === 'practice' ? 'Exit Training Mode' : 'Exit to Home'}
+                onClick={quitToHome}
               />
             </>
           )}
-          {!inGame && (
-            <>
-              <Action label="Training Mode" onClick={enterPractice} />
-              <Action label="Infinite Stagger" onClick={enterStagger} />
-            </>
-          )}
-
-          <Action label="Subway Map" active={mapStyle === 'transit'} onClick={() => chooseMap('transit')} />
-          <Action label="Mental Map" active={mapStyle === 'mentalBrain'} onClick={() => chooseMap('mentalBrain')} />
-          <Action label="Git Map" active={mapStyle === 'git'} onClick={() => chooseMap('git')} />
-
-          <Action label="Settings" tone="muted" onClick={() => { /* no settings screen yet */ }} />
 
           <div className="mt-auto">
-            <div className="font-pixel text-[8px] uppercase tracking-[0.2em] text-arcade-edge mb-1">Dev</div>
+            <Action label="Settings" tone="muted" onClick={() => setOpen(false)} />
             <Action label="Reset Journey" tone="danger" onClick={resetJourney} />
             <Action label="Logout" tone="danger" onClick={handleSignOut} />
           </div>

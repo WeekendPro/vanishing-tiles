@@ -29,13 +29,18 @@ interface StaggerState {
   lives: number               // shared pool; run ends at 0
   selectStartTime: number     // Date.now() when selecting began (for speed scoring)
   selectDuration: number      // current batch's select clock (ms)
+  paused: boolean             // hard pause (timer frozen, screen hidden)
+  resumeRemaining: number | null  // select ms to resume with (replay / pause)
 
   startRun: () => void
   beginReveal: () => void     // countdown → reveal (generates batch 0)
-  beginSelecting: () => void  // reveal done → selecting (starts the clock)
+  beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
   advanceBatch: () => void    // batch cleared → next, harder batch's reveal
   timeoutBatch: () => void    // select clock expired → costs a life, then advance
+  replayReveal: () => boolean // spend points to replay the memorize sequence
+  pause: () => void           // freeze the select clock
+  resume: () => void          // unfreeze, resuming the remaining select time
   exit: () => void            // tear down back to idle
 }
 
@@ -58,6 +63,8 @@ const IDLE = {
   lives: STAGGER.START_LIVES,
   selectStartTime: 0,
   selectDuration: 0,
+  paused: false,
+  resumeRemaining: null as number | null,
 }
 
 export const useStaggerStore = create<StaggerState>((set, get) => ({
@@ -67,12 +74,20 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   beginReveal: () => set({ phase: 'reveal', gaps: makeBatch(get().batchIndex) }),
 
-  beginSelecting: () =>
+  beginSelecting: () => {
+    const duration = difficultyForBatch(get().batchIndex).selectDuration
+    const resume = get().resumeRemaining
+    // Coming back from a replay: resume the clock where it was paused (backdate
+    // selectStartTime so `start + duration - now` equals the saved remaining).
+    const startTime = resume != null ? Date.now() - (duration - resume) : Date.now()
     set({
       phase: 'selecting',
-      selectStartTime: Date.now(),
-      selectDuration: difficultyForBatch(get().batchIndex).selectDuration,
-    }),
+      selectStartTime: startTime,
+      selectDuration: duration,
+      resumeRemaining: null,
+      paused: false,
+    })
+  },
 
   pickPiece: (type) => {
     const { phase, gaps, lives, score, selectStartTime, selectDuration } = get()
@@ -118,6 +133,35 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     }
     const next = get().batchIndex + 1
     set({ lives, phase: 'reveal', batchIndex: next, gaps: makeBatch(next) })
+  },
+
+  replayReveal: () => {
+    const { phase, score, selectStartTime, selectDuration } = get()
+    // Only mid-selection, and only if the player can afford it.
+    if (phase !== 'selecting' || score < STAGGER.REPLAY_COST) return false
+    const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
+    // Spend the points and replay the (unchanged) batch's reveal sequence; the
+    // saved remaining time resumes once the sequence finishes (beginSelecting).
+    set({ phase: 'reveal', score: score - STAGGER.REPLAY_COST, resumeRemaining: remaining })
+    return true
+  },
+
+  pause: () => {
+    const { phase, paused, selectStartTime, selectDuration } = get()
+    if (phase !== 'selecting' || paused) return
+    const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
+    set({ paused: true, resumeRemaining: remaining })
+  },
+
+  resume: () => {
+    const { paused, resumeRemaining, selectDuration } = get()
+    if (!paused) return
+    const remaining = resumeRemaining ?? selectDuration
+    set({
+      paused: false,
+      resumeRemaining: null,
+      selectStartTime: Date.now() - (selectDuration - remaining),
+    })
   },
 
   exit: () => set({ ...IDLE }),

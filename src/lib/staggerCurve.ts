@@ -17,6 +17,7 @@ export const STAGGER = {
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap
   SPEED_MAX: 500,      // max per-batch speed bonus
   START_LIVES: 5,      // shared lives for the whole run
+  REPLAY_COST: 500,    // points spent to replay the memorize sequence mid-batch
 } as const
 
 /** The rotation each piece is drawn at in the tray — and the rotation its gaps

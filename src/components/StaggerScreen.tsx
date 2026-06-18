@@ -164,15 +164,17 @@ function Hearts({ lives }: { lives: number }) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
   const {
-    phase, batchIndex, gaps, score, lives, selectDuration,
-    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch, exit,
+    phase, batchIndex, gaps, score, lives, selectDuration, selectStartTime, paused,
+    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
+    replayReveal, pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, score: s.score,
-    lives: s.lives, selectDuration: s.selectDuration,
+    lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
-    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch, exit: s.exit,
+    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
+    replayReveal: s.replayReveal, pause: s.pause, resume: s.resume, exit: s.exit,
   })))
-  const goJourney = useNavStore(s => s.goJourney)
+  const goHome = useNavStore(s => s.goHome)
 
   const [revealIndex, setRevealIndex] = useState(-1)
   const [revealOn, setRevealOn] = useState(false)
@@ -228,28 +230,32 @@ export function StaggerScreen() {
     return () => { cancelled = true; timers.forEach(clearTimeout) }
   }, [phase, batchIndex, gaps, beginSelecting])
 
-  // Selecting driver: drain the same bar over the select clock; on expiry, end
-  // the batch with no penalty (lives are the only fail condition).
+  // Selecting driver: drain the bar over whatever select clock REMAINS (a fresh
+  // batch starts full; a replay/pause resumes mid-drain), then end the batch on
+  // expiry (lives are the only fail condition). Paused → freeze: the effect
+  // tears down and waits, picking back up when `resume` re-dates selectStartTime.
   useEffect(() => {
-    if (phase !== 'selecting') return
+    if (phase !== 'selecting' || paused) return
     let cancelled = false
     setCleared(false)
-    setBarColor('green'); setBarTransition('none'); setBarPct(100)
+    const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
+    const startPct = selectDuration > 0 ? (remaining / selectDuration) * 100 : 0
+    setBarColor('green'); setBarTransition('none'); setBarPct(startPct)
     const raf = requestAnimationFrame(() => {
       if (cancelled) return
-      setBarTransition(`width ${selectDuration}ms linear`); setBarPct(0)
+      setBarTransition(`width ${remaining}ms linear`); setBarPct(0)
     })
     const expiry = window.setTimeout(() => {
       if (cancelled) return
       // A cleared batch is handled by the clear beat; only a genuinely-unfinished
       // batch reaches here, and running out of time costs a life.
       if (!useStaggerStore.getState().gaps.every(g => g.filled)) timeoutBatch()
-    }, selectDuration)
+    }, remaining)
     return () => { cancelled = true; cancelAnimationFrame(raf); clearTimeout(expiry) }
-  }, [phase, batchIndex, selectDuration, timeoutBatch])
+  }, [phase, paused, batchIndex, selectStartTime, selectDuration, timeoutBatch])
 
   const onPick = (type: PieceType) => {
-    if (cleared) return
+    if (cleared || paused) return
     const res = pickPiece(type)
     if (res.gameOver) return
     if (!res.ok) {
@@ -390,7 +396,7 @@ export function StaggerScreen() {
             <div className="text-xs text-gray-400 mb-6">reached batch {batchIndex + 1}</div>
             <div className="flex flex-col gap-3 w-44">
               <NeonButton variant="primary" fullWidth onClick={startRun}>Replay</NeonButton>
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goJourney() }}>Exit to menu</NeonButton>
+              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Exit to menu</NeonButton>
             </div>
           </div>
         )}
@@ -399,8 +405,39 @@ export function StaggerScreen() {
       {/* Phase label + tray */}
       <div className="h-5 mt-3 font-pixel text-[10px] tracking-[0.2em] uppercase text-gray-500">{phaseLabel}</div>
       <div className="mt-1 min-h-[88px] w-full flex justify-center">
-        {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared} />}
+        {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
       </div>
+
+      {/* Replay / Pause — spend points to re-see the sequence, or freeze the run. */}
+      {phase === 'selecting' && (
+        <div className="mt-3 w-full max-w-sm grid grid-cols-2 gap-3">
+          <NeonButton
+            variant="accent"
+            fullWidth
+            disabled={cleared || score < STAGGER.REPLAY_COST}
+            onClick={() => replayReveal()}
+          >
+            ↻ Replay −{STAGGER.REPLAY_COST}
+          </NeonButton>
+          <NeonButton variant="ghost" fullWidth disabled={cleared} onClick={() => pause()}>
+            ❚❚ Pause
+          </NeonButton>
+        </div>
+      )}
+
+      {/* Hard pause — covers the whole screen so no memorizing happens while
+          frozen; resume picks the clock back up, exit bails to the landing page. */}
+      {paused && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8
+          bg-arcade-bg text-white px-6">
+          <ScanlineOverlay />
+          <div className="font-pixel text-lg text-neon-cyan text-glow-cyan uppercase tracking-[0.2em]">Paused</div>
+          <div className="flex flex-col gap-3 w-52">
+            <NeonButton variant="primary" fullWidth onClick={() => resume()}>Resume</NeonButton>
+            <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

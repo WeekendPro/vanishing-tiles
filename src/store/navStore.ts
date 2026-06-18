@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 export type AppView =
-  | 'auth' | 'journey' | 'levelDetail' | 'playing' | 'results' | 'practice' | 'stagger'
+  | 'auth' | 'home' | 'journey' | 'levelDetail' | 'playing' | 'results' | 'practice' | 'stagger'
 
 interface NavState {
   appView: AppView
@@ -9,6 +9,7 @@ interface NavState {
   selectedLevelLocked: boolean
   levelOrder: string[]
   goAuth: () => void
+  goHome: () => void
   goJourney: () => void
   openLevel: (id: string, locked?: boolean) => void
   enterPlaying: () => void
@@ -32,6 +33,7 @@ const INITIAL = {
 export const useNavStore = create<NavState>((set, get) => ({
   ...INITIAL,
   goAuth: () => set({ appView: 'auth' }),
+  goHome: () => set({ appView: 'home' }),
   goJourney: () => set({ appView: 'journey' }),
   openLevel: (id, locked = false) =>
     set({ appView: 'levelDetail', selectedLevelId: id, selectedLevelLocked: locked }),

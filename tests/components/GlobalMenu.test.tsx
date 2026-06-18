@@ -22,28 +22,20 @@ beforeEach(() => {
 })
 
 describe('GlobalMenu', () => {
-  it('on the map shows Training Mode and account actions', async () => {
+  it('is simplified to Settings / Reset Journey / Logout (no modes or maps)', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(screen.getByRole('button', { name: /Training Mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Settings/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Reset Journey/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument()
+    // Game modes and map styles now live on the Home landing page, not the menu.
+    expect(screen.queryByRole('button', { name: /Training Mode/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Infinite Stagger/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Subway Map/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Git Map/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Resume/i })).not.toBeInTheDocument()
-  })
-
-  it('shows the three map styles and switching persists the choice', async () => {
-    useNavStore.setState({ appView: 'journey' })
-    const user = userEvent.setup()
-    render(<GlobalMenu />)
-    await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(screen.getByRole('button', { name: /Subway Map/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Mental Map$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Git Map/i })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /Git Map/i }))
-    expect(useSettingsStore.getState().settings.mapStyle).toBe('git')
-    expect(useNavStore.getState().appView).toBe('journey')
   })
 
   it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {
@@ -61,14 +53,14 @@ describe('GlobalMenu', () => {
     expect(useGameStore.getState().paused).toBe(false)
   })
 
-  it('Exit resets the game and navigates to the journey', async () => {
+  it('Exit resets the game and navigates to Home', async () => {
     useNavStore.setState({ appView: 'practice' })
     useGameStore.setState({ phase: 'viewing', round: 4 })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
     await user.click(screen.getByRole('button', { name: /Exit Training Mode/i }))
-    expect(useNavStore.getState().appView).toBe('journey')
+    expect(useNavStore.getState().appView).toBe('home')
     expect(useGameStore.getState().paused).toBe(false)
   })
 

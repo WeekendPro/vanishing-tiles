@@ -246,3 +246,53 @@ describe('useStaggerStore', () => {
     expect(useStaggerStore.getState().lives).toBe(STAGGER.START_LIVES)
   })
 })
+
+describe('Infinite Stagger replay + pause', () => {
+  it('replayReveal spends points, replays the sequence, and resumes the clock', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    useStaggerStore.setState({ score: 600 })
+    expect(useStaggerStore.getState().replayReveal()).toBe(true)
+    const mid = useStaggerStore.getState()
+    expect(mid.score).toBe(600 - STAGGER.REPLAY_COST)
+    expect(mid.phase).toBe('reveal')
+    expect(mid.resumeRemaining).toBeGreaterThan(0)
+    // Finishing the replayed reveal resumes selecting and consumes the saved time.
+    st.beginSelecting()
+    const after = useStaggerStore.getState()
+    expect(after.phase).toBe('selecting')
+    expect(after.resumeRemaining).toBeNull()
+  })
+
+  it('replayReveal is refused when the player cannot afford it', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    useStaggerStore.setState({ score: STAGGER.REPLAY_COST - 1 })
+    expect(useStaggerStore.getState().replayReveal()).toBe(false)
+    expect(useStaggerStore.getState().phase).toBe('selecting')
+    expect(useStaggerStore.getState().score).toBe(STAGGER.REPLAY_COST - 1)
+  })
+
+  it('replayReveal only fires mid-selection', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal()
+    useStaggerStore.setState({ score: 9999 })
+    expect(useStaggerStore.getState().replayReveal()).toBe(false)
+  })
+
+  it('pause freezes the clock and resume restores the remaining time', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    st.pause()
+    const paused = useStaggerStore.getState()
+    expect(paused.paused).toBe(true)
+    expect(paused.resumeRemaining).toBeGreaterThan(0)
+    const saved = paused.resumeRemaining!
+    st.resume()
+    const resumed = useStaggerStore.getState()
+    expect(resumed.paused).toBe(false)
+    expect(resumed.resumeRemaining).toBeNull()
+    const remaining = resumed.selectStartTime + resumed.selectDuration - Date.now()
+    expect(Math.abs(remaining - saved)).toBeLessThan(50)
+  })
+})
