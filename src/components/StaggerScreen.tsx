@@ -177,7 +177,7 @@ export function StaggerScreen() {
   const [revealIndex, setRevealIndex] = useState(-1)
   const [revealOn, setRevealOn] = useState(false)
   const [barPct, setBarPct] = useState(0)
-  const [barColor, setBarColor] = useState<'red' | 'green'>('red')
+  const [barColor, setBarColor] = useState<'magenta' | 'green'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
@@ -211,7 +211,7 @@ export function StaggerScreen() {
     const timers: number[] = []
     const n = gaps.length
     const hold = holdMsForBatch(batchIndex)
-    setBarColor('red'); setBarTransition('width 180ms ease-out'); setBarPct(0)
+    setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(0)
     setRevealIndex(-1); setRevealOn(false)
 
     const show = (idx: number) => {
@@ -286,8 +286,10 @@ export function StaggerScreen() {
         ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
         : barPct
       setBarTransition('none'); setBarPct(frozenPct)
-      window.setTimeout(() => { setBarTransition('width 600ms cubic-bezier(0.22,1,0.36,1)'); setBarPct(0) }, 200)
-      window.setTimeout(() => { setCleared(false); advanceBatch() }, 1050)
+      // A relaxed, savor-it drain — fast enough to feel like a reward, slow
+      // enough to enjoy the leftover time pouring into the score.
+      window.setTimeout(() => { setBarTransition('width 1400ms cubic-bezier(0.33,1,0.68,1)'); setBarPct(0) }, 220)
+      window.setTimeout(() => { setCleared(false); advanceBatch() }, 1900)
     }
   }
 
@@ -328,7 +330,7 @@ export function StaggerScreen() {
       <div className="w-full max-w-sm h-1.5 rounded-full bg-arcade-edge overflow-hidden mb-3">
         <div
           ref={barRef}
-          className={`h-full rounded-full ${barColor === 'red' ? 'bg-neon-red' : 'bg-neon-green'}`}
+          className={`h-full rounded-full ${barColor === 'magenta' ? 'bg-neon-magenta' : 'bg-neon-green'}`}
           style={{ width: `${barPct}%`, transition: barTransition }}
         />
       </div>
