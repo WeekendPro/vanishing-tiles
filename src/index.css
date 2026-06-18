@@ -179,3 +179,24 @@
 @keyframes redpulse {
   50% { opacity: 0.6; }
 }
+
+/* Auth-motif flicker: a soft, graceful bloom that rests dim most of the cycle,
+   with a little flutter at the peak. Each magenta cell sets its OWN duration +
+   delay inline, so the trio never pulses in lockstep — reads as organic, not
+   mechanical. */
+@keyframes phosFlicker {
+  0%, 70%, 100% { opacity: 0.2; }
+  10%           { opacity: 1; }
+  16%           { opacity: 0.5; }
+  23%           { opacity: 0.92; }
+  40%           { opacity: 0.32; }
+}
+.phos-flicker {
+  animation-name: phosFlicker;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phos-flicker { animation: none; opacity: 0.55; }
+}
