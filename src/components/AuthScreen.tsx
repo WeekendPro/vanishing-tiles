@@ -157,7 +157,7 @@ export function AuthScreen() {
             className="mt-3 text-center font-grotesk text-[12px] tracking-[0.04em] text-phos-dim
               hover:text-phos-text transition-colors disabled:opacity-50"
           >
-            Just here to play?{' '}
+            Just visiting?{' '}
             <span className="text-phos-cyan border-b border-phos-cyan/40">Continue as guest</span>
           </button>
 
