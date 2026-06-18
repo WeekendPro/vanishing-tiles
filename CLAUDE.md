@@ -1,8 +1,9 @@
-# Gap City — Project Context
+# Phosphor — Project Context
 
-A memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
+**Phosphor** is a memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
 complete and playable. The eventual goal is a React Native mobile app published to
-the Apple App Store.
+the Apple App Store. (Phosphor was formerly codenamed "Gap City"; that name survives only in
+internal identifiers such as district slugs, localStorage keys, and applied migrations.)
 
 **Run the app:** `npm run dev` → http://localhost:5173  
 **Run tests:** `npm run test` (all must pass before any commit)  

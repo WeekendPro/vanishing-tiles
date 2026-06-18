@@ -81,7 +81,7 @@ export function JourneyScreen() {
         <Wordmark size="sm" className="relative top-[2px]" />
         {themes.length > 0 && themes.every(t => t.levels.every(l => l.cleared)) && (
           <span className="text-[11px] font-bold tracking-wide text-emerald-400">
-            Gap City cleared
+            Journey cleared
           </span>
         )}
       </div>

@@ -90,14 +90,14 @@ describe('JourneyScreen', () => {
     // Completion is client-derived: mark every level's Main solved.
     useProgressStore.setState({ byLevel: clearedProgress(['l1', 'l2', 'l11']) })
     render(<JourneyScreen />)
-    expect(await screen.findByText(/Gap City cleared/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Journey cleared/i)).toBeInTheDocument()
   })
 
   it('does not show the all-clear badge while levels remain', async () => {
     ;(api.getJourney as any).mockResolvedValue(JOURNEY)
     render(<JourneyScreen />)
     await screen.findByRole('button', { name: /Vacant Heights/i })
-    expect(screen.queryByText(/Gap City cleared/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Journey cleared/i)).not.toBeInTheDocument()
   })
 
   it('shows a retry affordance when the journey fetch fails', async () => {

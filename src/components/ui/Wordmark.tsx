@@ -1,7 +1,11 @@
 interface WordmarkProps {
   size?: 'sm' | 'lg'
   as?: 'h1' | 'h2'
-  /** Stack "Gap" over "City" on two lines (landing-page hero treatment). */
+  /**
+   * Legacy hero treatment that stacked "Gap" over "City" on two lines.
+   * "PHOSPHOR" is a single word, so this is now a no-op kept for API
+   * compatibility with existing callers (landing-page hero).
+   */
   stacked?: boolean
   className?: string
 }
@@ -11,7 +15,7 @@ const SIZE: Record<NonNullable<WordmarkProps['size']>, string> = {
   lg: 'text-3xl',
 }
 
-export function Wordmark({ size = 'sm', as: Tag = 'h1', stacked = false, className = '' }: WordmarkProps) {
+export function Wordmark({ size = 'sm', as: Tag = 'h1', stacked: _stacked = false, className = '' }: WordmarkProps) {
   return (
     <Tag
       className={[
@@ -22,13 +26,7 @@ export function Wordmark({ size = 'sm', as: Tag = 'h1', stacked = false, classNa
         .filter(Boolean)
         .join(' ')}
     >
-      {stacked ? (
-        <>
-          Gap<br />City
-        </>
-      ) : (
-        'Gap City'
-      )}
+      Phosphor
     </Tag>
   )
 }
