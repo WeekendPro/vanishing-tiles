@@ -113,7 +113,7 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
             animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.9 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="absolute font-sans font-black leading-none text-neon-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
+            className="absolute font-silk font-black leading-none text-phos-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(40,240,255,0.55)]"
           >
             {count}
           </motion.span>
@@ -170,7 +170,7 @@ export function StaggerScreen() {
   const [revealIndex, setRevealIndex] = useState(-1)
   const [revealOn, setRevealOn] = useState(false)
   const [barPct, setBarPct] = useState(0)
-  const [barColor, setBarColor] = useState<'magenta' | 'green'>('magenta')
+  const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
@@ -231,7 +231,7 @@ export function StaggerScreen() {
     setCleared(false)
     const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
     const startPct = selectDuration > 0 ? (remaining / selectDuration) * 100 : 0
-    setBarColor('green'); setBarTransition('none'); setBarPct(startPct)
+    setBarColor('amber'); setBarTransition('none'); setBarPct(startPct)
     const raf = requestAnimationFrame(() => {
       if (cancelled) return
       setBarTransition(`width ${remaining}ms linear`); setBarPct(0)
@@ -282,9 +282,10 @@ export function StaggerScreen() {
       const frozenPct = el && parent
         ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
         : barPct
-      setBarTransition('none'); setBarPct(frozenPct)
+      setBarColor('lime'); setBarTransition('none'); setBarPct(frozenPct)
       // A relaxed, savor-it drain — fast enough to feel like a reward, slow
-      // enough to enjoy the leftover time pouring into the score.
+      // enough to enjoy the leftover time pouring into the score. The bar goes
+      // lime for the exhale (amber→lime payoff arc).
       window.setTimeout(() => { setBarTransition('width 1400ms cubic-bezier(0.33,1,0.68,1)'); setBarPct(0) }, 220)
       window.setTimeout(() => { setCleared(false); advanceBatch() }, 1900)
     }
@@ -292,7 +293,7 @@ export function StaggerScreen() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-arcade-bg">
+      <div className="min-h-screen flex flex-col items-center justify-center phos-vignette">
         <NeonButton variant="primary" onClick={startRun}>Start Infinite Stagger</NeonButton>
       </div>
     )
@@ -306,28 +307,38 @@ export function StaggerScreen() {
     phase === 'reveal' ? 'memorize' :
     phase === 'selecting' ? (cleared ? 'cleared!' : 'recall') : ''
 
+  // Timer-bar phase color (the §1 temperature arc): magenta filling on reveal,
+  // amber draining on recall, red pulse under 25% as the clock heats up, lime on
+  // the clear-payoff drain.
+  const barLow = barColor === 'amber' && barPct < 25
+  const barClass =
+    barColor === 'magenta' ? 'bg-phos-magenta shadow-phos-magenta' :
+    barColor === 'lime' ? 'bg-phos-lime shadow-phos-lime' :
+    barLow ? 'bg-phos-red shadow-phos-red animate-[redpulse_0.5s_cubic-bezier(0.7,0,0.3,1)_infinite]' :
+    'bg-phos-amber shadow-phos-amber'
+
   return (
-    <div className="min-h-screen flex flex-col items-center bg-arcade-bg text-white px-4 pt-12 pb-8">
+    <div className="min-h-screen flex flex-col items-center phos-vignette text-phos-text px-4 pt-12 pb-8">
       {/* HUD */}
       <div className="w-full max-w-sm flex items-end justify-between mb-2">
         <div>
-          <div className="font-pixel text-[9px] tracking-[0.2em] uppercase text-gray-500">Score</div>
-          <div className="font-pixel text-3xl text-neon-cyan text-glow-cyan leading-none tabular-nums">{displayScore}</div>
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
+          <div className="font-silk text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
         </div>
         <div className="text-right">
           <LivesCounter lives={lives} />
-          <div className="font-sans font-semibold text-sm text-gray-300 mt-1.5 tabular-nums">
+          <div className="font-grotesk font-semibold text-sm text-phos-text mt-1.5 tabular-nums">
             {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-            <span className="font-sans text-[10px] text-gray-500 ml-1.5 tracking-[0.12em] uppercase">gaps</span>
+            <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">shapes</span>
           </div>
         </div>
       </div>
 
-      {/* Timer / count bar */}
-      <div className="w-full max-w-sm h-1.5 rounded-full bg-arcade-edge overflow-hidden mb-3">
+      {/* Timer / count bar — phase-colored (magenta → amber → red → lime) */}
+      <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-3 shadow-[inset_0_1px_2px_#000]">
         <div
           ref={barRef}
-          className={`h-full rounded-full ${barColor === 'magenta' ? 'bg-neon-magenta' : 'bg-neon-green'}`}
+          className={`h-full rounded-full ${barClass}`}
           style={{ width: `${barPct}%`, transition: barTransition }}
         />
       </div>
@@ -348,8 +359,8 @@ export function StaggerScreen() {
               exit={{ opacity: 0, scale: 1.5, y: -46 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
               className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
-                font-pixel text-[11px] whitespace-nowrap text-neon-yellow
-                drop-shadow-[0_0_10px_rgba(250,204,21,0.85)]"
+                font-silk text-[11px] whitespace-nowrap text-phos-lime
+                drop-shadow-[0_0_10px_rgba(182,255,60,0.85)]"
               style={{ left: cb.x, top: cb.y }}
             >
               Combo {cb.count}
@@ -358,8 +369,8 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'countdown' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-arcade-bg/70 rounded-xl">
-            <div className="font-pixel text-sm text-neon-cyan text-glow-cyan mb-2 uppercase tracking-[0.1em]">Infinite Stagger</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/70 rounded-xl">
+            <div className="font-silk text-sm text-phos-cyan text-glow-phos-cyan mb-2 uppercase tracking-[0.1em]">Infinite Stagger</div>
             <StaggerCountdown onDone={beginReveal} />
           </div>
         )}
@@ -373,28 +384,28 @@ export function StaggerScreen() {
               transition={{ duration: 0.18 }}
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
             >
-              <span className="text-neon-red text-glow-red text-7xl font-black">✕</span>
+              <span className="text-phos-red text-glow-phos-red text-7xl font-black">✕</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         {phase === 'gameOver' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-arcade-bg/90 rounded-xl px-6">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/90 rounded-xl px-6">
             <ScanlineOverlay />
-            <div className="font-pixel text-sm text-neon-red text-glow-red uppercase tracking-[0.15em] mb-3">Game Over</div>
-            <div className="font-pixel text-[9px] tracking-[0.2em] uppercase text-gray-500">Final score</div>
-            <div className="font-pixel text-4xl text-neon-cyan text-glow-cyan mb-1">{score}</div>
-            <div className="text-xs text-gray-400 mb-6">reached batch {batchIndex + 1}</div>
+            <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1">Game Over</div>
+            <div className="font-grotesk text-xs text-phos-dim mb-5">Memory fades.</div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Final score</div>
+            <div className="font-silk text-4xl text-phos-amber text-glow-phos-amber mb-6">{score}</div>
             <div className="flex flex-col gap-3 w-44">
-              <NeonButton variant="primary" fullWidth onClick={startRun}>Replay</NeonButton>
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Exit to menu</NeonButton>
+              <NeonButton variant="primary" fullWidth onClick={startRun}>Play again</NeonButton>
+              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>
           </div>
         )}
       </div>
 
       {/* Phase label + tray */}
-      <div className="h-5 mt-3 font-pixel text-[10px] tracking-[0.2em] uppercase text-gray-500">{phaseLabel}</div>
+      <div className="h-5 mt-3 font-grotesk text-[11px] tracking-[0.22em] uppercase text-phos-dim">{phaseLabel}</div>
       <div className="mt-1 min-h-[88px] w-full flex justify-center">
         {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
       </div>
@@ -406,8 +417,8 @@ export function StaggerScreen() {
           <button
             disabled={cleared || score < STAGGER.REPLAY_COST}
             onClick={() => replayReveal()}
-            className="flex-1 rounded-md border-2 bg-arcade-panel py-3 px-4 text-sm font-sans font-semibold
-              border-neon-magenta text-neon-magenta shadow-neon-magenta hover:bg-neon-magenta/10
+            className="flex-1 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
+              border-phos-amber text-phos-amber shadow-phos-amber hover:bg-phos-amber/10
               transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             ↻ Replay <span className="opacity-75">−{STAGGER.REPLAY_COST}</span>
@@ -416,8 +427,8 @@ export function StaggerScreen() {
             aria-label="Pause"
             disabled={cleared}
             onClick={() => pause()}
-            className="shrink-0 w-12 grid place-items-center rounded-md border-2 bg-arcade-panel
-              border-arcade-edge text-gray-300 hover:border-neon-cyan hover:text-neon-cyan
+            className="shrink-0 w-12 grid place-items-center rounded-md border-2 bg-phos-raised
+              border-phos-cyan/40 text-phos-dim hover:border-phos-cyan hover:text-phos-cyan
               transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="flex gap-[3px]">
@@ -432,9 +443,9 @@ export function StaggerScreen() {
           frozen; resume picks the clock back up, exit bails to the landing page. */}
       {paused && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8
-          bg-arcade-bg text-white px-6">
+          bg-phos-void text-phos-text px-6">
           <ScanlineOverlay />
-          <div className="font-pixel text-lg text-neon-cyan text-glow-cyan uppercase tracking-[0.2em]">Paused</div>
+          <div className="font-silk text-lg text-phos-cyan text-glow-phos-cyan uppercase tracking-[0.2em]">Paused</div>
           <div className="flex flex-col gap-3 w-52">
             <NeonButton variant="primary" fullWidth onClick={() => resume()}>Resume</NeonButton>
             <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>

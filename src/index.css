@@ -173,3 +173,8 @@
 @media (prefers-reduced-motion: reduce) {
   .phos-bloom { animation: none; }
 }
+
+/* Timer bar under-25% red pulse (≤3Hz — flash-hazard safe). */
+@keyframes redpulse {
+  50% { opacity: 0.6; }
+}
