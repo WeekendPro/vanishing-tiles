@@ -1,0 +1,72 @@
+<!-- @dsCard group="Screens" name="Home / landing" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home / landing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--filled:#2A2D3A;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--decay:cubic-bezier(.3,0,.1,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(120% 80% at 50% 0%,#0c0a12 0%,var(--void) 55%);display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Space Grotesk','Inter',system-ui,sans-serif;color:var(--text)}
+.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:var(--panel);border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:30px 24px 24px}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:34px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.5;mix-blend-mode:overlay}
+/* brand */
+.brand{text-align:center;margin-top:18px}
+.motif{display:grid;grid-template-columns:repeat(4,11px);gap:3px;justify-content:center;margin-bottom:14px;opacity:.85}
+.motif i{width:11px;height:11px;border-radius:2px;background:#15151f}
+.motif i.on{background:var(--magenta);box-shadow:0 0 7px var(--magenta),0 0 16px #ff2d9b88;animation:pulse 3.4s var(--decay) infinite}
+.motif i.on.b{animation-delay:.6s}
+@keyframes pulse{0%,72%,100%{opacity:.2}14%{opacity:1}}
+.mark{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:34px;letter-spacing:.05em;color:#fff;text-shadow:0 0 10px #28f0ff55,0 0 24px #28f0ff2e}
+.sub{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px var(--magenta);margin-top:9px}
+/* primary play */
+.stack{margin-top:auto;display:flex;flex-direction:column;gap:13px}
+.play{position:relative;border-radius:16px;padding:22px 20px;text-align:left;cursor:pointer;overflow:hidden;
+  background:rgba(40,240,255,.06);box-shadow:inset 0 0 0 1px rgba(40,240,255,.45),0 0 26px rgba(40,240,255,.14)}
+.play::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.kick{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:5px}
+.ptitle{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:.02em;color:#fff;text-shadow:0 0 10px #28f0ff66}
+.pmeta{font-size:11px;color:var(--text-dim);margin-top:8px;letter-spacing:.02em}
+.pmeta b{color:var(--lime);font-family:'Departure Mono',ui-monospace,monospace}
+.parrow{position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:26px;color:var(--cyan);text-shadow:0 0 12px var(--cyan)}
+/* secondary modes */
+.row{display:flex;gap:13px}
+.mode{flex:1;border-radius:14px;padding:16px 14px;cursor:pointer;
+  background:rgba(255,45,155,.05);box-shadow:inset 0 0 0 1px rgba(255,45,155,.28)}
+.mode.alt{background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.mlabel{font-size:13px;font-weight:600;letter-spacing:.02em}
+.mhint{font-size:10px;color:var(--text-faint);margin-top:4px;letter-spacing:.02em}
+.mode .mlabel{color:var(--magenta)}
+.mode.alt .mlabel{color:var(--text)}
+/* footer */
+.foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid #ffffff0d}
+.who{font-size:11px;color:var(--text-dim)}
+.who b{color:var(--text)}
+.gear{font-size:15px;color:var(--text-faint);cursor:pointer}
+</style></head><body>
+  <div class="phone">
+    <div class="brand">
+      <div class="motif"><i></i><i class="on"></i><i class="on b"></i><i></i></div>
+      <div class="mark">PHOSPHOR</div>
+      <div class="sub">Memory glows. Then it's gone.</div>
+    </div>
+
+    <div class="stack">
+      <div class="play">
+        <div class="kick">▶ Play</div>
+        <div class="ptitle">INFINITE STAGGER</div>
+        <div class="pmeta">Remember, then race. Best <b>24,180</b></div>
+        <div class="parrow">→</div>
+      </div>
+
+      <div class="row">
+        <div class="mode"><div class="mlabel">Journey</div><div class="mhint">Map &amp; badges</div></div>
+        <div class="mode alt"><div class="mlabel">Practice</div><div class="mhint">Warm up</div></div>
+      </div>
+
+      <div class="foot">
+        <div class="who">Playing as <b>Guest</b></div>
+        <div class="gear">⚙</div>
+      </div>
+    </div>
+  </div>
+</body></html>
