@@ -1,0 +1,35 @@
+<!-- @dsCard group="Components" name="Lives & HUD" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lives &amp; HUD</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--cyan:#28F0FF;--red:#FF3B47;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 22px;font-weight:600}
+.lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin:20px 0 10px}
+.hud{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--panel);border-radius:12px;box-shadow:inset 0 1px 0 #ffffff0a,inset 0 0 0 1px #ffffff08;max-width:360px}
+.hearts{display:flex;gap:6px;font-size:18px}
+.heart{color:var(--red);filter:drop-shadow(0 0 5px var(--red))}
+.lost{color:var(--text-faint);filter:none}
+.score{font-family:'Silkscreen','Press Start 2P',monospace;font-size:20px;letter-spacing:.06em;text-shadow:0 0 8px #eaeaf24d}
+.batch{font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.08em;color:var(--cyan);text-shadow:0 0 8px var(--cyan);padding:3px 8px;border:1px solid #28f0ff44;border-radius:5px}
+.hrow{display:flex;gap:30px;align-items:center}
+</style></head><body>
+  <h2>Lives &amp; HUD — status, recessed and calm</h2>
+
+  <div class="lab">Full bar · lives · score · batch</div>
+  <div class="hud">
+    <div class="hearts"><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span></div>
+    <div class="score">017030</div>
+    <div class="batch">BATCH 07</div>
+  </div>
+
+  <div class="lab">Lives — 3 / 2 / 1 / 0</div>
+  <div class="hrow">
+    <div class="hearts"><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span></div>
+    <div class="hearts"><span class="heart">♥</span><span class="heart">♥</span><span class="lost">♥</span></div>
+    <div class="hearts"><span class="heart">♥</span><span class="lost">♥</span><span class="lost">♥</span></div>
+    <div class="hearts"><span class="lost">♥</span><span class="lost">♥</span><span class="lost">♥</span></div>
+  </div>
+
+  <p style="margin-top:24px;font-size:12px;color:var(--text-faint);max-width:400px;line-height:1.6">Lost hearts <b>flicker white for one frame</b> then drain to a hollow outline. The count is always implied by the row — <b>never carried by color alone</b>. Shared pool across the run.</p>
+</body></html>

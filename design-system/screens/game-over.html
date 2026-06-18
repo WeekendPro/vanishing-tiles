@@ -1,0 +1,54 @@
+<!-- @dsCard group="Screens" name="Game Over (Stagger)" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Game Over</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--red:#FF3B47;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--decay:cubic-bezier(.3,0,.1,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(120% 90% at 50% 40%,transparent 55%,#000 130%),var(--void);display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Space Grotesk','Inter',system-ui,sans-serif;color:var(--text)}
+.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:#070710;border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 30px}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:34px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.4;mix-blend-mode:overlay}
+/* dead lives */
+.lives{display:flex;align-items:center;gap:5px;font-size:15px;color:var(--text-faint);margin-bottom:22px}
+.lives .x{font-family:'Departure Mono',ui-monospace,monospace;font-size:13px}
+.label{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--red);text-shadow:0 0 12px #ff3b4766}
+.title{font-family:'Silkscreen','Press Start 2P',monospace;font-size:26px;letter-spacing:.06em;color:#fff;text-shadow:0 0 12px #ff3b4744;margin-top:8px}
+.fade{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-faint);margin-top:10px;animation:fade 3.2s var(--decay) infinite}
+@keyframes fade{0%{opacity:.6}60%,100%{opacity:.12}}
+.scorewrap{text-align:center;margin:30px 0 6px}
+.scorelabel{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim)}
+.score{font-family:'Silkscreen',monospace;font-size:42px;letter-spacing:.04em;color:var(--amber);text-shadow:0 0 14px #ffc23d66;margin-top:8px}
+.best{display:inline-block;margin-top:10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#04121a;background:var(--lime);padding:3px 9px;border-radius:6px;box-shadow:0 0 12px #b6ff3c66;font-weight:700}
+.stats{display:flex;gap:0;width:100%;max-width:300px;margin:24px 0 6px;border-top:1px solid #ffffff12;border-bottom:1px solid #ffffff12}
+.stat{flex:1;text-align:center;padding:14px 4px}
+.stat+.stat{border-left:1px solid #ffffff12}
+.stat .v{font-family:'Silkscreen',monospace;font-size:16px;color:var(--cyan);text-shadow:0 0 8px #28f0ff55}
+.stat .v.m{color:var(--magenta);text-shadow:0 0 8px var(--magenta)}
+.stat .v.l{color:var(--lime);text-shadow:0 0 8px #b6ff3c66}
+.stat .k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
+.acts{width:100%;max-width:300px;display:flex;flex-direction:column;gap:11px;margin-top:26px}
+.btn{height:50px;border-radius:12px;font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:2px solid;background:var(--panel-raised);color:var(--text);box-shadow:inset 0 1px 0 #ffffff12}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 16px #28f0ff44}
+.btn.ghost{border-color:#ffffff1f;color:var(--text-dim)}
+</style></head><body>
+  <div class="phone">
+    <div class="label">Run over</div>
+    <div class="title">GAME OVER</div>
+    <div class="fade">Memory fades</div>
+
+    <div class="scorewrap">
+      <div class="scorelabel">Final score</div>
+      <div class="score">024,180</div>
+      <div class="best">★ New best</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v m">84</div><div class="k">Shapes recalled</div></div>
+      <div class="stat"><div class="v l">×9</div><div class="k">Best combo</div></div>
+      <div class="stat"><div class="v">94%</div><div class="k">Accuracy</div></div>
+    </div>
+
+    <div class="acts">
+      <button class="btn primary">↻ Play again</button>
+      <button class="btn ghost">Home</button>
+    </div>
+  </div>
+</body></html>

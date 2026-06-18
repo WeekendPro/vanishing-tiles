@@ -28,3 +28,7 @@ dist-ssr
 # Claude Code local config (per-machine; not shared)
 .claude/
 .vercel
+
+# design-system bundle (regenerate with zip)
+phosphor-design-system.zip
+.DS_Store

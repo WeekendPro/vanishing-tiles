@@ -1,0 +1,45 @@
+<!-- @dsCard group="Components" name="Combo & miss feedback" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Combo &amp; miss</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--filled:#2A2D3A;--filled-edge:#3A3E4F;--lime:#B6FF3C;--red:#FF3B47;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--attack:cubic-bezier(.1,.9,.2,1)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 22px;font-weight:600}
+.demo{display:flex;gap:40px;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:14px}
+.stage{width:150px;height:150px;border-radius:14px;background:#04040a;box-shadow:inset 0 2px 6px #000,inset 0 0 0 1px #ffffff08;position:relative;display:grid;place-items:center;overflow:hidden}
+.cell{width:30px;height:30px;border-radius:5px}
+.win{background:var(--lime);box-shadow:0 0 8px var(--lime),0 0 20px #b6ff3c99,inset 0 0 4px #fff8;animation:snap 1.6s var(--attack) infinite}
+@keyframes snap{0%,70%,100%{transform:scale(1)}78%{transform:scale(.85)}88%{transform:scale(1.08)}}
+.combo{position:absolute;font-family:'Silkscreen',monospace;font-size:30px;color:var(--lime);text-shadow:0 0 10px var(--lime),0 0 26px #b6ff3c88;animation:rise 1.6s var(--attack) infinite}
+@keyframes rise{0%{opacity:0;transform:translateY(14px) scale(.6)}25%{opacity:1;transform:translateY(-6px) scale(1.1)}70%,100%{opacity:0;transform:translateY(-26px) scale(1)}}
+.spark{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 6px var(--lime);animation:burst 1.6s var(--attack) infinite}
+.miss{background:var(--red);box-shadow:0 0 8px var(--red),0 0 18px #ff3b4799;animation:shake 1.8s var(--attack) infinite}
+@keyframes shake{0%,82%,100%{transform:translateX(0)}86%{transform:translateX(-6px)}92%{transform:translateX(6px)}96%{transform:translateX(-3px)}}
+.x{position:absolute;font-size:34px;color:#fff;font-weight:700;text-shadow:0 0 10px var(--red);animation:xin 1.8s var(--attack) infinite}
+@keyframes xin{0%,80%{opacity:0}88%{opacity:1;transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);text-align:center;max-width:170px;line-height:1.6}
+.tag b{color:var(--text-dim)}
+</style></head><body>
+  <h2>Combo &amp; miss — streaks feel good, misses sting</h2>
+  <div class="demo">
+    <div class="col">
+      <div class="stage">
+        <div class="cell win"></div>
+        <div class="combo">×4</div>
+        <div class="spark" style="left:46%;top:30%;animation-delay:.04s"></div>
+        <div class="spark" style="left:62%;top:42%;animation-delay:.08s"></div>
+        <div class="spark" style="left:38%;top:54%;animation-delay:.06s"></div>
+      </div>
+      <div class="tag"><b>Combo</b> — lime snap + burst, multiplier rises brighter each step</div>
+    </div>
+    <div class="col">
+      <div class="stage">
+        <div class="cell miss"></div>
+        <div class="x">✕</div>
+      </div>
+      <div class="tag"><b>Miss</b> — 6px shake + red ✕, the streak shatters back to ×1</div>
+    </div>
+  </div>
+  <p style="margin-top:26px;font-size:12px;color:var(--text-faint);max-width:460px;line-height:1.6">The combo floats <b>over</b> the board and never reflows it. Past the streak threshold every correct pick celebrates; a miss should make the player flinch — losing the streak stings more than the lost life.</p>
+</body></html>

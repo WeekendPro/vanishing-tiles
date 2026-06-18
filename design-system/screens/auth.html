@@ -1,0 +1,50 @@
+<!-- @dsCard group="Screens" name="Login / Auth" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login / Auth</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--filled:#2A2D3A;--filled-edge:#3A3E4F;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--decay:cubic-bezier(.3,0,.1,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(120% 90% at 50% 38%,transparent 55%,#000 130%),var(--void);display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Space Grotesk','Inter',system-ui,sans-serif;color:var(--text)}
+.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:var(--panel);border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px 30px;gap:0}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:34px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.5;mix-blend-mode:overlay}
+/* faint blooming gap motif behind the wordmark */
+.motif{position:absolute;top:84px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,16px);gap:3px;opacity:.5}
+.motif i{width:16px;height:16px;border-radius:3px;background:#15151f}
+.motif i.on{background:var(--magenta);box-shadow:0 0 8px var(--magenta),0 0 18px #ff2d9b88;animation:pulse 3.4s var(--decay) infinite}
+.motif i.on.b{animation-delay:.5s}.motif i.on.c{animation-delay:1s}
+@keyframes pulse{0%,70%,100%{opacity:.15}12%{opacity:1}}
+.brand{position:relative;text-align:center;margin-bottom:30px}
+.mark{font-family:'Silkscreen','Press Start 2P',monospace;font-size:34px;letter-spacing:.08em;color:#fff;text-shadow:0 0 10px #28f0ff66,0 0 26px #28f0ff33}
+.tag{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 10px var(--magenta);margin-top:10px}
+.form{width:100%;display:flex;flex-direction:column;gap:12px}
+.field{position:relative}
+.field label{position:absolute;top:-7px;left:12px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);background:var(--panel);padding:0 5px}
+.input{width:100%;height:48px;border-radius:11px;background:#0a0a12;border:1px solid #ffffff14;color:var(--text);font:inherit;font-size:14px;padding:0 14px;box-shadow:inset 0 1px 2px #000}
+.input.focus{border-color:var(--cyan);box-shadow:inset 0 1px 2px #000,0 0 0 1px #28f0ff55,0 0 14px #28f0ff33}
+.input::placeholder{color:var(--text-faint)}
+.btn{height:48px;border-radius:11px;font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:2px solid;background:var(--panel-raised);color:var(--text);box-shadow:inset 0 1px 0 #ffffff12}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 16px #28f0ff44;margin-top:4px}
+.divider{display:flex;align-items:center;gap:12px;color:var(--text-faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin:14px 0 2px}
+.divider::before,.divider::after{content:"";height:1px;flex:1;background:#ffffff12}
+.btn.oauth{border-color:#ffffff22;color:var(--text);font-size:12px;letter-spacing:.04em;text-transform:none}
+.gicon{width:16px;height:16px;border-radius:50%;background:conic-gradient(#ea4335,#fbbc05,#34a853,#4285f4);display:inline-block}
+.guest{margin-top:16px;text-align:center;font-size:12px;color:var(--text-dim);letter-spacing:.04em;cursor:pointer}
+.guest u{color:var(--cyan);text-decoration:none;border-bottom:1px solid #28f0ff55}
+.foot{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:9px;color:var(--text-faint);letter-spacing:.06em}
+</style></head><body>
+  <div class="phone">
+    <div class="motif"><i></i><i class="on"></i><i class="on b"></i><i></i><i class="on c"></i><i></i><i></i><i></i></div>
+    <div class="brand">
+      <div class="mark">PHOSPHOR</div>
+      <div class="tag">Memory glows. Then it's gone.</div>
+    </div>
+    <div class="form">
+      <div class="field"><label>Email</label><input class="input" placeholder="you@email.com"></div>
+      <div class="field"><label>Password</label><input class="input focus" type="password" placeholder="••••••••"></div>
+      <button class="btn primary">Enter →</button>
+      <div class="divider">or</div>
+      <button class="btn oauth"><span class="gicon"></span> Continue with Google</button>
+      <div class="guest">Just here to play? <u>Continue as guest</u></div>
+    </div>
+    <div class="foot">By continuing you agree to the Terms &amp; Privacy</div>
+  </div>
+</body></html>

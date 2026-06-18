@@ -1,0 +1,61 @@
+<!-- @dsCard group="Components" name="Gap cell — bloom → reseal → lights-out" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gap cell</title><style>
+:root{--void:#06060B;--filled:#2A2D3A;--filled-edge:#3A3E4F;--magenta:#FF2D9B;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--mechanical:cubic-bezier(.7,0,.3,1);--decay:cubic-bezier(.3,0,.1,1)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 4px;font-weight:600}
+.sub{font-size:12px;color:var(--text-faint);margin:0 0 26px;max-width:520px;line-height:1.6}
+.sub b{color:var(--text-dim)}
+.demo{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start}
+.col{display:flex;flex-direction:column;align-items:center;gap:12px}
+.mini{display:grid;grid-template-columns:repeat(3,26px);grid-template-rows:repeat(3,26px);gap:3px;padding:8px;background:#04040a;border-radius:10px;box-shadow:inset 0 0 0 1px #ffffff08}
+/* every cell shares ONE surface tone — gaps are concealed within it */
+.c{border-radius:4px;background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:inset 0 1px 0 #ffffff10,inset 0 -1px 0 #00000055}
+.c.dim{background:#0c0c14;box-shadow:none}
+.c.g{animation:bloom 3s var(--decay) infinite}
+.c.g.d2{animation-delay:.14s}.c.g.d3{animation-delay:.28s}.c.g.d4{animation-delay:.42s}
+@keyframes bloom{
+  0%{background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:none;transform:scale(1)}
+  6%{background:var(--magenta);box-shadow:0 0 8px var(--magenta),0 0 20px var(--magenta);transform:scale(1.12)}
+  13%{background:var(--magenta);box-shadow:0 0 7px var(--magenta);transform:scale(1)}
+  42%{background:var(--magenta);box-shadow:0 0 7px var(--magenta)}
+  52%{background:#2c1c2a;box-shadow:0 0 4px #ff2d9b55}
+  60%,100%{background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:inset 0 1px 0 #ffffff10,inset 0 -1px 0 #00000055} /* RE-SEALED — identical to the surface */
+}
+.c.placed{background:var(--lime);box-shadow:0 0 7px var(--lime),0 0 18px #b6ff3c99,inset 0 0 4px #fff8}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);text-align:center;max-width:170px;line-height:1.6}
+.tag b{color:var(--text-dim)}
+.rule{margin-top:26px;font-size:12px;color:var(--text-faint);max-width:560px;line-height:1.65;border-left:2px solid #ff2d9b66;padding-left:14px}
+.rule b{color:var(--magenta)}
+</style></head><body>
+  <h2>Gap cell — the unit of memory</h2>
+  <p class="sub">Light flows through the shape, blooms magenta, holds, then the light decays to zero and the cell <b>re-seals into the surface</b> — never a darker hole. At recall the whole board drops to <b>one uniform tone</b>, so the gap pattern survives only in memory.</p>
+  <div class="demo">
+    <div class="col">
+      <div class="mini">
+        <div class="c"></div><div class="c g"></div><div class="c"></div>
+        <div class="c g d2"></div><div class="c g d3"></div><div class="c g d4"></div>
+        <div class="c"></div><div class="c"></div><div class="c"></div>
+      </div>
+      <div class="tag"><b>Reveal</b> · bloom → re-seal into the surface (loops)</div>
+    </div>
+    <div class="col">
+      <div class="mini">
+        <div class="c dim"></div><div class="c dim"></div><div class="c dim"></div>
+        <div class="c dim"></div><div class="c dim"></div><div class="c dim"></div>
+        <div class="c dim"></div><div class="c dim"></div><div class="c dim"></div>
+      </div>
+      <div class="tag"><b>Recall</b> · lights-out · uniform · gaps concealed</div>
+    </div>
+    <div class="col">
+      <div class="mini">
+        <div class="c dim"></div><div class="c placed"></div><div class="c dim"></div>
+        <div class="c placed"></div><div class="c placed"></div><div class="c placed"></div>
+        <div class="c dim"></div><div class="c dim"></div><div class="c dim"></div>
+      </div>
+      <div class="tag"><b>Placed</b> · correct pick blooms lime out of the dark</div>
+    </div>
+  </div>
+  <p class="rule"><b>Uniformity rule:</b> at recall every cell must render in one identical tone. A gap that decayed to a <i>darker</i> hole than its neighbours would betray its shape as negative space — handing the player the answer. The light goes; the hole must go with it.</p>
+</body></html>

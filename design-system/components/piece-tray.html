@@ -1,0 +1,48 @@
+<!-- @dsCard group="Components" name="Piece tray — tiles & states" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piece tray</title><style>
+:root{--void:#06060B;--panel-raised:#15151F;--cyan:#28F0FF;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 4px;font-weight:600}
+.sub{font-size:12px;color:var(--text-faint);margin:0 0 24px}
+.lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin:22px 0 10px}
+.tray{display:flex;gap:9px}
+.tile{width:52px;height:52px;border-radius:10px;background:var(--panel-raised);border:1px solid #28f0ff2e;position:relative;display:grid;place-items:center;box-shadow:inset 0 1px 0 #ffffff0c}
+.active{box-shadow:inset 0 1px 0 #ffffff0c,0 0 0 1px #28f0ff33,0 0 12px #28f0ff2e}
+.locked{filter:saturate(.2) brightness(.6);border-color:#ffffff10}
+.mg{display:grid;gap:2px}
+.pc{width:8px;height:8px;border-radius:2px;background:var(--cyan);box-shadow:0 0 4px #28f0ff99}
+.locked .pc{box-shadow:none}
+.count{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--cyan);color:#04121a;font-family:'Departure Mono',ui-monospace,monospace;font-size:10px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 8px var(--cyan)}
+</style></head><body>
+  <h2>Piece tray — lit tiles you tap to pick</h2>
+  <p class="sub">Each tetromino rendered in cyan with a count badge. Dimmed/locked during reveal, alive during recall.</p>
+
+  <div class="lab">Active · recall (tap to pick, count ticks up)</div>
+  <div class="tray" id="active"></div>
+
+  <div class="lab">Locked · reveal (watch only)</div>
+  <div class="tray" id="locked"></div>
+
+<script>
+const pieces={
+  I:[[0,0],[1,0],[2,0],[3,0]], O:[[0,0],[0,1],[1,0],[1,1]], T:[[0,0],[0,1],[0,2],[1,1]],
+  S:[[0,1],[0,2],[1,0],[1,1]], Z:[[0,0],[0,1],[1,1],[1,2]], J:[[0,1],[1,1],[2,0],[2,1]], L:[[0,0],[1,0],[2,0],[2,1]]
+};
+const counts={I:1,O:2,T:1,S:1,Z:0,J:1,L:1};
+function build(host,cls){
+  Object.entries(pieces).forEach(([k,arr])=>{
+    const t=document.createElement('div'); t.className='tile '+cls;
+    const rows=Math.max(...arr.map(p=>p[0]))+1, cols=Math.max(...arr.map(p=>p[1]))+1;
+    const g=document.createElement('div'); g.className='mg'; g.style.gridTemplateColumns=`repeat(${cols},8px)`;
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const cell=document.createElement('div');cell.style.width='8px';cell.style.height='8px';if(arr.some(p=>p[0]===r&&p[1]===c))cell.className='pc';g.appendChild(cell);}
+    t.appendChild(g);
+    const b=document.createElement('div'); b.className='count'; b.textContent=counts[k]; t.appendChild(b);
+    host.appendChild(t);
+  });
+}
+build(document.getElementById('active'),'active');
+build(document.getElementById('locked'),'locked');
+</script>
+</body></html>

@@ -1,0 +1,50 @@
+<!-- @dsCard group="Screens" name="Pause overlay" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pause overlay</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--filled:#2A2D3A;--filled-edge:#3A3E4F;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--red:#FF3B47;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(120% 90% at 50% 40%,transparent 55%,#000 130%),var(--void);display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Space Grotesk','Inter',system-ui,sans-serif;color:var(--text)}
+.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:var(--panel);border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d;padding:16px 14px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+/* frozen game behind */
+.hud{display:flex;align-items:center;justify-content:space-between;padding:4px 6px;filter:saturate(.5) brightness(.7)}
+.lives{display:flex;align-items:center;gap:5px;font-size:16px;color:var(--red)}
+.lives .h{filter:drop-shadow(0 0 5px var(--red))}
+.lives .x{font-family:'Departure Mono',ui-monospace,monospace;font-size:14px;color:var(--text);letter-spacing:.04em}
+.score{font-family:'Silkscreen',monospace;font-size:18px;letter-spacing:.06em;color:var(--text-dim)}
+.batch{font-family:'Silkscreen',monospace;font-size:11px;color:#28f0ff99;padding:3px 7px;border:1px solid #28f0ff33;border-radius:5px}
+.timer{height:12px;border-radius:7px;background:#000;position:relative;overflow:hidden;margin:0 2px;filter:saturate(.5) brightness(.6)}
+.timer .fill{position:absolute;inset:0;width:48%;border-radius:7px;background:linear-gradient(90deg,#ffc23d88,var(--amber))}
+.bezel{margin:2px 4px;padding:10px;border-radius:14px;background:#04040a;box-shadow:inset 0 2px 6px #000;flex:1}
+.board{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;height:100%}
+.cell{border-radius:2px;background:#0c0c14}
+/* scrim + pause card */
+.scrim{position:absolute;inset:0;border-radius:34px;background:rgba(4,4,10,.74);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:30px}
+.ptitle{font-family:'Silkscreen','Press Start 2P',monospace;font-size:30px;letter-spacing:.12em;color:#fff;text-shadow:0 0 12px #28f0ff66,0 0 30px #28f0ff33}
+.psub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);margin-bottom:24px}
+.acts{width:100%;max-width:260px;display:flex;flex-direction:column;gap:11px}
+.btn{height:50px;border-radius:12px;font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:2px solid;background:var(--panel-raised);color:var(--text);box-shadow:inset 0 1px 0 #ffffff12}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 16px #28f0ff44}
+.btn.amber{border-color:var(--amber);color:var(--amber);box-shadow:inset 0 1px 0 #ffffff12,0 0 12px #ffc23d33}
+.btn.ghost{border-color:#ffffff1f;color:var(--text-dim)}
+.chip{font-family:'Departure Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:6px;border:1px solid #ffc23d77;color:var(--amber)}
+</style></head><body>
+  <div class="phone">
+    <div class="hud">
+      <div class="lives"><span class="h">♥</span><span class="x">×4</span></div>
+      <div class="score">018650</div>
+      <div class="batch">BATCH 09</div>
+    </div>
+    <div class="timer"><div class="fill"></div></div>
+    <div class="bezel"><div class="board" id="board"></div></div>
+
+    <div class="scrim">
+      <div class="ptitle">PAUSED</div>
+      <div class="psub">the world holds still</div>
+      <div class="acts">
+        <button class="btn primary">▶ Resume</button>
+        <button class="btn ghost">Exit to Home</button>
+      </div>
+    </div>
+  </div>
+<script>const b=document.getElementById('board');for(let i=0;i<144;i++){const d=document.createElement('div');d.className='cell';b.appendChild(d);}</script>
+</body></html>
