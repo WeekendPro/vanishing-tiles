@@ -1,7 +1,6 @@
 import { useGameStore } from '../store/gameStore'
 import { useNavStore } from '../store/navStore'
 import { useShallow } from 'zustand/shallow'
-import { MAX_LIVES } from '@shared/core/scoring'
 import { COMPONENT_LABEL } from '../lib/components'
 import { GIT_TRACKS } from '../lib/gitMap'
 import { BriefingPhase } from './BriefingPhase'
@@ -11,6 +10,7 @@ import { SelectingPhase } from './SelectingPhase'
 import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
 import { ArcadeLoader } from './ArcadeLoader'
+import { LivesCounter } from './ui/LivesCounter'
 
 export function GameShell() {
   const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent, gitTrack } =
@@ -109,10 +109,8 @@ export function GameShell() {
       )}
 
       {showLives && (
-        <div data-testid="lives-row" className="flex justify-center gap-1 pt-2 text-sm">
-          {Array.from({ length: MAX_LIVES }, (_, i) => (
-            <span key={i} className={i < livesRemaining ? 'text-neon-red text-glow-red' : 'text-arcade-edge'}>♥</span>
-          ))}
+        <div data-testid="lives-row" className="flex justify-center pt-2">
+          <LivesCounter lives={livesRemaining} />
         </div>
       )}
 
