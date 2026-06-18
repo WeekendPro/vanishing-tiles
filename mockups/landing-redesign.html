@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gap City — Landing redesign</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      neon: { cyan:'#22d3ee', magenta:'#ff2d95', green:'#39d98a', red:'#ff4d4d', yellow:'#facc15' },
+      arcade: { bg:'#030712', panel:'#060d12', edge:'#0e2b33', well:'#0c1f25' },
+    }}}
+  }
+</script>
+<style>
+  body { font-family:'Sora',system-ui,sans-serif; background:#0a0a0f; }
+  .ff-pixel  { font-family:'Press Start 2P',monospace; }
+  .ff-grotesk{ font-family:'Space Grotesk',system-ui,sans-serif; }
+  .ff-sora   { font-family:'Sora',system-ui,sans-serif; }
+  .ff-chakra { font-family:'Chakra Petch',system-ui,sans-serif; }
+  .ff-orbit  { font-family:'Orbitron',system-ui,sans-serif; }
+
+  .phone { width:380px; height:780px; }
+  .screen{ background:radial-gradient(120% 80% at 50% 0%, #0a1620 0%, #030712 55%); }
+  .scan::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.45) 2px 3px);
+    opacity:.5;
+  }
+  .glow-cyan   { text-shadow:0 0 10px rgba(34,211,238,.7), 0 0 24px rgba(34,211,238,.35); }
+  .glow-green  { text-shadow:0 0 10px rgba(57,217,138,.6); }
+
+  .panel-edge  { box-shadow:0 0 0 1px rgba(255,255,255,.04), inset 0 0 18px rgba(0,0,0,.6); }
+  .ring-green  { box-shadow:0 0 18px rgba(57,217,138,.45), inset 0 0 0 1px rgba(57,217,138,.5); }
+  .ring-cyan   { box-shadow:0 0 14px rgba(34,211,238,.30), inset 0 0 0 1px rgba(34,211,238,.4); }
+
+  .fill-green  { background:linear-gradient(180deg,#4ef0a0,#2bbd7d); box-shadow:0 0 22px rgba(57,217,138,.5), inset 0 1px 0 rgba(255,255,255,.45); }
+  .fill-green:active { transform:translateY(1px); }
+
+  .slide-wrap { overflow:hidden; }
+  .slide-track{ display:flex; width:200%; transition:transform .34s cubic-bezier(.4,0,.2,1); }
+  .slide-pane { width:50%; flex:0 0 50%; }
+
+  .accordion { transition:max-height .34s cubic-bezier(.4,0,.2,1), opacity .26s ease; max-height:0; opacity:0; overflow:hidden; }
+  .accordion.open { max-height:340px; opacity:1; }
+
+  .sheet-back{ transition:opacity .26s ease; opacity:0; pointer-events:none; }
+  .sheet-back.open{ opacity:1; pointer-events:auto; }
+  .sheet { transition:transform .34s cubic-bezier(.4,0,.2,1); transform:translateY(100%); }
+  .sheet.open{ transform:translateY(0); }
+
+  .chev { transition:transform .3s ease; }
+  .chev.open{ transform:rotate(180deg); }
+
+  .lbl { font-size:11px; letter-spacing:.28em; }
+  .col-head{ font-size:11px; letter-spacing:.22em; }
+</style>
+</head>
+<body class="text-white px-8 py-10">
+
+  <header class="max-w-6xl mx-auto mb-10">
+    <h1 class="text-3xl font-bold tracking-tight">Gap City — Landing page redesign</h1>
+    <p class="text-zinc-400 mt-2 max-w-2xl">Logout is gone (it lives in the hamburger). <span class="text-neon-green font-medium">PLAY</span> drops straight into Infinite Stagger. Everything else collapses behind one <span class="text-neon-cyan font-medium">Experimental Modes</span> entry. Two questions to settle: <b class="text-white">(1) which button style</b>, and <b class="text-white">(2) how the experimental sub-menu reveals</b>.</p>
+  </header>
+
+  <!-- ============ PART 1 · BUTTON STYLE DIRECTIONS ============ -->
+  <section class="max-w-6xl mx-auto">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="ff-chakra text-neon-cyan tracking-[0.25em] text-sm font-semibold">PART 1</span>
+      <h2 class="text-xl font-semibold">Button style directions</h2>
+    </div>
+    <p class="text-zinc-500 mb-7 text-sm">Title keeps the arcade pixel font. Buttons move to a clean modern face. Pick one — or mix.</p>
+
+    <div class="flex gap-8 flex-wrap items-start">
+
+      <!-- ===== STYLE A · Neon Solid ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">A · Neon Solid <span class="text-zinc-600 normal-case tracking-normal">(Space Grotesk)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 px-7 pt-12">
+          <button class="absolute top-5 right-5 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+            <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+          </button>
+          <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+          <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+
+          <div class="mt-12 flex flex-col gap-3.5 ff-grotesk">
+            <button class="fill-green rounded-2xl py-5 text-zinc-900 font-bold text-lg flex items-center justify-center gap-2">
+              <span class="text-xl">▶</span> Play
+            </button>
+            <button class="rounded-2xl py-4 font-semibold text-base text-neon-cyan border border-neon-cyan/60 ring-cyan flex items-center justify-center gap-2">
+              Experimental Modes
+            </button>
+          </div>
+          <p class="text-center text-zinc-600 text-xs mt-6 ff-grotesk">Infinite Stagger · the main game</p>
+        </div>
+      </div>
+
+      <!-- ===== STYLE B · Frosted Glass ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">B · Frosted Edge <span class="text-zinc-600 normal-case tracking-normal">(Sora)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 px-7 pt-12">
+          <button class="absolute top-5 right-5 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+            <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+          </button>
+          <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+          <p class="ff-sora mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+
+          <div class="mt-12 flex flex-col gap-3.5 ff-sora">
+            <button class="relative rounded-2xl py-5 font-bold text-lg text-white text-left pl-6 ring-green" style="background:rgba(57,217,138,.10)">
+              <span class="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-green"></span>
+              <span class="glow-green">Play</span>
+              <span class="block text-xs font-normal text-neon-green/70 mt-0.5">Infinite Stagger</span>
+            </button>
+            <button class="relative rounded-2xl py-4 font-semibold text-white/90 text-left pl-6 flex items-center justify-between pr-5" style="background:rgba(255,255,255,.045);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)">
+              <span class="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-cyan"></span>
+              <span>Experimental Modes</span>
+              <span class="text-neon-cyan">›</span>
+            </button>
+          </div>
+          <p class="text-center text-zinc-600 text-xs mt-6 ff-sora">4 more ways to play, behind one tap</p>
+        </div>
+      </div>
+
+      <!-- ===== STYLE C · Hairline / Tech ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">C · Hairline Tech <span class="text-zinc-600 normal-case tracking-normal">(Chakra Petch)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 px-7 pt-12">
+          <button class="absolute top-5 right-5 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+            <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+          </button>
+          <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+          <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+
+          <div class="mt-12 flex flex-col gap-4 ff-chakra">
+            <button class="rounded-xl py-5 font-bold text-lg uppercase tracking-[0.18em] text-zinc-900 fill-green flex items-center justify-center gap-3">
+              ▶ Play
+            </button>
+            <button class="rounded-xl py-4 font-semibold uppercase tracking-[0.2em] text-sm text-zinc-200 border border-zinc-600 flex items-center justify-between px-6 hover:border-neon-cyan hover:text-neon-cyan transition-colors">
+              <span>Experimental</span>
+              <span class="text-lg">+</span>
+            </button>
+          </div>
+          <p class="text-center text-zinc-600 text-xs mt-6 ff-chakra uppercase tracking-[0.2em]">Tap + to expand</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ PART 2 · REVEAL PATTERNS ============ -->
+  <section class="max-w-6xl mx-auto mt-16">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="ff-chakra text-neon-magenta tracking-[0.25em] text-sm font-semibold">PART 2</span>
+      <h2 class="text-xl font-semibold">How “Experimental Modes” reveals</h2>
+    </div>
+    <p class="text-zinc-500 mb-7 text-sm">All three are <b class="text-white">tappable</b>. Same buttons (Style A) so you're judging the interaction, not the look. Modes: Training · Subway Map · Mind Map · Git Map.</p>
+
+    <div class="flex gap-8 flex-wrap items-start">
+
+      <!-- ===== PATTERN 1 · Inline accordion ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">1 · Inline expand <span class="text-zinc-600 normal-case tracking-normal">(accordion)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 px-7 pt-12 ff-grotesk">
+          <div class="absolute top-5 right-5 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+            <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+          </div>
+          <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+          <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+
+          <div class="mt-12 flex flex-col gap-3.5">
+            <button class="fill-green rounded-2xl py-5 text-zinc-900 font-bold text-lg flex items-center justify-center gap-2"><span class="text-xl">▶</span> Play</button>
+
+            <button onclick="acc(this)" class="rounded-2xl py-4 font-semibold text-base text-neon-cyan border border-neon-cyan/60 ring-cyan flex items-center justify-center gap-2">
+              Experimental Modes <span class="chev text-sm">▾</span>
+            </button>
+
+            <div class="accordion">
+              <div class="flex flex-col gap-2.5 pt-1.5 pl-2 border-l border-neon-cyan/25 ml-1">
+                <button class="rounded-xl py-3 text-sm font-medium text-zinc-200 border border-zinc-700/70 hover:border-neon-cyan/70 hover:text-white transition-colors">Training</button>
+                <button class="rounded-xl py-3 text-sm font-medium text-zinc-200 border border-zinc-700/70 hover:border-neon-cyan/70 hover:text-white transition-colors">Subway Map</button>
+                <button class="rounded-xl py-3 text-sm font-medium text-zinc-200 border border-zinc-700/70 hover:border-neon-cyan/70 hover:text-white transition-colors">Mind Map</button>
+                <button class="rounded-xl py-3 text-sm font-medium text-zinc-200 border border-zinc-700/70 hover:border-neon-cyan/70 hover:text-white transition-colors">Git Map</button>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-zinc-600 text-xs mt-6">Tap to expand in place ↑</p>
+        </div>
+      </div>
+
+      <!-- ===== PATTERN 2 · Slide to second screen ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">2 · Slide across <span class="text-zinc-600 normal-case tracking-normal">(two panes)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 ff-grotesk">
+          <div class="absolute top-5 right-5 z-10 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+            <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+          </div>
+
+          <div class="slide-wrap h-full">
+            <div class="slide-track" id="track2">
+              <!-- pane 1 : home -->
+              <div class="slide-pane px-7 pt-12">
+                <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+                <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+                <div class="mt-12 flex flex-col gap-3.5">
+                  <button class="fill-green rounded-2xl py-5 text-zinc-900 font-bold text-lg flex items-center justify-center gap-2"><span class="text-xl">▶</span> Play</button>
+                  <button onclick="slide('track2',1)" class="rounded-2xl py-4 font-semibold text-base text-neon-cyan border border-neon-cyan/60 ring-cyan flex items-center justify-center gap-2">
+                    Experimental Modes <span class="text-base">›</span>
+                  </button>
+                </div>
+                <p class="text-center text-zinc-600 text-xs mt-6">Swipe → for more modes</p>
+              </div>
+              <!-- pane 2 : experimental -->
+              <div class="slide-pane px-7 pt-12" style="background:radial-gradient(120% 80% at 50% 0%, #1a0f1c 0%, #030712 55%)">
+                <button onclick="slide('track2',0)" class="flex items-center gap-2 text-neon-magenta font-semibold text-sm mb-8">‹ Back</button>
+                <h3 class="ff-pixel text-base leading-tight text-white" style="text-shadow:0 0 10px rgba(255,45,149,.6)">EXPERI-<br>MENTAL</h3>
+                <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Roads not yet taken</p>
+                <div class="mt-10 flex flex-col gap-3">
+                  <button class="rounded-xl py-4 text-sm font-medium text-zinc-100 border border-zinc-700/70 text-left px-5 flex items-center justify-between hover:border-neon-magenta/70 transition-colors"><span>Training</span><span class="text-zinc-600">›</span></button>
+                  <button class="rounded-xl py-4 text-sm font-medium text-zinc-100 border border-zinc-700/70 text-left px-5 flex items-center justify-between hover:border-neon-magenta/70 transition-colors"><span>Subway Map</span><span class="text-zinc-600">›</span></button>
+                  <button class="rounded-xl py-4 text-sm font-medium text-zinc-100 border border-zinc-700/70 text-left px-5 flex items-center justify-between hover:border-neon-magenta/70 transition-colors"><span>Mind Map</span><span class="text-zinc-600">›</span></button>
+                  <button class="rounded-xl py-4 text-sm font-medium text-zinc-100 border border-zinc-700/70 text-left px-5 flex items-center justify-between hover:border-neon-magenta/70 transition-colors"><span>Git Map</span><span class="text-zinc-600">›</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PATTERN 3 · Bottom sheet ===== -->
+      <div>
+        <div class="col-head uppercase text-zinc-500 mb-2 font-bold">3 · Bottom sheet <span class="text-zinc-600 normal-case tracking-normal">(drawer)</span></div>
+        <div class="phone scan screen relative rounded-[2.2rem] overflow-hidden ring-1 ring-zinc-800 ff-grotesk">
+          <div class="px-7 pt-12">
+            <div class="absolute top-5 right-5 w-10 h-10 rounded-xl border border-zinc-700/80 grid place-items-center text-zinc-300">
+              <span class="flex flex-col gap-[5px]"><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span><span class="w-5 h-0.5 bg-zinc-300"></span></span>
+            </div>
+            <h3 class="ff-pixel text-2xl leading-tight text-white glow-cyan">GAP<br>CITY</h3>
+            <p class="ff-chakra mt-3 lbl uppercase text-zinc-500">Memory · Speed · Gaps</p>
+            <div class="mt-12 flex flex-col gap-3.5">
+              <button class="fill-green rounded-2xl py-5 text-zinc-900 font-bold text-lg flex items-center justify-center gap-2"><span class="text-xl">▶</span> Play</button>
+              <button onclick="sheet(true)" class="rounded-2xl py-4 font-semibold text-base text-neon-cyan border border-neon-cyan/60 ring-cyan flex items-center justify-center gap-2">Experimental Modes ▴</button>
+            </div>
+            <p class="text-center text-zinc-600 text-xs mt-6">Drawer rises from the bottom</p>
+          </div>
+
+          <!-- backdrop + sheet -->
+          <div id="sheetBack" class="sheet-back absolute inset-0 z-20" style="background:rgba(0,0,0,.55)" onclick="sheet(false)"></div>
+          <div id="sheetEl" class="sheet absolute left-0 right-0 bottom-0 z-30 rounded-t-[1.8rem] px-6 pt-3 pb-8" style="background:#0b1218;box-shadow:0 -10px 40px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06)">
+            <div class="mx-auto w-10 h-1.5 rounded-full bg-zinc-600 mb-5"></div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="ff-chakra uppercase tracking-[0.2em] text-xs text-neon-cyan font-semibold">Experimental Modes</span>
+              <button onclick="sheet(false)" class="text-zinc-500 text-lg leading-none">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <button class="rounded-xl py-5 text-sm font-medium text-zinc-100 border border-zinc-700/70 hover:border-neon-cyan/70 transition-colors flex flex-col items-center gap-1"><span class="text-lg">◴</span>Training</button>
+              <button class="rounded-xl py-5 text-sm font-medium text-zinc-100 border border-zinc-700/70 hover:border-neon-cyan/70 transition-colors flex flex-col items-center gap-1"><span class="text-lg">◈</span>Subway Map</button>
+              <button class="rounded-xl py-5 text-sm font-medium text-zinc-100 border border-zinc-700/70 hover:border-neon-cyan/70 transition-colors flex flex-col items-center gap-1"><span class="text-lg">❋</span>Mind Map</button>
+              <button class="rounded-xl py-5 text-sm font-medium text-zinc-100 border border-zinc-700/70 hover:border-neon-cyan/70 transition-colors flex flex-col items-center gap-1"><span class="text-lg">⎇</span>Git Map</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="max-w-6xl mx-auto mt-14 text-zinc-600 text-sm border-t border-zinc-800 pt-6">
+    Mockup only — nothing wired to the real store yet. Tell me a Part 1 style + a Part 2 pattern and I'll build it for real.
+  </footer>
+
+<script>
+  function acc(btn){
+    const acc = btn.parentElement.querySelector('.accordion');
+    const chev = btn.querySelector('.chev');
+    acc.classList.toggle('open'); chev.classList.toggle('open');
+  }
+  function slide(id,i){ document.getElementById(id).style.transform = `translateX(${i? '-50%':'0'})`; }
+  function sheet(open){
+    document.getElementById('sheetEl').classList.toggle('open',open);
+    document.getElementById('sheetBack').classList.toggle('open',open);
+  }
+</script>
+</body>
+</html>

@@ -107,8 +107,9 @@ export function GlobalMenu() {
         onClick={open ? close : openMenu}
         aria-label="Menu"
         aria-expanded={open}
-        className="fixed top-1.5 right-3 z-50 grid place-items-center w-10 h-10 rounded-md
-          text-neon-cyan hover:text-neon-cyan text-glow-cyan"
+        className="fixed top-3 right-3 z-50 grid place-items-center w-10 h-10 rounded-xl
+          border border-arcade-edge bg-arcade-panel/60 text-gray-200 hover:border-neon-cyan hover:text-neon-cyan
+          transition-colors"
       >
         {open ? (
           <span className="text-2xl leading-none">×</span>
