@@ -113,7 +113,7 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
             animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.9 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="absolute font-pixel leading-none text-neon-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
+            className="absolute font-sans font-black leading-none text-neon-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(34,211,238,0.55)]"
           >
             {count}
           </motion.span>
@@ -325,9 +325,9 @@ export function StaggerScreen() {
         </div>
         <div className="text-right">
           <Hearts lives={lives} />
-          <div className="font-pixel text-sm text-gray-300 mt-1.5 tabular-nums">
+          <div className="font-sans font-semibold text-sm text-gray-300 mt-1.5 tabular-nums">
             {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-            <span className="text-[9px] text-gray-500 ml-1.5 tracking-[0.15em] uppercase">gaps</span>
+            <span className="font-sans text-[10px] text-gray-500 ml-1.5 tracking-[0.12em] uppercase">gaps</span>
           </div>
         </div>
       </div>
@@ -408,20 +408,32 @@ export function StaggerScreen() {
         {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
       </div>
 
-      {/* Replay / Pause — spend points to re-see the sequence, or freeze the run. */}
+      {/* Replay / Pause — spend points to re-see the sequence, or freeze the run.
+          Replay stretches to fill the row; Pause is a slim icon-only button. */}
       {phase === 'selecting' && (
-        <div className="mt-3 w-full max-w-sm grid grid-cols-2 gap-3">
-          <NeonButton
-            variant="accent"
-            fullWidth
+        <div className="mt-3 w-full max-w-sm flex gap-3">
+          <button
             disabled={cleared || score < STAGGER.REPLAY_COST}
             onClick={() => replayReveal()}
+            className="flex-1 rounded-md border-2 bg-arcade-panel py-3 px-4 text-sm font-sans font-semibold
+              border-neon-magenta text-neon-magenta shadow-neon-magenta hover:bg-neon-magenta/10
+              transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
-            ↻ Replay −{STAGGER.REPLAY_COST}
-          </NeonButton>
-          <NeonButton variant="ghost" fullWidth disabled={cleared} onClick={() => pause()}>
-            ❚❚ Pause
-          </NeonButton>
+            ↻ Replay <span className="opacity-75">−{STAGGER.REPLAY_COST}</span>
+          </button>
+          <button
+            aria-label="Pause"
+            disabled={cleared}
+            onClick={() => pause()}
+            className="shrink-0 w-12 grid place-items-center rounded-md border-2 bg-arcade-panel
+              border-arcade-edge text-gray-300 hover:border-neon-cyan hover:text-neon-cyan
+              transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <span className="flex gap-[3px]">
+              <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+              <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+            </span>
+          </button>
         </div>
       )}
 
