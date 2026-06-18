@@ -100,3 +100,76 @@
 @media (prefers-reduced-motion: reduce) {
   .map-next, .map-progress { animation: none; }
 }
+
+/* ── Afterglow (Phosphor) primitives ──────────────────────────────────────
+   The phosphor look: two-layer glow, the gap "bloom" (light → hold → decay →
+   re-seal into the surface), the lights-out recall tone, and easing tokens.
+   Additive — existing arcade utilities above are untouched. */
+:root {
+  --phos-attack: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --phos-decay: cubic-bezier(0.3, 0, 0.1, 1);
+  --phos-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
+}
+
+/* Screen ground: void + corner vignette so lit UI floats. */
+.phos-vignette {
+  background: radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), #06060b;
+}
+
+/* Two-layer glow boxes (tight core + soft halo) per accent. */
+.phos-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }
+.phos-glow-magenta { box-shadow: 0 0 6px #ff2d9b, 0 0 22px rgba(255, 45, 155, 0.45); }
+.phos-glow-lime { box-shadow: 0 0 6px #b6ff3c, 0 0 22px rgba(182, 255, 60, 0.45); }
+.phos-glow-amber { box-shadow: 0 0 6px #ffc23d, 0 0 22px rgba(255, 194, 61, 0.45); }
+.phos-glow-red { box-shadow: 0 0 6px #ff3b47, 0 0 22px rgba(255, 59, 71, 0.45); }
+
+/* Text halos (numerals / labels only — never body copy). */
+.text-glow-phos-cyan { text-shadow: 0 0 10px rgba(40, 240, 255, 0.5); }
+.text-glow-phos-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
+.text-glow-phos-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
+.text-glow-phos-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
+
+/* Recall "lights-out" cell tone — every cell renders this at recall so gaps
+   leave no readable hole (the uniformity rule). */
+.phos-dim { background: #0c0c14; box-shadow: none; }
+
+/* A filled-surface cell (graphite, inert). */
+.phos-filled {
+  background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
+}
+
+/* The gap bloom: light floods the shape, holds, then decays and RE-SEALS into
+   the filled surface — never a darker hole. Apply to a cell that is also a
+   member of a tetromino group whose cells all get this class at the same tick. */
+@keyframes phosBloom {
+  0% {
+    background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
+    box-shadow: none;
+    transform: scale(1);
+  }
+  10% {
+    background: #ff2d9b;
+    box-shadow: 0 0 10px #ff2d9b, 0 0 22px #ff2d9b;
+    transform: scale(1.1);
+  }
+  24%, 55% {
+    background: #ff2d9b;
+    box-shadow: 0 0 8px #ff2d9b;
+    transform: scale(1);
+  }
+  82% {
+    background: #2c1c2a;
+    box-shadow: 0 0 4px rgba(255, 45, 155, 0.33);
+  }
+  100% {
+    background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
+    transform: scale(1);
+  }
+}
+.phos-bloom { animation: phosBloom 1.3s var(--phos-decay) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phos-bloom { animation: none; }
+}
