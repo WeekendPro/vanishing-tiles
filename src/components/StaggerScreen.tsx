@@ -7,7 +7,7 @@ import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { STAGGER, holdMsForBatch, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
-import { NeonButton, ArcadePanel, ScanlineOverlay, LivesCounter } from './ui'
+import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
@@ -127,10 +127,10 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
 // ── Piece tray ────────────────────────────────────────────────────────────────
 function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disabled: boolean }) {
   return (
-    <ArcadePanel className="p-3 w-full max-w-sm">
+    <div className="w-full max-w-sm rounded-xl p-3 bg-phos-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className="flex justify-between items-center mb-2">
-        <span className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan">Pieces</span>
-        <span className="text-[10px] text-gray-500">tap to place from memory</span>
+        <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-phos-cyan text-glow-phos-cyan">Pieces</span>
+        <span className="text-[10px] text-phos-dim tracking-[0.04em]">tap to place from memory</span>
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {PIECE_DEFINITIONS.map(def => (
@@ -139,15 +139,16 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
             data-piece-option={def.type}
             disabled={disabled}
             onClick={() => onPick(def.type as PieceType)}
-            className="flex items-center justify-center h-12 p-1 rounded-md border-2 border-arcade-edge
-              bg-arcade-well hover:border-neon-cyan/60 cursor-pointer transition disabled:opacity-40
-              disabled:pointer-events-none"
+            className="flex items-center justify-center h-12 p-1 rounded-md border bg-phos-raised
+              border-phos-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
+              hover:border-phos-cyan hover:shadow-phos-cyan cursor-pointer transition
+              disabled:opacity-40 disabled:pointer-events-none"
           >
             <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
           </button>
         ))}
       </div>
-    </ArcadePanel>
+    </div>
   )
 }
 
