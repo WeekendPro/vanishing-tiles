@@ -182,6 +182,7 @@ export function StaggerScreen() {
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
   const boardRef = useRef<HTMLDivElement>(null)
+  const barRef = useRef<HTMLDivElement>(null)
 
   // Smoothly counted-up score: every banked pick (and the end-of-batch speed
   // bonus) ticks the displayed number up rather than snapping.
@@ -262,9 +263,10 @@ export function StaggerScreen() {
       window.setTimeout(() => setXMark(false), 440)
       return
     }
-    // Correct recall: pop a "Combo N" burst centered over the gap just filled.
-    if (res.gap) {
-      const count = (comboCount.current += 1)
+    // Correct recall. The streak builds silently; once it reaches 3 in a row,
+    // each further correct pick pops a "Combo N" burst over the filled gap.
+    const count = (comboCount.current += 1)
+    if (res.gap && count >= 3) {
       const cells = res.gap.cells
       const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
       const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
@@ -276,10 +278,15 @@ export function StaggerScreen() {
     }
     if (res.batchCleared) {
       setCleared(true)
-      // A quick pause, then smoothly fast-forward whatever select time was left
-      // to zero (the leftover-time speed bonus is already banked, so the score
-      // count-up rises through this beat for the payoff).
-      window.setTimeout(() => { setBarTransition('width 550ms cubic-bezier(0.22,1,0.36,1)'); setBarPct(0) }, 150)
+      // Freeze the green bar where it currently sits, then — after a quick beat —
+      // visibly rush it down to empty. The leftover-time speed bonus is already
+      // banked, so the score count-up rises as the bar drains: time → points.
+      const el = barRef.current, parent = el?.parentElement
+      const frozenPct = el && parent
+        ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
+        : barPct
+      setBarTransition('none'); setBarPct(frozenPct)
+      window.setTimeout(() => { setBarTransition('width 600ms cubic-bezier(0.22,1,0.36,1)'); setBarPct(0) }, 200)
       window.setTimeout(() => { setCleared(false); advanceBatch() }, 1050)
     }
   }
@@ -320,6 +327,7 @@ export function StaggerScreen() {
       {/* Timer / count bar */}
       <div className="w-full max-w-sm h-1.5 rounded-full bg-arcade-edge overflow-hidden mb-3">
         <div
+          ref={barRef}
           className={`h-full rounded-full ${barColor === 'red' ? 'bg-neon-red' : 'bg-neon-green'}`}
           style={{ width: `${barPct}%`, transition: barTransition }}
         />
