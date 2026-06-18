@@ -128,6 +128,7 @@
 .text-glow-phos-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
 .text-glow-phos-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
 .text-glow-phos-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
+.text-glow-phos-lime { text-shadow: 0 0 10px rgba(182, 255, 60, 0.5); }
 
 /* Recall "lights-out" cell tone — every cell renders this at recall so gaps
    leave no readable hole (the uniformity rule). */

@@ -32,6 +32,13 @@ interface StaggerState {
   paused: boolean             // hard pause (timer frozen, screen hidden)
   resumeRemaining: number | null  // select ms to resume with (replay / pause)
 
+  // Run stats (for the Game Over screen) — reset on startRun, survive into gameOver.
+  shapesRecalled: number      // total gaps correctly filled across the run
+  currentCombo: number        // running streak of consecutive correct picks
+  bestCombo: number           // longest streak seen this run
+  totalPicks: number          // correct + wrong picks
+  correctPicks: number        // correct picks (accuracy numerator)
+
   startRun: () => void
   beginReveal: () => void     // countdown → reveal (generates batch 0)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
@@ -65,6 +72,11 @@ const IDLE = {
   selectDuration: 0,
   paused: false,
   resumeRemaining: null as number | null,
+  shapesRecalled: 0,
+  currentCombo: 0,
+  bestCombo: 0,
+  totalPicks: 0,
+  correctPicks: 0,
 }
 
 export const useStaggerStore = create<StaggerState>((set, get) => ({
@@ -90,7 +102,10 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
   },
 
   pickPiece: (type) => {
-    const { phase, gaps, lives, score, selectStartTime, selectDuration } = get()
+    const {
+      phase, gaps, lives, score, selectStartTime, selectDuration,
+      totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
+    } = get()
     if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false }
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
@@ -98,12 +113,14 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     const target = gaps.find(g => !g.filled && g.pieceType === type)
 
     if (!target) {
+      // A miss: counts toward accuracy and breaks the running combo.
       const nextLives = lives - 1
+      const baseStats = { totalPicks: totalPicks + 1, currentCombo: 0 }
       if (nextLives <= 0) {
-        set({ lives: 0, phase: 'gameOver' })
+        set({ lives: 0, phase: 'gameOver', ...baseStats })
         return { ok: false, batchCleared: false, gameOver: true }
       }
-      set({ lives: nextLives })
+      set({ lives: nextLives, ...baseStats })
       return { ok: false, batchCleared: false, gameOver: false }
     }
 
@@ -114,7 +131,17 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
       nextScore += batchSpeedBonus(remaining, selectDuration)
     }
-    set({ gaps: nextGaps, score: nextScore })
+    // A correct recall: extend the streak and bank a recalled shape.
+    const nextCombo = currentCombo + 1
+    set({
+      gaps: nextGaps,
+      score: nextScore,
+      shapesRecalled: shapesRecalled + 1,
+      correctPicks: correctPicks + 1,
+      totalPicks: totalPicks + 1,
+      currentCombo: nextCombo,
+      bestCombo: Math.max(bestCombo, nextCombo),
+    })
     return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false }
   },
 

@@ -247,6 +247,79 @@ describe('useStaggerStore', () => {
   })
 })
 
+describe('Infinite Stagger run-stats (Game Over)', () => {
+  it('startRun zeroes the run stats', () => {
+    const st = useStaggerStore.getState()
+    st.startRun()
+    const s = useStaggerStore.getState()
+    expect(s.shapesRecalled).toBe(0)
+    expect(s.bestCombo).toBe(0)
+    expect(s.totalPicks).toBe(0)
+    expect(s.correctPicks).toBe(0)
+  })
+
+  it('a correct pick increments shapesRecalled, correctPicks and totalPicks', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    const type = useStaggerStore.getState().gaps[0].pieceType
+    useStaggerStore.getState().pickPiece(type)
+    const s = useStaggerStore.getState()
+    expect(s.shapesRecalled).toBe(1)
+    expect(s.correctPicks).toBe(1)
+    expect(s.totalPicks).toBe(1)
+    expect(s.bestCombo).toBe(1)
+  })
+
+  it('a wrong pick increments totalPicks only and resets the running combo', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    const type = useStaggerStore.getState().gaps[0].pieceType
+    useStaggerStore.getState().pickPiece(type)      // correct → combo 1
+    useStaggerStore.getState().pickPiece(missingType())  // wrong → combo breaks
+    const s = useStaggerStore.getState()
+    expect(s.shapesRecalled).toBe(1)
+    expect(s.correctPicks).toBe(1)
+    expect(s.totalPicks).toBe(2)
+    expect(s.bestCombo).toBe(1)  // best so far survives the miss
+  })
+
+  it('bestCombo tracks the longest streak of consecutive correct picks', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    // First batch: fill every gap → a clean streak of gaps.length.
+    const firstBatch = [...useStaggerStore.getState().gaps]
+    firstBatch.forEach(g => useStaggerStore.getState().pickPiece(g.pieceType))
+    expect(useStaggerStore.getState().bestCombo).toBe(firstBatch.length)
+
+    // Advance, break the streak with a miss, then a single correct pick → the
+    // long first-batch streak must still be the best.
+    st.advanceBatch(); st.beginSelecting()
+    useStaggerStore.getState().pickPiece(missingType())
+    useStaggerStore.getState().pickPiece(useStaggerStore.getState().gaps[0].pieceType)
+    expect(useStaggerStore.getState().bestCombo).toBe(firstBatch.length)
+    // Stats accumulate across batches.
+    const s = useStaggerStore.getState()
+    expect(s.shapesRecalled).toBe(firstBatch.length + 1)
+    expect(s.correctPicks).toBe(firstBatch.length + 1)
+    expect(s.totalPicks).toBe(firstBatch.length + 2)
+  })
+
+  it('stats persist into the gameOver phase', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    useStaggerStore.getState().pickPiece(useStaggerStore.getState().gaps[0].pieceType)
+    for (let i = 0; i < STAGGER.START_LIVES; i++) {
+      useStaggerStore.getState().pickPiece(missingType())
+    }
+    const s = useStaggerStore.getState()
+    expect(s.phase).toBe('gameOver')
+    expect(s.shapesRecalled).toBe(1)
+    expect(s.bestCombo).toBe(1)
+    expect(s.correctPicks).toBe(1)
+    expect(s.totalPicks).toBe(1 + STAGGER.START_LIVES)
+  })
+})
+
 describe('Infinite Stagger replay + pause', () => {
   it('replayReveal spends points, replays the sequence, and resumes the clock', () => {
     const st = useStaggerStore.getState()
