@@ -38,16 +38,16 @@ describe('AuthScreen', () => {
     await user.type(screen.getByLabelText(/Password/i), 'hunter2')
     await user.click(screen.getByRole('button', { name: /Enter/i }))
     expect(auth.signInWithEmail).toHaveBeenCalledWith('player@example.com', 'hunter2')
-    expect(useNavStore.getState().appView).toBe('journey')
+    expect(useNavStore.getState().appView).toBe('home')
   })
 
-  it('guest sign-in calls signInAsGuest and navigates to the journey', async () => {
+  it('guest sign-in calls signInAsGuest and navigates to home', async () => {
     ;(auth.signInAsGuest as any).mockResolvedValue({ data: {}, error: null })
     const user = userEvent.setup()
     render(<AuthScreen />)
     await user.click(screen.getByRole('button', { name: /Guest/i }))
     expect(auth.signInAsGuest).toHaveBeenCalledTimes(1)
-    expect(useNavStore.getState().appView).toBe('journey')
+    expect(useNavStore.getState().appView).toBe('home')
   })
 
   it('shows an inline error when a provider sign-in fails', async () => {

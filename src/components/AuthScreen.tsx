@@ -26,7 +26,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function AuthScreen() {
-  const goJourney = useNavStore(s => s.goJourney)
+  const goHome = useNavStore(s => s.goHome)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
@@ -38,7 +38,7 @@ export function AuthScreen() {
     try {
       const { error } = await track(fn())
       if (error) { setError(error.message); return }
-      if (navigate) goJourney()
+      if (navigate) goHome()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sign-in failed')
     } finally {
