@@ -10,6 +10,34 @@ import { PieceShape } from './PieceShape'
 import { NeonButton, ArcadePanel, ScanlineOverlay } from './ui'
 
 const CELL = 28
+const CELL_PITCH = CELL + 2   // cell + 2px grid gap
+const BOARD_PAD = 12          // p-3 around the board
+
+/** Smoothly tween a displayed number toward `value`. Increases ease up over
+ *  `durationMs` (so every banked pick — and the end-of-batch speed bonus — counts
+ *  up with a little joy); a decrease (e.g. a fresh run resetting to 0) snaps. */
+function useCountUp(value: number, durationMs = 600): number {
+  const [display, setDisplay] = useState(value)
+  const displayRef = useRef(value)
+  const rafRef = useRef(0)
+  useEffect(() => {
+    cancelAnimationFrame(rafRef.current)
+    const from = displayRef.current
+    if (value <= from) { displayRef.current = value; setDisplay(value); return }
+    const start = performance.now()
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const v = Math.round(from + (value - from) * eased)
+      displayRef.current = v
+      setDisplay(v)
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [value, durationMs])
+  return display
+}
 
 // ── Board ─────────────────────────────────────────────────────────────────────
 // The board reads as SOLID during selection — gaps are hidden, so the player is
@@ -103,16 +131,16 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
         <span className="font-pixel text-[10px] tracking-[0.15em] uppercase text-neon-cyan">Pieces</span>
         <span className="text-[10px] text-gray-500">tap to place from memory</span>
       </div>
-      <div className="grid grid-cols-7 gap-1.5 items-end">
+      <div className="grid grid-cols-7 gap-1.5">
         {PIECE_DEFINITIONS.map(def => (
           <button
             key={def.type}
             data-piece-option={def.type}
             disabled={disabled}
             onClick={() => onPick(def.type as PieceType)}
-            className="flex items-end justify-center p-1 rounded-md border-2 border-arcade-edge
+            className="flex items-center justify-center h-12 p-1 rounded-md border-2 border-arcade-edge
               bg-arcade-well hover:border-neon-cyan/60 cursor-pointer transition disabled:opacity-40
-              disabled:pointer-events-none min-h-[40px]"
+              disabled:pointer-events-none"
           >
             <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
           </button>
@@ -149,11 +177,30 @@ export function StaggerScreen() {
   const [revealIndex, setRevealIndex] = useState(-1)
   const [revealOn, setRevealOn] = useState(false)
   const [barPct, setBarPct] = useState(0)
-  const [barColor, setBarColor] = useState<'cyan' | 'green'>('cyan')
+  const [barColor, setBarColor] = useState<'red' | 'green'>('red')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
   const boardRef = useRef<HTMLDivElement>(null)
+
+  // Smoothly counted-up score: every banked pick (and the end-of-batch speed
+  // bonus) ticks the displayed number up rather than snapping.
+  const displayScore = useCountUp(score)
+
+  // Combo: a streak of correct recalls. Each correct pick floats a "Combo N"
+  // burst over the just-filled gap; a miss breaks the streak.
+  const [combos, setCombos] = useState<{ id: number; count: number; x: number; y: number }[]>([])
+  const comboCount = useRef(0)
+  const comboId = useRef(0)
+
+  // A fresh run / game over / a broken board resets the streak and clears any
+  // lingering combo bursts.
+  useEffect(() => {
+    if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
+      comboCount.current = 0
+      setCombos([])
+    }
+  }, [phase])
 
   // Reveal driver: flash each gap once (fade-in → hold → fade-out), filling the
   // bar one step per gap as a COUNT indicator, then hand off to selecting.
@@ -163,7 +210,7 @@ export function StaggerScreen() {
     const timers: number[] = []
     const n = gaps.length
     const hold = holdMsForBatch(batchIndex)
-    setBarColor('cyan'); setBarTransition('width 180ms ease-out'); setBarPct(0)
+    setBarColor('red'); setBarTransition('width 180ms ease-out'); setBarPct(0)
     setRevealIndex(-1); setRevealOn(false)
 
     const show = (idx: number) => {
@@ -205,6 +252,7 @@ export function StaggerScreen() {
     const res = pickPiece(type)
     if (res.gameOver) return
     if (!res.ok) {
+      comboCount.current = 0   // a miss breaks the streak
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -214,9 +262,25 @@ export function StaggerScreen() {
       window.setTimeout(() => setXMark(false), 440)
       return
     }
+    // Correct recall: pop a "Combo N" burst centered over the gap just filled.
+    if (res.gap) {
+      const count = (comboCount.current += 1)
+      const cells = res.gap.cells
+      const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
+      const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
+      const x = BOARD_PAD + avgC * CELL_PITCH + CELL / 2
+      const y = BOARD_PAD + avgR * CELL_PITCH + CELL / 2
+      const id = (comboId.current += 1)
+      setCombos(prev => [...prev, { id, count, x, y }])
+      window.setTimeout(() => setCombos(prev => prev.filter(p => p.id !== id)), 700)
+    }
     if (res.batchCleared) {
       setCleared(true)
-      window.setTimeout(() => { setCleared(false); advanceBatch() }, 700)
+      // A quick pause, then smoothly fast-forward whatever select time was left
+      // to zero (the leftover-time speed bonus is already banked, so the score
+      // count-up rises through this beat for the payoff).
+      window.setTimeout(() => { setBarTransition('width 550ms cubic-bezier(0.22,1,0.36,1)'); setBarPct(0) }, 150)
+      window.setTimeout(() => { setCleared(false); advanceBatch() }, 1050)
     }
   }
 
@@ -242,7 +306,7 @@ export function StaggerScreen() {
       <div className="w-full max-w-sm flex items-end justify-between mb-2">
         <div>
           <div className="font-pixel text-[9px] tracking-[0.2em] uppercase text-gray-500">Score</div>
-          <div className="font-pixel text-3xl text-neon-cyan text-glow-cyan leading-none">{score}</div>
+          <div className="font-pixel text-3xl text-neon-cyan text-glow-cyan leading-none tabular-nums">{displayScore}</div>
         </div>
         <div className="text-right">
           <Hearts lives={lives} />
@@ -256,7 +320,7 @@ export function StaggerScreen() {
       {/* Timer / count bar */}
       <div className="w-full max-w-sm h-1.5 rounded-full bg-arcade-edge overflow-hidden mb-3">
         <div
-          className={`h-full rounded-full ${barColor === 'cyan' ? 'bg-neon-cyan' : 'bg-neon-green'}`}
+          className={`h-full rounded-full ${barColor === 'red' ? 'bg-neon-red' : 'bg-neon-green'}`}
           style={{ width: `${barPct}%`, transition: barTransition }}
         />
       </div>
@@ -266,6 +330,25 @@ export function StaggerScreen() {
         <div ref={boardRef}>
           <StaggerBoard gaps={gaps} revealCells={revealCells} revealOn={revealOn} />
         </div>
+
+        {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
+        <AnimatePresence>
+          {combos.map(cb => (
+            <motion.div
+              key={cb.id}
+              initial={{ opacity: 0, scale: 0.4, y: 6 }}
+              animate={{ opacity: 1, scale: 1, y: -22 }}
+              exit={{ opacity: 0, scale: 1.5, y: -46 }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
+                font-pixel text-[11px] whitespace-nowrap text-neon-yellow
+                drop-shadow-[0_0_10px_rgba(250,204,21,0.85)]"
+              style={{ left: cb.x, top: cb.y }}
+            >
+              Combo {cb.count}
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         {phase === 'countdown' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-arcade-bg/70 rounded-xl">
