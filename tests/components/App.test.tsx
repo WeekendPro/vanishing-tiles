@@ -21,7 +21,7 @@ describe('App routing', () => {
   it('shows the auth screen when there is no session', async () => {
     ;(auth.getSession as any).mockResolvedValue({ data: { session: null } })
     render(<App />)
-    expect(await screen.findByText(/Play as Guest/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Continue as guest/i)).toBeInTheDocument()
     expect(useNavStore.getState().appView).toBe('auth')
   })
 
