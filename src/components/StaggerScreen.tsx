@@ -187,14 +187,14 @@ export function StaggerScreen() {
     phase, batchIndex, gaps, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
     startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
-    replayReveal, pause, resume, exit,
+    pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
-    replayReveal: s.replayReveal, pause: s.pause, resume: s.resume, exit: s.exit,
+    pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
 
@@ -586,24 +586,16 @@ export function StaggerScreen() {
         {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
       </div>
 
-      {/* Replay / Pause — spend points to re-see the sequence, or freeze the run.
-          Equal width (50/50). */}
+      {/* Pause — freeze the run (full width). (Replay-the-sequence was removed:
+          replaying after picks left correct pieces on the board, a confusing
+          experience to be redesigned later.) */}
       {phase === 'selecting' && (
-        <div className="mt-3 w-full max-w-sm flex gap-3">
-          <button
-            disabled={cleared || score < STAGGER.REPLAY_COST}
-            onClick={() => replayReveal()}
-            className="flex-1 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
-              border-phos-amber text-phos-amber hover:bg-phos-amber/10 hover:shadow-phos-amber
-              transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
-          >
-            ↻ Replay <span className="opacity-75">−{STAGGER.REPLAY_COST}</span>
-          </button>
+        <div className="mt-3 w-full max-w-sm">
           <button
             aria-label="Pause"
             disabled={cleared}
             onClick={() => pause()}
-            className="flex-1 flex items-center justify-center gap-2 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
+            className="w-full flex items-center justify-center gap-2 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
               border-phos-cyan text-phos-cyan hover:bg-phos-cyan/10 hover:shadow-phos-cyan
               transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
