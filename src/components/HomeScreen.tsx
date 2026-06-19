@@ -48,8 +48,8 @@ export function HomeScreen() {
           <div className="w-full max-w-sm">
             {/* GAP / CITY stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
-            <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.28em] text-gray-500">
-              Memory · Speed · Gaps
+            <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
+              Memory glows. Then it&apos;s gone.
             </p>
           </div>
 
@@ -57,12 +57,11 @@ export function HomeScreen() {
             {/* PLAY → Infinite Stagger */}
             <button
               onClick={play}
-              className="relative rounded-2xl py-5 pl-6 text-left text-lg font-bold frost-green
+              className="relative flex items-center rounded-2xl py-5 pl-6 text-left text-lg font-bold frost-green
                 transition-transform active:translate-y-px"
             >
               <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-green" />
               <span className="text-glow-green">Play</span>
-              <span className="block text-xs font-normal text-neon-green/70 mt-0.5">Infinite Stagger</span>
             </button>
 
             {/* Experimental Modes → slide to second pane */}

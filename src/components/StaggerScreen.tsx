@@ -329,29 +329,33 @@ export function StaggerScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center phos-vignette text-phos-text px-4 pt-12 pb-8">
-      {/* HUD */}
-      <div className="w-full max-w-sm flex items-end justify-between mb-2">
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
-          <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
-        </div>
-        <div className="text-right">
-          <LivesCounter lives={lives} />
-          <div className="font-grotesk font-semibold text-sm text-phos-text mt-1.5 tabular-nums">
-            {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-            <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">shapes</span>
+      {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
+      {phase !== 'gameOver' && (
+        <>
+          <div className="w-full max-w-sm flex items-end justify-between mb-2">
+            <div>
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
+              <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
+            </div>
+            <div className="text-right">
+              <LivesCounter lives={lives} />
+              <div className="font-grotesk font-semibold text-sm text-phos-text mt-1.5 tabular-nums">
+                {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
+                <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">shapes</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Timer / count bar — phase-colored (magenta → amber → red → lime) */}
-      <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-3 shadow-[inset_0_1px_2px_#000]">
-        <div
-          ref={barRef}
-          className={`h-full rounded-full ${barClass}`}
-          style={{ width: `${barPct}%`, transition: barTransition }}
-        />
-      </div>
+          {/* Timer / count bar — phase-colored (magenta → amber → red → lime) */}
+          <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-3 shadow-[inset_0_1px_2px_#000]">
+            <div
+              ref={barRef}
+              className={`h-full rounded-full ${barClass}`}
+              style={{ width: `${barPct}%`, transition: barTransition }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Board + overlays */}
       <div className="relative">
@@ -402,8 +406,9 @@ export function StaggerScreen() {
         {phase === 'gameOver' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/90 rounded-xl px-6">
             <ScanlineOverlay />
-            <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1">Game Over</div>
-            <div className="font-grotesk text-xs text-phos-dim mb-5">Memory fades.</div>
+            <div className="font-grotesk text-[10px] tracking-[0.3em] uppercase text-phos-red text-glow-phos-red mb-2">Run Over</div>
+            <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-phos-magenta text-glow-phos-magenta mb-5 phos-breathe">Memory Fades</div>
             <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Final score</div>
             <div className="font-silk font-bold text-4xl text-phos-amber text-glow-phos-amber mb-6 tabular-nums">{score}</div>
 

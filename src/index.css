@@ -200,3 +200,14 @@
 @media (prefers-reduced-motion: reduce) {
   .phos-flicker { animation: none; opacity: 0.55; }
 }
+
+/* Game-over tagline "Memory Fades": a slow, graceful breath — fades in and out. */
+@keyframes phosBreathe {
+  0%, 100% { opacity: 0.32; }
+  50%      { opacity: 1; }
+}
+.phos-breathe { animation: phosBreathe 3.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phos-breathe { animation: none; opacity: 0.85; }
+}
