@@ -13,6 +13,19 @@ const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
 const BOARD_PAD = 12          // p-3 around the board
 
+/** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
+ *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
+ *  together and then wink out in a wave. Each instance animates to completion
+ *  CONCURRENTLY with later ones (the overlapping cascade). */
+interface Bloom { id: number; cells: { key: string; durMs: number }[] }
+
+function bloomForGap(id: number, gap: StaggerGap): Bloom {
+  const cells = [...gap.cells]
+    .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
+    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
+  return { id, cells }
+}
+
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
  *  `durationMs` (so every banked pick — and the end-of-batch speed bonus — counts
  *  up with a little joy); a decrease (e.g. a fresh run resetting to 0) snaps. */
@@ -48,8 +61,8 @@ function useCountUp(value: number, durationMs = 600): number {
 // Filled/placed gaps keep their piece color (a correct pick lighting out of the
 // dark), ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomCells, bloomKey,
-}: { gaps: StaggerGap[]; bloomCells: Set<string>; bloomKey: number }) {
+  gaps, bloomByCell,
+}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number }> }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -78,19 +91,20 @@ function StaggerBoard({
             />
           )
         }
-        // Uniform dark void; a blooming gap's cells all flash at once (no delay)
-        // then decay back to the void in a WAVE — each cell gets a slightly longer
-        // duration along the diagonal, so they wink out at staggered times.
-        const blooming = bloomCells.has(key)
-        return (
-          <div
-            key={blooming ? `${i}-bloom-${bloomKey}` : i}
-            className={`w-7 h-7 rounded-sm ${blooming ? 'phos-bloom' : 'phos-dim'}`}
-            style={blooming ? {
-              animationDuration: `${STAGGER.REVEAL_BLOOM_MS + ((r + c) % 4) * STAGGER.REVEAL_WAVE_MS}ms`,
-            } : undefined}
-          />
-        )
+        // Uniform dark void; a blooming gap's cells all flash at once then decay
+        // back to the void in a wave (per-cell duration). Past blooms stay mounted
+        // and keep decaying — keyed by their instance id — so they overlap.
+        const bloom = bloomByCell.get(key)
+        if (bloom) {
+          return (
+            <div
+              key={`${i}-bloom-${bloom.id}`}
+              className="w-7 h-7 rounded-sm phos-bloom"
+              style={{ animationDuration: `${bloom.durMs}ms` }}
+            />
+          )
+        }
+        return <div key={i} className="w-7 h-7 rounded-sm phos-dim" />
       })}
     </div>
   )
@@ -173,8 +187,7 @@ export function StaggerScreen() {
   })))
   const goHome = useNavStore(s => s.goHome)
 
-  const [revealIndex, setRevealIndex] = useState(-1)
-  const [bloomKey, setBloomKey] = useState(0)
+  const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
@@ -216,17 +229,29 @@ export function StaggerScreen() {
     // out-runs this step, so the next piece flashes while the previous is still
     // decaying — the overlapping cascade.
     const step = STAGGER.REVEAL_STEP_MS
+    // How long one bloom lives on screen: its longest-wave cell, plus a hair.
+    const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
     // Memorize bar DRAINS: starts full and empties one step per gap as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
-    setRevealIndex(-1)
+    setBlooms([])
+    let id = 0
 
     const show = (idx: number) => {
       if (cancelled) return
-      if (idx >= n) { beginSelecting(); return }
-      setRevealIndex(idx)
-      setBloomKey(k => k + 1)   // re-key so the bloom animation (re)starts
+      if (idx >= n) {
+        // Let the final piece finish its decay before recall lights-out.
+        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS - step)))
+        return
+      }
+      const myId = ++id
+      // Add a fresh bloom that runs CONCURRENTLY with earlier still-decaying ones
+      // (the overlap), and self-removes once its full decay completes.
+      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx])])
       setBarPct((1 - (idx + 1) / n) * 100)
+      timers.push(window.setTimeout(() => {
+        if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
+      }, lifetime))
       timers.push(window.setTimeout(() => show(idx + 1), step))
     }
     // A short breath before the first gap (also paces continuous next batches).
@@ -320,9 +345,12 @@ export function StaggerScreen() {
     )
   }
 
-  const bloomCells = phase === 'reveal' && revealIndex >= 0 && revealIndex < gaps.length
-    ? new Set(gaps[revealIndex].cells.map(([r, c]) => `${r},${c}`))
-    : new Set<string>()
+  // All currently-animating bloom cells (every active instance, so past pieces
+  // keep decaying while new ones flash). Empty outside reveal → board stays dark.
+  const bloomByCell = new Map<string, { id: number; durMs: number }>()
+  if (phase === 'reveal') {
+    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs })
+  }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
     phase === 'selecting' ? (cleared ? 'CLEAR!' : 'RECALL') : ''
@@ -394,7 +422,7 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomCells={bloomCells} bloomKey={bloomKey} />
+          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
         </div>
 
         {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
