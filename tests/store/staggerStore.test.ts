@@ -3,12 +3,12 @@ import { useStaggerStore } from '../../src/store/staggerStore'
 import {
   STAGGER,
   gapCountForBatch,
-  holdMsForBatch,
+  revealStepMs,
   selectDurationForBatch,
   complexityForGapCount,
   difficultyForBatch,
   batchSpeedBonus,
-  gapRevealMs,
+  batchRevealMs,
   allowedTypesForBatch,
   lockedRotationsForBatch,
   DISPLAY_ROTATION,
@@ -37,20 +37,19 @@ describe('staggerCurve', () => {
     expect(gapCountForBatch(100)).toBe(STAGGER.MAX_GAPS)
   })
 
-  it('hold time decreases monotonically and floors at MIN_HOLD', () => {
-    expect(holdMsForBatch(0)).toBe(STAGGER.START_HOLD)
-    expect(holdMsForBatch(1)).toBeLessThan(holdMsForBatch(0))
-    expect(holdMsForBatch(100)).toBe(STAGGER.MIN_HOLD)
-  })
-
-  it('reveal time per gap = fades + hold', () => {
-    expect(gapRevealMs(0)).toBe(STAGGER.FADE_MS * 2 + STAGGER.START_HOLD)
+  it('reveal pacing is constant per piece across batches (no speed-up lever)', () => {
+    expect(revealStepMs()).toBe(STAGGER.REVEAL_STEP_MS)
+    // Batch reveal time grows ONLY because there are more pieces, at a fixed step —
+    // individual pieces never get faster as the run escalates.
+    expect(batchRevealMs(2) - batchRevealMs(0)).toBe(
+      (gapCountForBatch(2) - gapCountForBatch(0)) * STAGGER.REVEAL_STEP_MS,
+    )
+    expect(batchRevealMs(0)).toBe(2 * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS)
   })
 
   it('select clock grows with gap count and exceeds the reveal time', () => {
     expect(selectDurationForBatch(0)).toBe(STAGGER.SELECT_BASE + 3 * STAGGER.SELECT_PER_GAP)
-    const revealTotal = gapCountForBatch(5) * gapRevealMs(5)
-    expect(selectDurationForBatch(5)).toBeGreaterThan(revealTotal)
+    expect(selectDurationForBatch(5)).toBeGreaterThan(batchRevealMs(5))
   })
 
   it('complexity follows The Classic bands', () => {
@@ -165,10 +164,33 @@ describe('useStaggerStore', () => {
     let res = { batchCleared: false } as ReturnType<typeof st.pickPiece>
     gaps.forEach(g => { res = useStaggerStore.getState().pickPiece(g.pieceType) })
     expect(res.batchCleared).toBe(true)
-    // accuracy for every gap, plus a speed bonus in [0, SPEED_MAX].
-    const accuracy = gaps.length * STAGGER.ACCURACY_PER_GAP
+    // Combo-scaled accuracy: a clean run scores base×1 + base×2 + … + base×n
+    // (linear multiplier), plus a speed bonus in [0, SPEED_MAX].
+    const n = gaps.length
+    const accuracy = (STAGGER.ACCURACY_PER_GAP * n * (n + 1)) / 2
     expect(useStaggerStore.getState().score).toBeGreaterThanOrEqual(accuracy)
     expect(useStaggerStore.getState().score).toBeLessThanOrEqual(accuracy + STAGGER.SPEED_MAX)
+  })
+
+  it('combo multiplies per-pick points linearly and resets on a miss', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    const gaps = [...useStaggerStore.getState().gaps]
+    const r1 = useStaggerStore.getState().pickPiece(gaps[0].pieceType)
+    expect(r1).toMatchObject({ ok: true, combo: 1, gained: STAGGER.ACCURACY_PER_GAP })
+    const r2 = useStaggerStore.getState().pickPiece(gaps[1].pieceType)
+    expect(r2).toMatchObject({ ok: true, combo: 2, gained: 2 * STAGGER.ACCURACY_PER_GAP })
+    // A miss breaks the streak: the multiplier resets to 0.
+    expect(useStaggerStore.getState().pickPiece(missingType()).ok).toBe(false)
+    expect(useStaggerStore.getState().currentCombo).toBe(0)
+  })
+
+  it('earns a life every LIFE_EVERY points', () => {
+    useStaggerStore.setState({ phase: 'selecting', score: STAGGER.LIFE_EVERY - 50, lives: 2, currentCombo: 0,
+      gaps: [{ cells: [[0, 0]], pieceType: 'O', rotation: 0, filled: false } as never] })
+    // A pick worth ≥50 crosses the threshold and awards exactly one life.
+    useStaggerStore.getState().pickPiece('O')
+    expect(useStaggerStore.getState().lives).toBe(3)
   })
 
   it('advanceBatch escalates difficulty and resets the gaps unfilled', () => {

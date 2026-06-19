@@ -49,7 +49,7 @@ export function HomeScreen() {
             {/* GAP / CITY stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
-              Memory glows. Then it&apos;s gone.
+              A memory game
             </p>
           </div>
 

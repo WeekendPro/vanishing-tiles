@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PHOSPHOR — Combo Scoring Study</title>
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 90% at 50% 20%, transparent 55%, #000 130%), var(--void);
+    color:var(--text); font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    min-height:100vh; padding:38px 24px 80px;
+  }
+  h1{font-size:18px; letter-spacing:.18em; text-transform:uppercase; text-align:center; text-shadow:0 0 14px #28f0ff55; margin-bottom:4px}
+  .sub{text-align:center; color:var(--lime); font-size:12px; letter-spacing:.22em; text-transform:uppercase; margin-bottom:28px}
+  h2{font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--cyan); text-align:center; margin:34px 0 16px}
+  .wrap{max-width:920px; margin:0 auto}
+  .row{display:flex; gap:24px; justify-content:center; flex-wrap:wrap; align-items:flex-start}
+
+  /* ── live demo HUD ── */
+  .demo{width:360px; background:var(--panel); border:1px solid #1a1a26; border-radius:16px; padding:20px;
+        box-shadow:0 20px 50px #0008, inset 0 1px 0 #ffffff0d}
+  .hud{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:4px}
+  .hud .lab{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim)}
+  .scoreline{display:flex; align-items:baseline; gap:10px}
+  .score{font-size:34px; font-weight:800; color:var(--cyan); text-shadow:0 0 10px #28f0ff80; line-height:1; font-variant-numeric:tabular-nums}
+  .mult{font-size:20px; font-weight:800; color:var(--lime); text-shadow:0 0 10px #b6ff3c80; line-height:1;
+        opacity:0; transform:translateY(2px) scale(.8); transition:opacity .2s}
+  .mult.on{opacity:1}
+  .mult.pop{animation:multpop .35s cubic-bezier(.2,.8,.2,1)}
+  @keyframes multpop{0%{transform:scale(1.5);text-shadow:0 0 22px #b6ff3c}100%{transform:scale(1)}}
+  .board{margin-top:16px; display:grid; grid-template-columns:repeat(8,1fr); gap:3px; aspect-ratio:1; position:relative}
+  .cell{border-radius:3px; background:#0c0c14}
+  .cell.lit{background:var(--lime); box-shadow:0 0 7px var(--lime)}
+  .burst{position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); pointer-events:none;
+         font-weight:800; font-size:24px; color:var(--lime); text-shadow:0 0 12px #b6ff3c; opacity:0}
+  .burst.go{animation:bup 1s cubic-bezier(.2,.8,.2,1)}
+  @keyframes bup{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}25%{opacity:1;transform:translate(-50%,-60%) scale(1.05)}100%{opacity:0;transform:translate(-50%,-95%) scale(1)}}
+  .note{margin-top:14px; font-size:12px; color:var(--text-dim); line-height:1.55; text-align:center}
+
+  /* ── comparison table ── */
+  .panel{width:480px; background:var(--panel); border:1px solid #1a1a26; border-radius:16px; padding:20px;
+         box-shadow:0 20px 50px #0008, inset 0 1px 0 #ffffff0d}
+  table{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums}
+  th,td{padding:6px 8px; text-align:right; font-size:12px}
+  th{color:var(--text-dim); font-weight:600; letter-spacing:.05em; border-bottom:1px solid #ffffff14}
+  td:first-child,th:first-child{text-align:left}
+  tbody tr:nth-child(odd){background:#ffffff05}
+  .tot td{border-top:1px solid #ffffff22; font-weight:800; padding-top:9px}
+  .flat{color:var(--text-dim)}
+  .lin{color:var(--lime)}
+  .cap{color:var(--amber)}
+  .legend{margin-top:12px; font-size:11px; color:var(--text-faint); line-height:1.6}
+  .legend b{color:var(--text)}
+  .rec{max-width:780px; margin:26px auto 0; background:#0f1410; border:1px solid #2a3a22; border-radius:14px; padding:18px 20px;
+       font-size:13px; color:var(--text-dim); line-height:1.65}
+  .rec b{color:var(--lime)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Phosphor · Combo Scoring</h1>
+    <div class="sub">multiplier near the score · burst = ×N</div>
+
+    <div class="row">
+      <!-- LIVE DEMO -->
+      <div class="demo">
+        <div class="hud">
+          <div>
+            <div class="lab">Score</div>
+            <div class="scoreline">
+              <span class="score" id="score">0</span>
+              <span class="mult" id="mult">×1</span>
+            </div>
+          </div>
+          <div style="text-align:right"><div class="lab">Items</div>
+            <div style="font-weight:700;font-size:14px" id="items">0 / 8</div></div>
+        </div>
+        <div class="board" id="board"><div class="burst" id="burst"></div></div>
+        <div class="note">Each correct pick pops <b style="color:var(--lime)">+points</b> on the board,
+        the <b style="color:var(--lime)">×N</b> chip by the score climbs, and the score jumps by
+        <b>base × N</b>. A miss snaps the chip back to ×1.</div>
+      </div>
+
+      <!-- COMPARISON -->
+      <div class="panel">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px">
+          A clean 8-in-a-row · base 100/pick</div>
+        <table>
+          <thead><tr><th>Pick</th><th>×N</th><th class="flat">Flat</th><th class="lin">Linear</th><th class="cap">Capped&nbsp;5</th></tr></thead>
+          <tbody id="tbody"></tbody>
+          <tfoot><tr class="tot"><td>Total</td><td></td><td class="flat" id="tFlat"></td><td class="lin" id="tLin"></td><td class="cap" id="tCap"></td></tr></tfoot>
+        </table>
+        <div class="legend">
+          <b>Flat</b> — today: every pick = 100, combo is cosmetic.<br>
+          <b>Linear</b> — ×N = combo length (your ×5→500). Biggest variance; a perfect streak snowballs, one miss resets it.<br>
+          <b>Capped&nbsp;5</b> — ×N = min(combo, 5). Keeps the thrill, tames runaway late-game streaks.
+        </div>
+      </div>
+    </div>
+
+    <div class="rec">
+      <b>My take:</b> put a persistent <b>×N chip right next to the score</b> (it's the number it
+      multiplies — cause and effect read instantly) and make the on-board burst the <b>+points actually earned</b>
+      that pick, not "×N". The multiplier creates exactly the scoring variance you're after: a flawless run
+      is worth multiples of a sloppy one. I'd start with <b>Capped 5</b> (×N = min(combo, 5)) so a deep
+      streak stays exciting without a single batch dwarfing the whole rest of the run — easy to lift the cap
+      later if you want it wilder. Combo still ignites at 3 (chip hidden at ×1/×2, blooms at ×3).
+    </div>
+  </div>
+
+<script>
+  const BASE=100, PICKS=8, CAP=5;
+  // table
+  const tb=document.getElementById('tbody');
+  let f=0,l=0,c=0;
+  for(let n=1;n<=PICKS;n++){
+    const linM=n, capM=Math.min(n,CAP);
+    f+=BASE; l+=BASE*linM; c+=BASE*capM;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>#${n}</td><td>×${n}</td><td class="flat">${BASE}</td><td class="lin">${BASE*linM}</td><td class="cap">${BASE*capM}</td>`;
+    tb.appendChild(tr);
+  }
+  document.getElementById('tFlat').textContent=f;
+  document.getElementById('tLin').textContent=l;
+  document.getElementById('tCap').textContent=c;
+
+  // live demo (uses Capped 5)
+  const board=document.getElementById('board'), burst=document.getElementById('burst'),
+        scoreEl=document.getElementById('score'), multEl=document.getElementById('mult'), itemsEl=document.getElementById('items');
+  const cells=[];
+  for(let i=0;i<64;i++){const d=document.createElement('div');d.className='cell';board.appendChild(d);cells.push(d);}
+  const path=[9,10,11,18,27,28,36,44]; // arbitrary lit sequence
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  async function run(){
+    while(true){
+      let score=0, combo=0;
+      cells.forEach(c=>c.className='cell'); scoreEl.textContent='0';
+      multEl.className='mult'; multEl.textContent='×1'; itemsEl.textContent='0 / 8';
+      await sleep(700);
+      for(let i=0;i<path.length;i++){
+        combo++; const m=Math.min(combo,CAP); const pts=BASE*m;
+        score+=pts; cells[path[i]].classList.add('lit');
+        scoreEl.textContent=score; itemsEl.textContent=`${i+1} / 8`;
+        burst.textContent='+'+pts; burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
+        if(combo>=3){ multEl.classList.add('on'); }
+        multEl.textContent='×'+m; multEl.classList.remove('pop'); void multEl.offsetWidth; multEl.classList.add('pop');
+        await sleep(820);
+      }
+      await sleep(1100);
+    }
+  }
+  run();
+</script>
+</body>
+</html>

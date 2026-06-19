@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PHOSPHOR — Decay Study (countdown + reveal)</title>
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --panel-raised:#15151F;
+    --filled:#2A2D3A; --filled-edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+    --decay:cubic-bezier(.3,0,.1,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%), var(--void);
+    color:var(--text); font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    min-height:100vh; padding:40px 24px 80px;
+  }
+  h1{font-size:18px; letter-spacing:.18em; text-transform:uppercase; color:var(--text);
+     text-shadow:0 0 14px #28f0ff55; text-align:center; margin-bottom:4px}
+  .sub{text-align:center; color:var(--magenta); font-size:12px; letter-spacing:.22em;
+       text-transform:uppercase; margin-bottom:6px}
+  .lede{text-align:center; color:var(--text-dim); font-size:13px; max-width:560px; margin:0 auto 40px; line-height:1.6}
+  h2{font-size:12px; letter-spacing:.24em; text-transform:uppercase; color:var(--cyan);
+     text-shadow:0 0 10px #28f0ff44; margin:36px 0 18px; text-align:center}
+  .row{display:flex; gap:22px; justify-content:center; flex-wrap:wrap}
+  .card{
+    width:240px; background:var(--panel); border:1px solid #1a1a26; border-radius:16px;
+    padding:18px; box-shadow:0 20px 50px #0008, inset 0 1px 0 #ffffff0d;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+  .card .name{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--text)}
+  .card .desc{font-size:11px; color:var(--text-dim); line-height:1.5; text-align:center; min-height:46px}
+  .stage{
+    width:100%; height:170px; border-radius:12px; background:#04040a;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px #ffffff08;
+    display:grid; place-items:center; position:relative; overflow:hidden;
+  }
+
+  /* ── COUNTDOWN numerals ─────────────────────────────── */
+  .num{
+    position:absolute; font-family:'Space Grotesk',sans-serif; font-weight:800;
+    font-size:88px; line-height:1; color:var(--cyan); opacity:0;
+  }
+  /* A · Clean decay — bright pop, ease-out fade to zero, glow fades with it */
+  @keyframes numA{
+    0%{opacity:0; transform:scale(.4); text-shadow:0 0 0 #28f0ff00}
+    10%{opacity:1; transform:scale(1); text-shadow:0 0 30px #28f0ffcc,0 0 60px #28f0ff88}
+    100%{opacity:0; transform:scale(1.04); text-shadow:0 0 6px #28f0ff22}
+  }
+  .A .num{animation:numA 1100ms var(--decay)}
+  /* B · Afterglow smear — light dissipates: blurs and swells as it dies */
+  @keyframes numB{
+    0%{opacity:0; transform:scale(.5); filter:blur(0)}
+    9%{opacity:1; transform:scale(1); filter:blur(0); text-shadow:0 0 28px #28f0ffcc}
+    100%{opacity:0; transform:scale(1.22); filter:blur(7px); text-shadow:0 0 50px #28f0ff66}
+  }
+  .B .num{animation:numB 1100ms cubic-bezier(.25,.6,.2,1)}
+  /* C · Ember — burns, drops to a dim ember, then a long slow tail to nothing */
+  @keyframes numC{
+    0%{opacity:0; transform:scale(.5); text-shadow:0 0 0 #28f0ff00}
+    8%{opacity:1; transform:scale(1.04); text-shadow:0 0 34px #28f0ffee,0 0 64px #28f0ff99}
+    16%{opacity:1; transform:scale(1); text-shadow:0 0 22px #28f0ffaa}
+    34%{opacity:.34; text-shadow:0 0 12px #28f0ff55}
+    72%{opacity:.20; text-shadow:0 0 8px #28f0ff33}
+    100%{opacity:0; text-shadow:0 0 2px #28f0ff11}
+  }
+  .C .num{animation:numC 1100ms cubic-bezier(.2,.7,.25,1)}
+
+  /* ── REVEAL piece bloom + decay ─────────────────────── */
+  .miniboard{
+    display:grid; grid-template-columns:repeat(6,18px); grid-auto-rows:18px; gap:2px;
+  }
+  .c{border-radius:3px}
+  /* graphite filled surface */
+  .fill{background:linear-gradient(160deg,var(--filled-edge),var(--filled));
+        box-shadow:inset 0 1px 0 #ffffff10, inset 0 -1px 0 #00000055}
+  /* dark void surface */
+  .voidc{background:#0c0c14}
+
+  /* R1 · Re-seal (current design): bloom magenta → decay → HEALS back to graphite (no hole) */
+  @keyframes bloomReseal{
+    0%{background:linear-gradient(160deg,var(--filled-edge),var(--filled)); box-shadow:none; transform:scale(1)}
+    10%{background:var(--magenta); box-shadow:0 0 10px var(--magenta),0 0 22px var(--magenta); transform:scale(1.12)}
+    24%,55%{background:var(--magenta); box-shadow:0 0 8px var(--magenta); transform:scale(1)}
+    82%{background:#2c1c2a; box-shadow:0 0 4px #ff2d9b55}
+    100%{background:linear-gradient(160deg,var(--filled-edge),var(--filled));
+         box-shadow:inset 0 1px 0 #ffffff10, inset 0 -1px 0 #00000055; transform:scale(1)}
+  }
+  .R1 .bloom{animation:bloomReseal 1500ms var(--decay) forwards}
+
+  /* R2 · Decay to nothing: dark board, bloom magenta → fades to VOID (light dies into black) */
+  @keyframes bloomVoid{
+    0%{background:#0c0c14; box-shadow:none; transform:scale(1)}
+    10%{background:var(--magenta); box-shadow:0 0 12px var(--magenta),0 0 26px var(--magenta); transform:scale(1.12)}
+    26%{background:var(--magenta); box-shadow:0 0 9px var(--magenta); transform:scale(1)}
+    55%{background:#7a1652; box-shadow:0 0 6px #ff2d9b66}
+    80%{background:#2a0e22; box-shadow:0 0 3px #ff2d9b22}
+    100%{background:#0c0c14; box-shadow:none; transform:scale(1)}
+  }
+  .R2 .bloom{animation:bloomVoid 1500ms cubic-bezier(.2,.7,.25,1) forwards}
+
+  /* R3 · Afterimage: bloom → quick drop → long luminous ghost tail before it dies */
+  @keyframes bloomGhost{
+    0%{background:#0c0c14; box-shadow:none; transform:scale(1)}
+    8%{background:var(--magenta); box-shadow:0 0 14px var(--magenta),0 0 30px var(--magenta); transform:scale(1.14)}
+    18%{background:var(--magenta); box-shadow:0 0 8px var(--magenta); transform:scale(1)}
+    34%{background:#b51f73; box-shadow:0 0 10px #ff2d9b88}
+    62%{background:#5e1240; box-shadow:0 0 7px #ff2d9b55}
+    85%{background:#260b1e; box-shadow:0 0 3px #ff2d9b22}
+    100%{background:#0c0c14; box-shadow:none; transform:scale(1)}
+  }
+  .R3 .bloom{animation:bloomGhost 1700ms cubic-bezier(.2,.75,.2,1) forwards}
+
+  .tag{font-family:'Space Grotesk',monospace; font-size:10px; color:var(--text-faint);
+       letter-spacing:.1em; text-transform:uppercase}
+</style>
+</head>
+<body>
+  <h1>Phosphor · Decay Study</h1>
+  <div class="sub">Afterglow</div>
+  <p class="lede">A light that burns bright for a brief moment and dims into nothingness.
+  Each option below loops forever — watch the <b>tail</b> of the fade, that's the whole feeling.
+  Pick one for the countdown and one for the reveal (or mix notes).</p>
+
+  <h2>① Countdown numerals — burn &amp; fade</h2>
+  <div class="row" id="countRow">
+    <div class="card A"><div class="name">A · Clean Decay</div>
+      <div class="desc">Bright pop, smooth ease-out to zero. Glow fades with the glyph. Crisp, legible.</div>
+      <div class="stage"><span class="num">3</span></div></div>
+    <div class="card B"><div class="name">B · Afterglow Smear</div>
+      <div class="desc">The light dissipates — blurs and swells outward as it dies. Most "phosphor", least crisp.</div>
+      <div class="stage"><span class="num">3</span></div></div>
+    <div class="card C"><div class="name">C · Ember</div>
+      <div class="desc">Burns, drops to a dim ember, then a long slow tail to nothing. Lingering afterimage.</div>
+      <div class="stage"><span class="num">3</span></div></div>
+  </div>
+
+  <h2>② Reveal pieces — bloom &amp; decay</h2>
+  <div class="row" id="revealRow">
+    <div class="card R1"><div class="name">R1 · Re-seal (current)</div>
+      <div class="desc">Board stays graphite. Gap blooms magenta, then HEALS back into the surface — no hole left.</div>
+      <div class="stage"><div class="miniboard" data-bg="fill"></div></div>
+      <div class="tag">board: graphite · heals shut</div></div>
+    <div class="card R2"><div class="name">R2 · Decay to Nothing</div>
+      <div class="desc">Dark board. Gap blooms, then the light dies all the way into the void — gone.</div>
+      <div class="stage"><div class="miniboard" data-bg="voidc"></div></div>
+      <div class="tag">board: void · fades to black</div></div>
+    <div class="card R3"><div class="name">R3 · Afterimage</div>
+      <div class="desc">Dark board. Fast burn, then a long luminous ghost tail lingers before dying. Most "retina-trace".</div>
+      <div class="stage"><div class="miniboard" data-bg="voidc"></div></div>
+      <div class="tag">board: void · long ghost tail</div></div>
+  </div>
+
+<script>
+  /* COUNTDOWN: cycle 3 → 2 → 1 forever, restarting the animation each beat. */
+  const BEAT = 1100;
+  document.querySelectorAll('#countRow .card').forEach(card=>{
+    const el = card.querySelector('.num');
+    let n = 3;
+    const play = ()=>{
+      el.textContent = n;
+      el.style.animation='none'; void el.offsetWidth;  // restart
+      el.style.animation='';
+      n = n>1 ? n-1 : 3;
+    };
+    play(); setInterval(play, BEAT);
+  });
+
+  /* REVEAL: 6×4 mini-board; a 4-cell tetromino (an S) blooms as a unit and decays. */
+  const SHAPE = [[1,1],[1,2],[2,2],[2,3]]; // S-ish cluster in a 6-col grid
+  const ROWSN=4, COLSN=6;
+  document.querySelectorAll('#revealRow .card').forEach(card=>{
+    const mb = card.querySelector('.miniboard');
+    const bg = mb.dataset.bg;
+    const cells=[];
+    for(let r=0;r<ROWSN;r++)for(let c=0;c<COLSN;c++){
+      const d=document.createElement('div'); d.className='c '+bg;
+      mb.appendChild(d); cells.push(d);
+    }
+    const isShape=(r,c)=>SHAPE.some(([sr,sc])=>sr===r&&sc===c);
+    const shapeCells=[];
+    for(let r=0;r<ROWSN;r++)for(let c=0;c<COLSN;c++) if(isShape(r,c)) shapeCells.push(cells[r*COLSN+c]);
+    const CYCLE = 2100;
+    const play=()=>{
+      shapeCells.forEach(d=>{ d.className='c '+bg; void d.offsetWidth; d.classList.add('bloom'); });
+    };
+    play(); setInterval(play, CYCLE);
+  });
+</script>
+</body>
+</html>

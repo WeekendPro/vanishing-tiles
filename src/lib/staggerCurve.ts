@@ -8,15 +8,20 @@ import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
  */
 export const STAGGER = {
   MAX_GAPS: 12,        // cap so the 12×12 board stays solvable
-  START_HOLD: 720,     // ms a gap holds on screen at batch 0 (~1.12s/gap with fades)
-  MIN_HOLD: 260,       // floor on the hold (~0.66s/gap at the top)
-  HOLD_STEP: 38,       // ms shaved off the hold per batch
-  FADE_MS: 200,        // fade-in / fade-out duration (constant)
+  // Reveal timing is CONSTANT for every batch — we deliberately do NOT speed the
+  // reveal/decay up as the run escalates (complexity comes from other levers).
+  // Each piece: flash all cells at once → hold bright → decay to nothing in a
+  // per-cell wave. The bloom keyframe (phosBloom) encodes the flash/hold/decay
+  // split; these drive the JS pacing and the wave spread.
+  REVEAL_BLOOM_MS: 2080, // total visible time for one piece (flash + ~1s hold + ~1s decay)
+  REVEAL_STEP_MS: 1120,  // time between consecutive piece flashes (overlapping: next flashes as prev starts to decay)
+  REVEAL_WAVE_MS: 220,   // per-cell decay wave spread (cells end at staggered times)
   SELECT_BASE: 6000,   // ms base select clock
   SELECT_PER_GAP: 1400,// ms of select clock added per gap
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap
   SPEED_MAX: 500,      // max per-batch speed bonus
   START_LIVES: 5,      // shared lives for the whole run
+  LIFE_EVERY: 5000,    // every N cumulative points earns one life back
   REPLAY_COST: 500,    // points spent to replay the memorize sequence mid-batch
 } as const
 
@@ -60,14 +65,17 @@ export function gapCountForBatch(batchIndex: number): number {
   return Math.min(STAGGER.MAX_GAPS, 3 + Math.floor(batchIndex / 2))
 }
 
-/** On-screen hold per gap, shrinking with the batch index down to MIN_HOLD. */
-export function holdMsForBatch(batchIndex: number): number {
-  return Math.max(STAGGER.MIN_HOLD, STAGGER.START_HOLD - batchIndex * STAGGER.HOLD_STEP)
+/** Time between consecutive piece flashes during reveal — CONSTANT for every
+ *  batch. (We no longer shorten reveal/decay as the run escalates.) */
+export function revealStepMs(): number {
+  return STAGGER.REVEAL_STEP_MS
 }
 
-/** Total visible time for one gap: fade-in + hold + fade-out. */
-export function gapRevealMs(batchIndex: number): number {
-  return STAGGER.FADE_MS + holdMsForBatch(batchIndex) + STAGGER.FADE_MS
+/** Total reveal (memorize) time for a batch. Pieces overlap, so it's the last
+ *  piece's flash plus one full bloom — grows only with the piece COUNT, never
+ *  by speeding individual pieces up. */
+export function batchRevealMs(batchIndex: number): number {
+  return (gapCountForBatch(batchIndex) - 1) * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS
 }
 
 /** Select clock grows with the gap count so picking is never the bottleneck. */

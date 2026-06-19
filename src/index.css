@@ -66,7 +66,12 @@
 }
 .frost-green {
   background: rgba(57, 217, 138, 0.1);
-  box-shadow: 0 0 18px rgba(57, 217, 138, 0.45), inset 0 0 0 1px rgba(57, 217, 138, 0.5);
+  /* Border-only at rest (no static outer glow); the hover state lights it up. */
+  box-shadow: inset 0 0 0 1px rgba(57, 217, 138, 0.55);
+  transition: box-shadow 0.2s ease;
+}
+.frost-green:hover {
+  box-shadow: 0 0 18px rgba(57, 217, 138, 0.4), inset 0 0 0 1px rgba(57, 217, 138, 0.7);
 }
 .frost-cyan {
   background: rgba(255, 255, 255, 0.045);
@@ -140,44 +145,79 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
 }
 
-/* The gap bloom: light floods the shape, holds, then decays and RE-SEALS into
-   the filled surface — never a darker hole. Apply to a cell that is also a
-   member of a tetromino group whose cells all get this class at the same tick. */
+/* The gap bloom (Afterimage): on the dark void board a gap floods magenta, a
+   fast burn, then a long luminous GHOST TAIL that dims all the way back to the
+   void — a light that burns bright and dies into nothingness, leaving no hole.
+   Applied per cell; each cell of a tetromino sets its OWN duration + delay
+   inline so the shape fades away in a WAVE rather than in lockstep. */
 @keyframes phosBloom {
   0% {
-    background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
+    background: #0c0c14;
     box-shadow: none;
     transform: scale(1);
   }
-  10% {
+  4% {
     background: #ff2d9b;
-    box-shadow: 0 0 10px #ff2d9b, 0 0 22px #ff2d9b;
-    transform: scale(1.1);
+    box-shadow: 0 0 14px #ff2d9b, 0 0 30px #ff2d9b;
+    transform: scale(1.13);
   }
-  24%, 55% {
+  52% {
     background: #ff2d9b;
-    box-shadow: 0 0 8px #ff2d9b;
+    box-shadow: 0 0 9px #ff2d9b;
     transform: scale(1);
   }
-  82% {
-    background: #2c1c2a;
-    box-shadow: 0 0 4px rgba(255, 45, 155, 0.33);
+  70% {
+    background: #b51f73;
+    box-shadow: 0 0 8px rgba(255, 45, 155, 0.5);
+  }
+  88% {
+    background: #3a1330;
+    box-shadow: 0 0 3px rgba(255, 45, 155, 0.2);
   }
   100% {
-    background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
+    background: #0c0c14;
+    box-shadow: none;
     transform: scale(1);
   }
 }
-.phos-bloom { animation: phosBloom 1.3s var(--phos-decay) forwards; }
+/* Flash to ~4% (instant, all cells together), HOLD bright to ~52% (~1s), then
+   decay to void over the rest (~1s). Duration is overridden per cell inline (the
+   wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback. */
+.phos-bloom { animation: phosBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-bloom { animation: none; }
+  .phos-bloom { animation: none; background: #ff2d9b; box-shadow: 0 0 8px #ff2d9b; }
+}
+
+/* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
+   appears, then the light dissipates — blurring and swelling outward as it fades
+   to full-zero visibility, just before the next number takes its place. Duration
+   is kept in lockstep with the per-beat timer in StaggerCountdown. */
+@keyframes phosNumDecay {
+  0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40, 240, 255, 0); }
+  9%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
+  100% { opacity: 0; transform: scale(1.22); filter: blur(7px); text-shadow: 0 0 50px rgba(40, 240, 255, 0.4); }
+}
+.phos-num-decay { animation: phosNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phos-num-decay { animation: none; opacity: 1; }
 }
 
 /* Timer bar under-25% red pulse (≤3Hz — flash-hazard safe). */
 @keyframes redpulse {
   50% { opacity: 0.6; }
+}
+
+/* Combo multiplier chip — a quick pop each time the streak climbs. */
+@keyframes comboPop {
+  0% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+.combo-pop { animation: comboPop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .combo-pop { animation: none; }
 }
 
 /* Auth-motif flicker: a soft, graceful bloom that rests dim most of the cycle,

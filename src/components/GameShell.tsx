@@ -11,6 +11,7 @@ import { ResolutionPhase } from './ResolutionPhase'
 import { ProgressBar } from './ProgressBar'
 import { ArcadeLoader } from './ArcadeLoader'
 import { LivesCounter } from './ui/LivesCounter'
+import { MAX_LIVES } from '@shared/core/scoring'
 
 export function GameShell() {
   const { phase, paused, phaseStartTime, phaseDuration, mode, levelDisplayNumber, levelName, submitting, roundIndex, livesRemaining, activeComponent, gitTrack } =
@@ -110,7 +111,7 @@ export function GameShell() {
 
       {showLives && (
         <div data-testid="lives-row" className="flex justify-center pt-2">
-          <LivesCounter lives={livesRemaining} />
+          <LivesCounter lives={livesRemaining} cap={MAX_LIVES} />
         </div>
       )}
 

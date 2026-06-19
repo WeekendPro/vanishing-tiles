@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
-import { STAGGER, holdMsForBatch, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 
@@ -40,16 +40,16 @@ function useCountUp(value: number, durationMs = 600): number {
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
-// The phosphor board. Every empty cell renders ONE uniform surface so gaps are
-// concealed: graphite (.phos-filled) during reveal/countdown, lights-out
-// (.phos-dim) during recall. A gap is only ever exposed by a live magenta BLOOM
-// — the whole tetromino's cells get .phos-bloom at the same tick, flood magenta,
-// hold, then decay and RE-SEAL into the graphite surface (never a dark hole).
+// The phosphor board is the dark VOID throughout (.phos-dim) — gaps are concealed
+// within one uniform near-black field, never a readable hole. A gap is only ever
+// exposed by a live magenta BLOOM: the whole tetromino's cells get .phos-bloom at
+// the same tick, flood magenta, then decay along a luminous ghost tail back to the
+// void — and they fade away in a WAVE (each cell sets its own duration + delay).
 // Filled/placed gaps keep their piece color (a correct pick lighting out of the
 // dark), ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomCells, bloomKey, recall,
-}: { gaps: StaggerGap[]; bloomCells: Set<string>; bloomKey: number; recall: boolean }) {
+  gaps, bloomCells, bloomKey,
+}: { gaps: StaggerGap[]; bloomCells: Set<string>; bloomKey: number }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -78,13 +78,17 @@ function StaggerBoard({
             />
           )
         }
-        // Uniform surface: graphite while revealing, lights-out while recalling.
-        // A blooming gap's cells flood magenta together then re-seal seamlessly.
+        // Uniform dark void; a blooming gap's cells all flash at once (no delay)
+        // then decay back to the void in a WAVE — each cell gets a slightly longer
+        // duration along the diagonal, so they wink out at staggered times.
         const blooming = bloomCells.has(key)
         return (
           <div
             key={blooming ? `${i}-bloom-${bloomKey}` : i}
-            className={`w-7 h-7 rounded-sm ${blooming ? 'phos-bloom' : recall ? 'phos-dim' : 'phos-filled'}`}
+            className={`w-7 h-7 rounded-sm ${blooming ? 'phos-bloom' : 'phos-dim'}`}
+            style={blooming ? {
+              animationDuration: `${STAGGER.REVEAL_BLOOM_MS + ((r + c) % 4) * STAGGER.REVEAL_WAVE_MS}ms`,
+            } : undefined}
           />
         )
       })}
@@ -93,33 +97,31 @@ function StaggerBoard({
 }
 
 // ── Countdown ───────────────────────────────────────────────────────────────
+// Each number burns bright the instant it appears, then dissipates (Afterglow
+// Smear: blurs + swells + fades to nothing) over the beat, just as the next
+// number takes its place. The CSS animation length (.phos-num-decay, 850ms) is
+// kept in lockstep with BEAT_MS.
+const BEAT_MS = 850
 function StaggerCountdown({ onDone }: { onDone: () => void }) {
-  const reduce = useReducedMotion()
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
       const t = window.setTimeout(onDone, 350)
       return () => clearTimeout(t)
     }
-    const t = window.setTimeout(() => setCount(c => c - 1), 750)
+    const t = window.setTimeout(() => setCount(c => c - 1), BEAT_MS)
     return () => clearTimeout(t)
   }, [count, onDone])
   return (
-    <div className="flex h-44 w-44 items-center justify-center">
-      <AnimatePresence>
-        {count > 0 && (
-          <motion.span
-            key={count}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.3 }}
-            animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-            exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.9 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="absolute font-silk font-black leading-none text-phos-cyan text-[6rem] drop-shadow-[0_0_30px_rgba(40,240,255,0.55)]"
-          >
-            {count}
-          </motion.span>
-        )}
-      </AnimatePresence>
+    <div className="relative flex h-44 w-44 items-center justify-center">
+      {count > 0 && (
+        <span
+          key={count}
+          className="absolute phos-num-decay font-silk font-black leading-none text-phos-cyan text-[6rem]"
+        >
+          {count}
+        </span>
+      )}
     </div>
   )
 }
@@ -158,13 +160,13 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, score, lives, selectDuration, selectStartTime, paused,
-    shapesRecalled, bestCombo, totalPicks, correctPicks,
+    shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
     startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
     replayReveal, pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
-    shapesRecalled: s.shapesRecalled, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
+    shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     replayReveal: s.replayReveal, pause: s.pause, resume: s.resume, exit: s.exit,
@@ -176,6 +178,7 @@ export function StaggerScreen() {
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
+  const [clockMs, setClockMs] = useState(0)
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
   const boardRef = useRef<HTMLDivElement>(null)
@@ -185,36 +188,37 @@ export function StaggerScreen() {
   // bonus) ticks the displayed number up rather than snapping.
   const displayScore = useCountUp(score)
 
-  // Combo: a streak of correct recalls. Each correct pick floats a "Combo N"
-  // burst over the just-filled gap; a miss breaks the streak.
-  const [combos, setCombos] = useState<{ id: number; count: number; x: number; y: number }[]>([])
-  const comboCount = useRef(0)
+  // Combo: a streak of correct recalls (tracked in the store). Each correct pick
+  // floats the "+points" it earned over the just-filled gap; the running ×N
+  // multiplier shows as a chip next to the score.
+  const [combos, setCombos] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
   const comboId = useRef(0)
 
-  // A fresh run / game over / a broken board resets the streak and clears any
-  // lingering combo bursts.
+  // A fresh run / game over / a broken board clears any lingering bursts.
   useEffect(() => {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
-      comboCount.current = 0
       setCombos([])
     }
   }, [phase])
 
   // Reveal driver (shape-bloom): bloom each gap as a WHOLE tetromino — all its
-  // cells get .phos-bloom at the same tick, flood magenta, hold, then decay and
-  // re-seal into the surface. Decays cascade (the next shape blooms before the
-  // last finishes dying), filling the bar one step per gap as a COUNT, then hand
-  // off to selecting. Because .phos-bloom forwards-fills to the graphite surface,
-  // past gaps re-seal seamlessly — no readable hole remains.
+  // cells get .phos-bloom at the same tick, flood magenta, then decay along a
+  // ghost tail back to the void (fading away in a per-cell wave). Decays cascade
+  // (the next shape blooms before the last finishes dying), draining the bar one
+  // step per gap as a COUNT, then hand off to selecting. Because .phos-bloom
+  // forwards-fills back to the void, past gaps leave no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
     let cancelled = false
     const timers: number[] = []
     const n = gaps.length
-    // Step between shape blooms: the hold plus a short inter-shape breath. The
-    // 1.3s bloom keyframe out-runs this, so decays overlap into a cascade.
-    const step = holdMsForBatch(batchIndex) + STAGGER.FADE_MS
-    setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(0)
+    // Step between piece flashes: CONSTANT (no per-batch speed-up). The bloom
+    // out-runs this step, so the next piece flashes while the previous is still
+    // decaying — the overlapping cascade.
+    const step = STAGGER.REVEAL_STEP_MS
+    // Memorize bar DRAINS: starts full and empties one step per gap as the
+    // sequence plays out (a visual count of memorize time spent).
+    setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
     setRevealIndex(-1)
 
     const show = (idx: number) => {
@@ -222,7 +226,7 @@ export function StaggerScreen() {
       if (idx >= n) { beginSelecting(); return }
       setRevealIndex(idx)
       setBloomKey(k => k + 1)   // re-key so the bloom animation (re)starts
-      setBarPct(((idx + 1) / n) * 100)
+      setBarPct((1 - (idx + 1) / n) * 100)
       timers.push(window.setTimeout(() => show(idx + 1), step))
     }
     // A short breath before the first gap (also paces continuous next batches).
@@ -230,36 +234,45 @@ export function StaggerScreen() {
     return () => { cancelled = true; timers.forEach(clearTimeout) }
   }, [phase, batchIndex, gaps, beginSelecting])
 
-  // Selecting driver: drain the bar over whatever select clock REMAINS (a fresh
-  // batch starts full; a replay/pause resumes mid-drain), then end the batch on
-  // expiry (lives are the only fail condition). Paused → freeze: the effect
-  // tears down and waits, picking back up when `resume` re-dates selectStartTime.
+  // Selecting expiry: end the batch when the select clock runs out (lives are the
+  // only fail condition). Paused → freeze: the effect tears down and re-arms when
+  // `resume` re-dates selectStartTime.
   useEffect(() => {
     if (phase !== 'selecting' || paused) return
     let cancelled = false
     setCleared(false)
     const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
-    const startPct = selectDuration > 0 ? (remaining / selectDuration) * 100 : 0
-    setBarColor('amber'); setBarTransition('none'); setBarPct(startPct)
-    const raf = requestAnimationFrame(() => {
-      if (cancelled) return
-      setBarTransition(`width ${remaining}ms linear`); setBarPct(0)
-    })
     const expiry = window.setTimeout(() => {
       if (cancelled) return
       // A cleared batch is handled by the clear beat; only a genuinely-unfinished
       // batch reaches here, and running out of time costs a life.
       if (!useStaggerStore.getState().gaps.every(g => g.filled)) timeoutBatch()
     }, remaining)
-    return () => { cancelled = true; cancelAnimationFrame(raf); clearTimeout(expiry) }
+    return () => { cancelled = true; clearTimeout(expiry) }
   }, [phase, paused, batchIndex, selectStartTime, selectDuration, timeoutBatch])
+
+  // Recall clock + bar drain: tick the remaining time every 100ms, draining the
+  // amber bar and feeding the in-bar seconds off the SAME live clock (so the bar
+  // and the temperature arc track real time, not a fragile CSS-only transition).
+  // Bails while cleared so onPick's lime payoff drain isn't overwritten.
+  useEffect(() => {
+    if (phase !== 'selecting' || paused || cleared) return
+    setBarColor('amber'); setBarTransition('width 120ms linear')
+    const tick = () => {
+      const rem = Math.max(0, selectStartTime + selectDuration - Date.now())
+      setClockMs(rem)
+      setBarPct(selectDuration > 0 ? (rem / selectDuration) * 100 : 0)
+    }
+    tick()
+    const id = window.setInterval(tick, 100)
+    return () => clearInterval(id)
+  }, [phase, paused, cleared, selectStartTime, selectDuration])
 
   const onPick = (type: PieceType) => {
     if (cleared || paused) return
     const res = pickPiece(type)
     if (res.gameOver) return
     if (!res.ok) {
-      comboCount.current = 0   // a miss breaks the streak
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -269,17 +282,16 @@ export function StaggerScreen() {
       window.setTimeout(() => setXMark(false), 440)
       return
     }
-    // Correct recall. The streak builds silently; once it reaches 3 in a row,
-    // each further correct pick pops a "Combo N" burst over the filled gap.
-    const count = (comboCount.current += 1)
-    if (res.gap && count >= 3) {
+    // Correct recall. Float the "+points" earned (base × combo) over the filled
+    // gap; the running ×N multiplier lives in the chip by the score.
+    if (res.gap) {
       const cells = res.gap.cells
       const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
       const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
       const x = BOARD_PAD + avgC * CELL_PITCH + CELL / 2
       const y = BOARD_PAD + avgR * CELL_PITCH + CELL / 2
       const id = (comboId.current += 1)
-      setCombos(prev => [...prev, { id, count, x, y }])
+      setCombos(prev => [...prev, { id, pts: res.gained, x, y }])
       window.setTimeout(() => setCombos(prev => prev.filter(p => p.id !== id)), 700)
     }
     if (res.batchCleared) {
@@ -303,7 +315,7 @@ export function StaggerScreen() {
   if (phase === 'idle') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center phos-vignette">
-        <NeonButton variant="primary" onClick={startRun}>Start Infinite Stagger</NeonButton>
+        <NeonButton variant="primary" onClick={startRun}>Start Staggered Phosphor</NeonButton>
       </div>
     )
   }
@@ -311,21 +323,29 @@ export function StaggerScreen() {
   const bloomCells = phase === 'reveal' && revealIndex >= 0 && revealIndex < gaps.length
     ? new Set(gaps[revealIndex].cells.map(([r, c]) => `${r},${c}`))
     : new Set<string>()
-  const recall = phase === 'selecting'
   const phaseLabel =
-    phase === 'countdown' ? 'get ready' :
-    phase === 'reveal' ? 'memorize' :
-    phase === 'selecting' ? (cleared ? 'cleared!' : 'recall') : ''
+    phase === 'reveal' ? 'MEMORIZE' :
+    phase === 'selecting' ? (cleared ? 'CLEAR!' : 'RECALL') : ''
 
   // Timer-bar phase color (the §1 temperature arc): magenta filling on reveal,
   // amber draining on recall, red pulse under 25% as the clock heats up, lime on
   // the clear-payoff drain.
-  const barLow = barColor === 'amber' && barPct < 25
+  // "Low" tracks real remaining time (not the bar's width state), so the bar +
+  // label only heat to red in the final quarter of the recall clock.
+  const barLow = barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < 0.25
   const barClass =
     barColor === 'magenta' ? 'bg-phos-magenta shadow-phos-magenta' :
     barColor === 'lime' ? 'bg-phos-lime shadow-phos-lime' :
     barLow ? 'bg-phos-red shadow-phos-red animate-[redpulse_0.5s_cubic-bezier(0.7,0,0.3,1)_infinite]' :
     'bg-phos-amber shadow-phos-amber'
+
+  // Phase label color tracks the bar's temperature (magenta → amber → red → lime).
+  const phaseLabelClass =
+    phase === 'reveal' ? 'text-phos-magenta text-glow-phos-magenta' :
+    cleared ? 'text-phos-lime text-glow-phos-lime' :
+    barLow ? 'text-phos-red text-glow-phos-red' :
+    phase === 'selecting' ? 'text-phos-amber text-glow-phos-amber' :
+    'text-phos-dim'
 
   return (
     <div className="min-h-screen flex flex-col items-center phos-vignette text-phos-text px-4 pt-12 pb-8">
@@ -335,32 +355,46 @@ export function StaggerScreen() {
           <div className="w-full max-w-sm flex items-end justify-between mb-2">
             <div>
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
-              <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
+              <div className="flex items-baseline gap-2">
+                <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
+                {/* Combo multiplier chip — ignites at ×3, pops on each pick. */}
+                {currentCombo >= 3 && (
+                  <span
+                    key={currentCombo}
+                    className="combo-pop font-silk font-bold text-xl text-phos-lime text-glow-phos-lime leading-none tabular-nums"
+                  >
+                    ×{currentCombo}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="text-right">
-              <LivesCounter lives={lives} />
+              <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
               <div className="font-grotesk font-semibold text-sm text-phos-text mt-1.5 tabular-nums">
                 {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-                <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">shapes</span>
+                <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
               </div>
             </div>
           </div>
 
-          {/* Timer / count bar — phase-colored (magenta → amber → red → lime) */}
-          <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-3 shadow-[inset_0_1px_2px_#000]">
+          {/* Timer / count bar — phase-colored (magenta → amber → red → lime). */}
+          <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-2 shadow-[inset_0_1px_2px_#000]">
             <div
               ref={barRef}
               className={`h-full rounded-full ${barClass}`}
               style={{ width: `${barPct}%`, transition: barTransition }}
             />
           </div>
+
+          {/* Phase label — above the grid, colored to match the bar. */}
+          <div className={`h-4 mb-2 font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
         </>
       )}
 
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomCells={bloomCells} bloomKey={bloomKey} recall={recall} />
+          <StaggerBoard gaps={gaps} bloomCells={bloomCells} bloomKey={bloomKey} />
         </div>
 
         {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
@@ -377,54 +411,52 @@ export function StaggerScreen() {
                 drop-shadow-[0_0_10px_rgba(182,255,60,0.85)]"
               style={{ left: cb.x, top: cb.y }}
             >
-              Combo {cb.count}
+              +{cb.pts}
             </motion.div>
           ))}
         </AnimatePresence>
 
         {phase === 'countdown' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/70 rounded-xl">
-            <div className="font-silk text-sm text-phos-cyan text-glow-phos-cyan mb-2 uppercase tracking-[0.1em]">Infinite Stagger</div>
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-phos-void">
+            <div className="font-silk text-sm text-phos-cyan text-glow-phos-cyan mb-2 uppercase tracking-[0.1em]">Staggered Phosphor</div>
             <StaggerCountdown onDone={beginReveal} />
           </div>
         )}
 
+        {/* Wrong pick: a red border flashes around the board (with the shake). */}
         <AnimatePresence>
           {xMark && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.2 }}
-              transition={{ duration: 0.18 }}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            >
-              <span className="text-phos-red text-glow-phos-red text-7xl font-black">✕</span>
-            </motion.div>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="absolute inset-0 rounded-xl pointer-events-none shadow-[inset_0_0_0_2px_#FF3B47,0_0_24px_rgba(255,59,71,0.28)]"
+            />
           )}
         </AnimatePresence>
 
         {phase === 'gameOver' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/90 rounded-xl px-6">
             <ScanlineOverlay />
-            <div className="font-grotesk text-[10px] tracking-[0.3em] uppercase text-phos-red text-glow-phos-red mb-2">Run Over</div>
             <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
             <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-phos-magenta text-glow-phos-magenta mb-5 phos-breathe">Memory Fades</div>
             <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Final score</div>
             <div className="font-silk font-bold text-4xl text-phos-amber text-glow-phos-amber mb-6 tabular-nums">{score}</div>
 
-            {/* Run-stats trio — shapes recalled / best combo / accuracy. */}
+            {/* Run-stats trio — items recalled / best combo / accuracy. */}
             <div className="flex w-full max-w-[300px] border-y border-white/10 mb-6">
               <div className="flex-1 text-center py-3.5">
                 <div className="font-silk font-bold text-base text-phos-magenta text-glow-phos-magenta tabular-nums">{shapesRecalled}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Shapes recalled</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Items recalled</div>
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk font-bold text-base text-phos-lime text-glow-phos-lime tabular-nums">×{bestCombo}</div>
+                <div className="font-silk font-bold text-base text-phos-lime text-glow-phos-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Best combo</div>
               </div>
               <div className="flex-1 text-center py-3.5">
                 <div className="font-silk font-bold text-base text-phos-cyan text-glow-phos-cyan tabular-nums">
-                  {totalPicks === 0 ? 100 : Math.round((correctPicks / totalPicks) * 100)}%
+                  {totalPicks === 0 ? 0 : Math.round((correctPicks / totalPicks) * 100)}%
                 </div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-phos-faint mt-1.5">Accuracy</div>
               </div>
@@ -438,9 +470,8 @@ export function StaggerScreen() {
         )}
       </div>
 
-      {/* Phase label + tray */}
-      <div className="h-5 mt-3 font-grotesk text-[11px] tracking-[0.22em] uppercase text-phos-dim">{phaseLabel}</div>
-      <div className="mt-1 min-h-[88px] w-full flex justify-center">
+      {/* Tray */}
+      <div className="mt-4 min-h-[88px] w-full flex justify-center">
         {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
       </div>
 
@@ -452,8 +483,8 @@ export function StaggerScreen() {
             disabled={cleared || score < STAGGER.REPLAY_COST}
             onClick={() => replayReveal()}
             className="flex-1 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
-              border-phos-amber text-phos-amber shadow-phos-amber hover:bg-phos-amber/10
-              transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+              border-phos-amber text-phos-amber hover:bg-phos-amber/10 hover:shadow-phos-amber
+              transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             ↻ Replay <span className="opacity-75">−{STAGGER.REPLAY_COST}</span>
           </button>

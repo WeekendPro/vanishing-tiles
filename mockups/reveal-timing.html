@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PHOSPHOR — Reveal Timing Study</title>
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --cell:#0c0c14;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 90% at 50% 25%, transparent 55%, #000 130%), var(--void);
+    color:var(--text); font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    min-height:100vh; padding:38px 24px 80px;
+  }
+  h1{font-size:18px; letter-spacing:.18em; text-transform:uppercase; text-align:center;
+     text-shadow:0 0 14px #28f0ff55; margin-bottom:4px}
+  .sub{text-align:center; color:var(--magenta); font-size:12px; letter-spacing:.22em; text-transform:uppercase; margin-bottom:24px}
+
+  /* anatomy strip */
+  .anatomy{max-width:520px; margin:0 auto 34px}
+  .anatomy .bar{display:flex; height:26px; border-radius:6px; overflow:hidden; box-shadow:inset 0 0 0 1px #ffffff10}
+  .anatomy .seg{display:grid; place-items:center; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#04040a; font-weight:700}
+  .seg.flash{background:var(--magenta); flex:0 0 7%}
+  .seg.hold{background:#ff8fcb; flex:1}
+  .seg.decay{background:linear-gradient(90deg,#7a1652,#0c0c14); color:#fff; flex:1}
+  .anatomy p{text-align:center; color:var(--text-dim); font-size:12px; margin-top:8px; line-height:1.5}
+
+  .row{display:flex; gap:22px; justify-content:center; flex-wrap:wrap}
+  .card{
+    width:248px; background:var(--panel); border:1px solid #1a1a26; border-radius:16px; padding:18px;
+    box-shadow:0 20px 50px #0008, inset 0 1px 0 #ffffff0d; display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .card .name{font-size:11px; letter-spacing:.14em; text-transform:uppercase}
+  .card .desc{font-size:11px; color:var(--text-dim); line-height:1.5; text-align:center; min-height:60px}
+  .stage{width:100%; padding:14px; border-radius:12px; background:#04040a;
+         box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px #ffffff08; display:grid; place-items:center}
+  .board{display:grid; gap:2px}
+  .c{width:17px; height:17px; border-radius:3px; background:var(--cell)}
+  .tag{font-family:'Space Grotesk',monospace; font-size:10px; color:var(--text-faint); letter-spacing:.06em; text-align:center}
+
+  /* balanced: flash 80ms / hold 1000 / decay 1000 → total 2080, holdEnd 52% */
+  @keyframes revBalanced{
+    0%{background:var(--cell);box-shadow:none;transform:scale(1)}
+    4%{background:var(--magenta);box-shadow:0 0 12px var(--magenta),0 0 26px var(--magenta);transform:scale(1.13)}
+    52%{background:var(--magenta);box-shadow:0 0 9px var(--magenta);transform:scale(1)}
+    70%{background:#b51f73;box-shadow:0 0 8px rgba(255,45,155,.5)}
+    88%{background:#3a1330;box-shadow:0 0 3px rgba(255,45,155,.2)}
+    100%{background:var(--cell);box-shadow:none;transform:scale(1)}
+  }
+  /* long tail: flash 80 / hold 800 / decay 1200 → total 2080, holdEnd 42% */
+  @keyframes revLongTail{
+    0%{background:var(--cell);box-shadow:none;transform:scale(1)}
+    4%{background:var(--magenta);box-shadow:0 0 12px var(--magenta),0 0 26px var(--magenta);transform:scale(1.13)}
+    42%{background:var(--magenta);box-shadow:0 0 9px var(--magenta);transform:scale(1)}
+    60%{background:#b51f73;box-shadow:0 0 8px rgba(255,45,155,.5)}
+    82%{background:#3a1330;box-shadow:0 0 3px rgba(255,45,155,.2)}
+    100%{background:var(--cell);box-shadow:none;transform:scale(1)}
+  }
+</style>
+</head>
+<body>
+  <h1>Phosphor · Reveal Timing</h1>
+  <div class="sub">Flash → Hold → Waved Decay · constant per piece</div>
+
+  <div class="anatomy">
+    <div class="bar">
+      <div class="seg flash">Flash</div>
+      <div class="seg hold">Hold ~1s</div>
+      <div class="seg decay">Decay ~1s</div>
+    </div>
+    <p>All cells of a piece flash <b>at once</b>, hold bright ~1s, then decay to nothing over ~1s —
+    each cell ending at a slightly different time so the shape <b>fades away in a wave</b>.
+    Same duration for every piece, every level (no speed-up).</p>
+  </div>
+
+  <div class="row" id="row"></div>
+
+<script>
+  // mini board layout (7 cols × 6 rows) with three tetromino groups
+  const COLS=7, ROWS=6;
+  const GROUPS=[
+    [[0,1],[0,2],[1,1],[1,2]],          // O
+    [[1,4],[2,4],[3,4],[4,4]],          // I (vertical)
+    [[3,1],[4,1],[5,1],[5,2]],          // L
+  ];
+  const VARIANTS=[
+    {name:'T1 · Sequential', kf:'revBalanced', total:2080, step:2300, spread:220,
+     desc:'1s hold / 1s decay. Each piece fully blooms and dies before the next appears. Calmest, easiest to read; slowest overall.'},
+    {name:'T2 · Overlapping', kf:'revBalanced', total:2080, step:1120, spread:220,
+     desc:'1s hold / 1s decay, but the next piece flashes as the previous starts to decay — there is always one bright + one fading. Layered, quicker rhythm.'},
+    {name:'T3 · Long Tail', kf:'revLongTail', total:2080, step:2300, spread:300,
+     desc:'0.8s hold / 1.2s decay, wider wave. Shorter bright moment, longer luminous ghost — most "afterimage / retina-trace".'},
+  ];
+
+  const row=document.getElementById('row');
+  VARIANTS.forEach(v=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`<div class="name">${v.name}</div><div class="desc">${v.desc}</div>`;
+    const stage=document.createElement('div'); stage.className='stage';
+    const board=document.createElement('div'); board.className='board';
+    board.style.gridTemplateColumns=`repeat(${COLS},17px)`;
+    const cells=[];
+    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const d=document.createElement('div');d.className='c';board.appendChild(d);cells.push(d);}
+    stage.appendChild(board); card.appendChild(stage);
+    const tag=document.createElement('div'); tag.className='tag';
+    tag.textContent=`flash · hold · decay  —  step ${(v.step/1000).toFixed(2)}s/piece`;
+    card.appendChild(tag);
+    row.appendChild(card);
+
+    const cellOf=(r,c)=>cells[r*COLS+c];
+    const bloom=(group)=>{
+      // order cells diagonally for a directional wave; longer duration = lingers later
+      const ordered=[...group].map(([r,c])=>({r,c,o:r+c})).sort((a,b)=>a.o-b.o);
+      ordered.forEach((cell,i)=>{
+        const el=cellOf(cell.r,cell.c);
+        el.style.animation='none'; void el.offsetWidth;
+        el.style.animation=`${v.kf} ${v.total + i*v.spread}ms cubic-bezier(.2,.75,.2,1) forwards`;
+      });
+    };
+    const loop=()=>{
+      GROUPS.forEach((g,i)=>setTimeout(()=>bloom(g), i*v.step));
+      const cycle = (GROUPS.length-1)*v.step + v.total + 3*v.spread + 900;
+      setTimeout(loop, cycle);
+    };
+    loop();
+  });
+</script>
+</body>
+</html>

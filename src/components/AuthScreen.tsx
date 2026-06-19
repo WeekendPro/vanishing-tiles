@@ -79,7 +79,7 @@ export function AuthScreen() {
         <div className="text-center mb-8">
           <Wordmark size="lg" />
           <p className="mt-2.5 font-grotesk text-[10px] tracking-[0.22em] uppercase text-phos-magenta text-glow-phos-magenta">
-            Memory glows. Then it&apos;s gone.
+            A memory game
           </p>
         </div>
 
