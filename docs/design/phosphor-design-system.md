@@ -1,6 +1,6 @@
-# PHOSPHOR — Design System
+# VANISHING SHAPES — Design System
 
-**Product: PHOSPHOR** · Art direction: *Afterglow*
+**Product: VANISHING SHAPES** · Art direction: *Afterglow*
 A visual identity for a remember-then-race memory game.
 Mobile-first. Built to be handed to Claude Design and turned into UI.
 
@@ -10,7 +10,7 @@ Mobile-first. Built to be handed to Claude Design and turned into UI.
 
 > **Memory is an afterimage. So we build the entire game out of light that lingers.**
 
-The core act of Phosphor is holding a picture in your mind's eye *after it's gone* — the
+The core act of Vanishing Shapes is holding a picture in your mind's eye *after it's gone* — the
 gap flashed, then vanished, and now you're racing the decay of your own short-term memory.
 There is one material in the universe that behaves exactly like that: **phosphor**. A CRT
 pixel gets hit, blooms bright, then fades on a slow tail, leaving a ghost on the glass and
@@ -386,6 +386,6 @@ the city-map metaphor and drafting language fit it perfectly. Keep it in the dra
 
 ---
 
-*Product: PHOSPHOR. Art direction: Afterglow — committed; §10 documents the alternative and
+*Product: VANISHING SHAPES. Art direction: Afterglow — committed; §10 documents the alternative and
 why it lost. Hand this to Claude Design with the companion mockup
 `mockups/stagger-afterglow.html` for the visual reference.*

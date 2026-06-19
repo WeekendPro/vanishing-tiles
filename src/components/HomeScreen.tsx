@@ -46,7 +46,7 @@ export function HomeScreen() {
           className="w-1/2 flex flex-col items-center px-6 pt-10 pb-8"
         >
           <div className="w-full max-w-sm">
-            {/* GAP / CITY stacked, glowing */}
+            {/* VANISHING / SHAPES stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
               A memory game

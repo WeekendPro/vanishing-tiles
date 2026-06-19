@@ -106,41 +106,41 @@
   .map-next, .map-progress { animation: none; }
 }
 
-/* ── Afterglow (Phosphor) primitives ──────────────────────────────────────
-   The phosphor look: two-layer glow, the gap "bloom" (light → hold → decay →
+/* ── Afterglow (Vanishing Shapes) primitives ──────────────────────────────────────
+   The Vanishing Shapes look: two-layer glow, the gap "bloom" (light → hold → decay →
    re-seal into the surface), the lights-out recall tone, and easing tokens.
    Additive — existing arcade utilities above are untouched. */
 :root {
-  --phos-attack: cubic-bezier(0.1, 0.9, 0.2, 1);
-  --phos-decay: cubic-bezier(0.3, 0, 0.1, 1);
-  --phos-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
+  --vs-attack: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --vs-decay: cubic-bezier(0.3, 0, 0.1, 1);
+  --vs-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
 }
 
 /* Screen ground: void + corner vignette so lit UI floats. */
-.phos-vignette {
+.vs-vignette {
   background: radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), #06060b;
 }
 
 /* Two-layer glow boxes (tight core + soft halo) per accent. */
-.phos-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }
-.phos-glow-magenta { box-shadow: 0 0 6px #ff2d9b, 0 0 22px rgba(255, 45, 155, 0.45); }
-.phos-glow-lime { box-shadow: 0 0 6px #b6ff3c, 0 0 22px rgba(182, 255, 60, 0.45); }
-.phos-glow-amber { box-shadow: 0 0 6px #ffc23d, 0 0 22px rgba(255, 194, 61, 0.45); }
-.phos-glow-red { box-shadow: 0 0 6px #ff3b47, 0 0 22px rgba(255, 59, 71, 0.45); }
+.vs-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }
+.vs-glow-magenta { box-shadow: 0 0 6px #ff2d9b, 0 0 22px rgba(255, 45, 155, 0.45); }
+.vs-glow-lime { box-shadow: 0 0 6px #b6ff3c, 0 0 22px rgba(182, 255, 60, 0.45); }
+.vs-glow-amber { box-shadow: 0 0 6px #ffc23d, 0 0 22px rgba(255, 194, 61, 0.45); }
+.vs-glow-red { box-shadow: 0 0 6px #ff3b47, 0 0 22px rgba(255, 59, 71, 0.45); }
 
 /* Text halos (numerals / labels only — never body copy). */
-.text-glow-phos-cyan { text-shadow: 0 0 10px rgba(40, 240, 255, 0.5); }
-.text-glow-phos-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
-.text-glow-phos-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
-.text-glow-phos-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
-.text-glow-phos-lime { text-shadow: 0 0 10px rgba(182, 255, 60, 0.5); }
+.text-glow-vs-cyan { text-shadow: 0 0 10px rgba(40, 240, 255, 0.5); }
+.text-glow-vs-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
+.text-glow-vs-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
+.text-glow-vs-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
+.text-glow-vs-lime { text-shadow: 0 0 10px rgba(182, 255, 60, 0.5); }
 
 /* Recall "lights-out" cell tone — every cell renders this at recall so gaps
    leave no readable hole (the uniformity rule). */
-.phos-dim { background: #0c0c14; box-shadow: none; }
+.vs-dim { background: #0c0c14; box-shadow: none; }
 
 /* A filled-surface cell (graphite, inert). */
-.phos-filled {
+.vs-filled {
   background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
 }
@@ -150,7 +150,7 @@
    void — a light that burns bright and dies into nothingness, leaving no hole.
    Applied per cell; each cell of a tetromino sets its OWN duration + delay
    inline so the shape fades away in a WAVE rather than in lockstep. */
-@keyframes phosBloom {
+@keyframes vsBloom {
   0% {
     background: #0c0c14;
     box-shadow: none;
@@ -185,25 +185,25 @@
    wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback.
    The flood color is driven by --bloom-color (set per gap to its piece color so
    the reveal carries shape AND color); it falls back to the signature magenta. */
-.phos-bloom { animation: phosBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
+.vs-bloom { animation: vsBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
+  .vs-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
    appears, then the light dissipates — blurring and swelling outward as it fades
    to full-zero visibility, just before the next number takes its place. Duration
    is kept in lockstep with the per-beat timer in StaggerCountdown. */
-@keyframes phosNumDecay {
+@keyframes vsNumDecay {
   0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40, 240, 255, 0); }
   9%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
   100% { opacity: 0; transform: scale(1.22); filter: blur(7px); text-shadow: 0 0 50px rgba(40, 240, 255, 0.4); }
 }
-.phos-num-decay { animation: phosNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+.vs-num-decay { animation: vsNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-num-decay { animation: none; opacity: 1; }
+  .vs-num-decay { animation: none; opacity: 1; }
 }
 
 /* Timer bar under-25% red pulse (≤3Hz — flash-hazard safe). */
@@ -226,32 +226,32 @@
    with a little flutter at the peak. Each magenta cell sets its OWN duration +
    delay inline, so the trio never pulses in lockstep — reads as organic, not
    mechanical. */
-@keyframes phosFlicker {
+@keyframes vsFlicker {
   0%, 70%, 100% { opacity: 0.2; }
   10%           { opacity: 1; }
   16%           { opacity: 0.5; }
   23%           { opacity: 0.92; }
   40%           { opacity: 0.32; }
 }
-.phos-flicker {
-  animation-name: phosFlicker;
+.vs-flicker {
+  animation-name: vsFlicker;
   animation-iteration-count: infinite;
   animation-timing-function: ease-in-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-flicker { animation: none; opacity: 0.55; }
+  .vs-flicker { animation: none; opacity: 0.55; }
 }
 
 /* Game-over tagline "Memory Fades": lingers a beat, then decays to nothing —
    the words literally fade away (and blur out) like the memory they name. */
-@keyframes phosFadeAway {
+@keyframes vsFadeAway {
   0%   { opacity: 1; filter: blur(0); }
   28%  { opacity: 1; filter: blur(0); }
   100% { opacity: 0; filter: blur(5px); }
 }
-.phos-fade-away { animation: phosFadeAway 4.2s ease-in forwards; }
+.vs-fade-away { animation: vsFadeAway 4.2s ease-in forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-fade-away { animation: none; opacity: 0.85; }
+  .vs-fade-away { animation: none; opacity: 0.85; }
 }

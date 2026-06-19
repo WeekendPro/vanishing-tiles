@@ -12,8 +12,8 @@ export function LivesCounter({ lives, cap = 5, className = '' }: { lives: number
   if (lives > cap) {
     return (
       <div className={`inline-flex items-center gap-0.5 ${className}`} aria-label={`${lives} lives`}>
-        <span className="text-base leading-none text-phos-red text-glow-phos-red" aria-hidden="true">♥</span>
-        <span className="font-mono text-sm leading-none tabular-nums text-phos-text" aria-hidden="true">×{lives}</span>
+        <span className="text-base leading-none text-vs-red text-glow-vs-red" aria-hidden="true">♥</span>
+        <span className="font-mono text-sm leading-none tabular-nums text-vs-text" aria-hidden="true">×{lives}</span>
       </div>
     )
   }
@@ -25,7 +25,7 @@ export function LivesCounter({ lives, cap = 5, className = '' }: { lives: number
         <span
           key={i}
           aria-hidden="true"
-          className={`text-base leading-none ${i < lives ? 'text-phos-red text-glow-phos-red' : 'text-phos-faint'}`}
+          className={`text-base leading-none ${i < lives ? 'text-vs-red text-glow-vs-red' : 'text-vs-faint'}`}
         >
           ♥
         </span>

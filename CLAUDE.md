@@ -1,9 +1,11 @@
-# Phosphor — Project Context
+# Vanishing Shapes — Project Context
 
-**Phosphor** is a memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
+**Vanishing Shapes** is a memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
 complete and playable. The eventual goal is a React Native mobile app published to
-the Apple App Store. (Phosphor was formerly codenamed "Gap City"; that name survives only in
-internal identifiers such as district slugs, localStorage keys, and applied migrations.)
+the Apple App Store. (Vanishing Shapes was formerly named "Phosphor", and before that codenamed "Gap City";
+those earlier names survive only in internal identifiers — district slugs, localStorage keys, applied
+migrations, and the `phos`-derived names in dated specs/plans. The phosphor-inspired *visual* system is
+still called **Afterglow**; the runtime design tokens were renamed `phos-*` → `vs-*`.)
 
 **Run the app:** `npm run dev` → http://localhost:5173  
 **Run tests:** `npm run test` (all must pass before any commit)  

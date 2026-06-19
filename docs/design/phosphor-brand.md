@@ -1,32 +1,35 @@
-# PHOSPHOR — Brand Bible
+# VANISHING SHAPES — Brand Bible
 
-**Status:** Name settled 2026-06-18. Replaces "Gap City."
+**Status:** Name changed 2026-06-19 to **Vanishing Shapes** (replaces "Phosphor", which had replaced "Gap City"). The phosphor-inspired *visual* system keeps its name, **Afterglow**.
 **Companion docs:** art direction lives in [`phosphor-design-system.md`](./phosphor-design-system.md) (palette, type, motion). This doc owns the *name*, the *voice*, and the *naming rules*.
 
 ---
 
 ## 1. The name
 
-**PHOSPHOR.**
+**VANISHING SHAPES.**
 
-Chosen because the metaphor *is* the mechanic. A phosphor pixel is struck, blooms
-bright, then **decays on a slow tail** — leaving a ghost on the glass and a ghost on your
-retina. That is exactly the act of play: a gap flashes, vanishes, and you race the decay of
-your own short-term memory to refill it. The aesthetic (afterglow on black) and the
-gameplay (hold the afterimage) are the same physical phenomenon. No other candidate name
-fused identity and mechanic this cleanly.
+Chosen for clarity. The title names the player's experience in two plain words: you watch
+the **shapes** (the tetromino gaps), then they **vanish** — and you race your own memory to
+refill them. A first-time player scrolling an app store grasps the premise before reading a
+line of copy, with none of the explanation the previous name ("Phosphor") required.
 
-- **Product name:** Phosphor (display as `PHOSPHOR` in the pixel wordmark).
-- **Art direction / design-system name:** *Afterglow* — the sibling word, the glow that
-  lingers. Use "Afterglow" when referring to the visual system, "Phosphor" for the game.
+The earlier "Phosphor" name came from a CRT metaphor — a pixel blooms bright then decays on
+a slow tail, the same shape as a fading memory. Elegant, but oblique: it only landed once
+explained. We kept its *soul* where it earns its keep — the **visual system** — and moved
+the *name* to something direct.
+
+- **Product name:** Vanishing Shapes (display stacked as `VANISHING` / `SHAPES` in the pixel wordmark).
+- **Art direction / design-system name:** *Afterglow* — the phosphor-inspired glow that
+  lingers. Use "Afterglow" for the visual system, "Vanishing Shapes" for the game.
 
 ## 2. The promise (tagline)
 
-**Primary:** *Memory glows. Then it's gone.*
+**Primary (shipped on auth + home):** *A memory game.* — plain, frictionless, says what it is.
 
 Alternates, by mood — keep in the drawer, don't ship more than one at a time:
+- *Memorize the gaps. Fill them fast.* — the objective, spelled out.
 - *Fill the fading.* — terse, imperative, good for an icon/splash.
-- *Catch the light before it dies.* — urgency-forward.
 - *Hold the afterimage.* — for the cerebral/store-copy register.
 
 ## 3. The lexicon — one vocabulary, drawn from the CRT
@@ -50,7 +53,7 @@ mode names are unbranded and survive untouched.
 
 | Surface | Name | Verdict |
 |---|---|---|
-| The game | ~~Gap City~~ → **Phosphor** | **changes** |
+| The game | ~~Gap City~~ → ~~Phosphor~~ → **Vanishing Shapes** | **changes** |
 | Endless flagship mode | **Infinite Stagger** | **keep** — "Stagger" (staggered decay + the reel under pressure) is loved and on-theme; it is the centerpiece in the design system. |
 | Level-map mode | **Journey** | keep — generic, never "Gap City"-branded. |
 | Legacy gauntlet | **Training** | keep. |
@@ -74,11 +77,13 @@ should feel the same: hit hard, then resolve.
 
 ## 6. Naming rules (do / don't)
 
-- **Do** write the product as `PHOSPHOR` in the pixel wordmark, "Phosphor" in running text.
+- **Do** write the product as `VANISHING SHAPES` (stacked) in the pixel wordmark, "Vanishing Shapes" in running text.
+- **Do** use the `vs-*` design tokens in runtime code (renamed from `phos-*` on 2026-06-19;
+  the CRT-derived *visual* lexicon in §3 is unchanged).
 - **Do** reach for the §3 lexicon before any new term.
 - **Don't** rewrite dated historical docs (`docs/superpowers/specs/*`, `plans/*`) or old
-  mockups to say "Phosphor" — they are records of when the game was Gap City. Renaming them
-  falsifies the trail. New docs use Phosphor.
+  mockups — they are records of when the game was Gap City, then Phosphor. Renaming them
+  falsifies the trail. New docs use **Vanishing Shapes**.
 - **Don't** rename applied Supabase migration files (`0008_gap_city_districts.sql`, etc.) —
   migration filenames are immutable history.
 - **Don't** silently change localStorage keys (`gapcity:*`) without a migration — it wipes
@@ -86,6 +91,6 @@ should feel the same: hit hard, then resolve.
 
 ---
 
-*Name settled. Next: propagate through the runtime (see
-`docs/superpowers/plans/2026-06-18-phosphor-rename.md`) and push the Afterglow component
-library to Claude Design once `/login` unblocks DesignSync.*
+*Name changed to Vanishing Shapes (2026-06-19). The Phosphor → Vanishing Shapes sweep
+renamed user-facing strings and the `phos-*` → `vs-*` design tokens; dated specs/plans under
+`docs/superpowers/*` are left as historical record. Afterglow (the visual system) is unchanged.*

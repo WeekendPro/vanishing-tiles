@@ -17,7 +17,7 @@ const MOTIF_CELLS: ({ dur: number; delay: number } | null)[] = [
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="relative">
-      <span className="absolute -top-[7px] left-3 z-10 px-1.5 bg-phos-panel font-grotesk text-[9px] tracking-[0.12em] uppercase text-phos-faint">
+      <span className="absolute -top-[7px] left-3 z-10 px-1.5 bg-vs-panel font-grotesk text-[9px] tracking-[0.12em] uppercase text-vs-faint">
         {label}
       </span>
       {children}
@@ -50,15 +50,15 @@ export function AuthScreen() {
 
   // Lit-hardware input: dark fill, faint edge, cyan focus glow.
   const inputClass =
-    'w-full h-12 px-3.5 rounded-[11px] bg-[#0a0a12] text-phos-text font-grotesk text-sm ' +
-    'border border-white/10 placeholder-phos-faint shadow-[inset_0_1px_2px_#000] ' +
-    'focus:outline-none focus:border-phos-cyan ' +
+    'w-full h-12 px-3.5 rounded-[11px] bg-[#0a0a12] text-vs-text font-grotesk text-sm ' +
+    'border border-white/10 placeholder-vs-faint shadow-[inset_0_1px_2px_#000] ' +
+    'focus:outline-none focus:border-vs-cyan ' +
     'focus:shadow-[inset_0_1px_2px_#000,0_0_0_1px_rgba(40,240,255,0.33),0_0_14px_rgba(40,240,255,0.2)] ' +
     'disabled:opacity-50'
 
   return (
-    <div className="relative min-h-dvh phos-vignette flex items-center justify-center px-6 overflow-hidden">
-      <div className="relative w-full max-w-sm rounded-[28px] bg-phos-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] px-7 py-9 flex flex-col items-center">
+    <div className="relative min-h-dvh vs-vignette flex items-center justify-center px-6 overflow-hidden">
+      <div className="relative w-full max-w-sm rounded-[28px] bg-vs-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] px-7 py-9 flex flex-col items-center">
 
         {/* Faint blooming-gap motif above the wordmark. */}
         <div className="grid grid-cols-4 gap-[3px] mb-7 opacity-60" aria-hidden="true">
@@ -67,8 +67,8 @@ export function AuthScreen() {
               key={i}
               className={`w-4 h-4 rounded-[3px] ${
                 cell
-                  ? 'bg-phos-magenta shadow-[0_0_8px_#FF2D9B,0_0_18px_rgba(255,45,155,0.53)] phos-flicker'
-                  : 'bg-phos-raised'
+                  ? 'bg-vs-magenta shadow-[0_0_8px_#FF2D9B,0_0_18px_rgba(255,45,155,0.53)] vs-flicker'
+                  : 'bg-vs-raised'
               }`}
               style={cell ? { animationDuration: `${cell.dur}s`, animationDelay: `${cell.delay}s` } : undefined}
             />
@@ -77,8 +77,8 @@ export function AuthScreen() {
 
         {/* Brand. */}
         <div className="text-center mb-8">
-          <Wordmark size="lg" />
-          <p className="mt-2.5 font-grotesk text-[10px] tracking-[0.22em] uppercase text-phos-magenta text-glow-phos-magenta">
+          <Wordmark size="lg" stacked />
+          <p className="mt-2.5 font-grotesk text-[10px] tracking-[0.22em] uppercase text-vs-magenta text-glow-vs-magenta">
             A memory game
           </p>
         </div>
@@ -114,10 +114,10 @@ export function AuthScreen() {
             disabled={!canSubmit}
             onClick={() => run(() => signInWithEmail(email, password), true)}
             className="mt-1 h-12 rounded-[11px] inline-flex items-center justify-center gap-2
-              border-2 border-phos-cyan bg-phos-raised text-phos-cyan
+              border-2 border-vs-cyan bg-vs-raised text-vs-cyan
               font-grotesk text-[13px] tracking-[0.1em] uppercase
               shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_16px_rgba(40,240,255,0.27)]
-              hover:bg-phos-cyan/10 transition-colors active:translate-y-px
+              hover:bg-vs-cyan/10 transition-colors active:translate-y-px
               disabled:opacity-50 disabled:pointer-events-none"
           >
             Enter →
@@ -126,16 +126,16 @@ export function AuthScreen() {
             disabled={!canSubmit}
             onClick={() => run(() => signUpWithEmail(email, password), true)}
             className="h-11 rounded-[11px] inline-flex items-center justify-center
-              border border-white/10 bg-phos-raised text-phos-dim
+              border border-white/10 bg-vs-raised text-vs-dim
               font-grotesk text-[12px] tracking-[0.06em]
-              hover:text-phos-text hover:border-white/20 transition-colors active:translate-y-px
+              hover:text-vs-text hover:border-white/20 transition-colors active:translate-y-px
               disabled:opacity-50 disabled:pointer-events-none"
           >
             Create account
           </button>
 
           {/* Divider. */}
-          <div className="flex items-center gap-3 my-2 font-grotesk text-[10px] tracking-[0.14em] uppercase text-phos-faint">
+          <div className="flex items-center gap-3 my-2 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vs-faint">
             <span className="h-px flex-1 bg-white/10" />
             <span>or</span>
             <span className="h-px flex-1 bg-white/10" />
@@ -146,7 +146,7 @@ export function AuthScreen() {
             disabled={busy}
             onClick={() => run(signInWithGoogle, false)}
             className="h-12 rounded-[11px] inline-flex items-center justify-center gap-2
-              border-2 border-white/15 bg-phos-raised text-phos-text
+              border-2 border-white/15 bg-vs-raised text-vs-text
               font-grotesk text-[12px] tracking-[0.04em]
               shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]
               hover:border-white/30 transition-colors active:translate-y-px
@@ -165,14 +165,14 @@ export function AuthScreen() {
           <button
             disabled={busy}
             onClick={() => run(signInAsGuest, true)}
-            className="mt-3 text-center font-grotesk text-[12px] tracking-[0.04em] text-phos-dim
-              hover:text-phos-text transition-colors disabled:opacity-50"
+            className="mt-3 text-center font-grotesk text-[12px] tracking-[0.04em] text-vs-dim
+              hover:text-vs-text transition-colors disabled:opacity-50"
           >
             Just visiting?{' '}
-            <span className="text-phos-cyan border-b border-phos-cyan/40">Continue as guest</span>
+            <span className="text-vs-cyan border-b border-vs-cyan/40">Continue as guest</span>
           </button>
 
-          {error && <p className="font-grotesk text-phos-red text-glow-phos-red text-sm text-center mt-2">{error}</p>}
+          {error && <p className="font-grotesk text-vs-red text-glow-vs-red text-sm text-center mt-2">{error}</p>}
         </div>
       </div>
     </div>

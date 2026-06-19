@@ -17,8 +17,8 @@ export default {
           edge: '#0e2b33',
           well: '#0c1f25',
         },
-        // ── Afterglow (Phosphor) semantic palette ──
-        phos: {
+        // ── Afterglow (Vanishing Shapes) semantic palette ──
+        vs: {
           void: '#06060B',
           panel: '#0E0E16',
           raised: '#15151F',
@@ -41,11 +41,11 @@ export default {
         'neon-green': '0 0 8px rgba(57,217,138,0.5)',
         'neon-red': '0 0 8px rgba(255,77,77,0.5)',
         'panel-inset': 'inset 0 0 14px rgba(0,0,0,0.6)',
-        'phos-cyan': '0 0 6px #28F0FF, 0 0 22px rgba(40,240,255,0.45)',
-        'phos-magenta': '0 0 6px #FF2D9B, 0 0 22px rgba(255,45,155,0.45)',
-        'phos-amber': '0 0 6px #FFC23D, 0 0 22px rgba(255,194,61,0.45)',
-        'phos-red': '0 0 6px #FF3B47, 0 0 22px rgba(255,59,71,0.45)',
-        'phos-lime': '0 0 6px #B6FF3C, 0 0 22px rgba(182,255,60,0.45)',
+        'vs-cyan': '0 0 6px #28F0FF, 0 0 22px rgba(40,240,255,0.45)',
+        'vs-magenta': '0 0 6px #FF2D9B, 0 0 22px rgba(255,45,155,0.45)',
+        'vs-amber': '0 0 6px #FFC23D, 0 0 22px rgba(255,194,61,0.45)',
+        'vs-red': '0 0 6px #FF3B47, 0 0 22px rgba(255,59,71,0.45)',
+        'vs-lime': '0 0 6px #B6FF3C, 0 0 22px rgba(182,255,60,0.45)',
       },
       fontFamily: {
         pixel: ['"Space Grotesk"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
