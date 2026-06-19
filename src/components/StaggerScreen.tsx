@@ -421,7 +421,7 @@ export function StaggerScreen() {
 
           {/* Phase label (centered) above the grid; the running COMBO multiplier
               rides the right of this row — labeled, so it never reads as score×N. */}
-          <div className="relative w-full max-w-sm h-4 mb-2">
+          <div className="relative w-full max-w-sm h-4 mt-1 mb-2">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
             {currentCombo >= 3 && (
               <span
