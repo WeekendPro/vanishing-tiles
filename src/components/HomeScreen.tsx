@@ -53,27 +53,27 @@ export function HomeScreen() {
             </p>
           </div>
 
-          <div className="mt-14 w-full max-w-sm flex flex-col gap-3.5 font-display">
-            {/* PLAY → Infinite Stagger */}
+          <div className="mt-14 w-full max-w-sm flex flex-col gap-3.5">
+            {/* PLAY → Infinite Stagger — same neon-outline recipe as NeonButton. */}
             <button
               onClick={play}
-              className="relative flex items-center rounded-2xl py-5 pl-6 text-left text-lg font-bold frost-green
-                transition-transform active:translate-y-px"
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                transition active:translate-y-px py-4 text-base flex items-center justify-center
+                border-neon-green text-neon-green hover:bg-neon-green/10 hover:shadow-neon-green"
             >
-              <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-green" />
-              <span className="text-glow-green">Play</span>
+              Play
             </button>
 
             {/* Experimental Modes → slide to second pane */}
             <button
               onClick={() => setPane('experimental')}
               aria-label="Experimental Modes"
-              className="relative rounded-2xl py-4 pl-6 pr-5 text-left font-semibold text-white/90 frost-cyan
-                flex items-center justify-between transition-transform active:translate-y-px"
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
+                border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
             >
-              <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-cyan" />
               <span>Experimental Modes</span>
-              <span className="text-neon-cyan text-lg leading-none">›</span>
+              <span className="text-lg leading-none">›</span>
             </button>
           </div>
 
@@ -103,7 +103,7 @@ export function HomeScreen() {
             </p>
           </div>
 
-          <div className="mt-10 w-full max-w-sm flex flex-col gap-3 font-display">
+          <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
             <ModeButton label="Training" hint="The classic gauntlet" onClick={training} />
             <ModeButton label="Subway Map" hint="Ride the transit lines" onClick={() => openMap('transit')} />
             <ModeButton label="Mind Map" hint="Light up the neurons" onClick={() => openMap('mentalBrain')} />
@@ -115,20 +115,20 @@ export function HomeScreen() {
   )
 }
 
-/** A frosted, magenta-edged button used for each Experimental mode. */
+/** A magenta neon-outline button (matching NeonButton) for each Experimental mode. */
 function ModeButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="relative rounded-2xl py-4 pl-6 pr-5 text-left frost-magenta flex items-center justify-between
-        transition-transform active:translate-y-px"
+      className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+        transition active:translate-y-px py-3.5 px-5 text-sm text-left flex items-center justify-between
+        border-neon-magenta text-neon-magenta hover:bg-neon-magenta/10 hover:shadow-neon-magenta"
     >
-      <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-neon-magenta" />
       <span>
-        <span className="block font-semibold text-white/90">{label}</span>
-        <span className="block text-xs font-normal text-gray-500 mt-0.5">{hint}</span>
+        <span className="block">{label}</span>
+        <span className="block normal-case tracking-normal text-[10px] text-neon-magenta/60 mt-0.5">{hint}</span>
       </span>
-      <span className="text-gray-600 text-lg leading-none">›</span>
+      <span className="text-lg leading-none">›</span>
     </button>
   )
 }

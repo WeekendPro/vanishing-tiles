@@ -241,13 +241,15 @@
   .phos-flicker { animation: none; opacity: 0.55; }
 }
 
-/* Game-over tagline "Memory Fades": a slow, graceful breath — fades in and out. */
-@keyframes phosBreathe {
-  0%, 100% { opacity: 0.32; }
-  50%      { opacity: 1; }
+/* Game-over tagline "Memory Fades": lingers a beat, then decays to nothing —
+   the words literally fade away (and blur out) like the memory they name. */
+@keyframes phosFadeAway {
+  0%   { opacity: 1; filter: blur(0); }
+  28%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 0; filter: blur(5px); }
 }
-.phos-breathe { animation: phosBreathe 3.4s ease-in-out infinite; }
+.phos-fade-away { animation: phosFadeAway 4.2s ease-in forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-breathe { animation: none; opacity: 0.85; }
+  .phos-fade-away { animation: none; opacity: 0.85; }
 }

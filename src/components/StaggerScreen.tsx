@@ -207,6 +207,21 @@ export function StaggerScreen() {
   const [combos, setCombos] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
   const comboId = useRef(0)
 
+  // Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
+  // celebratory heart burst over the board.
+  const [lifeBursts, setLifeBursts] = useState<{ id: number; n: number }[]>([])
+  const lifeBurstId = useRef(0)
+  const prevLives = useRef(lives)
+  useEffect(() => {
+    const delta = lives - prevLives.current
+    if (phase === 'selecting' && delta > 0) {
+      const id = (lifeBurstId.current += 1)
+      setLifeBursts(prev => [...prev, { id, n: delta }])
+      window.setTimeout(() => setLifeBursts(prev => prev.filter(b => b.id !== id)), 1500)
+    }
+    prevLives.current = lives
+  }, [lives, phase])
+
   // A fresh run / game over / a broken board clears any lingering bursts.
   useEffect(() => {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
@@ -435,11 +450,35 @@ export function StaggerScreen() {
               exit={{ opacity: 0, scale: 1.5, y: -46 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
               className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
-                font-silk text-[11px] whitespace-nowrap text-phos-lime
-                drop-shadow-[0_0_10px_rgba(182,255,60,0.85)]"
-              style={{ left: cb.x, top: cb.y }}
+                font-silk font-bold text-sm whitespace-nowrap text-white"
+              style={{
+                left: cb.x,
+                top: cb.y,
+                // White with a hard dark outline so it stays legible on top of any
+                // piece color underneath.
+                textShadow: '0 1px 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.9), -1px 0 2px rgba(0,0,0,0.85), 1px 0 2px rgba(0,0,0,0.85)',
+              }}
             >
               +{cb.pts}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Earn-a-life celebration — a heart blooms and rises off the board. */}
+        <AnimatePresence>
+          {lifeBursts.map(lb => (
+            <motion.div
+              key={lb.id}
+              initial={{ opacity: 0, scale: 0.3, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: -6 }}
+              exit={{ opacity: 0, scale: 1.7, y: -52 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none"
+            >
+              <span className="text-6xl leading-none text-phos-red text-glow-phos-red">♥</span>
+              <span className="mt-1.5 font-silk font-bold text-lg tracking-[0.18em] text-phos-red text-glow-phos-red">
+                +{lb.n} LIFE{lb.n > 1 ? 'S' : ''}
+              </span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -468,7 +507,7 @@ export function StaggerScreen() {
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-phos-void/90 rounded-xl px-6">
             <ScanlineOverlay />
             <div className="font-silk text-base text-phos-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-phos-magenta text-glow-phos-magenta mb-5 phos-breathe">Memory Fades</div>
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-phos-magenta text-glow-phos-magenta mb-5 phos-fade-away">Memory Fades</div>
             <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Final score</div>
             <div className="font-silk font-bold text-4xl text-phos-amber text-glow-phos-amber mb-6 tabular-nums">{score}</div>
 
