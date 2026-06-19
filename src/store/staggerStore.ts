@@ -163,13 +163,14 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
   timeoutBatch: () => {
     // Letting the select clock run out costs a life; if it was the last, the run
     // ends — otherwise the abandoned batch is left behind and the next begins.
+    // Losing a life also breaks the combo streak.
     const lives = get().lives - 1
     if (lives <= 0) {
-      set({ lives: 0, phase: 'gameOver' })
+      set({ lives: 0, phase: 'gameOver', currentCombo: 0 })
       return
     }
     const next = get().batchIndex + 1
-    set({ lives, phase: 'reveal', batchIndex: next, gaps: makeBatch(next) })
+    set({ lives, phase: 'reveal', batchIndex: next, gaps: makeBatch(next), currentCombo: 0 })
   },
 
   replayReveal: () => {

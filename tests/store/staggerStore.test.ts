@@ -224,6 +224,16 @@ describe('useStaggerStore', () => {
     expect(s.phase).toBe('reveal')
   })
 
+  it('a selection timeout breaks the running combo (losing a life resets it)', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    const type = useStaggerStore.getState().gaps[0].pieceType
+    useStaggerStore.getState().pickPiece(type)           // build a streak
+    expect(useStaggerStore.getState().currentCombo).toBeGreaterThan(0)
+    st.timeoutBatch()
+    expect(useStaggerStore.getState().currentCombo).toBe(0)
+  })
+
   it('timeoutBatch on the last life ends the run', () => {
     const st = useStaggerStore.getState()
     st.startRun(); st.beginReveal(); st.beginSelecting()

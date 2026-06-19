@@ -398,22 +398,12 @@ export function StaggerScreen() {
           <div className="w-full max-w-sm flex items-end justify-between mb-2">
             <div>
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
-              <div className="flex items-baseline gap-2">
-                <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
-                {/* Combo multiplier chip — ignites at ×3, pops on each pick. */}
-                {currentCombo >= 3 && (
-                  <span
-                    key={currentCombo}
-                    className="combo-pop font-silk font-bold text-xl text-phos-lime text-glow-phos-lime leading-none tabular-nums"
-                  >
-                    ×{currentCombo}
-                  </span>
-                )}
-              </div>
+              <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
-              <div className="font-grotesk font-semibold text-sm text-phos-text mt-1.5 tabular-nums">
+              <div className="mt-1.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-phos-cyan">Phase {batchIndex + 1}</div>
+              <div className="mt-0.5 font-grotesk font-semibold text-sm text-phos-text tabular-nums">
                 {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
                 <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
               </div>
@@ -429,8 +419,19 @@ export function StaggerScreen() {
             />
           </div>
 
-          {/* Phase label — above the grid, colored to match the bar. */}
-          <div className={`h-4 mb-2 font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
+          {/* Phase label (centered) above the grid; the running COMBO multiplier
+              rides the right of this row — labeled, so it never reads as score×N. */}
+          <div className="relative w-full max-w-sm h-4 mb-2">
+            <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
+            {currentCombo >= 3 && (
+              <span
+                key={currentCombo}
+                className="combo-pop absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-phos-lime text-glow-phos-lime whitespace-nowrap"
+              >
+                COMBO ×{currentCombo}
+              </span>
+            )}
+          </div>
         </>
       )}
 
@@ -473,11 +474,16 @@ export function StaggerScreen() {
               animate={{ opacity: 1, scale: 1, y: -6 }}
               exit={{ opacity: 0, scale: 1.7, y: -52 }}
               transition={{ duration: 0.55, ease: 'easeOut' }}
-              className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none"
+              className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
             >
-              <span className="text-6xl leading-none text-phos-red text-glow-phos-red">♥</span>
-              <span className="mt-1.5 font-silk font-bold text-lg tracking-[0.18em] text-phos-red text-glow-phos-red">
-                +{lb.n} LIFE{lb.n > 1 ? 'S' : ''}
+              <span className="relative flex items-center justify-center">
+                <span className="text-7xl leading-none text-phos-red text-glow-phos-red">♥</span>
+                <span
+                  className="absolute -translate-y-[3px] font-silk font-bold text-lg text-white"
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                >
+                  +{lb.n}
+                </span>
               </span>
             </motion.div>
           ))}
@@ -543,7 +549,7 @@ export function StaggerScreen() {
       </div>
 
       {/* Replay / Pause — spend points to re-see the sequence, or freeze the run.
-          Replay stretches to fill the row; Pause is a slim icon-only button. */}
+          Equal width (50/50). */}
       {phase === 'selecting' && (
         <div className="mt-3 w-full max-w-sm flex gap-3">
           <button
@@ -559,14 +565,15 @@ export function StaggerScreen() {
             aria-label="Pause"
             disabled={cleared}
             onClick={() => pause()}
-            className="shrink-0 w-12 grid place-items-center rounded-md border-2 bg-phos-raised
-              border-phos-cyan/40 text-phos-dim hover:border-phos-cyan hover:text-phos-cyan
-              transition-colors active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
+            className="flex-1 flex items-center justify-center gap-2 rounded-md border-2 bg-phos-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
+              border-phos-cyan text-phos-cyan hover:bg-phos-cyan/10 hover:shadow-phos-cyan
+              transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="flex gap-[3px]">
               <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
               <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
             </span>
+            Pause
           </button>
         </div>
       )}
