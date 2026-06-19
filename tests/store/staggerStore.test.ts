@@ -213,15 +213,16 @@ describe('useStaggerStore', () => {
     })
   })
 
-  it('timeoutBatch costs a life and advances to the next batch', () => {
+  it('timeoutBatch costs a life but does NOT advance the phase (replays the same batch)', () => {
     const st = useStaggerStore.getState()
     st.startRun(); st.beginReveal(); st.beginSelecting()
     const before = useStaggerStore.getState().lives
     st.timeoutBatch()
     const s = useStaggerStore.getState()
     expect(s.lives).toBe(before - 1)
-    expect(s.batchIndex).toBe(1)
+    expect(s.batchIndex).toBe(0)              // stays on the same phase — no advance
     expect(s.phase).toBe('reveal')
+    expect(s.gaps.every(g => !g.filled)).toBe(true)  // same batch, reset unfilled
   })
 
   it('a selection timeout breaks the running combo (losing a life resets it)', () => {

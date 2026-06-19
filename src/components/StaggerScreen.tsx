@@ -13,6 +13,11 @@ const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
 const BOARD_PAD = 12          // p-3 around the board
 
+// Combo chip: hold the multiplier fully visible for COMBO_HOLD_MS after the last
+// streak step, then let it fade away over COMBO_FADE_MS in the signature style.
+const COMBO_HOLD_MS = 2000
+const COMBO_FADE_MS = 900
+
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
@@ -203,9 +208,31 @@ export function StaggerScreen() {
 
   // Combo: a streak of correct recalls (tracked in the store). Each correct pick
   // floats the "+points" it earned over the just-filled gap; the running ×N
-  // multiplier shows as a chip next to the score.
+  // multiplier shows as a chip above the board.
   const [combos, setCombos] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
   const comboId = useRef(0)
+
+  // Combo chip lifecycle: a fresh streak step pops the chip in and holds it for
+  // COMBO_HOLD_MS, then it fades out in our signature fade style (phos-fade-away:
+  // hold → opacity/blur to nothing) and unmounts. Each new step re-arms the hold,
+  // so the chip lingers a beat after the last correct pick. A broken streak
+  // (currentCombo < 3) clears it immediately — the streak shattered.
+  const [comboChip, setComboChip] = useState<{ value: number; fading: boolean } | null>(null)
+  const comboTimers = useRef<number[]>([])
+  useEffect(() => {
+    comboTimers.current.forEach(clearTimeout)
+    comboTimers.current = []
+    if (currentCombo >= 3) {
+      setComboChip({ value: currentCombo, fading: false })
+      comboTimers.current.push(window.setTimeout(
+        () => setComboChip(c => (c ? { ...c, fading: true } : c)), COMBO_HOLD_MS))
+      comboTimers.current.push(window.setTimeout(
+        () => setComboChip(null), COMBO_HOLD_MS + COMBO_FADE_MS))
+    } else {
+      setComboChip(null)
+    }
+    return () => { comboTimers.current.forEach(clearTimeout); comboTimers.current = [] }
+  }, [currentCombo])
 
   // Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
   // celebratory heart burst over the board.
@@ -226,6 +253,7 @@ export function StaggerScreen() {
   useEffect(() => {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
       setCombos([])
+      setComboChip(null)
     }
   }, [phase])
 
@@ -396,14 +424,15 @@ export function StaggerScreen() {
       {phase !== 'gameOver' && (
         <>
           <div className="w-full max-w-sm flex items-end justify-between mb-2">
+            {/* Phase count sits ABOVE the score; the score is the loudest text on
+                screen and stands on its own — no label. */}
             <div>
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-phos-dim">Score</div>
+              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-phos-cyan">Phase {batchIndex + 1}</div>
               <div className="font-silk font-bold text-3xl text-phos-cyan text-glow-phos-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
-              <div className="mt-1.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-phos-cyan">Phase {batchIndex + 1}</div>
-              <div className="mt-0.5 font-grotesk font-semibold text-sm text-phos-text tabular-nums">
+              <div className="mt-1.5 font-grotesk font-semibold text-sm text-phos-text tabular-nums">
                 {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
                 <span className="font-grotesk text-[10px] text-phos-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
               </div>
@@ -420,15 +449,18 @@ export function StaggerScreen() {
           </div>
 
           {/* Phase label (centered) above the grid; the running COMBO multiplier
-              rides the right of this row — labeled, so it never reads as score×N. */}
+              rides the right of this row — labeled, so it never reads as score×N.
+              It pops in on each streak step, holds, then fades in the signature
+              style (see comboChip lifecycle above). */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
-            {currentCombo >= 3 && (
+            {comboChip && (
               <span
-                key={currentCombo}
-                className="combo-pop absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-phos-lime text-glow-phos-lime whitespace-nowrap"
+                key={comboChip.fading ? `fade-${comboChip.value}` : comboChip.value}
+                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-phos-lime text-glow-phos-lime whitespace-nowrap ${comboChip.fading ? 'phos-fade-away' : 'combo-pop'}`}
+                style={comboChip.fading ? { animationDuration: `${COMBO_FADE_MS}ms` } : undefined}
               >
-                COMBO ×{currentCombo}
+                COMBO ×{comboChip.value}
               </span>
             )}
           </div>

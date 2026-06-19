@@ -47,7 +47,7 @@ interface StaggerState {
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
   advanceBatch: () => void    // batch cleared → next, harder batch's reveal
-  timeoutBatch: () => void    // select clock expired → costs a life, then advance
+  timeoutBatch: () => void    // select clock expired → costs a life, replays the same phase
   replayReveal: () => boolean // spend points to replay the memorize sequence
   pause: () => void           // freeze the select clock
   resume: () => void          // unfreeze, resuming the remaining select time
@@ -161,16 +161,17 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
   },
 
   timeoutBatch: () => {
-    // Letting the select clock run out costs a life; if it was the last, the run
-    // ends — otherwise the abandoned batch is left behind and the next begins.
-    // Losing a life also breaks the combo streak.
+    // Letting the select clock run out costs a life and breaks the combo streak.
+    // Crucially it does NOT advance to the next phase: the SAME batch is replayed
+    // on a fresh clock (same shapes, reset unfilled — mirroring Journey's "a
+    // failed attempt replays the same puzzle"). If it was the last life, the run
+    // ends.
     const lives = get().lives - 1
     if (lives <= 0) {
       set({ lives: 0, phase: 'gameOver', currentCombo: 0 })
       return
     }
-    const next = get().batchIndex + 1
-    set({ lives, phase: 'reveal', batchIndex: next, gaps: makeBatch(next), currentCombo: 0 })
+    set({ lives, phase: 'reveal', gaps: get().gaps.map(g => ({ ...g, filled: false })), currentCombo: 0 })
   },
 
   replayReveal: () => {
