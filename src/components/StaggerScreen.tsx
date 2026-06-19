@@ -18,6 +18,12 @@ const BOARD_PAD = 12          // p-3 around the board
 const COMBO_HOLD_MS = 2000
 const COMBO_FADE_MS = 900
 
+// Floating white labels (the per-pick "+points" and the "+N" in the earned-life
+// heart) sit over bright piece/heart color. Contrast comes from a soft DOWNWARD
+// drop shadow — never a hard stroke/outline (§9: shadow for legibility, and glow
+// never substitutes for contrast).
+const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95)'
+
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
@@ -487,9 +493,9 @@ export function StaggerScreen() {
               style={{
                 left: cb.x,
                 top: cb.y,
-                // White with a hard dark outline so it stays legible on top of any
-                // piece color underneath.
-                textShadow: '0 1px 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.9), -1px 0 2px rgba(0,0,0,0.85), 1px 0 2px rgba(0,0,0,0.85)',
+                // White lifted off any piece color by a soft drop shadow (not a
+                // stroke) so it stays legible without an outline.
+                textShadow: FLOAT_TEXT_SHADOW,
               }}
             >
               +{cb.pts}
@@ -512,7 +518,7 @@ export function StaggerScreen() {
                 <span className="text-7xl leading-none text-phos-red text-glow-phos-red">♥</span>
                 <span
                   className="absolute -translate-y-[3px] font-silk font-bold text-lg text-white"
-                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                  style={{ textShadow: FLOAT_TEXT_SHADOW }}
                 >
                   +{lb.n}
                 </span>
