@@ -1,0 +1,199 @@
+<!-- @dsCard group="Screens" name="Vanishing Shapes — Auth + Home" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Shapes — brand mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F;
+    --filled:#2A2D3A; --filled-edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --lime:#B6FF3C;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh; background:var(--void); color:var(--text);
+    font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    padding:40px 28px 64px;
+    background-image:radial-gradient(120% 80% at 50% -5%,#13131f 0%,transparent 55%);
+  }
+
+  /* ---------- page chrome ---------- */
+  .head{max-width:880px;margin:0 auto 34px}
+  .head h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+  .head h1 b{color:var(--cyan)}
+  .head p{color:var(--dim);margin-top:10px;font-size:14px;line-height:1.55;max-width:62ch}
+  .head .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin:0 2px}
+  .stage{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .col .cap{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);font-weight:700}
+
+  /* ---------- phone shell ---------- */
+  .phone{
+    width:390px;max-width:92vw;aspect-ratio:390/800;
+    background:var(--panel);border-radius:36px;border:1px solid #1a1a26;
+    box-shadow:0 40px 90px #000a, inset 0 1px 0 #ffffff0d;
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .phone::after{ /* scanlines */
+    content:"";position:absolute;inset:0;pointer-events:none;border-radius:36px;
+    background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);
+    opacity:.5;mix-blend-mode:overlay;
+  }
+  .vignette{background:radial-gradient(120% 90% at 50% 36%,transparent 52%,#000 128%)}
+
+  /* ---------- brand wordmark ---------- */
+  .mark{
+    font-family:'Silkscreen','Press Start 2P',monospace;font-weight:700;
+    line-height:1.04;letter-spacing:.04em;text-transform:uppercase;color:#fff;
+    text-shadow:0 0 10px #28f0ff80,0 0 26px #28f0ff40;
+  }
+  .mark .s2{color:var(--cyan);text-shadow:0 0 12px #28f0ffaa,0 0 30px #28f0ff55}
+  .tag{
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--magenta);
+    text-shadow:0 0 10px var(--magenta);margin-top:11px;
+  }
+  .subtag{font-size:11px;color:var(--dim);letter-spacing:.02em;margin-top:7px}
+
+  /* ---------- the signature "vanishing shapes" motif ---------- */
+  /* a 4-col mini board; tetromino-shaped cell clusters bloom magenta, then decay
+     (vanish) on staggered, incommensurate timers — the name, demonstrating itself. */
+  .board{display:grid;grid-template-columns:repeat(4,16px);grid-auto-rows:16px;gap:3px}
+  .board i{width:16px;height:16px;border-radius:3px;background:var(--raised)}
+  .board i.lit{animation:vanish 5s ease-in-out infinite}
+  @keyframes vanish{
+    0%   {background:var(--raised);box-shadow:none}
+    10%  {background:var(--magenta);box-shadow:0 0 8px var(--magenta),0 0 18px #ff2d9b88}
+    34%  {background:var(--magenta);box-shadow:0 0 8px var(--magenta),0 0 18px #ff2d9b88}
+    62%  {background:#3a1b2e;box-shadow:0 0 2px #ff2d9b30}  /* fading on the tail */
+    80%,100%{background:var(--raised);box-shadow:none}      /* gone */
+  }
+
+  /* ---------- auth form ---------- */
+  .form{width:100%;display:flex;flex-direction:column;gap:12px;max-width:300px}
+  .field{position:relative}
+  .field label{
+    position:absolute;top:-7px;left:12px;font-size:9px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);background:var(--panel);padding:0 5px;
+  }
+  .input{
+    width:100%;height:48px;border-radius:11px;background:#0a0a12;border:1px solid #ffffff14;
+    color:var(--text);font:inherit;font-size:14px;padding:0 14px;box-shadow:inset 0 1px 2px #000;
+  }
+  .input.focus{border-color:var(--cyan);box-shadow:inset 0 1px 2px #000,0 0 0 1px #28f0ff55,0 0 14px #28f0ff33}
+  .input::placeholder{color:var(--faint)}
+  .btn{
+    height:48px;border-radius:11px;font:inherit;font-size:13px;letter-spacing:.1em;
+    text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;
+    cursor:pointer;border:2px solid transparent;background:var(--raised);color:var(--text);
+    box-shadow:inset 0 1px 0 #ffffff12;transition:.15s;
+  }
+  .btn.primary{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 16px #28f0ff44}
+  .btn.primary:hover{background:#28f0ff14}
+  .btn.ghost{height:44px;border:1px solid #ffffff1a;color:var(--dim);font-size:12px;letter-spacing:.04em;text-transform:none}
+  .btn.ghost:hover{color:var(--text);border-color:#ffffff33}
+  .btn.oauth{border:2px solid #ffffff26;color:var(--text);font-size:12px;letter-spacing:.04em;text-transform:none}
+  .btn.oauth:hover{border-color:#ffffff44}
+  .gicon{width:16px;height:16px;border-radius:50%;background:conic-gradient(#ea4335,#fbbc05,#34a853,#4285f4)}
+  .divider{display:flex;align-items:center;gap:12px;color:var(--faint);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin:6px 0 2px}
+  .divider::before,.divider::after{content:"";height:1px;flex:1;background:#ffffff12}
+  .guest{margin-top:14px;text-align:center;font-size:12px;color:var(--dim);letter-spacing:.04em;cursor:pointer}
+  .guest u{color:var(--cyan);text-decoration:none;border-bottom:1px solid #28f0ff55}
+
+  /* ---------- home ---------- */
+  .hamb{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:12px;border:1px solid #ffffff1f;display:grid;place-items:center;gap:5px;cursor:pointer}
+  .hamb span{display:block;width:18px;height:2px;background:var(--dim)}
+  .home-btn{
+    width:100%;border-radius:12px;border:2px solid;background:var(--raised);
+    font-family:'Press Start 2P','Silkscreen',monospace;font-size:13px;letter-spacing:.06em;
+    text-transform:uppercase;padding:18px;cursor:pointer;transition:.15s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .home-btn.play{border-color:var(--lime);color:var(--lime);box-shadow:0 0 18px #b6ff3c33}
+  .home-btn.play:hover{background:#b6ff3c14}
+  .home-btn.exp{border-color:var(--cyan);color:var(--cyan);font-size:11px;justify-content:space-between;padding:18px 20px}
+  .home-btn.exp:hover{background:#28f0ff14}
+  .footnote{margin-top:22px;text-align:center;font-size:12px;color:var(--faint)}
+</style>
+</head>
+<body>
+
+  <header class="head">
+    <h1>Working title: <b>Vanishing Shapes</b></h1>
+    <p>
+      Same Afterglow look (void black, Silkscreen wordmark, cyan
+      <span class="swatch" style="background:#28F0FF"></span> +
+      magenta <span class="swatch" style="background:#FF2D9B"></span> neon) — new name on
+      the two first-impression screens. The hero motif is a tiny board where tetromino gap
+      shapes <em>bloom, then vanish</em> on a slow decay tail: the title shows you the game
+      before you read a word. Mock only — nothing wired; the live app still says “Phosphor.”
+    </p>
+  </header>
+
+  <div class="stage">
+
+    <!-- ============================== AUTH ============================== -->
+    <div class="col">
+      <div class="cap">Auth / Sign-in</div>
+      <div class="phone vignette" style="justify-content:center;padding:40px 30px">
+
+        <div class="board" aria-hidden="true" style="margin-bottom:30px">
+          <!-- row layout (4 cols). Two tetromino clusters vanish out of phase. -->
+          <i></i><i class="lit" style="animation-delay:.0s"></i><i class="lit" style="animation-delay:.0s"></i><i></i>
+          <i class="lit" style="animation-delay:.2s"></i><i class="lit" style="animation-delay:.2s"></i><i></i><i></i>
+          <i></i><i></i><i class="lit" style="animation-delay:2.4s"></i><i></i>
+          <i></i><i class="lit" style="animation-delay:2.6s"></i><i class="lit" style="animation-delay:2.6s"></i><i class="lit" style="animation-delay:2.6s"></i>
+        </div>
+
+        <div style="text-align:center;margin-bottom:30px">
+          <div class="mark" style="font-size:30px">Vanishing<br><span class="s2">Shapes</span></div>
+          <div class="tag">Memorize the gaps. Fill them fast.</div>
+        </div>
+
+        <div class="form">
+          <div class="field"><label>Email</label><input class="input" placeholder="you@email.com"></div>
+          <div class="field"><label>Password</label><input class="input focus" type="password" placeholder="••••••••"></div>
+          <button class="btn primary">Enter →</button>
+          <button class="btn ghost">Create account</button>
+          <div class="divider">or</div>
+          <button class="btn oauth"><span class="gicon"></span> Continue with Google</button>
+          <div class="guest">Just visiting? <u>Continue as guest</u></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================== HOME ============================== -->
+    <div class="col">
+      <div class="cap">Home / Landing</div>
+      <div class="phone vignette" style="padding:44px 30px 32px;align-items:stretch">
+
+        <div class="hamb" aria-hidden="true"><span></span><span></span><span></span></div>
+
+        <div class="board" aria-hidden="true" style="margin-bottom:18px">
+          <i></i><i class="lit" style="animation-delay:.0s"></i><i class="lit" style="animation-delay:.0s"></i><i></i>
+          <i class="lit" style="animation-delay:.2s"></i><i class="lit" style="animation-delay:.2s"></i><i></i><i></i>
+          <i></i><i></i><i class="lit" style="animation-delay:2.4s"></i><i></i>
+          <i></i><i class="lit" style="animation-delay:2.6s"></i><i class="lit" style="animation-delay:2.6s"></i><i class="lit" style="animation-delay:2.6s"></i>
+        </div>
+
+        <div class="mark" style="font-size:34px">Vanishing<br><span class="s2">Shapes</span></div>
+        <div class="tag" style="text-align:left">A memory game</div>
+
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:14px">
+          <button class="home-btn play">Play</button>
+          <button class="home-btn exp"><span>Experimental Modes</span><span style="font-size:18px;line-height:1">›</span></button>
+        </div>
+
+        <div class="footnote">4 more ways to play, behind one tap</div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
