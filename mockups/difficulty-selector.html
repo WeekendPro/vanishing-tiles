@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Shapes — Difficulty selector mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F; --grid:#1C1C28;
+    --edge:#3A3E4F; --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --green:#39d98a; --amber:#FFC23D; --red:#FF3B47; --cyan:#28F0FF; --magenta:#FF2D9B;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:640px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:0 0 4px; font-weight:600}
+  .caption .rec{color:var(--green)}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:8px 4px 0; min-height:48px}
+
+  /* phone frame */
+  .phone{
+    position:relative; width:320px; height:300px; border-radius:26px;
+    background:var(--void); border:1px solid #1a1a26;
+    box-shadow:0 0 0 2px #0b0b14, 0 24px 60px rgba(0,0,0,.6);
+    overflow:hidden; padding:18px 22px 22px;
+    display:flex; flex-direction:column;
+  }
+  .phone::before{ /* subtle scanlines */
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+  .topfill{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px}
+  .mark{font-weight:700; text-transform:uppercase; letter-spacing:.05em; line-height:1; text-align:center;
+        font-size:26px; color:#fff; text-shadow:0 0 10px rgba(40,240,255,.45)}
+  .tag{font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.5)}
+
+  .bottom{display:flex; flex-direction:column; gap:14px}
+
+  /* PLAY button (pinned look) */
+  .play{
+    width:100%; border:2px solid var(--green); color:var(--green); background:rgba(57,217,138,.04);
+    border-radius:8px; padding:15px; font-weight:600; text-transform:uppercase; letter-spacing:.1em;
+    font-size:16px; text-align:center; cursor:pointer; text-shadow:0 0 10px rgba(57,217,138,.4);
+    box-shadow:0 0 16px rgba(57,217,138,.18), inset 0 0 18px rgba(57,217,138,.06);
+  }
+
+  .difflabel{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); text-align:center}
+
+  /* ── Option 1: Segmented switch ── */
+  .seg{display:flex; border:1px solid #23232f; border-radius:9px; background:var(--panel); overflow:hidden}
+  .seg button{
+    flex:1; appearance:none; background:transparent; border:0; border-right:1px solid #1a1a24;
+    color:var(--faint); font-family:inherit; font-weight:600; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; padding:11px 4px; cursor:pointer; transition:all .15s;
+  }
+  .seg button:last-child{border-right:0}
+  .seg button[data-on="1"]{ color:#0a0a10; }
+  .seg button[data-lvl="easy"][data-on="1"]{ background:var(--green);  box-shadow:0 0 14px rgba(57,217,138,.5) inset, 0 0 12px rgba(57,217,138,.35); }
+  .seg button[data-lvl="med"][data-on="1"]{  background:var(--amber);  box-shadow:0 0 14px rgba(255,194,61,.5) inset, 0 0 12px rgba(255,194,61,.35); }
+  .seg button[data-lvl="hard"][data-on="1"]{ background:var(--red);    background:var(--red); box-shadow:0 0 14px rgba(255,59,71,.5) inset, 0 0 12px rgba(255,59,71,.35); }
+  .seghint{font-size:11px; color:var(--dim); text-align:center; min-height:14px}
+
+  /* ── Option 2: Pip cards ── */
+  .pips{display:flex; gap:8px}
+  .pcard{
+    flex:1; border:1px solid #23232f; border-radius:9px; background:var(--panel); padding:10px 6px 9px;
+    text-align:center; cursor:pointer; transition:all .15s;
+  }
+  .pcard .pname{font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--dim)}
+  .pcard .prow{display:flex; gap:3px; justify-content:center; margin-top:7px}
+  .pcard .pip{width:8px; height:8px; border-radius:2px; background:#262633}
+  .pcard[data-lvl="easy"].on{border-color:var(--green); box-shadow:0 0 14px rgba(57,217,138,.25)}
+  .pcard[data-lvl="med"].on{border-color:var(--amber); box-shadow:0 0 14px rgba(255,194,61,.25)}
+  .pcard[data-lvl="hard"].on{border-color:var(--red); box-shadow:0 0 14px rgba(255,59,71,.25)}
+  .pcard[data-lvl="easy"].on .pname{color:var(--green)}
+  .pcard[data-lvl="med"].on .pname{color:var(--amber)}
+  .pcard[data-lvl="hard"].on .pname{color:var(--red)}
+  .pcard[data-lvl="easy"].on .pip.lit{background:var(--green); box-shadow:0 0 6px var(--green)}
+  .pcard[data-lvl="med"].on .pip.lit{background:var(--amber); box-shadow:0 0 6px var(--amber)}
+  .pcard[data-lvl="hard"].on .pip.lit{background:var(--red); box-shadow:0 0 6px var(--red)}
+
+  /* ── Option 3: Cycler ── */
+  .cyc{display:flex; align-items:center; justify-content:space-between; border:1px solid #23232f;
+       border-radius:9px; background:var(--panel); padding:8px 10px}
+  .cyc .arr{appearance:none; background:transparent; border:0; color:var(--dim); font-size:20px; cursor:pointer; padding:0 8px; line-height:1}
+  .cyc .cval{font-weight:700; font-size:15px; letter-spacing:.12em; text-transform:uppercase}
+  .cyc .cval[data-lvl="easy"]{color:var(--green); text-shadow:0 0 12px rgba(57,217,138,.5)}
+  .cyc .cval[data-lvl="med"]{color:var(--amber); text-shadow:0 0 12px rgba(255,194,61,.5)}
+  .cyc .cval[data-lvl="hard"]{color:var(--red); text-shadow:0 0 12px rgba(255,59,71,.5)}
+  .dots{display:flex; gap:6px; justify-content:center; margin-top:9px}
+  .dots i{width:6px; height:6px; border-radius:50%; background:#2a2a38; display:block}
+  .dots i.on{background:var(--cyan); box-shadow:0 0 8px var(--cyan)}
+
+  /* ── Option 4: Stacked rows ── */
+  .rows{display:flex; flex-direction:column; gap:7px}
+  .drow{display:flex; align-items:center; gap:11px; border:1px solid #23232f; border-radius:9px;
+        background:var(--panel); padding:9px 12px; cursor:pointer; transition:all .15s}
+  .drow .radio{width:13px; height:13px; border-radius:50%; border:2px solid #33333f; flex:none}
+  .drow .rname{font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--dim)}
+  .drow .rhint{font-size:10px; color:var(--faint); margin-left:auto}
+  .drow[data-lvl="easy"].on{border-color:var(--green); box-shadow:0 0 12px rgba(57,217,138,.2)}
+  .drow[data-lvl="med"].on{border-color:var(--amber); box-shadow:0 0 12px rgba(255,194,61,.2)}
+  .drow[data-lvl="hard"].on{border-color:var(--red); box-shadow:0 0 12px rgba(255,59,71,.2)}
+  .drow[data-lvl="easy"].on .radio{border-color:var(--green); background:var(--green); box-shadow:0 0 8px var(--green)}
+  .drow[data-lvl="med"].on .radio{border-color:var(--amber); background:var(--amber); box-shadow:0 0 8px var(--amber)}
+  .drow[data-lvl="hard"].on .radio{border-color:var(--red); background:var(--red); box-shadow:0 0 8px var(--red)}
+  .drow[data-lvl="easy"].on .rname{color:var(--green)}
+  .drow[data-lvl="med"].on .rname{color:var(--amber)}
+  .drow[data-lvl="hard"].on .rname{color:var(--red)}
+</style>
+</head>
+<body>
+  <h1>Difficulty selector — style options</h1>
+  <p class="sub">All four shown in context: the <b style="color:var(--green)">PLAY</b> button pinned to the bottom, with the
+  difficulty control directly beneath it. Tap any control to feel the selected state. Colour follows a heat arc —
+  <b style="color:var(--green)">Easy green</b> → <b style="color:var(--amber)">Medium amber</b> → <b style="color:var(--red)">Hard red</b>.</p>
+
+  <div class="grid">
+
+    <!-- OPTION 1 -->
+    <div class="col">
+      <p class="caption">Option 1 — Segmented switch <span class="rec">· recommended</span></p>
+      <div class="phone">
+        <div class="topfill"><div class="mark">Vanishing<br>Shapes</div><div class="tag">A memory game</div></div>
+        <div class="bottom">
+          <button class="play">Play</button>
+          <div class="difflabel">Difficulty</div>
+          <div class="seg" data-group="1">
+            <button data-lvl="easy" data-on="1">Easy</button>
+            <button data-lvl="med">Medium</button>
+            <button data-lvl="hard">Hard</button>
+          </div>
+          <div class="seghint" id="hint1">Pieces revealed in their own colours</div>
+        </div>
+      </div>
+      <p class="note">Compact, classic console toggle. One tap, instant read of where you are. Best fit for the tight space under a pinned Play.</p>
+    </div>
+
+    <!-- OPTION 2 -->
+    <div class="col">
+      <p class="caption">Option 2 — Pip cards</p>
+      <div class="phone">
+        <div class="topfill"><div class="mark">Vanishing<br>Shapes</div><div class="tag">A memory game</div></div>
+        <div class="bottom">
+          <button class="play">Play</button>
+          <div class="difflabel">Difficulty</div>
+          <div class="pips" data-group="2">
+            <div class="pcard on" data-lvl="easy"><div class="pname">Easy</div><div class="prow"><i class="pip lit"></i><i class="pip"></i><i class="pip"></i></div></div>
+            <div class="pcard" data-lvl="med"><div class="pname">Medium</div><div class="prow"><i class="pip lit"></i><i class="pip lit"></i><i class="pip"></i></div></div>
+            <div class="pcard" data-lvl="hard"><div class="pname">Hard</div><div class="prow"><i class="pip lit"></i><i class="pip lit"></i><i class="pip lit"></i></div></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Each tier carries a 1–2–3 pip rating, so the relative jump in challenge is visible at a glance. A touch taller.</p>
+    </div>
+
+    <!-- OPTION 3 -->
+    <div class="col">
+      <p class="caption">Option 3 — Arcade cycler</p>
+      <div class="phone">
+        <div class="topfill"><div class="mark">Vanishing<br>Shapes</div><div class="tag">A memory game</div></div>
+        <div class="bottom">
+          <button class="play">Play</button>
+          <div class="difflabel">Difficulty</div>
+          <div class="cyc" data-group="3">
+            <button class="arr" data-dir="-1">‹</button>
+            <span class="cval" data-lvl="easy">Easy</span>
+            <button class="arr" data-dir="1">›</button>
+          </div>
+          <div class="dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+      </div>
+      <p class="note">Most "game-y" — a settings-menu cycler with arrows + position dots. Very compact, but takes 1–2 taps to reach Hard.</p>
+    </div>
+
+    <!-- OPTION 4 -->
+    <div class="col">
+      <p class="caption">Option 4 — Stacked rows</p>
+      <div class="phone">
+        <div class="topfill"><div class="mark">Vanishing<br>Shapes</div><div class="tag">A memory game</div></div>
+        <div class="bottom">
+          <button class="play">Play</button>
+          <div class="rows" data-group="4">
+            <div class="drow on" data-lvl="easy"><span class="radio"></span><span class="rname">Easy</span><span class="rhint">colours shown</span></div>
+            <div class="drow" data-lvl="med"><span class="radio"></span><span class="rname">Medium</span><span class="rhint">pink reveal</span></div>
+            <div class="drow" data-lvl="hard"><span class="radio"></span><span class="rname">Hard</span><span class="rhint">pink · faster</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Most explanatory — a one-line hint per tier. Clearest for first-timers, but the tallest and pushes the layout up.</p>
+    </div>
+
+  </div>
+
+<script>
+  const HINTS = {
+    easy:"Pieces revealed in their own colours",
+    med:"Reveal flashes in branded pink",
+    hard:"Pink reveal, noticeably faster"
+  };
+  // Option 1 segmented
+  document.querySelectorAll('.seg').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      seg.querySelectorAll('button').forEach(x=>x.removeAttribute('data-on'));
+      b.setAttribute('data-on','1');
+      document.getElementById('hint1').textContent = HINTS[b.dataset.lvl];
+    }));
+  });
+  // Option 2 pip cards
+  document.querySelectorAll('.pips').forEach(g=>{
+    g.querySelectorAll('.pcard').forEach(c=>c.addEventListener('click',()=>{
+      g.querySelectorAll('.pcard').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');
+    }));
+  });
+  // Option 3 cycler
+  document.querySelectorAll('.cyc').forEach(c=>{
+    const order=['easy','med','hard'], names={easy:'Easy',med:'Medium',hard:'Hard'};
+    const val=c.querySelector('.cval'); const dots=c.parentElement.querySelectorAll('.dots i');
+    c.querySelectorAll('.arr').forEach(a=>a.addEventListener('click',()=>{
+      let i=order.indexOf(val.dataset.lvl); i=Math.min(2,Math.max(0,i+ +a.dataset.dir));
+      const lvl=order[i]; val.dataset.lvl=lvl; val.textContent=names[lvl];
+      dots.forEach((d,di)=>d.classList.toggle('on',di===i));
+    }));
+  });
+  // Option 4 rows
+  document.querySelectorAll('.rows').forEach(g=>{
+    g.querySelectorAll('.drow').forEach(r=>r.addEventListener('click',()=>{
+      g.querySelectorAll('.drow').forEach(x=>x.classList.remove('on'));
+      r.classList.add('on');
+    }));
+  });
+</script>
+</body>
+</html>

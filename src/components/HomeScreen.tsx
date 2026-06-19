@@ -2,17 +2,45 @@ import { useState } from 'react'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useStaggerStore } from '../store/staggerStore'
-import { useSettingsStore, type MapStyle } from '../store/settingsStore'
+import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { Wordmark, ScanlineOverlay } from './ui'
 
 /**
- * The primary landing page shown right after sign-in. Two panes slide
- * horizontally: the Home pane leads with PLAY (straight into Infinite Stagger,
- * the heart of the game) plus a single "Experimental Modes" entry; tapping it
- * slides across to the Experimental pane (Training + the three Journey map
- * styles). Logout is intentionally absent here — it lives in the global menu.
+ * The primary landing page shown right after sign-in. PLAY (straight into
+ * Infinite Stagger, the heart of the game) is pinned to the bottom thumb arc,
+ * with the Difficulty selector directly beneath it. Logout is intentionally
+ * absent here — it lives in the global menu.
+ *
+ * The "Experimental Modes" entry (Training + the three Journey map styles) is
+ * HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and its machinery are kept
+ * intact behind the flag — not deleted — so we can bring them back in one line.
  */
+const SHOW_EXPERIMENTAL: boolean = false
+
+/** The three reveal difficulties, rendered as a segmented neon switch. Each tier
+ *  owns a colour on the heat arc (green → amber → red) and a one-line hint. */
+const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: string }[] = [
+  {
+    value: 'easy',
+    label: 'Easy',
+    hint: 'Pieces revealed in their own colours',
+    active: 'bg-neon-green text-arcade-bg shadow-[inset_0_0_14px_rgba(57,217,138,0.5),0_0_12px_rgba(57,217,138,0.35)]',
+  },
+  {
+    value: 'medium',
+    label: 'Medium',
+    hint: 'Reveal flashes in branded pink',
+    active: 'bg-neon-yellow text-arcade-bg shadow-[inset_0_0_14px_rgba(250,204,21,0.5),0_0_12px_rgba(250,204,21,0.35)]',
+  },
+  {
+    value: 'hard',
+    label: 'Hard',
+    hint: 'Pink reveal, noticeably faster',
+    active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
+  },
+]
+
 export function HomeScreen() {
   const [pane, setPane] = useState<'home' | 'experimental'>('home')
 
@@ -26,11 +54,17 @@ export function HomeScreen() {
     startPractice: s.startPractice,
     resetGame: s.resetGame,
   })))
-  const setMapStyle = useSettingsStore(s => s.setMapStyle)
+  const { setMapStyle, difficulty, setDifficulty } = useSettingsStore(useShallow(s => ({
+    setMapStyle: s.setMapStyle,
+    difficulty: s.settings.difficulty,
+    setDifficulty: s.setDifficulty,
+  })))
 
   const play = () => { startStagger(); goStagger() }
   const training = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
+
+  const activeHint = DIFFICULTIES.find(d => d.value === difficulty)?.hint
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
@@ -43,9 +77,10 @@ export function HomeScreen() {
         {/* ── Home pane ── */}
         <section
           aria-hidden={pane !== 'home'}
-          className="w-1/2 flex flex-col items-center px-6 pt-10 pb-8"
+          className="w-1/2 min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
         >
-          <div className="w-full max-w-sm">
+          {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
+          <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
             {/* VANISHING / SHAPES stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
@@ -53,7 +88,8 @@ export function HomeScreen() {
             </p>
           </div>
 
-          <div className="mt-14 w-full max-w-sm flex flex-col gap-3.5">
+          {/* Bottom-pinned cluster: PLAY + difficulty. */}
+          <div className="w-full max-w-sm flex flex-col gap-4">
             {/* PLAY → Infinite Stagger — same neon-outline recipe as NeonButton. */}
             <button
               onClick={play}
@@ -64,52 +100,79 @@ export function HomeScreen() {
               Play
             </button>
 
-            {/* Experimental Modes → slide to second pane */}
-            <button
-              onClick={() => setPane('experimental')}
-              aria-label="Experimental Modes"
-              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
-                border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
-            >
-              <span>Experimental Modes</span>
-              <span className="text-lg leading-none">›</span>
-            </button>
-          </div>
+            {/* Experimental Modes → slide to second pane (hidden for now). */}
+            {SHOW_EXPERIMENTAL && (
+              <button
+                onClick={() => setPane('experimental')}
+                aria-label="Experimental Modes"
+                className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                  transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
+                  border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
+              >
+                <span>Experimental Modes</span>
+                <span className="text-lg leading-none">›</span>
+              </button>
+            )}
 
-          <p className="mt-6 text-center text-xs text-gray-600 font-display">
-            4 more ways to play, behind one tap
-          </p>
-        </section>
-
-        {/* ── Experimental pane ── */}
-        <section
-          aria-hidden={pane !== 'experimental'}
-          className="w-1/2 flex flex-col items-center px-6 pt-10 pb-8 bg-arcade-glow-magenta"
-        >
-          <div className="w-full max-w-sm">
-            <button
-              onClick={() => setPane('home')}
-              className="flex items-center gap-1.5 text-neon-magenta font-display font-semibold text-sm mb-8
-                transition-transform active:translate-y-px"
-            >
-              <span className="text-lg leading-none">‹</span> Back
-            </button>
-            <h2 className="font-pixel font-bold text-sm leading-none uppercase tracking-[0.08em] text-white text-glow-magenta">
-              Experimental
-            </h2>
-            <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.28em] text-gray-500">
-              Roads not yet taken
-            </p>
-          </div>
-
-          <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
-            <ModeButton label="Training" hint="The classic gauntlet" onClick={training} />
-            <ModeButton label="Subway Map" hint="Ride the transit lines" onClick={() => openMap('transit')} />
-            <ModeButton label="Mind Map" hint="Light up the neurons" onClick={() => openMap('mentalBrain')} />
-            <ModeButton label="Git Map" hint="Branch through the graph" onClick={() => openMap('git')} />
+            {/* Difficulty — segmented neon switch (Easy / Medium / Hard). */}
+            <div>
+              <p className="text-center font-display text-[10px] font-medium uppercase tracking-[0.22em] text-gray-500 mb-2">
+                Difficulty
+              </p>
+              <div className="flex rounded-md border-2 border-arcade-edge bg-arcade-panel overflow-hidden">
+                {DIFFICULTIES.map(d => {
+                  const active = d.value === difficulty
+                  return (
+                    <button
+                      key={d.value}
+                      onClick={() => setDifficulty(d.value)}
+                      aria-pressed={active}
+                      className={`flex-1 py-3 font-pixel uppercase text-xs tracking-[0.08em] transition
+                        border-r border-arcade-edge last:border-r-0
+                        ${active ? d.active : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      {d.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-center text-[11px] text-gray-500 font-display min-h-[16px]">
+                {activeHint}
+              </p>
+            </div>
           </div>
         </section>
+
+        {/* ── Experimental pane (hidden behind SHOW_EXPERIMENTAL) ── */}
+        {SHOW_EXPERIMENTAL && (
+          <section
+            aria-hidden={pane !== 'experimental'}
+            className="w-1/2 flex flex-col items-center px-6 pt-10 pb-8 bg-arcade-glow-magenta"
+          >
+            <div className="w-full max-w-sm">
+              <button
+                onClick={() => setPane('home')}
+                className="flex items-center gap-1.5 text-neon-magenta font-display font-semibold text-sm mb-8
+                  transition-transform active:translate-y-px"
+              >
+                <span className="text-lg leading-none">‹</span> Back
+              </button>
+              <h2 className="font-pixel font-bold text-sm leading-none uppercase tracking-[0.08em] text-white text-glow-magenta">
+                Experimental
+              </h2>
+              <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.28em] text-gray-500">
+                Roads not yet taken
+              </p>
+            </div>
+
+            <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
+              <ModeButton label="Training" hint="The classic gauntlet" onClick={training} />
+              <ModeButton label="Subway Map" hint="Ride the transit lines" onClick={() => openMap('transit')} />
+              <ModeButton label="Mind Map" hint="Light up the neurons" onClick={() => openMap('mentalBrain')} />
+              <ModeButton label="Git Map" hint="Branch through the graph" onClick={() => openMap('git')} />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   )

@@ -15,15 +15,26 @@ export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
 /** Which Journey map rendering to use. R&D toggle while we compare directions. */
 export type MapStyle = 'transit' | 'mentalBrain' | 'git'
 
+/**
+ * Stagger reveal difficulty (set from the home screen). Differences live entirely
+ * in the reveal phase:
+ *  - `easy`   — gaps bloom in their own PIECE colour (track shape + colour).
+ *  - `medium` — gaps bloom in the uniform branded pink (shape only).
+ *  - `hard`   — pink reveal, but the sequence plays noticeably faster.
+ */
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
 export interface UserSettings {
   /** Per-puzzle-type opt-out of the instruction (briefing) page. Keyed by component. */
   hideBriefing: Partial<Record<PlayableComponent, boolean>>
   /** Selected Journey map style. Defaults to the original transit map. */
   mapStyle: MapStyle
+  /** Selected Stagger reveal difficulty. Defaults to the gentlest (easy). */
+  difficulty: Difficulty
 }
 
 function emptySettings(): UserSettings {
-  return { hideBriefing: {}, mapStyle: 'transit' }
+  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' }
 }
 
 function load(): UserSettings {
@@ -48,6 +59,7 @@ interface SettingsStore {
   isBriefingHidden: (component: PlayableComponent) => boolean
   setBriefingHidden: (component: PlayableComponent, hidden: boolean) => void
   setMapStyle: (style: MapStyle) => void
+  setDifficulty: (difficulty: Difficulty) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -69,6 +81,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   setMapStyle: (style) => {
     set((state) => {
       const next: UserSettings = { ...state.settings, mapStyle: style }
+      save(next)
+      return { settings: next }
+    })
+  },
+
+  setDifficulty: (difficulty) => {
+    set((state) => {
+      const next: UserSettings = { ...state.settings, difficulty }
       save(next)
       return { settings: next }
     })

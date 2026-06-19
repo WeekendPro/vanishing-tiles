@@ -18,7 +18,7 @@ function solveCurrent() {
 beforeEach(() => {
   localStorage.clear()
   useProgressStore.setState({ byLevel: {} })
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
   useGameStore.getState().resetGame()
 })
 

@@ -12,7 +12,7 @@ import { useStaggerStore } from '../../src/store/staggerStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
   useStaggerStore.getState().exit()
   vi.clearAllMocks()
 })
@@ -26,40 +26,25 @@ describe('HomeScreen', () => {
     expect(useStaggerStore.getState().phase).toBe('countdown')
   })
 
-  it('Training opens the practice gauntlet', async () => {
-    const user = userEvent.setup()
+  it('hides the Experimental Modes entry (and its modes) for now', () => {
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Experimental Modes' }))
-    await user.click(screen.getByRole('button', { name: /Training/i }))
-    expect(useNavStore.getState().appView).toBe('practice')
+    expect(screen.queryByRole('button', { name: 'Experimental Modes' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Training/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Subway Map/i })).toBeNull()
   })
 
-  it('Subway Map selects the transit map and opens the journey', async () => {
-    const user = userEvent.setup()
-    useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'git' } })
+  it('defaults the difficulty selector to Easy', () => {
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Experimental Modes' }))
-    await user.click(screen.getByRole('button', { name: /Subway Map/i }))
-    expect(useSettingsStore.getState().settings.mapStyle).toBe('transit')
-    expect(useNavStore.getState().appView).toBe('journey')
+    expect(screen.getByRole('button', { name: 'Easy', pressed: true })).toBeTruthy()
   })
 
-  it('Mind Map selects the mentalBrain map and opens the journey', async () => {
+  it('selecting Medium / Hard updates the difficulty setting', async () => {
     const user = userEvent.setup()
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Experimental Modes' }))
-    await user.click(screen.getByRole('button', { name: /Mind Map/i }))
-    expect(useSettingsStore.getState().settings.mapStyle).toBe('mentalBrain')
-    expect(useNavStore.getState().appView).toBe('journey')
-  })
-
-  it('Git Map selects the git map and opens the journey', async () => {
-    const user = userEvent.setup()
-    render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Experimental Modes' }))
-    await user.click(screen.getByRole('button', { name: /Git Map/i }))
-    expect(useSettingsStore.getState().settings.mapStyle).toBe('git')
-    expect(useNavStore.getState().appView).toBe('journey')
+    await user.click(screen.getByRole('button', { name: 'Medium' }))
+    expect(useSettingsStore.getState().settings.difficulty).toBe('medium')
+    await user.click(screen.getByRole('button', { name: 'Hard' }))
+    expect(useSettingsStore.getState().settings.difficulty).toBe('hard')
   })
 
   it('does not offer Logout — that lives in the global menu', () => {

@@ -5,6 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
+import { useSettingsStore } from '../store/settingsStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
@@ -26,25 +27,32 @@ const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95
 
 /** Reveal-bloom flood color per piece type (hex of each piece's Tailwind class —
  *  I=cyan-400, O=yellow-400, T=purple-500, S=green-400, Z=red-500, J=blue-500,
- *  L=orange-400). EXPERIMENT: gaps bloom in their piece color during reveal
- *  (instead of the uniform magenta) so the player can track shape AND color,
- *  easing the memory load / difficulty curve. */
+ *  L=orange-400). On EASY, gaps bloom in their own piece color during reveal so
+ *  the player can track shape AND color, easing the memory load. */
 const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
+/** The uniform branded pink the reveal floods on MEDIUM/HARD (the signature
+ *  Afterglow magenta — shape only, no colour crutch). */
+const REVEAL_MAGENTA = '#FF2D9B'
+
+/** Hard compresses every reveal duration to this fraction of its base — a clearly
+ *  faster sequence without changing the bloom keyframe. */
+const HARD_REVEAL_SCALE = 0.62
+
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
- *  CONCURRENTLY with later ones (the overlapping cascade). `color` is the gap's
- *  piece color, used to tint the whole bloom. */
+ *  CONCURRENTLY with later ones (the overlapping cascade). `color` floods the
+ *  whole bloom; `scale` (≤1) compresses the per-cell decay durations (Hard). */
 interface Bloom { id: number; color: string; cells: { key: string; durMs: number }[] }
 
-function bloomForGap(id: number, gap: StaggerGap): Bloom {
+function bloomForGap(id: number, gap: StaggerGap, color: string, scale: number): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
-    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
-  return { id, color: PIECE_BLOOM_HEX[gap.pieceType], cells }
+    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: Math.round((STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS) * scale) }))
+  return { id, color, cells }
 }
 
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
@@ -166,7 +174,7 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
 function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disabled: boolean }) {
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vs-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
         <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vs-cyan text-glow-vs-cyan">Pieces</span>
         <span className="text-[10px] text-vs-dim tracking-[0.04em]">tap to place from memory</span>
       </div>
@@ -208,6 +216,7 @@ export function StaggerScreen() {
     pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
+  const difficulty = useSettingsStore(s => s.settings.difficulty)
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)
@@ -285,12 +294,18 @@ export function StaggerScreen() {
     let cancelled = false
     const timers: number[] = []
     const n = gaps.length
-    // Step between piece flashes: CONSTANT (no per-batch speed-up). The bloom
-    // out-runs this step, so the next piece flashes while the previous is still
-    // decaying — the overlapping cascade.
-    const step = STAGGER.REVEAL_STEP_MS
+    // Difficulty shapes the reveal: EASY floods each gap in its own piece colour;
+    // MEDIUM/HARD flood the uniform branded pink; HARD also compresses the timing
+    // so the whole sequence plays noticeably faster.
+    const scale = difficulty === 'hard' ? HARD_REVEAL_SCALE : 1
+    const colorFor = (gap: StaggerGap) =>
+      difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
+    // Step between piece flashes (scaled by difficulty). The bloom out-runs this
+    // step, so the next piece flashes while the previous is still decaying — the
+    // overlapping cascade.
+    const step = STAGGER.REVEAL_STEP_MS * scale
     // How long one bloom lives on screen: its longest-wave cell, plus a hair.
-    const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
+    const lifetime = (STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS) * scale + 80
     // Memorize bar DRAINS: starts full and empties one step per gap as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
@@ -301,13 +316,13 @@ export function StaggerScreen() {
       if (cancelled) return
       if (idx >= n) {
         // Let the final piece finish its decay before recall lights-out.
-        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS - step)))
+        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS * scale - step)))
         return
       }
       const myId = ++id
       // Add a fresh bloom that runs CONCURRENTLY with earlier still-decaying ones
       // (the overlap), and self-removes once its full decay completes.
-      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx])])
+      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx], colorFor(gaps[idx]), scale)])
       setBarPct((1 - (idx + 1) / n) * 100)
       timers.push(window.setTimeout(() => {
         if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
@@ -317,7 +332,7 @@ export function StaggerScreen() {
     // A short breath before the first gap (also paces continuous next batches).
     timers.push(window.setTimeout(() => show(0), 350))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, beginSelecting])
+  }, [phase, batchIndex, gaps, beginSelecting, difficulty])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
@@ -399,7 +414,7 @@ export function StaggerScreen() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center vs-vignette">
+      <div className="min-h-screen flex flex-col items-center justify-center vs-vignette select-none">
         <NeonButton variant="primary" onClick={startRun}>Start Staggered Vanishing Shapes</NeonButton>
       </div>
     )
@@ -436,11 +451,11 @@ export function StaggerScreen() {
     'text-vs-dim'
 
   return (
-    <div className="min-h-screen flex flex-col items-center vs-vignette text-vs-text px-4 pt-12 pb-8">
+    <div className="min-h-screen flex flex-col items-center vs-vignette text-vs-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
-          <div className="w-full max-w-sm flex items-end justify-between mb-2">
+          <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
             {/* Phase count sits ABOVE the score; the score is the loudest text on
                 screen and stands on its own — no label. */}
             <div>
@@ -469,7 +484,7 @@ export function StaggerScreen() {
               rides the right of this row — labeled, so it never reads as score×N.
               It pops in on each streak step, holds, then fades in the signature
               style (see comboChip lifecycle above). */}
-          <div className="relative w-full max-w-sm h-4 mt-1 mb-2">
+          <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
             {comboChip && (
               <span
@@ -539,7 +554,7 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'countdown' && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vs-void">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vs-void pointer-events-none">
             <div className="font-silk text-sm text-vs-cyan text-glow-vs-cyan mb-2 uppercase tracking-[0.1em]">Staggered Vanishing Shapes</div>
             <StaggerCountdown onDone={beginReveal} />
           </div>
@@ -559,7 +574,7 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'gameOver' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-vs-void/90 rounded-xl px-6">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-vs-void/90 rounded-xl px-6 pointer-events-none">
             <ScanlineOverlay />
             <div className="font-silk text-base text-vs-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
             <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vs-magenta text-glow-vs-magenta mb-5 vs-fade-away">Memory Fades</div>
@@ -584,7 +599,7 @@ export function StaggerScreen() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 w-44">
+            <div className="flex flex-col gap-3 w-44 pointer-events-auto">
               <NeonButton variant="primary" fullWidth onClick={startRun}>Play again</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>

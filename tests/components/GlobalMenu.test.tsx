@@ -17,7 +17,7 @@ import { useSettingsStore } from '../../src/store/settingsStore'
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
   vi.clearAllMocks()
 })
 

@@ -3,7 +3,7 @@ import { useSettingsStore, SETTINGS_STORAGE_KEY } from '../../src/store/settings
 
 beforeEach(() => {
   localStorage.clear()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
 })
 
 describe('settingsStore', () => {
@@ -25,5 +25,13 @@ describe('settingsStore', () => {
     useSettingsStore.getState().setBriefingHidden('flash', true)
     useSettingsStore.getState().setBriefingHidden('flash', false)
     expect(useSettingsStore.getState().isBriefingHidden('flash')).toBe(false)
+  })
+
+  it('setDifficulty updates the tier and persists to localStorage', () => {
+    expect(useSettingsStore.getState().settings.difficulty).toBe('easy')
+    useSettingsStore.getState().setDifficulty('hard')
+    expect(useSettingsStore.getState().settings.difficulty).toBe('hard')
+    const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)
+    expect(stored.difficulty).toBe('hard')
   })
 })
