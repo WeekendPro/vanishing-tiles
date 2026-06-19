@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
@@ -24,17 +24,27 @@ const COMBO_FADE_MS = 900
 // never substitutes for contrast).
 const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95)'
 
+/** Reveal-bloom flood color per piece type (hex of each piece's Tailwind class —
+ *  I=cyan-400, O=yellow-400, T=purple-500, S=green-400, Z=red-500, J=blue-500,
+ *  L=orange-400). EXPERIMENT: gaps bloom in their piece color during reveal
+ *  (instead of the uniform magenta) so the player can track shape AND color,
+ *  easing the memory load / difficulty curve. */
+const PIECE_BLOOM_HEX: Record<PieceType, string> = {
+  I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
+}
+
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
- *  CONCURRENTLY with later ones (the overlapping cascade). */
-interface Bloom { id: number; cells: { key: string; durMs: number }[] }
+ *  CONCURRENTLY with later ones (the overlapping cascade). `color` is the gap's
+ *  piece color, used to tint the whole bloom. */
+interface Bloom { id: number; color: string; cells: { key: string; durMs: number }[] }
 
 function bloomForGap(id: number, gap: StaggerGap): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
     .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
-  return { id, cells }
+  return { id, color: PIECE_BLOOM_HEX[gap.pieceType], cells }
 }
 
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
@@ -66,14 +76,15 @@ function useCountUp(value: number, durationMs = 600): number {
 // ── Board ─────────────────────────────────────────────────────────────────────
 // The phosphor board is the dark VOID throughout (.phos-dim) — gaps are concealed
 // within one uniform near-black field, never a readable hole. A gap is only ever
-// exposed by a live magenta BLOOM: the whole tetromino's cells get .phos-bloom at
-// the same tick, flood magenta, then decay along a luminous ghost tail back to the
-// void — and they fade away in a WAVE (each cell sets its own duration + delay).
-// Filled/placed gaps keep their piece color (a correct pick lighting out of the
-// dark), ringed with a soft glow.
+// exposed by a live BLOOM: the whole tetromino's cells get .phos-bloom at the same
+// tick, flood the gap's PIECE COLOR (--bloom-color; an experiment to ease the
+// difficulty curve by carrying shape + color), then decay along a luminous ghost
+// tail back to the void — fading away in a WAVE (each cell sets its own duration +
+// delay). Filled/placed gaps keep their piece color (a correct pick lighting out
+// of the dark), ringed with a soft glow.
 function StaggerBoard({
   gaps, bloomByCell,
-}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number }> }) {
+}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number; color: string }> }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -111,7 +122,7 @@ function StaggerBoard({
             <div
               key={`${i}-bloom-${bloom.id}`}
               className="w-7 h-7 rounded-sm phos-bloom"
-              style={{ animationDuration: `${bloom.durMs}ms` }}
+              style={{ animationDuration: `${bloom.durMs}ms`, ['--bloom-color']: bloom.color } as CSSProperties}
             />
           )
         }
@@ -396,9 +407,9 @@ export function StaggerScreen() {
 
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
-  const bloomByCell = new Map<string, { id: number; durMs: number }>()
+  const bloomByCell = new Map<string, { id: number; durMs: number; color: string }>()
   if (phase === 'reveal') {
-    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs })
+    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs, color: b.color })
   }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :

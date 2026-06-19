@@ -157,22 +157,22 @@
     transform: scale(1);
   }
   4% {
-    background: #ff2d9b;
-    box-shadow: 0 0 14px #ff2d9b, 0 0 30px #ff2d9b;
+    background: var(--bloom-color, #ff2d9b);
+    box-shadow: 0 0 14px var(--bloom-color, #ff2d9b), 0 0 30px var(--bloom-color, #ff2d9b);
     transform: scale(1.13);
   }
   52% {
-    background: #ff2d9b;
-    box-shadow: 0 0 9px #ff2d9b;
+    background: var(--bloom-color, #ff2d9b);
+    box-shadow: 0 0 9px var(--bloom-color, #ff2d9b);
     transform: scale(1);
   }
   70% {
-    background: #b51f73;
-    box-shadow: 0 0 8px rgba(255, 45, 155, 0.5);
+    background: color-mix(in srgb, var(--bloom-color, #ff2d9b) 62%, #0c0c14);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--bloom-color, #ff2d9b) 50%, transparent);
   }
   88% {
-    background: #3a1330;
-    box-shadow: 0 0 3px rgba(255, 45, 155, 0.2);
+    background: color-mix(in srgb, var(--bloom-color, #ff2d9b) 22%, #0c0c14);
+    box-shadow: 0 0 3px color-mix(in srgb, var(--bloom-color, #ff2d9b) 18%, transparent);
   }
   100% {
     background: #0c0c14;
@@ -182,11 +182,13 @@
 }
 /* Flash to ~4% (instant, all cells together), HOLD bright to ~52% (~1s), then
    decay to void over the rest (~1s). Duration is overridden per cell inline (the
-   wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback. */
+   wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback.
+   The flood color is driven by --bloom-color (set per gap to its piece color so
+   the reveal carries shape AND color); it falls back to the signature magenta. */
 .phos-bloom { animation: phosBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .phos-bloom { animation: none; background: #ff2d9b; box-shadow: 0 0 8px #ff2d9b; }
+  .phos-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
