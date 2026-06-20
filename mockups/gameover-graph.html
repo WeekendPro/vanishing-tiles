@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Shapes — Game Over · Score Graph (concepts)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --panel-raised:#15151F;
+    --grid-line:#1C1C28; --filled:#2A2D3A; --filled-edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+    --attack:cubic-bezier(.1,.9,.2,1);
+    --decay:cubic-bezier(.3,0,.1,1);
+    --mechanical:cubic-bezier(.7,0,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%),
+      var(--void);
+    color:var(--text);
+    font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    padding:40px 24px 80px;
+  }
+  .pagehead{max-width:1200px;margin:0 auto 40px;text-align:center}
+  .pagehead h1{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+  .pagehead p{font-size:13px;color:var(--text-faint);margin-top:10px;max-width:560px;margin-left:auto;margin-right:auto;line-height:1.6}
+
+  .rail{
+    display:flex; gap:48px; justify-content:center; align-items:flex-start; flex-wrap:wrap;
+    max-width:1320px; margin:0 auto;
+  }
+  .col{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .coltag{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+  .coltag b{color:var(--text)}
+  .coldesc{font-size:11.5px;color:var(--text-faint);max-width:380px;text-align:center;line-height:1.6;min-height:34px}
+
+  /* ── phone frame ─────────────────────────────────── */
+  .phone{
+    width:390px; max-width:94vw;
+    background:var(--panel); border-radius:34px;
+    border:1px solid #1a1a26;
+    box-shadow:0 40px 90px #000a, inset 0 1px 0 #ffffff0d, inset 0 -1px 0 #0008;
+    padding:26px 18px 22px; position:relative; overflow:hidden;
+  }
+  .phone::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:34px;
+    background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);
+    opacity:.5; mix-blend-mode:overlay;
+  }
+
+  /* ── game over header (matches StaggerScreen) ────── */
+  .go-head{text-align:center;position:relative;z-index:1}
+  .go-title{font-size:16px;letter-spacing:.15em;text-transform:uppercase;color:var(--text);font-weight:700}
+  .go-sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px var(--magenta);margin-top:5px}
+  .go-fslabel{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);margin-top:16px}
+  .go-score{font-size:40px;font-weight:700;color:var(--amber);text-shadow:0 0 16px #ffc23d88;letter-spacing:.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+
+  .trio{display:flex;border-top:1px solid #ffffff1a;border-bottom:1px solid #ffffff1a;margin:18px 0 6px;position:relative;z-index:1}
+  .trio .cell{flex:1;text-align:center;padding:13px 4px}
+  .trio .cell + .cell{border-left:1px solid #ffffff1a}
+  .trio .v{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+  .trio .k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
+  .v.m{color:var(--magenta);text-shadow:0 0 8px #ff2d9b88}
+  .v.l{color:var(--lime);text-shadow:0 0 8px #b6ff3c88}
+  .v.c{color:var(--cyan);text-shadow:0 0 8px #28f0ff88}
+
+  /* ── graph module shell ──────────────────────────── */
+  .graph{position:relative;z-index:1;margin-top:18px}
+  .graph-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .graph-title{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+
+  /* series tabs (V1) */
+  .tabs{display:flex;gap:4px}
+  .tab{
+    font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+    color:var(--text-faint);background:transparent;border:none;cursor:pointer;
+    padding:5px 9px;border-radius:7px;transition:all .25s var(--attack);position:relative;
+  }
+  .tab:hover{color:var(--text-dim)}
+  .tab.on{color:var(--void);}
+  .tab.on.score{background:var(--amber);box-shadow:0 0 10px #ffc23d77}
+  .tab.on.recalled{background:var(--magenta);box-shadow:0 0 10px #ff2d9b77}
+  .tab.on.combo{background:var(--lime);box-shadow:0 0 10px #b6ff3c77}
+
+  /* legend chips (V2) */
+  .chips{display:flex;gap:6px}
+  .chip{
+    display:flex;align-items:center;gap:5px;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+    color:var(--text-dim);background:#ffffff08;border:1px solid #ffffff12;cursor:pointer;
+    padding:4px 8px;border-radius:20px;transition:all .2s ease;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%}
+  .chip.off{opacity:.32;filter:grayscale(.6)}
+
+  svg{display:block;width:100%;overflow:visible}
+  .gax{font-size:8px;fill:var(--text-faint);font-family:'Space Grotesk',sans-serif;letter-spacing:.05em}
+
+  /* tooltip */
+  .tip{
+    position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-118%);
+    background:#0c0c14ee;border:1px solid #ffffff1f;border-radius:9px;padding:8px 10px;
+    box-shadow:0 8px 24px #000b;transition:opacity .15s ease;z-index:5;white-space:nowrap;
+    backdrop-filter:blur(4px);
+  }
+  .tip .tw{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
+  .tip .tb{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .tip .tm{font-size:9px;color:var(--text-dim);margin-top:3px;font-variant-numeric:tabular-nums}
+
+  /* rank pill */
+  .rankpill{
+    display:inline-flex;align-items:baseline;gap:5px;
+    background:linear-gradient(180deg,#ffffff10,#ffffff04);
+    border:1px solid #28f0ff55;border-radius:20px;padding:5px 11px;
+    box-shadow:0 0 16px #28f0ff22, inset 0 0 0 1px #ffffff05;
+  }
+  .rankpill .rn{font-size:13px;font-weight:700;color:var(--cyan);text-shadow:0 0 10px var(--cyan);font-variant-numeric:tabular-nums}
+  .rankpill .rl{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim)}
+
+  /* V3 ladder */
+  .ladder{display:flex;flex-direction:column;gap:5px;margin-top:14px}
+  .lrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;background:#ffffff05;border:1px solid #ffffff0a}
+  .lrow.you{background:linear-gradient(90deg,#28f0ff14,#28f0ff04);border-color:#28f0ff44;box-shadow:0 0 18px #28f0ff1c}
+  .lrank{font-size:11px;font-weight:700;color:var(--text-faint);width:26px;font-variant-numeric:tabular-nums}
+  .lrow.you .lrank{color:var(--cyan);text-shadow:0 0 8px var(--cyan)}
+  .lbar{flex:1;height:6px;border-radius:4px;background:#ffffff0c;overflow:hidden}
+  .lbar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#ffc23d55,var(--amber));box-shadow:0 0 8px #ffc23d66}
+  .lrow.you .lbar i{background:linear-gradient(90deg,#28f0ff66,var(--cyan));box-shadow:0 0 8px var(--cyan)}
+  .lval{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-dim);width:40px;text-align:right}
+  .lrow.you .lval{color:var(--text)}
+  .ltag{font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-left:4px}
+
+  /* buttons */
+  .actions{display:flex;flex-direction:column;gap:10px;margin-top:22px;align-items:center;position:relative;z-index:1}
+  .btn{
+    width:176px;height:44px;border-radius:11px;cursor:pointer;font-family:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+    border:2px solid;transition:transform .1s var(--attack),box-shadow .25s;
+  }
+  .btn:active{transform:translateY(2px)}
+  .btn.primary{background:#15151F;border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 6px #28f0ff55,0 0 22px #28f0ff22, inset 0 1px 0 #ffffff12}
+  .btn.ghost{background:transparent;border-color:#ffffff1f;color:var(--text-dim)}
+
+  .scoreflag{
+    position:absolute;pointer-events:none;
+    background:#0c0c14;border:1px solid var(--cyan);border-radius:8px;padding:4px 8px;
+    box-shadow:0 0 16px #28f0ff33;white-space:nowrap;z-index:4;
+  }
+  .scoreflag .fr{font-size:11px;font-weight:700;color:var(--cyan);text-shadow:0 0 8px var(--cyan)}
+  .scoreflag .fl{font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin-top:1px}
+
+  @media(max-width:900px){.rail{gap:64px}}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Game Over · Score-Over-Time Graph — three directions</h1>
+    <p>Each is the real Staggered Vanishing Shapes game-over card with an interactive chart added below the stats. Switch series, hover the runs, find your rank. Built on Afterglow tokens. Sample data is representative — run history + ranking aren't persisted yet.</p>
+  </div>
+
+  <div class="rail">
+    <!-- ════════ V1 — TRACE LINE ════════ -->
+    <div class="col">
+      <div class="coltag">A · <b>Trace Line</b></div>
+      <div class="coldesc">Minimal, integrated. One hero series at a time via tabs; the latest run blooms at the end with its rank flag pinned to it.</div>
+      <div class="phone" id="p1">
+        <div class="go-head">
+          <div class="go-title">Game Over</div>
+          <div class="go-sub">Memory Fades</div>
+          <div class="go-fslabel">Final score</div>
+          <div class="go-score">4820</div>
+        </div>
+        <div class="trio">
+          <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+          <div class="cell"><div class="v l">×12</div><div class="k">Best combo</div></div>
+          <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+        </div>
+        <div class="graph">
+          <div class="graph-head">
+            <div class="graph-title">Last 14 runs</div>
+            <div class="tabs">
+              <button class="tab score on" data-s="score">Score</button>
+              <button class="tab recalled" data-s="recalled">Recall</button>
+              <button class="tab combo" data-s="combo">Combo</button>
+            </div>
+          </div>
+          <div style="position:relative">
+            <svg id="sv1" viewBox="0 0 320 150"></svg>
+            <div class="tip" id="tip1"></div>
+            <div class="scoreflag" id="flag1"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary">Play again</button>
+          <button class="btn ghost">Home</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ V2 — OSCILLOSCOPE ════════ -->
+    <div class="col">
+      <div class="coltag">B · <b>Oscilloscope</b></div>
+      <div class="coldesc">Leans into the CRT/phosphor brand. All three traces overlaid on a graticule; toggle with legend chips; the latest run pulses like a beam blip.</div>
+      <div class="phone" id="p2">
+        <div class="go-head">
+          <div class="go-title">Game Over</div>
+          <div class="go-sub">Memory Fades</div>
+          <div class="go-fslabel">Final score</div>
+          <div class="go-score">4820</div>
+        </div>
+        <div class="trio">
+          <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+          <div class="cell"><div class="v l">×12</div><div class="k">Best combo</div></div>
+          <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+        </div>
+        <div class="graph">
+          <div class="graph-head">
+            <div class="rankpill"><span class="rn">4th</span><span class="rl">best all&#8209;time</span></div>
+            <div class="chips">
+              <button class="chip" data-s="score"><span class="dot" style="background:var(--amber);box-shadow:0 0 6px var(--amber)"></span>Score</button>
+              <button class="chip" data-s="recalled"><span class="dot" style="background:var(--magenta);box-shadow:0 0 6px var(--magenta)"></span>Recall</button>
+              <button class="chip" data-s="combo"><span class="dot" style="background:var(--lime);box-shadow:0 0 6px var(--lime)"></span>Combo</button>
+            </div>
+          </div>
+          <div style="position:relative">
+            <svg id="sv2" viewBox="0 0 320 156"></svg>
+            <div class="tip" id="tip2"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary">Play again</button>
+          <button class="btn ghost">Home</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ V3 — RANK LADDER ════════ -->
+    <div class="col">
+      <div class="coltag">C · <b>Rank Ladder</b></div>
+      <div class="coldesc">Rank-forward. A trend sparkline up top against your best/avg, then a personal-best ladder where this run glows at its place.</div>
+      <div class="phone" id="p3">
+        <div class="go-head">
+          <div class="go-title">Game Over</div>
+          <div class="go-sub">Memory Fades</div>
+          <div class="go-fslabel">Final score</div>
+          <div class="go-score">4820</div>
+        </div>
+        <div class="trio">
+          <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+          <div class="cell"><div class="v l">×12</div><div class="k">Best combo</div></div>
+          <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+        </div>
+        <div class="graph">
+          <div class="graph-head">
+            <div class="graph-title">Your trend</div>
+            <div class="tabs">
+              <button class="tab score on" data-s="score">Score</button>
+              <button class="tab recalled" data-s="recalled">Recall</button>
+              <button class="tab combo" data-s="combo">Combo</button>
+            </div>
+          </div>
+          <div style="position:relative">
+            <svg id="sv3" viewBox="0 0 320 96"></svg>
+            <div class="tip" id="tip3"></div>
+          </div>
+          <div class="ladder" id="ladder3"></div>
+        </div>
+        <div class="actions">
+          <button class="btn primary">Play again</button>
+          <button class="btn ghost">Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ── representative history: 14 recent runs (last = current) ── */
+const RUNS = [
+  {score:2100,recalled:18,combo:5,acc:74,when:'Mon'},
+  {score:1850,recalled:16,combo:4,acc:69,when:'Mon'},
+  {score:3200,recalled:25,combo:7,acc:80,when:'Tue'},
+  {score:2750,recalled:22,combo:6,acc:77,when:'Tue'},
+  {score:5100,recalled:41,combo:14,acc:93,when:'Wed'},
+  {score:3900,recalled:30,combo:9,acc:84,when:'Wed'},
+  {score:4400,recalled:34,combo:11,acc:88,when:'Thu'},
+  {score:3050,recalled:24,combo:7,acc:79,when:'Thu'},
+  {score:5600,recalled:44,combo:16,acc:95,when:'Fri'},
+  {score:4750,recalled:37,combo:12,acc:90,when:'Fri'},
+  {score:3600,recalled:28,combo:8,acc:82,when:'Sat'},
+  {score:5300,recalled:42,combo:15,acc:94,when:'Sat'},
+  {score:4100,recalled:32,combo:10,acc:86,when:'Sun'},
+  {score:4820,recalled:38,combo:12,acc:91,when:'Now'}, // current
+];
+const CUR = RUNS.length-1;
+const SERIES = {
+  score:   {key:'score',   label:'Score',   color:'var(--amber)',   hex:'#FFC23D'},
+  recalled:{key:'recalled',label:'Recalled',color:'var(--magenta)', hex:'#FF2D9B'},
+  combo:   {key:'combo',   label:'Combo',    color:'var(--lime)',    hex:'#B6FF3C', prefix:'×'},
+};
+const NS='http://www.w3.org/2000/svg';
+function el(t,a={}){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+/* Catmull-Rom → cubic bezier smooth path */
+function smooth(pts){
+  if(pts.length<2)return pts.length?`M ${pts[0].x} ${pts[0].y}`:'';
+  let d=`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6;
+    const c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;
+    d+=` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+function rankOf(key){
+  const v=RUNS[CUR][key];
+  const better=RUNS.filter((r,i)=>i!==CUR && r[key]>v).length;
+  return better+1;
+}
+function ord(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+/* layout helpers */
+function coords(key,W,H,padL,padR,padT,padB){
+  const vals=RUNS.map(r=>r[key]);
+  const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  return RUNS.map((r,i)=>({
+    x:padL + iw*(i/(RUNS.length-1)),
+    y:padT + ih*(1-(r[key]-min)/span),
+    r, i
+  }));
+}
+
+/* ════════ V1 — Trace Line ════════ */
+const v1={s:'score'};
+function drawV1(){
+  const W=320,H=150,padL=10,padR=14,padT=22,padB=20;
+  const svg=document.getElementById('sv1');svg.innerHTML='';
+  const S=SERIES[v1.s],pts=coords(v1.s,W,H,padL,padR,padT,padB);
+  // baseline grid
+  for(let g=0;g<=3;g++){const y=padT+(H-padT-padB)*g/3;
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#ffffff',['stroke-opacity']:.05}));}
+  const lp=smooth(pts);
+  // area
+  const area=lp+` L ${pts[CUR].x} ${H-padB} L ${pts[0].x} ${H-padB} Z`;
+  const gid='g1'+v1.s;
+  const defs=el('defs');const lg=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1});
+  lg.appendChild(el('stop',{offset:0,['stop-color']:S.hex,['stop-opacity']:.34}));
+  lg.appendChild(el('stop',{offset:1,['stop-color']:S.hex,['stop-opacity']:0}));
+  defs.appendChild(lg);svg.appendChild(defs);
+  svg.appendChild(el('path',{d:area,fill:`url(#${gid})`}));
+  // glow line + crisp line
+  svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:5,['stroke-opacity']:.18,['stroke-linecap']:'round',['stroke-linejoin']:'round',filter:'blur(3px)'}));
+  svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:2,['stroke-linecap']:'round',['stroke-linejoin']:'round'}));
+  // hover dots
+  pts.forEach((p,i)=>{
+    const hit=el('circle',{cx:p.x,cy:p.y,r:11,fill:'transparent',style:'cursor:pointer'});
+    const dot=el('circle',{cx:p.x,cy:p.y,r:i===CUR?4:2.4,fill:i===CUR?'#06060B':S.hex,stroke:S.hex,['stroke-width']:i===CUR?2.5:0});
+    if(i===CUR)dot.setAttribute('filter','drop-shadow(0 0 5px '+S.hex+')');
+    hit.addEventListener('mouseenter',()=>showTip('tip1','sv1',p,S,v1.s));
+    hit.addEventListener('mouseleave',()=>hideTip('tip1'));
+    svg.appendChild(dot);svg.appendChild(hit);
+  });
+  // current rank flag pinned to last node
+  const rank=rankOf(v1.s);
+  const flag=document.getElementById('flag1');
+  flag.innerHTML=`<div class="fr">${ord(rank)} best</div><div class="fl">this run</div>`;
+  positionAt(flag,'sv1',pts[CUR],-6,-46);
+}
+function showTip(tipId,svgId,p,S,key){
+  const tip=document.getElementById(tipId);
+  const pre=S.prefix||'';
+  tip.innerHTML=`<div class="tw">${p.r.when} · run ${p.i+1}</div><div class="tb" style="color:${S.hex}">${pre}${p.r[key]}</div><div class="tm">${p.r.score} pts · ×${p.r.combo} · ${p.r.acc}%</div>`;
+  positionAt(tip,svgId,p,0,0);tip.style.opacity=1;
+}
+function hideTip(id){document.getElementById(id).style.opacity=0;}
+function positionAt(node,svgId,p,dx,dy){
+  const svg=document.getElementById(svgId);const vb=svg.viewBox.baseVal;const rect=svg.getBoundingClientRect();
+  const sx=rect.width/vb.width, sy=rect.height/vb.height;
+  node.style.left=(p.x*sx+dx)+'px';
+  node.style.top=(p.y*sy+dy)+'px';
+}
+document.querySelectorAll('#p1 .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#p1 .tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');v1.s=t.dataset.s;drawV1();
+}));
+
+/* ════════ V2 — Oscilloscope (multi-trace) ════════ */
+const v2={on:{score:true,recalled:true,combo:true}};
+function drawV2(){
+  const W=320,H=156,padL=10,padR=12,padT=14,padB=18;
+  const svg=document.getElementById('sv2');svg.innerHTML='';
+  // graticule
+  for(let g=0;g<=4;g++){const y=padT+(H-padT-padB)*g/4;
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:'#28F0FF',['stroke-opacity']:.07}));}
+  for(let g=0;g<=7;g++){const x=padL+(W-padL-padR)*g/7;
+    svg.appendChild(el('line',{x1:x,y1:padT,x2:x,y2:H-padB,stroke:'#28F0FF',['stroke-opacity']:.05}));}
+  Object.keys(SERIES).forEach(k=>{
+    if(!v2.on[k])return;
+    const S=SERIES[k],pts=coords(k,W,H,padL,padR,padT,padB),lp=smooth(pts);
+    svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:5,['stroke-opacity']:.16,['stroke-linecap']:'round',['stroke-linejoin']:'round',filter:'blur(3px)'}));
+    svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:1.8,['stroke-opacity']:.92,['stroke-linecap']:'round',['stroke-linejoin']:'round'}));
+    // beam blip on current
+    const c=pts[CUR];
+    const pulse=el('circle',{cx:c.x,cy:c.y,r:3.4,fill:S.hex});
+    pulse.setAttribute('filter','drop-shadow(0 0 6px '+S.hex+')');
+    const an=el('animate',{attributeName:'r',values:'3.4;6.5;3.4',dur:'1.6s',repeatCount:'indefinite'});
+    const an2=el('animate',{attributeName:'fill-opacity',values:'1;.3;1',dur:'1.6s',repeatCount:'indefinite'});
+    pulse.appendChild(an);pulse.appendChild(an2);svg.appendChild(pulse);
+    // hit targets along the active-most series only (score if on, else first on)
+  });
+  // hover hit targets (use score positions if on, else any active)
+  const activeKey=v2.on.score?'score':(v2.on.recalled?'recalled':(v2.on.combo?'combo':null));
+  if(activeKey){
+    const pts=coords(activeKey,W,H,padL,padR,padT,padB),S=SERIES[activeKey];
+    pts.forEach((p)=>{
+      const hit=el('rect',{x:p.x-(W-padL-padR)/26,y:padT,width:(W-padL-padR)/13,height:H-padT-padB,fill:'transparent',style:'cursor:crosshair'});
+      hit.addEventListener('mouseenter',()=>showTip('tip2','sv2',p,S,activeKey));
+      hit.addEventListener('mouseleave',()=>hideTip('tip2'));
+      svg.appendChild(hit);
+    });
+  }
+}
+document.querySelectorAll('#p2 .chip').forEach(c=>{
+  // start all on
+  c.addEventListener('click',()=>{
+    const k=c.dataset.s;v2.on[k]=!v2.on[k];c.classList.toggle('off',!v2.on[k]);drawV2();
+  });
+});
+
+/* ════════ V3 — Rank Ladder ════════ */
+const v3={s:'score'};
+function drawV3(){
+  const W=320,H=96,padL=8,padR=10,padT=14,padB=14;
+  const svg=document.getElementById('sv3');svg.innerHTML='';
+  const S=SERIES[v3.s],pts=coords(v3.s,W,H,padL,padR,padT,padB);
+  const vals=RUNS.map(r=>r[v3.s]);
+  const max=Math.max(...vals),avg=vals.reduce((a,b)=>a+b,0)/vals.length,min=Math.min(...vals),span=(max-min)||1;
+  const yOf=v=>padT+(H-padT-padB)*(1-(v-min)/span);
+  // best + avg reference lines
+  const yBest=yOf(max),yAvg=yOf(avg);
+  [[yBest,'BEST',S.hex,.5],[yAvg,'AVG','#8A8AA0',.4]].forEach(([y,lab,col,op])=>{
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:col,['stroke-opacity']:op,['stroke-dasharray']:'2 3'}));
+    const t=el('text',{x:W-padR,y:y-3,['text-anchor']:'end',class:'gax'});t.textContent=lab;t.setAttribute('fill',col);t.setAttribute('fill-opacity',.7);svg.appendChild(t);
+  });
+  const lp=smooth(pts);
+  const gid='g3'+v3.s;
+  const defs=el('defs');const lg=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1});
+  lg.appendChild(el('stop',{offset:0,['stop-color']:S.hex,['stop-opacity']:.28}));
+  lg.appendChild(el('stop',{offset:1,['stop-color']:S.hex,['stop-opacity']:0}));
+  defs.appendChild(lg);svg.appendChild(defs);
+  svg.appendChild(el('path',{d:lp+` L ${pts[CUR].x} ${H-padB} L ${pts[0].x} ${H-padB} Z`,fill:`url(#${gid})`}));
+  svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:1.8,['stroke-linecap']:'round',['stroke-linejoin']:'round',['stroke-opacity']:.9}));
+  pts.forEach((p,i)=>{
+    const hit=el('circle',{cx:p.x,cy:p.y,r:10,fill:'transparent',style:'cursor:pointer'});
+    hit.addEventListener('mouseenter',()=>showTip('tip3','sv3',p,S,v3.s));
+    hit.addEventListener('mouseleave',()=>hideTip('tip3'));
+    svg.appendChild(hit);
+  });
+  const c=pts[CUR];
+  const pulse=el('circle',{cx:c.x,cy:c.y,r:4,fill:'#06060B',stroke:S.hex,['stroke-width']:2.5});
+  pulse.setAttribute('filter','drop-shadow(0 0 6px '+S.hex+')');svg.appendChild(pulse);
+  drawLadder();
+}
+function drawLadder(){
+  const key=v3.s,S=SERIES[key],pre=S.prefix||'';
+  const ranked=RUNS.map((r,i)=>({...r,i})).sort((a,b)=>b[key]-a[key]);
+  const max=ranked[0][key];
+  const top=ranked.slice(0,5);
+  const curRank=ranked.findIndex(r=>r.i===CUR)+1;
+  // ensure current run is shown even if outside top5
+  let rows=top;
+  if(curRank>5){rows=ranked.slice(0,4).concat([ranked[curRank-1]]);}
+  const box=document.getElementById('ladder3');box.innerHTML='';
+  rows.forEach((r)=>{
+    const realRank=ranked.findIndex(x=>x.i===r.i)+1;
+    const you=r.i===CUR;
+    const d=document.createElement('div');d.className='lrow'+(you?' you':'');
+    d.innerHTML=`<div class="lrank">${realRank}</div>
+      <div class="lbar"><i style="width:${Math.round(r[key]/max*100)}%"></i></div>
+      <div class="lval">${pre}${r[key]}</div>
+      ${you?'<div class="ltag">You</div>':'<div style="width:24px"></div>'}`;
+    box.appendChild(d);
+  });
+}
+document.querySelectorAll('#p3 .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#p3 .tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');v3.s=t.dataset.s;drawV3();
+}));
+
+/* init */
+function initV2chips(){document.querySelectorAll('#p2 .chip').forEach(c=>c.classList.remove('off'));}
+function renderAll(){drawV1();drawV2();drawV3();}
+initV2chips();renderAll();
+window.addEventListener('resize',()=>{drawV1();drawV2();drawV3();});
+window.addEventListener('load',renderAll);
+</script>
+</body>
+</html>
