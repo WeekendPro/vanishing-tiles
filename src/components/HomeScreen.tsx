@@ -19,21 +19,24 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 const SHOW_EXPERIMENTAL: boolean = false
 
 /** The three reveal difficulties, rendered as a segmented neon switch. Each tier
- *  owns a colour on the heat arc (green → amber → red). */
-const DIFFICULTIES: { value: Difficulty; label: string; active: string }[] = [
+ *  owns a colour on the heat arc (green → amber → red) and a one-line hint. */
+const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: string }[] = [
   {
     value: 'easy',
     label: 'Easy',
+    hint: 'Pieces revealed in their own colours',
     active: 'bg-neon-green text-arcade-bg shadow-[inset_0_0_14px_rgba(57,217,138,0.5),0_0_12px_rgba(57,217,138,0.35)]',
   },
   {
     value: 'medium',
     label: 'Medium',
+    hint: 'Reveal flashes in branded pink',
     active: 'bg-neon-yellow text-arcade-bg shadow-[inset_0_0_14px_rgba(250,204,21,0.5),0_0_12px_rgba(250,204,21,0.35)]',
   },
   {
     value: 'hard',
     label: 'Hard',
+    hint: 'Tiles painted in glossy black',
     active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
   },
 ]
@@ -61,6 +64,8 @@ export function HomeScreen() {
   const training = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
+  const activeHint = DIFFICULTIES.find(d => d.value === difficulty)?.hint
+
   return (
     <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
       <ScanlineOverlay />
@@ -85,8 +90,32 @@ export function HomeScreen() {
             </p>
           </div>
 
-          {/* Bottom-pinned cluster: difficulty + PLAY. */}
+          {/* Bottom-pinned cluster: PLAY + difficulty. */}
           <div className="w-full max-w-sm flex flex-col gap-4">
+            {/* PLAY → Infinite Stagger — same neon-outline recipe as NeonButton. */}
+            <button
+              onClick={play}
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                transition active:translate-y-px py-4 text-base flex items-center justify-center
+                border-neon-green text-neon-green hover:bg-neon-green/10 hover:shadow-neon-green"
+            >
+              Play
+            </button>
+
+            {/* Experimental Modes → slide to second pane (hidden for now). */}
+            {SHOW_EXPERIMENTAL && (
+              <button
+                onClick={() => setPane('experimental')}
+                aria-label="Experimental Modes"
+                className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                  transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
+                  border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
+              >
+                <span>Experimental Modes</span>
+                <span className="text-lg leading-none">›</span>
+              </button>
+            )}
+
             {/* Difficulty — segmented neon switch (Easy / Medium / Hard). */}
             <div>
               <p className="text-center font-display text-[10px] font-medium uppercase tracking-[0.22em] text-gray-500 mb-2">
@@ -109,31 +138,10 @@ export function HomeScreen() {
                   )
                 })}
               </div>
+              <p className="mt-2 text-center text-[11px] text-gray-500 font-display min-h-[16px]">
+                {activeHint}
+              </p>
             </div>
-
-            {/* Experimental Modes → slide to second pane (hidden for now). */}
-            {SHOW_EXPERIMENTAL && (
-              <button
-                onClick={() => setPane('experimental')}
-                aria-label="Experimental Modes"
-                className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                  transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
-                  border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
-              >
-                <span>Experimental Modes</span>
-                <span className="text-lg leading-none">›</span>
-              </button>
-            )}
-
-            {/* PLAY → Infinite Stagger — same neon-outline recipe as NeonButton. */}
-            <button
-              onClick={play}
-              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                transition active:translate-y-px py-4 text-base flex items-center justify-center
-                border-neon-green text-neon-green hover:bg-neon-green/10 hover:shadow-neon-green"
-            >
-              Play
-            </button>
           </div>
         </section>
 
