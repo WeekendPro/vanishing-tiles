@@ -1,11 +1,12 @@
-# Vanishing Shapes — Project Context
+# Vanishing Tiles — Project Context
 
-**Vanishing Shapes** is a memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
+**Vanishing Tiles** is a memory-and-speed puzzle game (a Tetris × Streets of Rage mashup). The web POC is
 complete and playable. The eventual goal is a React Native mobile app published to
-the Apple App Store. (Vanishing Shapes was formerly named "Phosphor", and before that codenamed "Gap City";
-those earlier names survive only in internal identifiers — district slugs, localStorage keys, applied
-migrations, and the `phos`-derived names in dated specs/plans. The phosphor-inspired *visual* system is
-still called **Afterglow**; the runtime design tokens were renamed `phos-*` → `vs-*`.)
+the Apple App Store. (Vanishing Tiles was formerly named "Vanishing Shapes", before that "Phosphor", and
+originally codenamed "Gap City"; those earlier names survive only in internal identifiers — district slugs,
+localStorage keys, applied migrations, and the `phos`/`vs`-derived names in dated specs/plans. The
+phosphor-inspired *visual* system is still called **Afterglow**; the runtime design tokens were renamed
+`phos-*` → `vs-*` → `vt-*`.)
 
 **Run the app:** `npm run dev` → http://localhost:5173  
 **Run tests:** `npm run test` (all must pass before any commit)  

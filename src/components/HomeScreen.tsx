@@ -83,7 +83,7 @@ export function HomeScreen() {
           <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
             {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
             <VanishingMotif className="mb-5" />
-            {/* VANISHING / SHAPES stacked, glowing */}
+            {/* VANISHING / TILES stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
               A memory game

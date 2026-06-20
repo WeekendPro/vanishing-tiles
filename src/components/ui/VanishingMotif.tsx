@@ -1,7 +1,7 @@
 /**
  * The signature brand motif: a 4×4 mini-board where two tetromino-shaped clusters
  * bloom magenta and then VANISH on staggered, out-of-phase timers — the name
- * demonstrating itself. Pure CSS (`vs-vanish` keyframe in index.css); no game
+ * demonstrating itself. Pure CSS (`vt-vanish` keyframe in index.css); no game
  * state. Used as the hero above the wordmark on the Auth + Home screens.
  *
  * Each entry is a lit cell's `animation-delay` in seconds (so the two clusters
@@ -20,7 +20,7 @@ export function VanishingMotif({ className = '' }: { className?: string }) {
       {VANISH_CELLS.map((delay, i) => (
         <span
           key={i}
-          className={`w-4 h-4 rounded-[3px] ${delay === null ? 'bg-vs-raised' : 'vs-vanish'}`}
+          className={`w-4 h-4 rounded-[3px] ${delay === null ? 'bg-vt-raised' : 'vt-vanish'}`}
           style={delay === null ? undefined : { animationDelay: `${delay}s` }}
         />
       ))}

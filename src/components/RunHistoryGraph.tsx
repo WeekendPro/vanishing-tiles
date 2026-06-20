@@ -464,7 +464,7 @@ export function RunHistoryGraph({ records, currentId, recentCount = 14 }: RunHis
   }
 
   return (
-    <div className="font-grotesk text-vs-text">
+    <div className="font-grotesk text-vt-text">
       {/* Series tabs */}
       <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
         {METRICS.map((m) => {

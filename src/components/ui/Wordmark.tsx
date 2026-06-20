@@ -2,7 +2,7 @@ interface WordmarkProps {
   size?: 'sm' | 'lg'
   as?: 'h1' | 'h2'
   /**
-   * Hero treatment: stack the two words ("Vanishing" over "Shapes") on two
+   * Hero treatment: stack the two words ("Vanishing" over "Tiles") on two
    * lines, the way the auth + home heroes present the wordmark. When false the
    * name renders inline on a single line.
    */
@@ -26,7 +26,7 @@ export function Wordmark({ size = 'sm', as: Tag = 'h1', stacked = false, classNa
         .filter(Boolean)
         .join(' ')}
     >
-      {stacked ? <>Vanishing<br />Shapes</> : 'Vanishing Shapes'}
+      {stacked ? <>Vanishing<br />Tiles</> : 'Vanishing Tiles'}
     </Tag>
   )
 }

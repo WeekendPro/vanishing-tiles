@@ -281,7 +281,7 @@ export function MentalMapBrain({ themes, onSelect }: JourneyMapProps) {
           className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-3 py-2"
           style={{ background: 'linear-gradient(to bottom,#04050c,transparent)' }}
         >
-          <span className="font-pixel font-bold tracking-[0.05em] text-[10px] text-white text-glow-cyan">VANISHING SHAPES</span>
+          <span className="font-pixel font-bold tracking-[0.05em] text-[10px] text-white text-glow-cyan">VANISHING TILES</span>
           <span className="font-pixel text-[9px] text-yellow-400" style={{ color: STAR }}>
             ★ {totalStars}
           </span>

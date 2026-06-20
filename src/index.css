@@ -106,41 +106,41 @@
   .map-next, .map-progress { animation: none; }
 }
 
-/* ── Afterglow (Vanishing Shapes) primitives ──────────────────────────────────────
-   The Vanishing Shapes look: two-layer glow, the gap "bloom" (light → hold → decay →
+/* ── Afterglow (Vanishing Tiles) primitives ──────────────────────────────────────
+   The Vanishing Tiles look: two-layer glow, the gap "bloom" (light → hold → decay →
    re-seal into the surface), the lights-out recall tone, and easing tokens.
    Additive — existing arcade utilities above are untouched. */
 :root {
-  --vs-attack: cubic-bezier(0.1, 0.9, 0.2, 1);
-  --vs-decay: cubic-bezier(0.3, 0, 0.1, 1);
-  --vs-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
+  --vt-attack: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --vt-decay: cubic-bezier(0.3, 0, 0.1, 1);
+  --vt-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
 }
 
 /* Screen ground: void + corner vignette so lit UI floats. */
-.vs-vignette {
+.vt-vignette {
   background: radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), #06060b;
 }
 
 /* Two-layer glow boxes (tight core + soft halo) per accent. */
-.vs-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }
-.vs-glow-magenta { box-shadow: 0 0 6px #ff2d9b, 0 0 22px rgba(255, 45, 155, 0.45); }
-.vs-glow-lime { box-shadow: 0 0 6px #b6ff3c, 0 0 22px rgba(182, 255, 60, 0.45); }
-.vs-glow-amber { box-shadow: 0 0 6px #ffc23d, 0 0 22px rgba(255, 194, 61, 0.45); }
-.vs-glow-red { box-shadow: 0 0 6px #ff3b47, 0 0 22px rgba(255, 59, 71, 0.45); }
+.vt-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }
+.vt-glow-magenta { box-shadow: 0 0 6px #ff2d9b, 0 0 22px rgba(255, 45, 155, 0.45); }
+.vt-glow-lime { box-shadow: 0 0 6px #b6ff3c, 0 0 22px rgba(182, 255, 60, 0.45); }
+.vt-glow-amber { box-shadow: 0 0 6px #ffc23d, 0 0 22px rgba(255, 194, 61, 0.45); }
+.vt-glow-red { box-shadow: 0 0 6px #ff3b47, 0 0 22px rgba(255, 59, 71, 0.45); }
 
 /* Text halos (numerals / labels only — never body copy). */
-.text-glow-vs-cyan { text-shadow: 0 0 10px rgba(40, 240, 255, 0.5); }
-.text-glow-vs-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
-.text-glow-vs-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
-.text-glow-vs-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
-.text-glow-vs-lime { text-shadow: 0 0 10px rgba(182, 255, 60, 0.5); }
+.text-glow-vt-cyan { text-shadow: 0 0 10px rgba(40, 240, 255, 0.5); }
+.text-glow-vt-magenta { text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
+.text-glow-vt-amber { text-shadow: 0 0 10px rgba(255, 194, 61, 0.5); }
+.text-glow-vt-red { text-shadow: 0 0 12px rgba(255, 59, 71, 0.4); }
+.text-glow-vt-lime { text-shadow: 0 0 10px rgba(182, 255, 60, 0.5); }
 
 /* Recall "lights-out" cell tone — every cell renders this at recall so gaps
    leave no readable hole (the uniformity rule). */
-.vs-dim { background: #0c0c14; box-shadow: none; }
+.vt-dim { background: #0c0c14; box-shadow: none; }
 
 /* A filled-surface cell (graphite, inert). */
-.vs-filled {
+.vt-filled {
   background: linear-gradient(160deg, #3a3e4f, #2a2d3a);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.33);
 }
@@ -150,7 +150,7 @@
    void — a light that burns bright and dies into nothingness, leaving no hole.
    Applied per cell; each cell of a tetromino sets its OWN duration + delay
    inline so the shape fades away in a WAVE rather than in lockstep. */
-@keyframes vsBloom {
+@keyframes vtBloom {
   0% {
     background: #0c0c14;
     box-shadow: none;
@@ -185,25 +185,25 @@
    wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback.
    The flood color is driven by --bloom-color (set per gap to its piece color so
    the reveal carries shape AND color); it falls back to the signature magenta. */
-.vs-bloom { animation: vsBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
+.vt-bloom { animation: vtBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .vs-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
+  .vt-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
    appears, then the light dissipates — blurring and swelling outward as it fades
    to full-zero visibility, just before the next number takes its place. Duration
    is kept in lockstep with the per-beat timer in StaggerCountdown. */
-@keyframes vsNumDecay {
+@keyframes vtNumDecay {
   0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40, 240, 255, 0); }
   9%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
   100% { opacity: 0; transform: scale(1.22); filter: blur(7px); text-shadow: 0 0 50px rgba(40, 240, 255, 0.4); }
 }
-.vs-num-decay { animation: vsNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+.vt-num-decay { animation: vtNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .vs-num-decay { animation: none; opacity: 1; }
+  .vt-num-decay { animation: none; opacity: 1; }
 }
 
 /* Timer bar under-25% red pulse (≤3Hz — flash-hazard safe). */
@@ -226,50 +226,50 @@
    with a little flutter at the peak. Each magenta cell sets its OWN duration +
    delay inline, so the trio never pulses in lockstep — reads as organic, not
    mechanical. */
-@keyframes vsFlicker {
+@keyframes vtFlicker {
   0%, 70%, 100% { opacity: 0.2; }
   10%           { opacity: 1; }
   16%           { opacity: 0.5; }
   23%           { opacity: 0.92; }
   40%           { opacity: 0.32; }
 }
-.vs-flicker {
-  animation-name: vsFlicker;
+.vt-flicker {
+  animation-name: vtFlicker;
   animation-iteration-count: infinite;
   animation-timing-function: ease-in-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vs-flicker { animation: none; opacity: 0.55; }
+  .vt-flicker { animation: none; opacity: 0.55; }
 }
 
 /* Game-over tagline "Memory Fades": lingers a beat, then decays to nothing —
    the words literally fade away (and blur out) like the memory they name. */
-@keyframes vsFadeAway {
+@keyframes vtFadeAway {
   0%   { opacity: 1; filter: blur(0); }
   28%  { opacity: 1; filter: blur(0); }
   100% { opacity: 0; filter: blur(5px); }
 }
-.vs-fade-away { animation: vsFadeAway 4.2s ease-in forwards; }
+.vt-fade-away { animation: vtFadeAway 4.2s ease-in forwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .vs-fade-away { animation: none; opacity: 0.85; }
+  .vt-fade-away { animation: none; opacity: 0.85; }
 }
 
 /* Brand motif: a gap cell BLOOMS magenta, holds, then decays on the tail back to
    the raised surface — it vanishes. Lit cells form tetromino clusters that bloom
    out of phase (per-cell animation-delay), so the title shows the game before you
    read a word. Pure decoration (VanishingMotif); no game state. */
-@keyframes vsVanish {
+@keyframes vtVanish {
   0%       { background: #15151F; box-shadow: none; }
   10%      { background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B, 0 0 18px rgba(255, 45, 155, 0.53); }
   34%      { background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B, 0 0 18px rgba(255, 45, 155, 0.53); }
   62%      { background: #3A1B2E; box-shadow: 0 0 2px rgba(255, 45, 155, 0.19); }
   80%, 100%{ background: #15151F; box-shadow: none; }
 }
-.vs-vanish { animation: vsVanish 5s ease-in-out infinite; }
+.vt-vanish { animation: vtVanish 5s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   /* Hold the clusters lit (static) so the brand shape still reads, without motion. */
-  .vs-vanish { animation: none; background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B; }
+  .vt-vanish { animation: none; background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B; }
 }

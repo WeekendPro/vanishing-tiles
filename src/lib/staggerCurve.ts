@@ -11,7 +11,7 @@ export const STAGGER = {
   // Reveal timing is CONSTANT for every batch — we deliberately do NOT speed the
   // reveal/decay up as the run escalates (complexity comes from other levers).
   // Each piece: flash all cells at once → hold bright → decay to nothing in a
-  // per-cell wave. The bloom keyframe (vsBloom) encodes the flash/hold/decay
+  // per-cell wave. The bloom keyframe (vtBloom) encodes the flash/hold/decay
   // split; these drive the JS pacing and the wave spread.
   REVEAL_BLOOM_MS: 2080, // total visible time for one piece (flash + ~1s hold + ~1s decay)
   REVEAL_STEP_MS: 1120,  // time between consecutive piece flashes (overlapping: next flashes as prev starts to decay)

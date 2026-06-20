@@ -84,9 +84,9 @@ function useCountUp(value: number, durationMs = 600): number {
 }
 
 // ── Board ─────────────────────────────────────────────────────────────────────
-// The Vanishing Shapes board is the dark VOID throughout (.vs-dim) — gaps are concealed
+// The Vanishing Tiles board is the dark VOID throughout (.vt-dim) — gaps are concealed
 // within one uniform near-black field, never a readable hole. A gap is only ever
-// exposed by a live BLOOM: the whole tetromino's cells get .vs-bloom at the same
+// exposed by a live BLOOM: the whole tetromino's cells get .vt-bloom at the same
 // tick, flood the gap's PIECE COLOR (--bloom-color; an experiment to ease the
 // difficulty curve by carrying shape + color), then decay along a luminous ghost
 // tail back to the void — fading away in a WAVE (each cell sets its own duration +
@@ -131,12 +131,12 @@ function StaggerBoard({
           return (
             <div
               key={`${i}-bloom-${bloom.id}`}
-              className="w-7 h-7 rounded-sm vs-bloom"
+              className="w-7 h-7 rounded-sm vt-bloom"
               style={{ animationDuration: `${bloom.durMs}ms`, ['--bloom-color']: bloom.color } as CSSProperties}
             />
           )
         }
-        return <div key={i} className="w-7 h-7 rounded-sm vs-dim" />
+        return <div key={i} className="w-7 h-7 rounded-sm vt-dim" />
       })}
     </div>
   )
@@ -145,7 +145,7 @@ function StaggerBoard({
 // ── Countdown ───────────────────────────────────────────────────────────────
 // Each number burns bright the instant it appears, then dissipates (Afterglow
 // Smear: blurs + swells + fades to nothing) over the beat, just as the next
-// number takes its place. The CSS animation length (.vs-num-decay, 850ms) is
+// number takes its place. The CSS animation length (.vt-num-decay, 850ms) is
 // kept in lockstep with BEAT_MS.
 const BEAT_MS = 850
 function StaggerCountdown({ onDone }: { onDone: () => void }) {
@@ -163,7 +163,7 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
       {count > 0 && (
         <span
           key={count}
-          className="absolute vs-num-decay font-silk font-black leading-none text-vs-cyan text-[6rem]"
+          className="absolute vt-num-decay font-silk font-black leading-none text-vt-cyan text-[6rem]"
         >
           {count}
         </span>
@@ -175,10 +175,10 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
 // ── Piece tray ────────────────────────────────────────────────────────────────
 function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disabled: boolean }) {
   return (
-    <div className="w-full max-w-sm rounded-xl p-3 bg-vs-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+    <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
-        <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vs-cyan text-glow-vs-cyan">Pieces</span>
-        <span className="text-[10px] text-vs-dim tracking-[0.04em]">tap to place from memory</span>
+        <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Pieces</span>
+        <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {PIECE_DEFINITIONS.map(def => (
@@ -187,9 +187,9 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
             data-piece-option={def.type}
             disabled={disabled}
             onClick={() => onPick(def.type as PieceType)}
-            className="flex items-center justify-center h-12 p-1 rounded-md border bg-vs-raised
-              border-vs-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
-              hover:border-vs-cyan hover:shadow-vs-cyan cursor-pointer transition
+            className="flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised
+              border-vt-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
+              hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
               disabled:opacity-40 disabled:pointer-events-none"
           >
             <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
@@ -259,7 +259,7 @@ export function StaggerScreen() {
   const comboId = useRef(0)
 
   // Combo chip lifecycle: a fresh streak step pops the chip in and holds it for
-  // COMBO_HOLD_MS, then it fades out in our signature fade style (vs-fade-away:
+  // COMBO_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
   // hold → opacity/blur to nothing) and unmounts. Each new step re-arms the hold,
   // so the chip lingers a beat after the last correct pick. A broken streak
   // (currentCombo < 3) clears it immediately — the streak shattered.
@@ -304,10 +304,10 @@ export function StaggerScreen() {
   }, [phase])
 
   // Reveal driver (shape-bloom): bloom each gap as a WHOLE tetromino — all its
-  // cells get .vs-bloom at the same tick, flood magenta, then decay along a
+  // cells get .vt-bloom at the same tick, flood magenta, then decay along a
   // ghost tail back to the void (fading away in a per-cell wave). Decays cascade
   // (the next shape blooms before the last finishes dying), draining the bar one
-  // step per gap as a COUNT, then hand off to selecting. Because .vs-bloom
+  // step per gap as a COUNT, then hand off to selecting. Because .vt-bloom
   // forwards-fills back to the void, past gaps leave no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
@@ -434,8 +434,8 @@ export function StaggerScreen() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center vs-vignette select-none">
-        <NeonButton variant="primary" onClick={startRun}>Start Staggered Vanishing Shapes</NeonButton>
+      <div className="min-h-screen flex flex-col items-center justify-center vt-vignette select-none">
+        <NeonButton variant="primary" onClick={startRun}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
   }
@@ -457,28 +457,28 @@ export function StaggerScreen() {
   // label only heat to red in the final quarter of the recall clock.
   const barLow = barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < 0.25
   const barClass =
-    barColor === 'magenta' ? 'bg-vs-magenta shadow-vs-magenta' :
-    barColor === 'lime' ? 'bg-vs-lime shadow-vs-lime' :
-    barLow ? 'bg-vs-red shadow-vs-red animate-[redpulse_0.5s_cubic-bezier(0.7,0,0.3,1)_infinite]' :
-    'bg-vs-amber shadow-vs-amber'
+    barColor === 'magenta' ? 'bg-vt-magenta shadow-vt-magenta' :
+    barColor === 'lime' ? 'bg-vt-lime shadow-vt-lime' :
+    barLow ? 'bg-vt-red shadow-vt-red animate-[redpulse_0.5s_cubic-bezier(0.7,0,0.3,1)_infinite]' :
+    'bg-vt-amber shadow-vt-amber'
 
   // Phase label color tracks the bar's temperature (magenta → amber → red → lime).
   const phaseLabelClass =
-    phase === 'reveal' ? 'text-vs-magenta text-glow-vs-magenta' :
-    cleared ? 'text-vs-lime text-glow-vs-lime' :
-    barLow ? 'text-vs-red text-glow-vs-red' :
-    phase === 'selecting' ? 'text-vs-amber text-glow-vs-amber' :
-    'text-vs-dim'
+    phase === 'reveal' ? 'text-vt-magenta text-glow-vt-magenta' :
+    cleared ? 'text-vt-lime text-glow-vt-lime' :
+    barLow ? 'text-vt-red text-glow-vt-red' :
+    phase === 'selecting' ? 'text-vt-amber text-glow-vt-amber' :
+    'text-vt-dim'
 
   // Countdown subtitle: the selected tier on the heat arc (green/amber/red).
   const modeLabel = `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)} Mode`
   const modeColor =
-    difficulty === 'easy' ? 'text-vs-lime text-glow-vs-lime' :
-    difficulty === 'hard' ? 'text-vs-red text-glow-vs-red' :
-    'text-vs-amber text-glow-vs-amber'
+    difficulty === 'easy' ? 'text-vt-lime text-glow-vt-lime' :
+    difficulty === 'hard' ? 'text-vt-red text-glow-vt-red' :
+    'text-vt-amber text-glow-vt-amber'
 
   return (
-    <div className="min-h-screen flex flex-col items-center vs-vignette text-vs-text px-4 pt-12 pb-8 select-none">
+    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
@@ -486,14 +486,14 @@ export function StaggerScreen() {
             {/* Phase count sits ABOVE the score; the score is the loudest text on
                 screen and stands on its own — no label. */}
             <div>
-              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vs-cyan">Phase {batchIndex + 1}</div>
-              <div className="font-silk font-bold text-3xl text-vs-cyan text-glow-vs-cyan leading-none tabular-nums">{displayScore}</div>
+              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">Phase {batchIndex + 1}</div>
+              <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
-              <div className="mt-1.5 font-grotesk font-semibold text-sm text-vs-text tabular-nums">
+              <div className="mt-1.5 font-grotesk font-semibold text-sm text-vt-text tabular-nums">
                 {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-                <span className="font-grotesk text-[10px] text-vs-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
+                <span className="font-grotesk text-[10px] text-vt-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
               </div>
             </div>
           </div>
@@ -516,7 +516,7 @@ export function StaggerScreen() {
             {comboChip && (
               <span
                 key={comboChip.fading ? `fade-${comboChip.value}` : comboChip.value}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vs-lime text-glow-vs-lime whitespace-nowrap ${comboChip.fading ? 'vs-fade-away' : 'combo-pop'}`}
+                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${comboChip.fading ? 'vt-fade-away' : 'combo-pop'}`}
                 style={comboChip.fading ? { animationDuration: `${COMBO_FADE_MS}ms` } : undefined}
               >
                 COMBO ×{comboChip.value}
@@ -568,7 +568,7 @@ export function StaggerScreen() {
               className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
             >
               <span className="relative flex items-center justify-center">
-                <span className="text-7xl leading-none text-vs-red text-glow-vs-red">♥</span>
+                <span className="text-7xl leading-none text-vt-red text-glow-vt-red">♥</span>
                 <span
                   className="absolute -translate-y-[3px] font-silk font-bold text-lg text-white"
                   style={{ textShadow: FLOAT_TEXT_SHADOW }}
@@ -581,9 +581,9 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'countdown' && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vs-void pointer-events-none">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vt-void pointer-events-none">
             <div className="flex flex-col items-center gap-1 mb-2">
-              <div className="font-silk text-base text-vs-cyan text-glow-vs-cyan uppercase tracking-[0.12em]">Vanishing Shapes</div>
+              <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.12em]">Vanishing Tiles</div>
               <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] ${modeColor}`}>{modeLabel}</div>
             </div>
             <StaggerCountdown onDone={beginReveal} />
@@ -604,28 +604,28 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'gameOver' && (
-          <div className="fixed inset-0 z-40 flex flex-col items-center bg-vs-void overflow-y-auto px-6 py-10">
+          <div className="fixed inset-0 z-40 flex flex-col items-center bg-vt-void overflow-y-auto px-6 py-10">
             <ScanlineOverlay />
-            <div className="font-silk text-base text-vs-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vs-magenta text-glow-vs-magenta mb-5 vs-fade-away">Memory Fades</div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vs-dim">Final score</div>
-            <div className="font-silk font-bold text-4xl text-vs-amber text-glow-vs-amber mb-6 tabular-nums">{score}</div>
+            <div className="font-silk text-base text-vt-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-magenta text-glow-vt-magenta mb-5 vt-fade-away">Memory Fades</div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Final score</div>
+            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-6 tabular-nums">{score}</div>
 
             {/* Run-stats trio — items recalled / best combo / accuracy. */}
             <div className="flex w-full max-w-[300px] border-y border-white/10 mb-6">
               <div className="flex-1 text-center py-3.5">
-                <div className="font-silk font-bold text-base text-vs-magenta text-glow-vs-magenta tabular-nums">{shapesRecalled}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vs-faint mt-1.5">Items recalled</div>
+                <div className="font-silk font-bold text-base text-vt-magenta text-glow-vt-magenta tabular-nums">{shapesRecalled}</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Items recalled</div>
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk font-bold text-base text-vs-lime text-glow-vs-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vs-faint mt-1.5">Best combo</div>
+                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best combo</div>
               </div>
               <div className="flex-1 text-center py-3.5">
-                <div className="font-silk font-bold text-base text-vs-cyan text-glow-vs-cyan tabular-nums">
+                <div className="font-silk font-bold text-base text-vt-cyan text-glow-vt-cyan tabular-nums">
                   {totalPicks === 0 ? 0 : Math.round((correctPicks / totalPicks) * 100)}%
                 </div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vs-faint mt-1.5">Accuracy</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Accuracy</div>
               </div>
             </div>
 
@@ -657,8 +657,8 @@ export function StaggerScreen() {
             aria-label="Pause"
             disabled={cleared}
             onClick={() => pause()}
-            className="w-full flex items-center justify-center gap-2 rounded-md border-2 bg-vs-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
-              border-vs-cyan text-vs-cyan hover:bg-vs-cyan/10 hover:shadow-vs-cyan
+            className="w-full flex items-center justify-center gap-2 rounded-md border-2 bg-vt-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
+              border-vt-cyan text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
               transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="flex gap-[3px]">
@@ -674,9 +674,9 @@ export function StaggerScreen() {
           frozen; resume picks the clock back up, exit bails to the landing page. */}
       {paused && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8
-          bg-vs-void text-vs-text px-6">
+          bg-vt-void text-vt-text px-6">
           <ScanlineOverlay />
-          <div className="font-silk text-lg text-vs-cyan text-glow-vs-cyan uppercase tracking-[0.2em]">Paused</div>
+          <div className="font-silk text-lg text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.2em]">Paused</div>
           <div className="flex flex-col gap-3 w-52">
             <NeonButton variant="primary" fullWidth onClick={() => resume()}>Resume</NeonButton>
             <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>

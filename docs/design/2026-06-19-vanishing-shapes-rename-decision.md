@@ -1,11 +1,15 @@
-# Naming Decision — Phosphor → Vanishing Shapes
+# Naming Decision — Phosphor → Vanishing Shapes → Vanishing Tiles
 
-**Date:** 2026-06-19
-**Status:** Decided and shipped (runtime + living docs renamed; see commit on
-`claude/game-title-brainstorm-eccbbe`).
+**Date:** 2026-06-19 (Phosphor → Vanishing Shapes) · updated 2026-06-20 (→ Vanishing Tiles)
+**Status:** Decided and shipped (runtime + living docs renamed on `main`).
 **Companion docs:** [`phosphor-brand.md`](./phosphor-brand.md) (brand bible — now titled
-*Vanishing Shapes*) · [`phosphor-design-system.md`](./phosphor-design-system.md) (Afterglow
+*Vanishing Tiles*) · [`phosphor-design-system.md`](./phosphor-design-system.md) (Afterglow
 visual system, unchanged).
+
+> **This doc records a chain of renames.** The body below explains the Phosphor → Vanishing
+> Shapes decision; the **Update (2026-06-20)** section right after the TL;DR covers the
+> refinement to **Vanishing Tiles**. Vanishing Shapes was a real, shipped decision, so its
+> rationale is kept intact rather than rewritten.
 
 ---
 
@@ -19,6 +23,29 @@ before reading a word. The **Afterglow** visual system (which is genuinely phosp
 is kept as-is; only the product *name* changed.
 
 This is the third name in the project's history: **Gap City → Phosphor → Vanishing Shapes.**
+(Since refined once more — see the Update below — making **Vanishing Tiles** the fourth.)
+
+---
+
+## Update — 2026-06-20: Vanishing Shapes → Vanishing Tiles
+
+Vanishing Shapes shipped, but the word *Shapes* didn't land as hoped in practice. We swapped
+the noun to **Tiles**, keeping everything else about the decision intact:
+
+- **Same rationale, sharper execution.** The goal is unchanged — name the player's experience
+  with maximum legibility. *Tiles* is simply a more **app-native** word than *Shapes*: it reads
+  instantly as "a phone puzzle game" because the whole tile / match / mahjong / 2048 category
+  has trained players to expect it.
+- **Small trade-off, eyes open.** The gaps are technically multi-cell **tetromino** shapes, and
+  *tile* can imply a single square. In practice a newcomer reads "tile" as "game piece" and
+  doesn't over-think it — the gain in familiarity outweighs the literal imprecision.
+- **Scope:** a further sweep identical in shape to the first — all user-facing strings plus the
+  internal design tokens, which moved `vs-*` → `vt-*` (Vanishing **S**hapes → Vanishing
+  **T**iles). The font and the Afterglow visual system were untouched; only text and token
+  names changed.
+
+Everything in the sections below still applies — it's the same memorize-then-refill game with
+the same Afterglow look. Only the noun in the title moved one notch toward clarity.
 
 ---
 
