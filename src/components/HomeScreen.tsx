@@ -19,24 +19,21 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 const SHOW_EXPERIMENTAL: boolean = false
 
 /** The three reveal difficulties, rendered as a segmented neon switch. Each tier
- *  owns a colour on the heat arc (green → amber → red) and a one-line hint. */
-const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: string }[] = [
+ *  owns a colour on the heat arc (green → amber → red). */
+const DIFFICULTIES: { value: Difficulty; label: string; active: string }[] = [
   {
     value: 'easy',
     label: 'Easy',
-    hint: 'Pieces revealed in their own colours',
     active: 'bg-neon-green text-arcade-bg shadow-[inset_0_0_14px_rgba(57,217,138,0.5),0_0_12px_rgba(57,217,138,0.35)]',
   },
   {
     value: 'medium',
     label: 'Medium',
-    hint: 'Reveal flashes in branded pink',
     active: 'bg-neon-yellow text-arcade-bg shadow-[inset_0_0_14px_rgba(250,204,21,0.5),0_0_12px_rgba(250,204,21,0.35)]',
   },
   {
     value: 'hard',
     label: 'Hard',
-    hint: 'Tiles painted in glossy black',
     active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
   },
 ]
@@ -63,8 +60,6 @@ export function HomeScreen() {
   const play = () => { startStagger(); goStagger() }
   const training = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
-
-  const activeHint = DIFFICULTIES.find(d => d.value === difficulty)?.hint
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
@@ -138,9 +133,6 @@ export function HomeScreen() {
                   )
                 })}
               </div>
-              <p className="mt-2 text-center text-[11px] text-gray-500 font-display min-h-[16px]">
-                {activeHint}
-              </p>
             </div>
           </div>
         </section>
