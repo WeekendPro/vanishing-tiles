@@ -28,7 +28,20 @@ let seq = 0
 function load(): RunRecord[] {
   try {
     const raw = localStorage.getItem(RUN_HISTORY_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as RunRecord[]) : []
+    if (!raw) return []
+    const records = JSON.parse(raw) as RunRecord[]
+    // Seed seq above the highest counter already persisted so ids never
+    // collide after a page reload (each id has the form "<playedAt>-<counter>").
+    let maxCounter = -1
+    for (const r of records) {
+      const lastDash = r.id.lastIndexOf('-')
+      if (lastDash !== -1) {
+        const n = parseInt(r.id.slice(lastDash + 1), 10)
+        if (!isNaN(n) && n > maxCounter) maxCounter = n
+      }
+    }
+    if (maxCounter >= seq) seq = maxCounter + 1
+    return records
   } catch {
     return []
   }

@@ -4,6 +4,7 @@ import {
   RUN_HISTORY_STORAGE_KEY,
   MAX_RUN_HISTORY,
   type RunStats,
+  type RunRecord,
 } from '../../src/store/runHistoryStore'
 
 const sampleStats: RunStats = {
@@ -86,6 +87,31 @@ describe('runHistoryStore', () => {
 
     expect(useRunHistoryStore.getState().records).toEqual([])
     expect(localStorage.getItem(RUN_HISTORY_STORAGE_KEY)).toBeNull()
+  })
+
+  it('seq is seeded above persisted ids after a fresh module load: no id collision', async () => {
+    // Pre-populate localStorage with a record whose id counter suffix is 7.
+    const highCounterRecord: RunRecord = {
+      id: `1700000000000-7`,
+      score: 100,
+      recalled: 5,
+      combo: 2,
+      accuracy: 70,
+      playedAt: 1700000000000,
+    }
+    localStorage.setItem(RUN_HISTORY_STORAGE_KEY, JSON.stringify([highCounterRecord]))
+
+    // Re-import the module fresh so load() runs again and seeds seq.
+    vi.resetModules()
+    const { useRunHistoryStore: freshStore } = await import('../../src/store/runHistoryStore')
+
+    const rec = freshStore.getState().recordRun(sampleStats)
+
+    // The new id's counter must be strictly greater than 7 to avoid collision.
+    const lastDash = rec.id.lastIndexOf('-')
+    const counter = parseInt(rec.id.slice(lastDash + 1), 10)
+    expect(counter).toBeGreaterThan(7)
+    expect(rec.id).not.toBe(highCounterRecord.id)
   })
 
   it('tolerates unavailable storage: recordRun still returns a record and updates in-memory state', () => {

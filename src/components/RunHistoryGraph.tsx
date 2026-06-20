@@ -66,11 +66,15 @@ function Sparkline({ window: win, allRecords, metric, currentId, selectedIdx, on
   const span = (max - min) || 1
   const yOf = (v: number) => PAD_T + ih * (1 - (v - min) / span)
 
-  const pts: (Point & { record: RunRecord; idx: number })[] = win.map((r, i) => ({
+  const pts: (Point & { record: RunRecord; idx: number; trueRunNumber: number })[] = win.map((r, i) => ({
     x: PAD_L + iw * (win.length > 1 ? i / (win.length - 1) : 0.5),
     y: yOf(r[metric.key]),
     record: r,
     idx: i,
+    // True 1-based position within the full records array.
+    // The window is the last win.length records chronologically, so window
+    // index i maps to overall index (allRecords.length - win.length + i).
+    trueRunNumber: allRecords.length - win.length + i + 1,
   }))
 
   const curIdx = win.findIndex(r => r.id === currentId)
@@ -316,7 +320,7 @@ function RankChip({ pt, metric, rank, svgWidth, svgHeight }: RankChipProps) {
 
 // ── Inspect card ──────────────────────────────────────────────────────────────
 interface InspectCardProps {
-  pt: Point & { record: RunRecord; idx: number }
+  pt: Point & { record: RunRecord; idx: number; trueRunNumber: number }
   metric: MetricDef
   svgWidth: number
   svgHeight: number
@@ -347,7 +351,7 @@ function InspectCard({ pt, metric, svgWidth, svgHeight }: InspectCardProps) {
       }}
     >
       <div style={{ fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#4A4A5C' }}>
-        {when} · run {pt.idx + 1}
+        {when} · run {pt.trueRunNumber}
       </div>
       <div style={{
         fontSize: '15px', fontWeight: 700, fontVariantNumeric: 'tabular-nums',

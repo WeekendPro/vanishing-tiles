@@ -92,13 +92,15 @@ describe('RunHistoryGraph', () => {
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
   })
 
-  it('inspect card label includes "· run N" (window index, 1-based)', () => {
+  it('inspect card label includes "· run N" using true historical run number (not window index)', () => {
     const records = makeSampleRecords()
     const { container } = render(<RunHistoryGraph records={records} currentId="r7" />)
 
     // Stub getBoundingClientRect so SVG overlay click resolves to a valid index.
     // With left=0 and width=320 the SVG x = clientX * (320/320) = clientX.
-    // Clicking at clientX=8 (PAD_L) → idx=0, which is run 1 in the window.
+    // Clicking at clientX=8 (PAD_L) → idx=0.
+    // records has 7 entries, recentCount defaults to 14, so win = all 7 records.
+    // True run number for window index 0 = 7 - 7 + 0 + 1 = 1.
     const svg = container.querySelector('svg')!
     vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue(
       { left: 0, top: 0, right: 320, bottom: 116, width: 320, height: 116, x: 0, y: 0, toJSON: () => ({}) } as DOMRect
@@ -110,5 +112,28 @@ describe('RunHistoryGraph', () => {
 
     // The inspect card time label should contain "· run 1"
     expect(screen.getByText(/·\s*run\s*1/i)).toBeInTheDocument()
+  })
+
+  it('inspect card shows true run number when history exceeds recentCount', () => {
+    // Build 16 records; with recentCount=14, window = last 14 (records[2]..records[15]).
+    // Clicking the leftmost point (window idx=0) should show "run 3" (overall position 3),
+    // not "run 1" (window index 0 + 1).
+    const base = Date.now() - 1000 * 60 * 60 * 24
+    const records: ReturnType<typeof makeRun>[] = Array.from({ length: 16 }, (_, i) =>
+      makeRun({ id: `r${i + 1}`, score: 1000 + i * 10, playedAt: base + i * 1000 })
+    )
+    const { container } = render(<RunHistoryGraph records={records} currentId="r16" recentCount={14} />)
+
+    const svg = container.querySelector('svg')!
+    vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue(
+      { left: 0, top: 0, right: 320, bottom: 116, width: 320, height: 116, x: 0, y: 0, toJSON: () => ({}) } as DOMRect
+    )
+
+    const overlay = container.querySelector('svg rect[fill="transparent"]')
+    expect(overlay).toBeTruthy()
+    // Click leftmost point → window idx=0 → true run = 16 - 14 + 0 + 1 = 3
+    fireEvent.click(overlay!, { clientX: 8, clientY: 0 })
+
+    expect(screen.getByText(/·\s*run\s*3/i)).toBeInTheDocument()
   })
 })
