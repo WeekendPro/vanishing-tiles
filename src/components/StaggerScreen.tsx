@@ -604,7 +604,7 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'gameOver' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-vs-void/90 rounded-xl px-6 pointer-events-none">
+          <div className="fixed inset-0 z-40 flex flex-col items-center bg-vs-void overflow-y-auto px-6 py-10">
             <ScanlineOverlay />
             <div className="font-silk text-base text-vs-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
             <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vs-magenta text-glow-vs-magenta mb-5 vs-fade-away">Memory Fades</div>
