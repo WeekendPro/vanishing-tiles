@@ -450,6 +450,13 @@ export function StaggerScreen() {
     phase === 'selecting' ? 'text-vs-amber text-glow-vs-amber' :
     'text-vs-dim'
 
+  // Countdown subtitle: the selected tier on the heat arc (green/amber/red).
+  const modeLabel = `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)} Mode`
+  const modeColor =
+    difficulty === 'easy' ? 'text-vs-lime text-glow-vs-lime' :
+    difficulty === 'hard' ? 'text-vs-red text-glow-vs-red' :
+    'text-vs-amber text-glow-vs-amber'
+
   return (
     <div className="min-h-screen flex flex-col items-center vs-vignette text-vs-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
@@ -555,7 +562,10 @@ export function StaggerScreen() {
 
         {phase === 'countdown' && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vs-void pointer-events-none">
-            <div className="font-silk text-sm text-vs-cyan text-glow-vs-cyan mb-2 uppercase tracking-[0.1em]">Staggered Vanishing Shapes</div>
+            <div className="flex flex-col items-center gap-1 mb-2">
+              <div className="font-silk text-base text-vs-cyan text-glow-vs-cyan uppercase tracking-[0.12em]">Vanishing Shapes</div>
+              <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] ${modeColor}`}>{modeLabel}</div>
+            </div>
             <StaggerCountdown onDone={beginReveal} />
           </div>
         )}
