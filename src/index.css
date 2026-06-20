@@ -255,3 +255,21 @@
 @media (prefers-reduced-motion: reduce) {
   .vs-fade-away { animation: none; opacity: 0.85; }
 }
+
+/* Brand motif: a gap cell BLOOMS magenta, holds, then decays on the tail back to
+   the raised surface — it vanishes. Lit cells form tetromino clusters that bloom
+   out of phase (per-cell animation-delay), so the title shows the game before you
+   read a word. Pure decoration (VanishingMotif); no game state. */
+@keyframes vsVanish {
+  0%       { background: #15151F; box-shadow: none; }
+  10%      { background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B, 0 0 18px rgba(255, 45, 155, 0.53); }
+  34%      { background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B, 0 0 18px rgba(255, 45, 155, 0.53); }
+  62%      { background: #3A1B2E; box-shadow: 0 0 2px rgba(255, 45, 155, 0.19); }
+  80%, 100%{ background: #15151F; box-shadow: none; }
+}
+.vs-vanish { animation: vsVanish 5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hold the clusters lit (static) so the brand shape still reads, without motion. */
+  .vs-vanish { animation: none; background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B; }
+}

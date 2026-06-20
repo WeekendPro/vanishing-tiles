@@ -4,7 +4,7 @@ import { useGameStore } from '../store/gameStore'
 import { useStaggerStore } from '../store/staggerStore'
 import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
-import { Wordmark, ScanlineOverlay } from './ui'
+import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
  * The primary landing page shown right after sign-in. PLAY (straight into
@@ -81,6 +81,8 @@ export function HomeScreen() {
         >
           {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
           <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
+            {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
+            <VanishingMotif className="mb-5" />
             {/* VANISHING / SHAPES stacked, glowing */}
             <Wordmark size="lg" stacked className="text-3xl" />
             <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">

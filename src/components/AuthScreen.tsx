@@ -3,14 +3,7 @@ import { signInAsGuest, signInWithEmail, signInWithGoogle, signUpWithEmail } fro
 import { useNavStore } from '../store/navStore'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
-
-// The blooming-gap motif above the wordmark: a 4×2 grid where three magenta
-// cells flicker. Each lit cell carries its OWN (incommensurate) duration + delay
-// so the trio never pulses in lockstep — a soft, organic, non-mechanical glow.
-const MOTIF_CELLS: ({ dur: number; delay: number } | null)[] = [
-  null,             { dur: 4.2, delay: 0 },   { dur: 5.6, delay: 1.9 }, null,
-  { dur: 3.4, delay: 1.1 }, null,             null,                     null,
-]
+import { VanishingMotif } from './ui/VanishingMotif'
 
 // Floating field label that notches the panel edge (mockup: small caps, faint).
 // Hoisted to module scope so the inputs aren't remounted on every keystroke.
@@ -60,20 +53,8 @@ export function AuthScreen() {
     <div className="relative min-h-dvh vs-vignette flex items-center justify-center px-6 overflow-hidden">
       <div className="relative w-full max-w-sm rounded-[28px] bg-vs-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] px-7 py-9 flex flex-col items-center">
 
-        {/* Faint blooming-gap motif above the wordmark. */}
-        <div className="grid grid-cols-4 gap-[3px] mb-7 opacity-60" aria-hidden="true">
-          {MOTIF_CELLS.map((cell, i) => (
-            <span
-              key={i}
-              className={`w-4 h-4 rounded-[3px] ${
-                cell
-                  ? 'bg-vs-magenta shadow-[0_0_8px_#FF2D9B,0_0_18px_rgba(255,45,155,0.53)] vs-flicker'
-                  : 'bg-vs-raised'
-              }`}
-              style={cell ? { animationDuration: `${cell.dur}s`, animationDelay: `${cell.delay}s` } : undefined}
-            />
-          ))}
-        </div>
+        {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
+        <VanishingMotif className="mb-7" />
 
         {/* Brand. */}
         <div className="text-center mb-8">
