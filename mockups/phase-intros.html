@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phase intros + new mechanics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --dim:#0c0c14; --panel:#0E0E16; --raised:#15151F;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#E8E8F0; --faint:#6b6b80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text);
+    background:radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%), var(--void);
+    padding:28px 16px 60px; user-select:none;}
+  h2.section{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); text-align:center; margin:34px 0 16px;}
+  .row{display:flex; flex-wrap:wrap; gap:22px; justify-content:center; align-items:flex-start;}
+  /* ── phone frame ───────────────────────────────────── */
+  .phone{width:300px; border-radius:26px; padding:14px; background:linear-gradient(180deg,#0c0c14,#070710);
+    border:1px solid rgba(255,255,255,.06); box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04);}
+  .screen{position:relative; height:430px; border-radius:16px; overflow:hidden; background:var(--board); display:flex; flex-direction:column; align-items:center;}
+  .caption{font-size:12px; color:var(--faint); text-align:center; margin-top:10px; max-width:300px;}
+  /* ── phase-intro overlay card ──────────────────────── */
+  .pi{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:24px;
+    background:radial-gradient(110% 80% at 50% 42%, rgba(20,8,28,.4), transparent 70%), rgba(4,4,10,.78); backdrop-filter:blur(2px);}
+  .pi .ph-eyebrow{font-size:11px; letter-spacing:.3em; text-transform:uppercase;}
+  .pi .ph-name{font-weight:700; font-size:30px; line-height:1.05;}
+  .pi .ph-tag{font-size:13px; color:var(--faint); max-width:220px; margin-top:2px;}
+  .pi .ph-row{display:flex; gap:8px; margin-top:14px; font-size:22px;}
+  .pi .ph-go{margin-top:18px; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.4} 50%{opacity:1}}
+  /* mini HUD strip */
+  .hud{width:100%; display:flex; justify-content:space-between; align-items:flex-end; padding:14px 16px 6px;}
+  .hud .lvl{font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); margin-bottom:2px;}
+  .hud .score{font-weight:700; font-size:22px; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1;}
+  .hearts{color:var(--red); font-size:12px; letter-spacing:1px; text-shadow:0 0 8px rgba(255,59,71,.5);}
+  /* board */
+  .board{display:grid; grid-template-columns:repeat(12,18px); gap:2px; padding:10px; background:var(--board); border-radius:10px; box-shadow:inset 0 2px 6px #000;}
+  .cell{width:18px; height:18px; border-radius:3px; background:var(--dim); display:flex; align-items:center; justify-content:center; font-size:12px; line-height:1;}
+  .cell.lit{box-shadow:0 0 10px var(--bc), 0 0 22px var(--bc); animation:bloomEmoji 2.4s ease-in-out infinite;}
+  @keyframes bloomEmoji{0%,100%{background:var(--dim); box-shadow:none} 30%{background:color-mix(in srgb,var(--bc) 26%,var(--dim)); box-shadow:0 0 10px var(--bc)} }
+  .cell.color{box-shadow:0 0 10px var(--bc),0 0 20px var(--bc);}
+  /* tray */
+  .tray{margin-top:14px; width:100%; padding:0 16px;}
+  .tray .lbl{font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--cyan); margin-bottom:6px;}
+  .opts{display:grid; gap:6px;}
+  .opts.seven{grid-template-columns:repeat(7,1fr);}
+  .opts.five{grid-template-columns:repeat(5,1fr);}
+  .opt{height:42px; border-radius:8px; background:var(--raised); border:1px solid rgba(40,240,255,.22); display:flex; align-items:center; justify-content:center; font-size:18px;}
+  .opt.swatch{border:1px solid rgba(255,255,255,.1);}
+  .opt .chip{width:22px; height:22px; border-radius:6px; box-shadow:0 0 10px currentColor;}
+  .phaselabel{margin-top:8px; font-size:10px; letter-spacing:.22em; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+  <h2 class="section">Phase-transition overlay — appears over the board between phases</h2>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="pi">
+          <div class="ph-eyebrow" style="color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5);">Phase 1 cleared</div>
+          <div class="ph-name" style="color:var(--amber); text-shadow:0 0 16px rgba(255,194,61,.5);">Emoji Tiles</div>
+          <div class="ph-tag">New tiles, same instinct. Memorize the icons — not the shapes.</div>
+          <div class="ph-row">🍎 🍊 🌮 🍼 🥪 💡 🍾</div>
+          <div class="ph-go">Tap to continue</div>
+        </div>
+      </div></div>
+      <div class="caption"><b>Phase 2 · Emoji</b> intro (enters Level 10)</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="pi">
+          <div class="ph-eyebrow" style="color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5);">Phase 2 cleared</div>
+          <div class="ph-name" style="color:var(--cyan); text-shadow:0 0 16px rgba(40,240,255,.5);">Chromatic</div>
+          <div class="ph-tag">Forget the shape. This time, remember the colors.</div>
+          <div class="ph-row">
+            <span style="color:#22d3ee">●</span><span style="color:#ff2d95">●</span><span style="color:#39d98a">●</span><span style="color:#a855f7">●</span><span style="color:#facc15">●</span>
+          </div>
+          <div class="ph-go">Tap to continue</div>
+        </div>
+      </div></div>
+      <div class="caption"><b>Phase 3 · Chromatic</b> intro (enters Level 20)</div>
+    </div>
+  </div>
+
+  <h2 class="section">Phase 2 · Emoji — reveal + tray</h2>
+  <div class="row">
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="hud"><div><div class="lvl">Level 11</div><div class="score">3 200</div></div><div style="text-align:right"><div class="hearts">♥♥♥♥</div></div></div>
+        <div class="phaselabel" style="color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55);">Memorize</div>
+        <div class="board" id="emojiBoard"></div>
+        <div class="tray"><div class="lbl">Tiles · tap from memory</div>
+          <div class="opts seven">
+            <div class="opt">🍎</div><div class="opt">🍊</div><div class="opt">🌮</div><div class="opt">🍼</div><div class="opt">🥪</div><div class="opt">💡</div><div class="opt">🍾</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption">Each gap is a single emoji tile. Recall <i>which</i> icons appeared — pure associative memory, a palette cleanser after Classic.</div>
+    </div>
+
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="hud"><div><div class="lvl">Level 21</div><div class="score">7 450</div></div><div style="text-align:right"><div class="hearts">♥♥♥</div></div></div>
+        <div class="phaselabel" style="color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55);">Memorize</div>
+        <div class="board" id="colorBoard"></div>
+        <div class="tray"><div class="lbl">Colors · tap from memory</div>
+          <div class="opts five">
+            <div class="opt swatch"><div class="chip" style="background:#22d3ee; color:#22d3ee"></div></div>
+            <div class="opt swatch"><div class="chip" style="background:#ff2d95; color:#ff2d95"></div></div>
+            <div class="opt swatch"><div class="chip" style="background:#39d98a; color:#39d98a"></div></div>
+            <div class="opt swatch"><div class="chip" style="background:#a855f7; color:#a855f7"></div></div>
+            <div class="opt swatch"><div class="chip" style="background:#facc15; color:#facc15"></div></div>
+          </div>
+        </div>
+      </div></div>
+      <div class="caption"><b>Phase 3 · Chromatic.</b> Tetromino-shaped gaps reveal in full color; you pick the <i>colors</i> you saw, not the shapes. Tray holds the 5 piece colors.</div>
+    </div>
+  </div>
+
+<script>
+  // Emoji reveal board: scatter a few emoji tiles
+  const EMO=['🍎','🍊','🌮','🍼','🥪','💡','🍾'];
+  const EHEX=['#fb923c','#facc15','#fb923c','#22d3ee','#fbbf24','#facc15','#39d98a'];
+  const eb=document.getElementById('emojiBoard');
+  const emojiSpots={ '26':0,'29':1,'52':2,'70':3,'88':4,'112':5,'117':6 };
+  for(let i=0;i<144;i++){const d=document.createElement('div'); d.className='cell';
+    if(emojiSpots[i]!==undefined){const k=emojiSpots[i]; d.textContent=EMO[k]; d.classList.add('lit'); d.style.setProperty('--bc',EHEX[k]); d.style.animationDelay=(k*0.3)+'s';}
+    eb.appendChild(d);}
+
+  // Chromatic board: a few colored tetrominoes
+  const cb=document.getElementById('colorBoard');
+  const shapes=[
+    {cells:[14,15,26,27], color:'#facc15'},      // O yellow
+    {cells:[31,43,55,67], color:'#22d3ee'},      // I cyan (vertical)
+    {cells:[80,81,82,93], color:'#a855f7'},      // T purple
+    {cells:[100,101,112,113], color:'#39d98a'},  // O green
+  ];
+  const cmap={};
+  shapes.forEach(s=>s.cells.forEach(i=>cmap[i]=s.color));
+  for(let i=0;i<144;i++){const d=document.createElement('div'); d.className='cell';
+    if(cmap[i]){d.classList.add('color'); d.style.background=cmap[i]; d.style.setProperty('--bc',cmap[i]);}
+    cb.appendChild(d);}
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ramp-up · Level 00 Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --dim:#0c0c14; --panel:#0E0E16; --raised:#15151F;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#E8E8F0; --faint:#6b6b80;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text);
+    background:radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), var(--void);
+    display:flex; flex-direction:column; align-items:center; padding:28px 16px 48px; user-select:none;
+  }
+  .stage-note{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); margin-bottom:14px;}
+  /* ── HUD ───────────────────────────────────────────── */
+  .hud{width:100%; max-width:344px; display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:8px;}
+  .hud .lvl{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); margin-bottom:2px;}
+  .hud .score{font-weight:700; font-size:28px; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1; font-variant-numeric:tabular-nums;}
+  .hud .right{text-align:right;}
+  .hearts{color:var(--red); letter-spacing:2px; text-shadow:0 0 8px rgba(255,59,71,.5); font-size:15px;}
+  .items{margin-top:5px; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .items small{color:var(--faint); font-size:9px; letter-spacing:.12em; text-transform:uppercase; margin-left:5px;}
+  .bar{width:100%; max-width:344px; height:8px; border-radius:99px; background:#000; overflow:hidden; box-shadow:inset 0 1px 2px #000; margin-bottom:8px;}
+  .bar > div{height:100%; border-radius:99px; transition:width .3s ease;}
+  .phaselabel{width:100%; max-width:344px; text-align:center; font-size:11px; letter-spacing:.22em; text-transform:uppercase; margin:2px 0 10px; min-height:14px;}
+  /* ── Board ─────────────────────────────────────────── */
+  .board-wrap{position:relative;}
+  .board{display:grid; grid-template-columns:repeat(12, 24px); gap:2px; padding:12px; background:var(--board); border-radius:12px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);}
+  .cell{width:24px; height:24px; border-radius:4px; background:var(--dim);}
+  .cell.bloom{animation:vtBloom 2080ms cubic-bezier(.2,.75,.2,1) forwards;}
+  .cell.filled{box-shadow:0 0 8px rgba(255,255,255,.25); outline:1px solid rgba(255,255,255,.25); animation:pop .24s ease-out;}
+  @keyframes pop{0%{transform:scale(.5); opacity:.4} 100%{transform:scale(1); opacity:1}}
+  @keyframes vtBloom{
+    0%{background:var(--dim); box-shadow:none; transform:scale(1)}
+    4%{background:var(--bc,#ff2d9b); box-shadow:0 0 14px var(--bc,#ff2d9b),0 0 30px var(--bc,#ff2d9b); transform:scale(1.13)}
+    52%{background:var(--bc,#ff2d9b); box-shadow:0 0 9px var(--bc,#ff2d9b); transform:scale(1)}
+    70%{background:color-mix(in srgb,var(--bc,#ff2d9b) 62%,var(--dim)); box-shadow:0 0 8px color-mix(in srgb,var(--bc,#ff2d9b) 50%,transparent)}
+    88%{background:color-mix(in srgb,var(--bc,#ff2d9b) 22%,var(--dim)); box-shadow:0 0 3px color-mix(in srgb,var(--bc,#ff2d9b) 18%,transparent)}
+    100%{background:var(--dim); box-shadow:none; transform:scale(1)}
+  }
+  /* coach scrim dims everything but the spotlit element */
+  .scrim{position:fixed; inset:0; background:rgba(2,2,8,.74); z-index:30; opacity:0; pointer-events:none; transition:opacity .4s ease;}
+  .scrim.on{opacity:1;}
+  /* ── Tray ──────────────────────────────────────────── */
+  .tray{margin-top:18px; width:100%; max-width:344px; border-radius:12px; padding:12px; background:var(--panel);
+    border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .tray .lbl{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .tray .lbl span:first-child{font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5);}
+  .tray .lbl span:last-child{font-size:10px; color:var(--faint);}
+  .pieces{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .pbtn{position:relative; height:48px; display:flex; align-items:center; justify-content:center; border-radius:8px;
+    background:var(--raised); border:1px solid rgba(40,240,255,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+    cursor:pointer; transition:border-color .15s, box-shadow .15s, opacity .35s, transform .15s;}
+  .pbtn:hover{border-color:var(--cyan);}
+  .pbtn.dimmed{opacity:.16; pointer-events:none;}
+  .pbtn.spotlit{z-index:31; border-color:var(--cyan); box-shadow:0 0 0 2px var(--cyan),0 0 22px rgba(40,240,255,.55); animation:beckon 1.15s ease-in-out infinite;}
+  @keyframes beckon{0%,100%{box-shadow:0 0 0 2px var(--cyan),0 0 18px rgba(40,240,255,.4)} 50%{box-shadow:0 0 0 3px var(--cyan),0 0 30px rgba(40,240,255,.75)}}
+  .pbtn.correct{animation:correctPop .5s ease-out;}
+  @keyframes correctPop{0%{box-shadow:0 0 0 2px var(--lime),0 0 26px rgba(182,255,60,.7); transform:scale(1.12)} 100%{box-shadow:0 0 0 0 transparent; transform:scale(1)}}
+  /* piece glyphs drawn as mini cell grids */
+  .mini{display:grid; gap:1px;}
+  .mini i{width:8px; height:8px; border-radius:1px; display:block;}
+  /* animated tap pointer */
+  .tapper{position:absolute; right:-2px; bottom:-2px; font-size:22px; z-index:32; pointer-events:none;
+    filter:drop-shadow(0 2px 4px #000); animation:tap 1.15s ease-in-out infinite;}
+  @keyframes tap{0%,100%{transform:translate(0,0)} 50%{transform:translate(-3px,-3px)}}
+  /* coach caption bubble */
+  .coach{position:fixed; left:50%; transform:translateX(-50%); bottom:118px; z-index:33; max-width:300px; text-align:center;
+    background:linear-gradient(180deg,#101019,#0a0a12); border:1px solid rgba(40,240,255,.3); border-radius:12px;
+    padding:12px 16px; box-shadow:0 0 24px rgba(40,240,255,.18); opacity:0; transition:opacity .35s ease, transform .35s ease;}
+  .coach.on{opacity:1;}
+  .coach .big{font-weight:600; font-size:15px; color:var(--text);}
+  .coach .sub{font-size:12px; color:var(--faint); margin-top:3px;}
+  /* sparkle burst on success */
+  .spark{position:absolute; left:50%; top:50%; z-index:35; pointer-events:none; font-size:13px; font-weight:700; color:var(--lime);
+    text-shadow:0 0 10px rgba(182,255,60,.8); animation:sparkUp .8s ease-out forwards;}
+  @keyframes sparkUp{0%{opacity:0; transform:translate(-50%,-30%) scale(.5)} 30%{opacity:1} 100%{opacity:0; transform:translate(-50%,-130%) scale(1.2)}}
+  /* welcome card */
+  .welcome{position:fixed; inset:0; z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    background:radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), var(--void); opacity:0; pointer-events:none; transition:opacity .5s ease; padding:24px;}
+  .welcome.on{opacity:1; pointer-events:auto;}
+  .welcome .eyebrow{font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5);}
+  .welcome h1{margin:0; font-weight:700; font-size:26px; text-align:center; line-height:1.25; max-width:300px;}
+  .welcome p{margin:0; color:var(--faint); font-size:14px; text-align:center; max-width:280px;}
+  /* controls */
+  .controls{margin-top:26px; display:flex; gap:10px; z-index:50;}
+  .btn{font-family:inherit; font-weight:600; font-size:13px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer;
+    padding:11px 20px; border-radius:8px; background:var(--raised); color:var(--cyan); border:2px solid var(--cyan);
+    box-shadow:0 0 14px rgba(40,240,255,.25); transition:transform .1s;}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{border-color:rgba(255,255,255,.15); color:var(--faint); box-shadow:none;}
+  .btn.primary{background:var(--cyan); color:#03121a;}
+</style>
+</head>
+<body>
+  <div class="stage-note">Mockup · Phase 1 “Classic” · Level&nbsp;00 — first-run tutorial</div>
+
+  <div class="hud">
+    <div><div class="lvl">Level 00 · Tutorial</div><div class="score" id="score">0</div></div>
+    <div class="right"><div class="hearts">♥♥♥♥♥</div><div class="items"><span id="filled">0</span> / 2<small>tiles</small></div></div>
+  </div>
+  <div class="bar"><div id="barfill" style="width:100%; background:var(--magenta); box-shadow:0 0 6px var(--magenta);"></div></div>
+  <div class="phaselabel" id="phaselabel" style="color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55);">Memorize</div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="tray" id="tray" style="visibility:hidden;">
+    <div class="lbl"><span>Pieces</span><span>tap to place from memory</span></div>
+    <div class="pieces" id="pieces"></div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="coach" id="coach"><div class="big" id="coachBig"></div><div class="sub" id="coachSub"></div></div>
+
+  <div class="welcome" id="welcome">
+    <div class="eyebrow">You’re ready</div>
+    <h1 id="welcomeMsg">Watch, remember, recall —<br>and don’t blink.</h1>
+    <p>The tiles will start vanishing faster now. Trust your memory and catch them before they fade.</p>
+    <button class="btn primary" onclick="restart()">Begin Level 01 →</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn ghost" onclick="restart()">↺ Replay</button>
+    <button class="btn" id="skipBtn" onclick="skipReveal()">Skip reveal →</button>
+  </div>
+
+<script>
+// ── Piece palette (hex per type) ─────────────────────────────
+const HEX={I:'#22d3ee',O:'#facc15',T:'#a855f7',S:'#4ade80',Z:'#ef4444',J:'#3b82f6',L:'#fb923c'};
+// Mini tray glyph layouts (rows of 0/1)
+const GLYPH={
+  I:[[1],[1],[1],[1]], O:[[1,1],[1,1]], T:[[1,1,1],[0,1,0]],
+  S:[[0,1,1],[1,1,0]], Z:[[1,1,0],[0,1,1]], J:[[0,1],[0,1],[1,1]], L:[[1,0],[1,0],[1,1]],
+};
+const ORDER=['I','O','T','S','Z','J','L'];
+
+// The two tutorial gaps: a yellow O at top-left, a purple T lower-right.
+const GAPS=[
+  {type:'O', cells:[[2,3],[2,4],[3,3],[3,4]]},
+  {type:'T', cells:[[7,7],[7,8],[7,9],[8,8]]},
+];
+
+let cellEls=[];
+function buildBoard(){
+  const b=document.getElementById('board'); b.innerHTML=''; cellEls=[];
+  for(let i=0;i<144;i++){const d=document.createElement('div'); d.className='cell'; b.appendChild(d); cellEls.push(d);}
+}
+function cellAt(r,c){return cellEls[r*12+c];}
+
+function buildTray(){
+  const p=document.getElementById('pieces'); p.innerHTML='';
+  ORDER.forEach(t=>{
+    const btn=document.createElement('button'); btn.className='pbtn'; btn.dataset.type=t;
+    const m=document.createElement('div'); m.className='mini';
+    const g=GLYPH[t]; m.style.gridTemplateColumns=`repeat(${g[0].length},8px)`;
+    g.flat().forEach(v=>{const i=document.createElement('i'); if(v){i.style.background=HEX[t]; i.style.boxShadow='0 0 4px '+HEX[t];} else {i.style.background='transparent';} m.appendChild(i);});
+    btn.appendChild(m);
+    btn.onclick=()=>onPick(t,btn);
+    p.appendChild(btn);
+  });
+}
+
+// ── Sequence state ───────────────────────────────────────────
+let step=0;            // 0=reveal, 1=spotlight gap0, 2=spotlight gap1, 3=done
+let filled=0;
+let timers=[];
+function clearTimers(){timers.forEach(clearTimeout); timers=[];}
+
+function setCoach(big,sub,on=true){
+  document.getElementById('coachBig').textContent=big;
+  document.getElementById('coachSub').textContent=sub||'';
+  document.getElementById('coach').classList.toggle('on',on);
+}
+function setScrim(on){document.getElementById('scrim').classList.toggle('on',on);}
+
+function reveal(){
+  step=0; filled=0;
+  document.getElementById('filled').textContent='0';
+  document.getElementById('tray').style.visibility='hidden';
+  document.getElementById('skipBtn').style.visibility='visible';
+  setScrim(false); setCoach('',''); document.getElementById('coach').classList.remove('on');
+  const pl=document.getElementById('phaselabel'); pl.textContent='Memorize'; pl.style.color='var(--magenta)'; pl.style.textShadow='0 0 10px rgba(255,45,155,.55)';
+  const bf=document.getElementById('barfill'); bf.style.background='var(--magenta)'; bf.style.boxShadow='0 0 6px var(--magenta)'; bf.style.width='100%';
+  buildBoard();
+  // bloom each gap in turn (own piece color, like EASY)
+  GAPS.forEach((g,gi)=>{
+    timers.push(setTimeout(()=>{
+      g.cells.forEach(([r,c],ci)=>{
+        const el=cellAt(r,c); el.style.setProperty('--bc',HEX[g.type]);
+        el.style.animationDuration=(2080+ci*220)+'ms'; el.classList.add('bloom');
+        timers.push(setTimeout(()=>el.classList.remove('bloom'),2080+ci*220+80));
+      });
+      bf.style.width=(100-(gi+1)/GAPS.length*100)+'%';
+    }, 350+gi*1120));
+  });
+  // hand off to recall
+  timers.push(setTimeout(beginRecall, 350+GAPS.length*1120+900));
+}
+function skipReveal(){clearTimers(); cellEls.forEach(e=>e.classList.remove('bloom')); beginRecall();}
+
+function beginRecall(){
+  document.getElementById('skipBtn').style.visibility='hidden';
+  const pl=document.getElementById('phaselabel'); pl.textContent='Recall'; pl.style.color='var(--amber)'; pl.style.textShadow='0 0 10px rgba(255,194,61,.5)';
+  const bf=document.getElementById('barfill'); bf.style.background='var(--amber)'; bf.style.boxShadow='0 0 6px var(--amber)'; bf.style.width='100%';
+  buildTray();
+  document.getElementById('tray').style.visibility='visible';
+  step=1; spotlight(0);
+}
+
+function spotlight(gi){
+  const g=GAPS[gi];
+  setScrim(true);
+  const btns=[...document.querySelectorAll('.pbtn')];
+  btns.forEach(b=>{
+    b.classList.remove('spotlit'); b.classList.add('dimmed');
+    const tp=b.querySelector('.tapper'); if(tp) tp.remove();
+  });
+  const target=btns.find(b=>b.dataset.type===g.type);
+  target.classList.remove('dimmed'); target.classList.add('spotlit');
+  const tap=document.createElement('div'); tap.className='tapper'; tap.textContent='👆'; target.appendChild(tap);
+  setCoach(gi===0?'You saw this tile. Tap it.':'One more — tap the tile you saw.',
+           gi===0?'We’ll do the first two together.':'You’ve got it.');
+}
+
+function onPick(t,btn){
+  const gi=step-1;
+  if(gi<0||gi>1) return;
+  if(t!==GAPS[gi].type){ // gentle nudge, no penalty in tutorial
+    btn.animate([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:220});
+    return;
+  }
+  // correct
+  const tp=btn.querySelector('.tapper'); if(tp) tp.remove();
+  btn.classList.remove('spotlit'); btn.classList.add('correct');
+  // fill the gap on the board
+  GAPS[gi].cells.forEach(([r,c])=>{const el=cellAt(r,c); el.style.background=HEX[GAPS[gi].type]; el.classList.add('filled');});
+  filled++; document.getElementById('filled').textContent=String(filled);
+  // sparkle + score tick
+  const spark=document.createElement('div'); spark.className='spark'; spark.textContent='+100'; btn.appendChild(spark);
+  setTimeout(()=>spark.remove(),800);
+  bumpScore(100);
+  setScrim(false); document.getElementById('coach').classList.remove('on');
+
+  if(gi===0){
+    setTimeout(()=>{document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('correct')); step=2; spotlight(1);},700);
+  } else {
+    setTimeout(finish,650);
+  }
+}
+
+let scoreVal=0;
+function bumpScore(n){
+  const el=document.getElementById('score'); const from=scoreVal; scoreVal+=n; const start=performance.now();
+  function f(now){const t=Math.min(1,(now-start)/500); el.textContent=Math.round(from+(scoreVal-from)*(1-Math.pow(1-t,3))); if(t<1) requestAnimationFrame(f);}
+  requestAnimationFrame(f);
+}
+
+function finish(){
+  step=3; setScrim(false);
+  const pl=document.getElementById('phaselabel'); pl.textContent='Clear!'; pl.style.color='var(--lime)'; pl.style.textShadow='0 0 10px rgba(182,255,60,.5)';
+  document.getElementById('barfill').style.background='var(--lime)';
+  setTimeout(()=>document.getElementById('welcome').classList.add('on'),550);
+}
+
+function restart(){clearTimers(); document.getElementById('welcome').classList.remove('on'); scoreVal=0; document.getElementById('score').textContent='0'; reveal();}
+
+buildBoard(); reveal();
+</script>
+</body>
+</html>
