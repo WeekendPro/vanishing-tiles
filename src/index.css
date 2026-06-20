@@ -193,11 +193,21 @@
    surface is self-colored (no --bloom-color), "bright at first" reads as a
    BRIGHTNESS pop at the flash (no outer glow), then it settles to the murky surface
    and decays back to the void in the same per-cell wave as vtBloom. The low
-   contrast is Hard's whole challenge. The impasto graphite surface is repeated at
-   the flash/hold keyframes so the brightness filter has a real surface to lift. */
+   contrast is Hard's whole challenge.
+
+   The decay fades the gradient's colours DIRECTLY to the empty-cell tone (#0c0c14)
+   rather than fading opacity — at opacity 0 the darker board background (#04040a)
+   would show through and the cell would dip to near-black before re-seating, an
+   awkward flash. So every keyframe keeps the SAME gradient structure (two radials +
+   a linear, identical stop positions) and only interpolates its colours: void →
+   impasto → void. The element stays fully opaque throughout, landing exactly on the
+   resting cell colour so the unmount is seamless. */
 @keyframes vtPaint {
   0% {
-    background: #0c0c14;
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0), transparent 60%),
+      linear-gradient(150deg, #0c0c14, #0c0c14 55%, #0c0c14);
     box-shadow: none;
     filter: brightness(1);
     transform: scale(1);
@@ -224,12 +234,13 @@
     filter: brightness(1);
     transform: scale(1);
   }
-  70% { opacity: 0.62; }
-  88% { opacity: 0.24; }
   100% {
-    background: #0c0c14;
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0), transparent 60%),
+      linear-gradient(150deg, #0c0c14, #0c0c14 55%, #0c0c14);
     box-shadow: none;
-    opacity: 0;
+    filter: brightness(1);
     transform: scale(1);
   }
 }
