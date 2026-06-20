@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Shapes — Game Over · Rank Ladder (final)</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --panel-raised:#15151F;
+    --grid-line:#1C1C28; --filled:#2A2D3A; --filled-edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+    --attack:cubic-bezier(.1,.9,.2,1);
+    --decay:cubic-bezier(.3,0,.1,1);
+    --mechanical:cubic-bezier(.7,0,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% 28%, transparent 52%, #000 130%),
+      var(--void);
+    color:var(--text);
+    font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    padding:48px 24px 80px;
+    display:flex;flex-direction:column;align-items:center;gap:30px;
+  }
+  .pagehead{text-align:center}
+  .pagehead h1{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--text-dim);font-weight:600}
+  .pagehead p{font-size:12.5px;color:var(--text-faint);margin-top:10px;max-width:540px;line-height:1.6}
+
+  .phone{
+    width:400px; max-width:94vw;
+    background:var(--panel); border-radius:36px;
+    border:1px solid #1a1a26;
+    box-shadow:0 50px 110px #000b, inset 0 1px 0 #ffffff0d, inset 0 -1px 0 #0008;
+    padding:30px 22px 26px; position:relative; overflow:hidden;
+  }
+  .phone::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:36px;
+    background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);
+    opacity:.5; mix-blend-mode:overlay;
+  }
+
+  .go-head{text-align:center;position:relative;z-index:1}
+  .go-title{font-size:16px;letter-spacing:.15em;text-transform:uppercase;color:var(--text);font-weight:700}
+  .go-sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px var(--magenta);margin-top:5px}
+  .go-fslabel{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);margin-top:18px}
+  .go-score{font-size:42px;font-weight:700;color:var(--amber);text-shadow:0 0 18px #ffc23d88;letter-spacing:.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+
+  .trio{display:flex;border-top:1px solid #ffffff1a;border-bottom:1px solid #ffffff1a;margin:20px 0 6px;position:relative;z-index:1}
+  .trio .cell{flex:1;text-align:center;padding:13px 4px}
+  .trio .cell + .cell{border-left:1px solid #ffffff1a}
+  .trio .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .trio .k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
+  .v.m{color:var(--magenta);text-shadow:0 0 8px #ff2d9b88}
+  .v.l{color:var(--lime);text-shadow:0 0 8px #b6ff3c88}
+  .v.c{color:var(--cyan);text-shadow:0 0 8px #28f0ff88}
+
+  .graph{position:relative;z-index:1;margin-top:22px}
+
+  /* full-width segmented series control */
+  .tabs{display:flex;gap:4px;margin-bottom:12px}
+  .tab{
+    flex:1;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+    color:var(--text-faint);background:#ffffff06;border:1px solid #ffffff0e;cursor:pointer;
+    padding:7px 4px;border-radius:8px;transition:all .25s var(--attack);
+  }
+  .tab:hover{color:var(--text-dim)}
+  .tab.on{color:var(--void);border-color:transparent}
+  .tab.on.score{background:var(--amber);box-shadow:0 0 10px #ffc23d77}
+  .tab.on.recalled{background:var(--magenta);box-shadow:0 0 10px #ff2d9b77}
+  .tab.on.combo{background:var(--lime);box-shadow:0 0 10px #b6ff3c77}
+  .tab.on.accuracy{background:var(--cyan);box-shadow:0 0 10px #28f0ff77}
+
+  svg{display:block;width:100%;overflow:visible;-webkit-tap-highlight-color:transparent}
+  .gax{font-size:8px;font-family:'Space Grotesk',sans-serif;letter-spacing:.06em}
+
+  .tip{
+    position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-122%);
+    background:#0c0c14ee;border:1px solid #ffffff1f;border-radius:9px;padding:8px 10px;
+    box-shadow:0 8px 24px #000b;transition:opacity .15s ease;z-index:6;white-space:nowrap;backdrop-filter:blur(4px);
+  }
+  .tip .tw{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
+  .tip .tb{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+  .tip .tm{font-size:9px;color:var(--text-dim);margin-top:3px;font-variant-numeric:tabular-nums}
+
+  /* rank chip pinned to the current blip */
+  .flag{
+    position:absolute;pointer-events:none;transform:translate(-100%,-50%);
+    display:flex;flex-direction:column;align-items:flex-end;
+    background:#0c0c14;border:1px solid var(--cyan);border-radius:9px;padding:5px 9px;
+    box-shadow:0 0 18px #28f0ff33, inset 0 0 0 1px #ffffff06;white-space:nowrap;z-index:5;margin-left:-10px;
+  }
+  .flag::after{
+    content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%) rotate(45deg);
+    width:8px;height:8px;background:#0c0c14;border-right:1px solid currentColor;border-top:1px solid currentColor;
+  }
+  .flag .fr{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .flag .fl{font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin-top:3px}
+
+  .ladder{display:flex;flex-direction:column;gap:5px;margin-top:16px}
+  .lrow{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:10px;background:#ffffff05;border:1px solid #ffffff0a;transition:background .3s,border-color .3s}
+  .lrow.you{background:linear-gradient(90deg,#28f0ff16,#28f0ff04);border-color:#28f0ff55;box-shadow:0 0 20px #28f0ff1c}
+  .lrank{font-size:12px;font-weight:700;color:var(--text-faint);width:24px;font-variant-numeric:tabular-nums}
+  .lrow.you .lrank{color:var(--cyan);text-shadow:0 0 8px var(--cyan)}
+  .lwhen{font-size:9px;color:var(--text-faint);width:30px;letter-spacing:.04em}
+  .lbar{flex:1;height:6px;border-radius:4px;background:#ffffff0c;overflow:hidden}
+  .lbar i{display:block;height:100%;border-radius:4px;transition:width .4s var(--mechanical)}
+  .lval{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-dim);width:46px;text-align:right}
+  .lrow.you .lval{color:var(--text)}
+  .ltag{font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);width:26px;text-align:right}
+
+  .actions{display:flex;flex-direction:column;gap:11px;margin-top:24px;align-items:center;position:relative;z-index:1}
+  .btn{
+    width:184px;height:46px;border-radius:11px;cursor:pointer;font-family:inherit;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;border:2px solid;
+    transition:transform .1s var(--attack),box-shadow .25s;
+  }
+  .btn:active{transform:translateY(2px)}
+  .btn.primary{background:#15151F;border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 6px #28f0ff55,0 0 22px #28f0ff22, inset 0 1px 0 #ffffff12}
+  .btn.ghost{background:transparent;border-color:#ffffff1f;color:var(--text-dim)}
+</style>
+</head>
+<body>
+  <div class="pagehead">
+    <h1>Game Over · Rank Ladder — merged direction</h1>
+    <p>C's trend + personal-best ladder, B's pulsing blip on the current run, A's rank chip pinned to it. Tap the line to inspect any run. Four clickable series. Ladder is your own runs (localStorage) — sample data shown.</p>
+  </div>
+
+  <div class="phone">
+    <div class="go-head">
+      <div class="go-title">Game Over</div>
+      <div class="go-sub">Memory Fades</div>
+      <div class="go-fslabel">Final score</div>
+      <div class="go-score">4820</div>
+    </div>
+    <div class="trio">
+      <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+      <div class="cell"><div class="v l">×12</div><div class="k">Best combo</div></div>
+      <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+    </div>
+
+    <div class="graph">
+      <div class="tabs">
+        <button class="tab score on" data-s="score">Score</button>
+        <button class="tab recalled" data-s="recalled">Recall</button>
+        <button class="tab combo" data-s="combo">Combo</button>
+        <button class="tab accuracy" data-s="accuracy">Accuracy</button>
+      </div>
+      <div style="position:relative">
+        <svg id="sv" viewBox="0 0 320 116"></svg>
+        <div class="tip" id="tip"></div>
+        <div class="flag" id="flag"></div>
+      </div>
+
+      <div class="ladder" id="rows"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary">Play again</button>
+      <button class="btn ghost">Home</button>
+    </div>
+  </div>
+
+<script>
+const RUNS=[
+  {score:2100,recalled:18,combo:5,acc:74,when:'Mon'},
+  {score:1850,recalled:16,combo:4,acc:69,when:'Mon'},
+  {score:3200,recalled:25,combo:7,acc:80,when:'Tue'},
+  {score:2750,recalled:22,combo:6,acc:77,when:'Tue'},
+  {score:5100,recalled:41,combo:14,acc:93,when:'Wed'},
+  {score:3900,recalled:30,combo:9,acc:84,when:'Wed'},
+  {score:4400,recalled:34,combo:11,acc:88,when:'Thu'},
+  {score:3050,recalled:24,combo:7,acc:79,when:'Thu'},
+  {score:5600,recalled:44,combo:16,acc:95,when:'Fri'},
+  {score:4750,recalled:37,combo:12,acc:90,when:'Fri'},
+  {score:3600,recalled:28,combo:8,acc:82,when:'Sat'},
+  {score:5300,recalled:42,combo:15,acc:94,when:'Sat'},
+  {score:4100,recalled:32,combo:10,acc:86,when:'Sun'},
+  {score:4820,recalled:38,combo:12,acc:91,when:'Now'},
+];
+const CUR=RUNS.length-1;
+const SERIES={
+  score:   {key:'score',   hex:'#FFC23D'},
+  recalled:{key:'recalled',hex:'#FF2D9B'},
+  combo:   {key:'combo',   hex:'#B6FF3C', prefix:'×'},
+  accuracy:{key:'acc',     hex:'#28F0FF', suffix:'%'},
+};
+const NS='http://www.w3.org/2000/svg';
+function el(t,a={}){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function fmt(S,v){return (S.prefix||'')+v+(S.suffix||'');}
+function smooth(pts){
+  let d=`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6;
+    const c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;
+    d+=` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+function ord(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+const LAYOUT={W:320,H:116,padL:8,padR:12,padT:18,padB:16};
+const state={s:'score'};
+let PTS=[], selIdx=-1;
+
+function draw(){
+  selIdx=-1; hideCard();
+  const key=SERIES[state.s].key, S=SERIES[state.s];
+  const {W,H,padL,padR,padT,padB}=LAYOUT;
+  const svg=document.getElementById('sv');svg.innerHTML='';
+  const vals=RUNS.map(r=>r[key]);
+  const max=Math.max(...vals),min=Math.min(...vals),span=(max-min)||1;
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const iw=W-padL-padR,ih=H-padT-padB;
+  const yOf=v=>padT+ih*(1-(v-min)/span);
+  PTS=RUNS.map((r,i)=>({x:padL+iw*(i/(RUNS.length-1)),y:yOf(r[key]),r,i}));
+
+  // best / avg reference lines
+  [[yOf(max),'BEST',S.hex,.55],[yOf(avg),'AVG','#8A8AA0',.42]].forEach(([y,lab,col,op])=>{
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:col,['stroke-opacity']:op,['stroke-dasharray']:'2 3'}));
+    const t=el('text',{x:padL+1,y:y-3,class:'gax',fill:col,['fill-opacity']:.75});t.textContent=lab;svg.appendChild(t);
+  });
+
+  const lp=smooth(PTS);
+  const gid='grad_'+key;
+  const defs=el('defs');const lg=el('linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1});
+  lg.appendChild(el('stop',{offset:0,['stop-color']:S.hex,['stop-opacity']:.30}));
+  lg.appendChild(el('stop',{offset:1,['stop-color']:S.hex,['stop-opacity']:0}));
+  defs.appendChild(lg);svg.appendChild(defs);
+  svg.appendChild(el('path',{d:lp+` L ${PTS[CUR].x} ${H-padB} L ${PTS[0].x} ${H-padB} Z`,fill:`url(#${gid})`}));
+  svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:5,['stroke-opacity']:.16,['stroke-linecap']:'round',['stroke-linejoin']:'round',filter:'blur(3px)'}));
+  svg.appendChild(el('path',{d:lp,fill:'none',stroke:S.hex,['stroke-width']:2,['stroke-linecap']:'round',['stroke-linejoin']:'round'}));
+
+  PTS.forEach((p,i)=>{ if(i!==CUR) svg.appendChild(el('circle',{cx:p.x,cy:p.y,r:2,fill:S.hex,['fill-opacity']:.55})); });
+
+  // pulsing blip on current run
+  const c=PTS[CUR];
+  const halo=el('circle',{cx:c.x,cy:c.y,r:4,fill:S.hex,['fill-opacity']:.5});
+  halo.appendChild(el('animate',{attributeName:'r',values:'4;9;4',dur:'1.8s',repeatCount:'indefinite'}));
+  halo.appendChild(el('animate',{attributeName:'fill-opacity',values:'.5;0;.5',dur:'1.8s',repeatCount:'indefinite'}));
+  svg.appendChild(halo);
+  const blip=el('circle',{cx:c.x,cy:c.y,r:4.2,fill:'#06060B',stroke:S.hex,['stroke-width']:2.5});
+  blip.setAttribute('filter','drop-shadow(0 0 6px '+S.hex+')');
+  svg.appendChild(blip);
+
+  // whole-plot tap target → nearest run (mobile-friendly)
+  const overlay=el('rect',{x:padL-4,y:0,width:iw+8,height:H,fill:'transparent',style:'cursor:pointer'});
+  overlay.addEventListener('click',e=>{
+    const rect=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;
+    const xsvg=(e.clientX-rect.left)*(vb.width/rect.width);
+    let idx=Math.round((xsvg-padL)/iw*(RUNS.length-1));
+    idx=Math.max(0,Math.min(RUNS.length-1,idx));
+    if(idx===selIdx){selIdx=-1;hideCard();} else {selIdx=idx;showCard(PTS[idx],S,key);}
+  });
+  svg.appendChild(overlay);
+
+  // rank chip pinned to the blip
+  const ranked=RUNS.map((r,i)=>({...r,i})).sort((a,b)=>b[key]-a[key]);
+  const rank=ranked.findIndex(r=>r.i===CUR)+1;
+  const flag=document.getElementById('flag');
+  flag.style.color=S.hex; flag.style.borderColor=S.hex;
+  flag.innerHTML=`<div class="fr" style="color:${S.hex};text-shadow:0 0 10px ${S.hex}">${ord(rank)} best</div><div class="fl">all-time</div>`;
+  pos(flag,c.x,c.y);
+
+  drawLadder(key,S);
+}
+
+function showCard(p,S,key){
+  const tip=document.getElementById('tip');
+  tip.innerHTML=`<div class="tw">${p.r.when} · run ${p.i+1}</div>
+    <div class="tb" style="color:${S.hex}">${fmt(S,p.r[key])}</div>
+    <div class="tm">${p.r.score} pts · ×${p.r.combo} · ${p.r.acc}%</div>`;
+  pos(tip,p.x,p.y);tip.style.opacity=1;
+}
+function hideCard(){const t=document.getElementById('tip');if(t)t.style.opacity=0;}
+function pos(node,x,y){
+  const svg=document.getElementById('sv');const vb=svg.viewBox.baseVal;const rect=svg.getBoundingClientRect();
+  node.style.left=(x*rect.width/vb.width)+'px';node.style.top=(y*rect.height/vb.height)+'px';
+}
+
+function drawLadder(key,S){
+  const ranked=RUNS.map((r,i)=>({...r,i})).sort((a,b)=>b[key]-a[key]);
+  const max=ranked[0][key];
+  const curRank=ranked.findIndex(r=>r.i===CUR)+1;
+  let rows=ranked.slice(0,5);
+  if(curRank>5)rows=ranked.slice(0,4).concat([ranked[curRank-1]]);
+  const box=document.getElementById('rows');box.innerHTML='';
+  rows.forEach(r=>{
+    const realRank=ranked.findIndex(x=>x.i===r.i)+1;
+    const you=r.i===CUR;
+    const fill=you?'linear-gradient(90deg,#28f0ff66,var(--cyan))':`linear-gradient(90deg,${S.hex}55,${S.hex})`;
+    const glow=you?'var(--cyan)':S.hex;
+    const d=document.createElement('div');d.className='lrow'+(you?' you':'');
+    d.innerHTML=`<div class="lrank">${realRank}</div>
+      <div class="lwhen">${r.when}</div>
+      <div class="lbar"><i style="width:${Math.round(r[key]/max*100)}%;background:${fill};box-shadow:0 0 8px ${glow}88"></i></div>
+      <div class="lval">${fmt(S,r[key])}</div>
+      <div class="ltag">${you?'You':''}</div>`;
+    box.appendChild(d);
+  });
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');state.s=t.dataset.s;draw();
+}));
+draw();
+window.addEventListener('resize',()=>{ // keep positions correct on resize
+  const key=SERIES[state.s].key;const flag=document.getElementById('flag');
+  if(PTS[CUR])pos(flag,PTS[CUR].x,PTS[CUR].y);
+  if(selIdx>=0)pos(document.getElementById('tip'),PTS[selIdx].x,PTS[selIdx].y);
+});
+window.addEventListener('load',draw);
+</script>
+</body>
+</html>

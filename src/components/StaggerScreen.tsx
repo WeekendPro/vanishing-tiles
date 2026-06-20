@@ -6,9 +6,11 @@ import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
+import { RunHistoryGraph } from './RunHistoryGraph'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
@@ -217,6 +219,24 @@ export function StaggerScreen() {
   })))
   const goHome = useNavStore(s => s.goHome)
   const difficulty = useSettingsStore(s => s.settings.difficulty)
+
+  const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
+
+  // Once-per-game-over run recording (guard ref prevents double-fire under StrictMode).
+  const recordedRef = useRef(false)
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (phase === 'gameOver' && !recordedRef.current) {
+      recordedRef.current = true
+      const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
+      const run = recordRun({ score, recalled: shapesRecalled, combo: bestCombo, accuracy })
+      setCurrentRunId(run.id)
+    } else if (phase !== 'gameOver') {
+      recordedRef.current = false
+      setCurrentRunId(null)
+    }
+  }, [phase, score, shapesRecalled, bestCombo, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)
@@ -584,7 +604,7 @@ export function StaggerScreen() {
         </AnimatePresence>
 
         {phase === 'gameOver' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-vs-void/90 rounded-xl px-6 pointer-events-none">
+          <div className="fixed inset-0 z-40 flex flex-col items-center bg-vs-void overflow-y-auto px-6 py-10">
             <ScanlineOverlay />
             <div className="font-silk text-base text-vs-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
             <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vs-magenta text-glow-vs-magenta mb-5 vs-fade-away">Memory Fades</div>
@@ -608,6 +628,12 @@ export function StaggerScreen() {
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vs-faint mt-1.5">Accuracy</div>
               </div>
             </div>
+
+            {currentRunId && (
+              <div className="w-full max-w-[300px] mb-6 pointer-events-auto">
+                <RunHistoryGraph records={records} currentId={currentRunId} />
+              </div>
+            )}
 
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
               <NeonButton variant="primary" fullWidth onClick={startRun}>Play again</NeonButton>
