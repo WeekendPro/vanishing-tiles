@@ -82,7 +82,6 @@ function Sparkline({ window: win, allRecords, metric, currentId, selectedIdx, on
     : ''
 
   const gradId = `grad_${metric.key}`
-  const glowId = `glow_${metric.key}`
 
   // Rank across ALL records (not just window)
   const rank = currentId ? rankOf(allRecords, metric.key, currentId) : 0
@@ -112,9 +111,6 @@ function Sparkline({ window: win, allRecords, metric, currentId, selectedIdx, on
             <stop offset="0" stopColor={metric.hex} stopOpacity={0.3} />
             <stop offset="1" stopColor={metric.hex} stopOpacity={0} />
           </linearGradient>
-          <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-          </filter>
         </defs>
 
         {/* BEST reference line */}
@@ -320,7 +316,7 @@ function RankChip({ pt, metric, rank, svgWidth, svgHeight }: RankChipProps) {
 
 // ── Inspect card ──────────────────────────────────────────────────────────────
 interface InspectCardProps {
-  pt: Point & { record: RunRecord }
+  pt: Point & { record: RunRecord; idx: number }
   metric: MetricDef
   svgWidth: number
   svgHeight: number
@@ -351,7 +347,7 @@ function InspectCard({ pt, metric, svgWidth, svgHeight }: InspectCardProps) {
       }}
     >
       <div style={{ fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#4A4A5C' }}>
-        {when}
+        {when} · run {pt.idx + 1}
       </div>
       <div style={{
         fontSize: '15px', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
@@ -416,7 +412,7 @@ function Ladder({ records, metric, currentId }: LadderProps) {
               {row.rank}
             </div>
             {/* When label */}
-            <div style={{ fontSize: '9px', color: '#4A4A5C', width: '30px', letterSpacing: '0.04em' }}>
+            <div style={{ fontSize: '9px', color: '#4A4A5C', width: '72px', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {when}
             </div>
             {/* Bar */}

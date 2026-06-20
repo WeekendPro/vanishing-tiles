@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { RunHistoryGraph } from '../../src/components/RunHistoryGraph'
 import type { RunRecord } from '../../src/store/runHistoryStore'
@@ -90,5 +90,25 @@ describe('RunHistoryGraph', () => {
 
     // Should still render tabs and ladder
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
+  })
+
+  it('inspect card label includes "· run N" (window index, 1-based)', () => {
+    const records = makeSampleRecords()
+    const { container } = render(<RunHistoryGraph records={records} currentId="r7" />)
+
+    // Stub getBoundingClientRect so SVG overlay click resolves to a valid index.
+    // With left=0 and width=320 the SVG x = clientX * (320/320) = clientX.
+    // Clicking at clientX=8 (PAD_L) → idx=0, which is run 1 in the window.
+    const svg = container.querySelector('svg')!
+    vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue(
+      { left: 0, top: 0, right: 320, bottom: 116, width: 320, height: 116, x: 0, y: 0, toJSON: () => ({}) } as DOMRect
+    )
+
+    const overlay = container.querySelector('svg rect[fill="transparent"]')
+    expect(overlay).toBeTruthy()
+    fireEvent.click(overlay!, { clientX: 8, clientY: 0 })
+
+    // The inspect card time label should contain "· run 1"
+    expect(screen.getByText(/·\s*run\s*1/i)).toBeInTheDocument()
   })
 })
