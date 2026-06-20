@@ -36,7 +36,7 @@ const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: st
   {
     value: 'hard',
     label: 'Hard',
-    hint: 'Pink reveal, noticeably faster',
+    hint: 'Tiles painted in glossy black',
     active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
   },
 ]

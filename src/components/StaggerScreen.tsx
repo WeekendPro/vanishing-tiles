@@ -35,26 +35,23 @@ const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
-/** The uniform branded pink the reveal floods on MEDIUM/HARD (the signature
- *  Afterglow magenta — shape only, no colour crutch). */
+/** The uniform branded pink the reveal floods on MEDIUM (the signature Afterglow
+ *  magenta — shape only, no colour crutch). */
 const REVEAL_MAGENTA = '#FF2D9B'
-
-/** Hard compresses every reveal duration to this fraction of its base — a clearly
- *  faster sequence without changing the bloom keyframe. */
-const HARD_REVEAL_SCALE = 0.62
 
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
  *  CONCURRENTLY with later ones (the overlapping cascade). `color` floods the
- *  whole bloom; `scale` (≤1) compresses the per-cell decay durations (Hard). */
-interface Bloom { id: number; color: string; cells: { key: string; durMs: number }[] }
+ *  whole bloom (EASY/MEDIUM); `paint` swaps the bright color flood for HARD's
+ *  self-colored graphite "impasto" surface (see .vt-paint), no color crutch. */
+interface Bloom { id: number; color: string; paint: boolean; cells: { key: string; durMs: number }[] }
 
-function bloomForGap(id: number, gap: StaggerGap, color: string, scale: number): Bloom {
+function bloomForGap(id: number, gap: StaggerGap, color: string, paint: boolean): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
-    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: Math.round((STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS) * scale) }))
-  return { id, color, cells }
+    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
+  return { id, color, paint, cells }
 }
 
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
@@ -90,11 +87,13 @@ function useCountUp(value: number, durationMs = 600): number {
 // tick, flood the gap's PIECE COLOR (--bloom-color; an experiment to ease the
 // difficulty curve by carrying shape + color), then decay along a luminous ghost
 // tail back to the void — fading away in a WAVE (each cell sets its own duration +
-// delay). Filled/placed gaps keep their piece color (a correct pick lighting out
-// of the dark), ringed with a soft glow.
+// delay). On HARD the bloom is .vt-paint instead: a self-colored graphite
+// "impasto" surface (no bright flood) that barely lifts off the void. Filled/
+// placed gaps keep their piece color (a correct pick lighting out of the dark),
+// ringed with a soft glow.
 function StaggerBoard({
   gaps, bloomByCell,
-}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number; color: string }> }) {
+}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number; color: string; paint: boolean }> }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -128,11 +127,16 @@ function StaggerBoard({
         // and keep decaying — keyed by their instance id — so they overlap.
         const bloom = bloomByCell.get(key)
         if (bloom) {
+          // HARD paints in graphite (.vt-paint, self-colored); EASY/MEDIUM flood
+          // the bright --bloom-color (.vt-bloom).
           return (
             <div
               key={`${i}-bloom-${bloom.id}`}
-              className="w-7 h-7 rounded-sm vt-bloom"
-              style={{ animationDuration: `${bloom.durMs}ms`, ['--bloom-color']: bloom.color } as CSSProperties}
+              className={`w-7 h-7 rounded-sm ${bloom.paint ? 'vt-paint' : 'vt-bloom'}`}
+              style={{
+                animationDuration: `${bloom.durMs}ms`,
+                ...(bloom.paint ? {} : { ['--bloom-color']: bloom.color }),
+              } as CSSProperties}
             />
           )
         }
@@ -315,17 +319,17 @@ export function StaggerScreen() {
     const timers: number[] = []
     const n = gaps.length
     // Difficulty shapes the reveal: EASY floods each gap in its own piece colour;
-    // MEDIUM/HARD flood the uniform branded pink; HARD also compresses the timing
-    // so the whole sequence plays noticeably faster.
-    const scale = difficulty === 'hard' ? HARD_REVEAL_SCALE : 1
+    // MEDIUM floods the uniform branded pink; HARD paints in graphite "impasto"
+    // (self-colored, no bright flood) so the murky low-contrast tiles are the
+    // whole challenge. All tiers play at the same (normal) reveal speed.
+    const paint = difficulty === 'hard'
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Step between piece flashes (scaled by difficulty). The bloom out-runs this
-    // step, so the next piece flashes while the previous is still decaying — the
-    // overlapping cascade.
-    const step = STAGGER.REVEAL_STEP_MS * scale
+    // Step between piece flashes. The bloom out-runs this step, so the next piece
+    // flashes while the previous is still decaying — the overlapping cascade.
+    const step = STAGGER.REVEAL_STEP_MS
     // How long one bloom lives on screen: its longest-wave cell, plus a hair.
-    const lifetime = (STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS) * scale + 80
+    const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
     // Memorize bar DRAINS: starts full and empties one step per gap as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
@@ -336,13 +340,13 @@ export function StaggerScreen() {
       if (cancelled) return
       if (idx >= n) {
         // Let the final piece finish its decay before recall lights-out.
-        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS * scale - step)))
+        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS - step)))
         return
       }
       const myId = ++id
       // Add a fresh bloom that runs CONCURRENTLY with earlier still-decaying ones
       // (the overlap), and self-removes once its full decay completes.
-      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx], colorFor(gaps[idx]), scale)])
+      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx], colorFor(gaps[idx]), paint)])
       setBarPct((1 - (idx + 1) / n) * 100)
       timers.push(window.setTimeout(() => {
         if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
@@ -442,9 +446,9 @@ export function StaggerScreen() {
 
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
-  const bloomByCell = new Map<string, { id: number; durMs: number; color: string }>()
+  const bloomByCell = new Map<string, { id: number; durMs: number; color: string; paint: boolean }>()
   if (phase === 'reveal') {
-    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs, color: b.color })
+    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs, color: b.color, paint: b.paint })
   }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :

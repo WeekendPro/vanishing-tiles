@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hard Mode — Impasto & Oil Slick (bloom reveal)</title>
+<style>
+  /* ── Real tokens (src/index.css, staggerCurve.ts) ─────────────────────────
+     Timing matched to the game's reveal:
+       REVEAL_BLOOM_MS 2080 · REVEAL_WAVE_MS 220 (per-cell) · REVEAL_STEP_MS 1120
+       Hard scale 0.62. Bloom = flash (~4%) → hold ~1s (52%) → decay to void. */
+  :root {
+    --void: #06060b;
+    --board: #04040a;
+    --dim: #0c0c14;          /* resting / vanished cell */
+    --cell: 30px;
+    --gap: 2px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%), var(--void);
+    color: #c9c9d6;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 17px; letter-spacing: .18em; text-transform: uppercase; text-align: center; color: #e6e6f0; font-weight: 800; margin: 0 0 6px; }
+  .sub { text-align: center; font-size: 12px; color: #6f6f86; margin: 0 auto 22px; max-width: 620px; line-height: 1.5; }
+  .controls { text-align: center; margin: 0 0 34px; display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  button.btn {
+    background: #15151f; color: #cfcfe0; border: 1px solid #2a2a3a; border-radius: 8px;
+    padding: 9px 18px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; transition: .15s;
+  }
+  button.btn:hover { border-color: #7a86ff; color: #fff; }
+  .seg { display: inline-flex; border: 1px solid #2a2a3a; border-radius: 8px; overflow: hidden; }
+  .seg button { background: #101019; color: #8a8aa0; border: 0; padding: 9px 16px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+  .seg button.on { background: #23233a; color: #fff; }
+
+  .grid-wrap { display: flex; gap: 56px; justify-content: center; flex-wrap: wrap; }
+  .variant { display: flex; flex-direction: column; align-items: center; }
+  .variant .tag { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8a8aa0; margin-bottom: 12px; font-weight: 700; }
+  .variant .tag b { color: #e8e8f4; }
+  .variant.B .tag b { color: #cfcfe0; }
+  .variant.D .tag b { color: #9fd8e6; }
+  .variant .blurb { font-size: 11px; color: #66667c; text-align: center; max-width: 320px; line-height: 1.5; margin: 16px 0 0; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: var(--gap);
+    padding: 12px;
+    background: var(--board);
+    border-radius: 12px;
+    box-shadow: inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  /* Every cell is the void at rest; a painted cell holds a .paint layer that the
+     bloom animation flashes in then decays back to transparent (void shows through —
+     no readable hole left behind). */
+  .c { border-radius: 4px; background: var(--dim); position: relative; overflow: hidden; }
+  .paint {
+    position: absolute; inset: 0; border-radius: 4px;
+    opacity: 0; transform: scale(.85);
+    will-change: opacity, transform, filter;
+  }
+  /* Moving specular sheen, swept across each tile while it's lit. */
+  .paint::after {
+    content: ""; position: absolute; inset: -50%;
+    background: var(--sheen, none);
+    transform: translateX(-130%) rotate(8deg);
+    opacity: 0;
+  }
+
+  /* The bloom: flash bright → hold ~1s → decay to void. Per-cell duration is set
+     inline (BLOOM + i·WAVE)·scale so the four cells wink out in a diagonal wave. */
+  .play .paint { animation: paintBloom var(--dur,2080ms) cubic-bezier(.2,.75,.2,1) var(--delay,0ms) both; }
+  .play .paint::after { animation: paintSheen var(--dur,2080ms) cubic-bezier(.3,.05,.2,1) var(--delay,0ms) both; }
+
+  @keyframes paintBloom {
+    0%   { opacity: 0;  transform: scale(.78); filter: brightness(1); }
+    4%   { opacity: 1;  transform: scale(1.13); filter: brightness(1.9); }   /* bright flash */
+    52%  { opacity: 1;  transform: scale(1);    filter: brightness(1); }     /* settled paint, ~1s hold */
+    70%  { opacity: .62; }
+    88%  { opacity: .24; }
+    100% { opacity: 0;  transform: scale(1);    filter: brightness(1); }     /* back to void */
+  }
+  @keyframes paintSheen {
+    0%   { opacity: 0; transform: translateX(-130%) rotate(8deg); }
+    4%   { opacity: 1; }
+    34%  { opacity: 1; transform: translateX(130%) rotate(8deg); }
+    46%  { opacity: 0; transform: translateX(130%) rotate(8deg); }
+    100% { opacity: 0; transform: translateX(130%) rotate(8deg); }
+  }
+
+  /* ════ Variant B — IMPASTO (heavy graphite gloss) ═══════════════════════ */
+  .B .paint {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 1px -1px 2px rgba(0,0,0,.7),
+      inset -1px 1px 1px rgba(255,255,255,.05),
+      0 0 12px rgba(150,160,200,.0);
+    --sheen: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.5) 49%, rgba(180,190,220,.25) 53%, transparent 64%);
+  }
+  /* Flash glow tint (the "bright at first" halo) — graphite white. */
+  .B .play .paint { box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 1px -1px 2px rgba(0,0,0,.7),
+      inset -1px 1px 1px rgba(255,255,255,.05),
+      0 0 16px rgba(190,200,235,.35); }
+
+  /* ════ Variant D — OIL SLICK (the dream sludge) ═════════════════════════ */
+  .D .paint {
+    background:
+      radial-gradient(90% 70% at 30% 25%, rgba(110,160,180,.18), transparent 55%),
+      radial-gradient(70% 80% at 75% 78%, rgba(140,95,150,.15), transparent 60%),
+      linear-gradient(155deg, #15171e, #0c0d14 55%, #07070c);
+    box-shadow:
+      inset 0 1px 0 rgba(190,220,230,.14),
+      inset 0 -2px 3px rgba(0,0,0,.6);
+    --sheen: linear-gradient(108deg, transparent 40%, rgba(150,215,230,.45) 47%, rgba(195,160,215,.32) 55%, transparent 64%);
+  }
+  .D .play .paint { box-shadow:
+      inset 0 1px 0 rgba(190,220,230,.14),
+      inset 0 -2px 3px rgba(0,0,0,.6),
+      0 0 16px rgba(120,190,205,.32); }
+</style>
+</head>
+<body>
+  <h1>Hard Mode · Impasto &amp; Oil Slick — bloom reveal</h1>
+  <p class="sub">
+    Both painted on the void in the game's real reveal rhythm: each gap <b>flashes bright</b>,
+    holds ~1s, then its cells <b>decay back into the void in a diagonal wave</b>. Gaps cascade one
+    after another, the next flashing as the previous starts to die — exactly like the live reveal.
+  </p>
+
+  <div class="controls">
+    <button class="btn" id="replay">▶ Replay reveal</button>
+    <div class="seg" id="speed">
+      <button data-scale="1" class="on">Normal</button>
+      <button data-scale="0.62">Hard speed (×0.62)</button>
+    </div>
+  </div>
+
+  <div class="grid-wrap" id="root"></div>
+
+<script>
+  const BLOOM = 2080, WAVE = 220, STEP = 1120;   // real constants
+  const COLS = 8, ROWS = 6;
+
+  // Four separated tetromino gaps (T, L, S, I). Flash order = array order.
+  const GAPS = [
+    [[0,1],[0,2],[0,3],[1,2]],   // T
+    [[1,5],[2,5],[3,5],[3,6]],   // L
+    [[3,1],[4,1],[4,2],[5,2]],   // S
+    [[5,4],[5,5],[5,6],[5,7]],   // I
+  ];
+  const VARIANTS = [
+    ['B','Impasto', 'Heavy graphite gloss — thick brush-ridge highlights, a wet pool of shine. Flashes graphite-white, settles to near-black, vanishes.'],
+    ['D','Oil Slick', 'Deep black with a petrol cyan/violet iridescence — the dream-sludge. Flashes with a cool oily sheen, then sinks back into the void.'],
+  ];
+
+  let scale = 1;
+  const cellEls = {}; // key "vKey:r,c" -> paint element
+
+  function build() {
+    const root = document.getElementById('root');
+    root.innerHTML = '';
+    VARIANTS.forEach(([key,name,blurb]) => {
+      const v = document.createElement('div'); v.className = 'variant ' + key;
+      const tag = document.createElement('div'); tag.className = 'tag';
+      tag.innerHTML = `Variant ${key} · <b>${name}</b>`;
+      const board = document.createElement('div'); board.className = 'board';
+      // map of painted cells -> their gap index
+      const paintMap = new Map();
+      GAPS.forEach((g) => g.forEach(([r,c]) => paintMap.set(r+','+c, true)));
+      for (let i=0;i<ROWS*COLS;i++){
+        const r = Math.floor(i/COLS), c = i%COLS;
+        const cell = document.createElement('div'); cell.className='c';
+        if (paintMap.has(r+','+c)) {
+          const p = document.createElement('div'); p.className='paint';
+          cellEls[key+':'+r+','+c] = p;
+          cell.appendChild(p);
+        }
+        board.appendChild(cell);
+      }
+      const bl = document.createElement('div'); bl.className='blurb'; bl.textContent = blurb;
+      v.append(tag, board, bl);
+      root.appendChild(v);
+    });
+  }
+
+  // Drive the whole cascade from CSS: per painted cell, set --dur (its decay
+  // length, longer cells wave out later) and --delay (its gap's flash time), then
+  // toggle .play to (re)start every animation together.
+  function playCSS() {
+    VARIANTS.forEach(([key]) => {
+      const board = cellEls[key+':0,1']?.closest('.board');
+      if (board) { board.classList.remove('play'); void board.offsetWidth; }
+      GAPS.forEach((gap, gi) => {
+        const sorted = [...gap].sort((a,b)=> (a[0]+a[1])-(b[0]+b[1]) || a[1]-b[1]);
+        const startDelay = Math.round(gi * STEP * scale);
+        sorted.forEach(([r,c], idx) => {
+          const el = cellEls[key+':'+r+','+c];
+          if (!el) return;
+          const dur = Math.round((BLOOM + idx*WAVE) * scale);
+          el.style.setProperty('--dur', dur+'ms');
+          el.style.setProperty('--delay', startDelay+'ms');
+        });
+      });
+      if (board) board.classList.add('play');
+    });
+  }
+
+  document.getElementById('replay').addEventListener('click', playCSS);
+  document.querySelectorAll('#speed button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#speed button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      scale = parseFloat(b.dataset.scale);
+      playCSS();
+    });
+  });
+
+  build();
+  // delay first play a touch so layout settles
+  setTimeout(playCSS, 250);
+  // auto-loop so the user can keep watching without clicking
+  setInterval(playCSS, Math.round((GAPS.length*STEP + BLOOM + 3*WAVE) * 1 + 900));
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hard Mode — Impasto (final, no glare)</title>
+<style>
+  /* Real tokens + reveal timing (src/index.css, staggerCurve.ts).
+     BLOOM 2080 · WAVE 220/cell · STEP 1120. Normal speed. No sheen sweep —
+     "bright at first" is a brightness flash + glow halo only, then per-cell
+     wave decay back to the void. */
+  :root { --void:#06060b; --board:#04040a; --dim:#0c0c14; --cell:30px; --gap:2px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%), var(--void);
+    color: #c9c9d6; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 44px 24px 70px;
+  }
+  h1 { font-size:17px; letter-spacing:.18em; text-transform:uppercase; text-align:center; color:#e6e6f0; font-weight:800; margin:0 0 6px; }
+  .sub { text-align:center; font-size:12px; color:#6f6f86; margin:0 auto 26px; max-width:600px; line-height:1.5; }
+  .controls { text-align:center; margin:0 0 34px; }
+  button.btn { background:#15151f; color:#cfcfe0; border:1px solid #2a2a3a; border-radius:8px; padding:9px 18px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; transition:.15s; }
+  button.btn:hover { border-color:#7a86ff; color:#fff; }
+  .center { display:flex; justify-content:center; }
+  .board {
+    display:grid; grid-template-columns:repeat(8,var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); padding:12px; background:var(--board); border-radius:12px;
+    box-shadow: inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .c { border-radius:4px; background:var(--dim); position:relative; overflow:hidden; }
+  .paint {
+    position:absolute; inset:0; border-radius:4px; opacity:0; transform:scale(.85);
+    will-change:opacity,transform,filter;
+    /* Impasto: thick graphite gloss — ridge highlights + a wet pool of shine. */
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 1px -1px 2px rgba(0,0,0,.7),
+      inset -1px 1px 1px rgba(255,255,255,.05),
+      0 0 16px rgba(190,200,235,.0);
+  }
+  .play .paint { animation: paintBloom var(--dur,2080ms) cubic-bezier(.2,.75,.2,1) var(--delay,0ms) both; }
+  @keyframes paintBloom {
+    0%   { opacity:0;  transform:scale(.78); filter:brightness(1);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7), inset -1px 1px 1px rgba(255,255,255,.05), 0 0 16px rgba(190,200,235,0); }
+    4%   { opacity:1;  transform:scale(1.13); filter:brightness(1.9);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7), inset -1px 1px 1px rgba(255,255,255,.05), 0 0 18px rgba(190,200,235,.4); }
+    52%  { opacity:1;  transform:scale(1); filter:brightness(1);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7), inset -1px 1px 1px rgba(255,255,255,.05), 0 0 16px rgba(190,200,235,0); }
+    70%  { opacity:.62; }
+    88%  { opacity:.24; }
+    100% { opacity:0;  transform:scale(1); filter:brightness(1); }
+  }
+</style>
+</head>
+<body>
+  <h1>Hard Mode · Impasto — final</h1>
+  <p class="sub">
+    Heavy graphite gloss, normal reveal speed, <b>no glare sweep</b>. Each gap flashes bright
+    (a brightness pop + a soft halo), holds ~1s, then its cells decay back into the void in a
+    diagonal wave. Gaps cascade as in the live reveal.
+  </p>
+  <div class="controls"><button class="btn" id="replay">▶ Replay reveal</button></div>
+  <div class="center"><div class="board" id="board"></div></div>
+
+<script>
+  const BLOOM=2080, WAVE=220, STEP=1120, COLS=8, ROWS=6;
+  const GAPS = [
+    [[0,1],[0,2],[0,3],[1,2]],
+    [[1,5],[2,5],[3,5],[3,6]],
+    [[3,1],[4,1],[4,2],[5,2]],
+    [[5,4],[5,5],[5,6],[5,7]],
+  ];
+  const board = document.getElementById('board');
+  const els = {};
+  const paintMap = new Set(); GAPS.forEach(g=>g.forEach(([r,c])=>paintMap.add(r+','+c)));
+  for (let i=0;i<ROWS*COLS;i++){
+    const r=Math.floor(i/COLS), c=i%COLS;
+    const cell=document.createElement('div'); cell.className='c';
+    if (paintMap.has(r+','+c)){ const p=document.createElement('div'); p.className='paint'; els[r+','+c]=p; cell.appendChild(p); }
+    board.appendChild(cell);
+  }
+  function play(){
+    board.classList.remove('play'); void board.offsetWidth;
+    GAPS.forEach((gap,gi)=>{
+      const sorted=[...gap].sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])||a[1]-b[1]);
+      const delay=gi*STEP;
+      sorted.forEach(([r,c],idx)=>{
+        const el=els[r+','+c]; if(!el) return;
+        el.style.setProperty('--dur',(BLOOM+idx*WAVE)+'ms');
+        el.style.setProperty('--delay',delay+'ms');
+      });
+    });
+    board.classList.add('play');
+  }
+  document.getElementById('replay').addEventListener('click', play);
+  setTimeout(play, 250);
+  setInterval(play, GAPS.length*STEP + BLOOM + 3*WAVE + 1100);
+</script>
+</body>
+</html>

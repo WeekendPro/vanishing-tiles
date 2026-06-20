@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hard Mode — Glossy Black Paint reveal</title>
+<style>
+  /* ── Real board tokens (from src/index.css / StaggerScreen.tsx) ───────────── */
+  :root {
+    --void: #06060b;          /* screen ground */
+    --board: #04040a;         /* board bg */
+    --dim: #0c0c14;           /* vt-dim resting cell */
+    --magenta: #FF2D9B;       /* current Hard reveal flood (for reference) */
+    --cell: 30px;
+    --gap: 2px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 90% at 50% 30%, transparent 55%, #000 130%), var(--void);
+    color: #c9c9d6;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 24px 80px;
+  }
+  h1 {
+    font-size: 17px; letter-spacing: .18em; text-transform: uppercase;
+    text-align: center; color: #e6e6f0; font-weight: 800; margin: 0 0 4px;
+  }
+  .sub {
+    text-align: center; font-size: 12px; color: #6f6f86; margin: 0 auto 6px;
+    max-width: 640px; line-height: 1.5;
+  }
+  .ref {
+    text-align:center; font-size:11px; color:#5a5a70; margin:0 auto 26px; max-width:560px;
+  }
+  .controls { text-align: center; margin: 0 0 36px; }
+  button.replay {
+    background: #15151f; color: #cfcfe0; border: 1px solid #2a2a3a;
+    border-radius: 8px; padding: 9px 18px; font-size: 12px; letter-spacing: .12em;
+    text-transform: uppercase; cursor: pointer; transition: .15s;
+  }
+  button.replay:hover { border-color: #FF2D9B; color: #fff; box-shadow: 0 0 14px rgba(255,45,155,.25); }
+
+  .grid-wrap {
+    display: grid; gap: 28px 30px; justify-content: center;
+    grid-template-columns: repeat(auto-fit, minmax(300px, max-content));
+    max-width: 1180px; margin: 0 auto;
+  }
+  .variant { display: flex; flex-direction: column; align-items: center; }
+  .variant .tag {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: #8a8aa0; margin-bottom: 4px; font-weight: 700;
+  }
+  .variant .tag b { color: #e8e8f4; }
+  .variant .blurb {
+    font-size: 11px; color: #66667c; text-align: center; max-width: 300px;
+    line-height: 1.45; margin: 6px 0 14px; min-height: 30px;
+  }
+
+  /* ── Board ─────────────────────────────────────────────────────────────── */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: var(--gap);
+    padding: 12px;
+    background: var(--board);
+    border-radius: 12px;
+    box-shadow: inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .c { border-radius: 4px; background: var(--dim); position: relative; }
+
+  /* A painted tile = a gap cell revealed. Each variant overrides --paint look. */
+  .paint { position: relative; overflow: hidden; }
+  .paint::after {            /* the moving specular sheen (gloss sweep) */
+    content: ""; position: absolute; inset: -40%;
+    background: var(--sheen, none);
+    transform: translateX(-120%) rotate(8deg);
+    pointer-events: none;
+  }
+  .playing .paint { animation: pop 900ms cubic-bezier(.2,.75,.2,1) both; }
+  .playing .paint::after { animation: sweep 1300ms cubic-bezier(.4,.1,.2,1) both; }
+  @keyframes pop {
+    0%   { transform: scale(.7); opacity: 0; }
+    45%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes sweep {
+    0%   { transform: translateX(-130%) rotate(8deg); }
+    60%  { transform: translateX(130%) rotate(8deg); }
+    100% { transform: translateX(130%) rotate(8deg); }
+  }
+  /* stagger each painted cell slightly so the shape "paints on" as a wave */
+  .paint.d1 { animation-delay: 60ms; }
+  .paint.d1::after { animation-delay: 60ms; }
+  .paint.d2 { animation-delay: 120ms; }
+  .paint.d2::after { animation-delay: 120ms; }
+  .paint.d3 { animation-delay: 180ms; }
+  .paint.d3::after { animation-delay: 180ms; }
+
+  /* ════ Variant A — WET GLOSS ════════════════════════════════════════════
+     Deep charcoal with a soft vertical gloss; a single bright specular streak
+     sweeps across like light catching a wet brushstroke. */
+  .A .paint {
+    background:
+      linear-gradient(160deg, #20202b 0%, #14141c 42%, #0a0a11 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.10),
+      inset 0 -2px 3px rgba(0,0,0,.6),
+      0 1px 4px rgba(0,0,0,.5);
+    --sheen: linear-gradient(105deg, transparent 38%, rgba(220,225,255,.55) 50%, transparent 62%);
+  }
+
+  /* ════ Variant B — IMPASTO (thick paint) ════════════════════════════════
+     Heavy, globby gloss black. Layered radial highlights read as thick brush
+     ridges catching light; an off-center wet pool of shine. */
+  .B .paint {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.16), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.10), transparent 60%),
+      linear-gradient(150deg, #1d1d27, #101017 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.14),
+      inset 1px -1px 2px rgba(0,0,0,.7),
+      inset -1px 1px 1px rgba(255,255,255,.04);
+    --sheen: linear-gradient(110deg, transparent 40%, rgba(255,255,255,.4) 49%, rgba(180,190,220,.2) 53%, transparent 64%);
+  }
+
+  /* ════ Variant C — OBSIDIAN (piano black) ═══════════════════════════════
+     Near-pure black, polished. One crisp hard white specular line; otherwise
+     pitch dark. The most "expensive", the hardest to read. */
+  .C .paint {
+    background:
+      linear-gradient(165deg, #16161d 0%, #0a0a10 38%, #050509 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.08),
+      inset 0 -1px 2px #000;
+    --sheen: linear-gradient(100deg, transparent 46%, rgba(255,255,255,.85) 49.5%, rgba(255,255,255,.85) 50.5%, transparent 54%);
+  }
+
+  /* ════ Variant D — OIL SLICK (the dream sludge) ═════════════════════════
+     Deep black with a faint cool petrol iridescence pooling at the edges —
+     evokes the black sludge: not pure neutral, a desaturated oily shimmer. */
+  .D .paint {
+    background:
+      radial-gradient(90% 70% at 30% 25%, rgba(90,130,150,.14), transparent 55%),
+      radial-gradient(70% 80% at 75% 78%, rgba(120,80,130,.12), transparent 60%),
+      linear-gradient(155deg, #14161c, #0c0d13 55%, #07070c);
+    box-shadow:
+      inset 0 1px 0 rgba(180,210,220,.10),
+      inset 0 -2px 3px rgba(0,0,0,.6);
+    --sheen: linear-gradient(108deg, transparent 40%, rgba(150,210,225,.4) 48%, rgba(190,160,210,.3) 54%, transparent 64%);
+  }
+
+  /* ════ Variant E — SOFT SHEEN (most readable) ═══════════════════════════
+     A dimmer, broader top-light gloss. Less aggressive contrast — the safety
+     option if full gloss is too hard to see during a timed reveal. */
+  .E .paint {
+    background:
+      linear-gradient(180deg, #24242f 0%, #181820 50%, #101017 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.12),
+      inset 0 -2px 4px rgba(0,0,0,.45);
+    --sheen: linear-gradient(100deg, transparent 30%, rgba(210,215,235,.35) 50%, transparent 70%);
+  }
+
+  /* ════ Reference — current Hard (magenta flood) ═════════════════════════ */
+  .REF .paint {
+    background: var(--magenta);
+    box-shadow: 0 0 9px var(--magenta), 0 0 20px rgba(255,45,155,.5);
+    --sheen: none;
+  }
+  .REF .tag b { color: var(--magenta); }
+</style>
+</head>
+<body>
+  <h1>Hard Mode · Glossy Black Paint reveal</h1>
+  <p class="sub">
+    On Hard, the reveal currently floods each gap in bright magenta. The idea: instead
+    "paint" the gap tiles in heavy glossy near-black — a wet, Severance-style sheen that
+    barely lifts off the void, so reading the shapes under the clock is genuinely harder.
+  </p>
+  <p class="ref">Same 8-col board crop &amp; tokens as the real game (void <code>#04040a</code>, resting cell <code>#0c0c14</code>). Watch the paint go on; compare against the magenta reference (bottom-right).</p>
+  <div class="controls"><button class="replay" id="replay">▶ Replay reveal</button></div>
+
+  <div class="grid-wrap" id="root"></div>
+
+<script>
+  // A small tetromino layout painted onto an 8x5 void board (T + L shapes),
+  // so each variant shows the gloss on a real multi-cell gap silhouette.
+  // 1 = painted gap cell, with a wave-delay class; 0 = void.
+  const LAYOUT = [
+    [0,1,1,1,0,0,0,0],
+    [0,0,1,0,0,1,0,0],
+    [0,0,0,0,0,1,0,0],
+    [0,0,0,0,0,1,1,0],
+    [0,0,0,0,0,0,0,0],
+  ];
+  const COLS = 8;
+  const VARIANTS = [
+    ['A','Wet Gloss',        'Charcoal + a single bright streak sweeping across, like light on a wet brushstroke.'],
+    ['B','Impasto',          'Thick, globby gloss — layered highlights read as heavy brush ridges. Most paint-like.'],
+    ['C','Obsidian',         'Near-pure black, one crisp hard specular line. The hardest to read.'],
+    ['D','Oil Slick',        'Deep black with a faint petrol iridescence at the edges — the dream-sludge.'],
+    ['E','Soft Sheen',       'Dimmer, broader top-gloss. The safety option if full gloss reads too dark.'],
+    ['REF','Current Hard',   'Reference only — today’s bright magenta flood.'],
+  ];
+
+  const root = document.getElementById('root');
+  VARIANTS.forEach(([key, name, blurb]) => {
+    const v = document.createElement('div');
+    v.className = 'variant ' + key;
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = key === 'REF' ? `<b>${name}</b>` : `Variant ${key} · <b>${name}</b>`;
+    const board = document.createElement('div');
+    board.className = 'board playing';
+    let d = 0;
+    LAYOUT.flat().forEach((cell, i) => {
+      const el = document.createElement('div');
+      if (cell) {
+        const wave = Math.floor((Math.floor(i/COLS) + (i%COLS)) % 4); // diagonal wave
+        el.className = 'c paint d' + wave;
+      } else {
+        el.className = 'c';
+      }
+      board.appendChild(el);
+    });
+    const bl = document.createElement('div');
+    bl.className = 'blurb'; bl.textContent = blurb;
+    v.append(tag, board, bl);
+    root.appendChild(v);
+  });
+
+  document.getElementById('replay').addEventListener('click', () => {
+    document.querySelectorAll('.board').forEach(b => {
+      b.classList.remove('playing'); void b.offsetWidth; b.classList.add('playing');
+    });
+  });
+</script>
+</body>
+</html>
