@@ -191,7 +191,7 @@
    color flood, a gap paints in as a heavy graphite gloss — deep near-black with
    ridge highlights and a wet sheen — that barely lifts off the void. Because the
    surface is self-colored (no --bloom-color), "bright at first" reads as a
-   BRIGHTNESS pop + soft halo at the flash, then it settles to the murky surface
+   BRIGHTNESS pop at the flash (no outer glow), then it settles to the murky surface
    and decays back to the void in the same per-cell wave as vtBloom. The low
    contrast is Hard's whole challenge. The impasto graphite surface is repeated at
    the flash/hold keyframes so the brightness filter has a real surface to lift. */
@@ -209,7 +209,7 @@
       linear-gradient(150deg, #20202b, #121219 55%, #08080d);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05), 0 0 18px rgba(190, 200, 235, 0.4);
+      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
     filter: brightness(1.9);
     transform: scale(1.13);
   }
