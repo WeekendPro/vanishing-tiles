@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Universal 2×2 Canvas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --dim:#0c0c14; --panel:#0E0E16; --raised:#15151F;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#E8E8F0; --faint:#6b6b80;
+    --cell:24px; --seam:2px; --r:6px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; min-height:100vh; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text);
+    background:radial-gradient(120% 90% at 50% 24%, transparent 55%, #000 130%), var(--void);
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 48px; user-select:none;}
+  .head{text-align:center; margin-bottom:14px; max-width:560px;}
+  .head h1{font-size:17px; margin:0 0 6px; letter-spacing:.02em;}
+  .head p{font-size:12px; color:var(--faint); margin:0; line-height:1.5;}
+  /* category bar */
+  .cats{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-width:560px; margin-bottom:18px;}
+  .cat{font-family:inherit; cursor:pointer; font-size:11px; letter-spacing:.06em; padding:7px 12px; border-radius:99px;
+    background:var(--raised); color:var(--faint); border:1px solid rgba(255,255,255,.08); transition:all .15s;}
+  .cat:hover{color:var(--text); border-color:rgba(40,240,255,.3);}
+  .cat.active{color:#03121a; background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 14px rgba(40,240,255,.4); font-weight:600;}
+  /* HUD */
+  .hud{width:100%; max-width:344px; display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:8px;}
+  .hud .lvl{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); margin-bottom:2px;}
+  .hud .score{font-weight:700; font-size:26px; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1; font-variant-numeric:tabular-nums;}
+  .hud .right{text-align:right;}
+  .hearts{color:var(--red); letter-spacing:2px; text-shadow:0 0 8px rgba(255,59,71,.5); font-size:14px;}
+  .items{margin-top:5px; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .items small{color:var(--faint); font-size:9px; letter-spacing:.12em; text-transform:uppercase; margin-left:5px;}
+  .bar{width:100%; max-width:344px; height:8px; border-radius:99px; background:#000; overflow:hidden; box-shadow:inset 0 1px 2px #000; margin-bottom:8px;}
+  .bar > div{height:100%; border-radius:99px; transition:width .3s ease;}
+  .phaselabel{width:100%; max-width:344px; text-align:center; font-size:11px; letter-spacing:.22em; text-transform:uppercase; margin:2px 0 12px; min-height:14px;}
+  /* Board */
+  .board{position:relative; display:grid; grid-template-columns:repeat(12, var(--cell)); gap:var(--seam); padding:12px; background:var(--board); border-radius:12px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);}
+  .cell{width:var(--cell); height:var(--cell); border-radius:4px; background:var(--dim);}
+  /* The universal 2×2 canvas: a continuous block of four flush quadrants, each a
+     clipped window into one 50px "inner" rendering — emoji, char, color, or a drawn
+     tetromino, identical pipeline. Each quadrant blooms (accent glow flash → hold →
+     decay) on a per-diagonal clock, so any content vanishes corner-by-corner. */
+  .block{position:absolute; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:0;}
+  .q{position:relative; overflow:hidden; opacity:0;}
+  .q.tl{border-top-left-radius:var(--r);} .q.tr{border-top-right-radius:var(--r);}
+  .q.bl{border-bottom-left-radius:var(--r);} .q.br{border-bottom-right-radius:var(--r);}
+  .inner{position:absolute; width:calc(var(--cell)*2 + var(--seam)); height:calc(var(--cell)*2 + var(--seam));
+    display:flex; align-items:center; justify-content:center;}
+  .glyph{font-size:42px; line-height:1;}
+  .glyph.stroke{filter:drop-shadow(.6px 0 0 rgba(255,255,255,.92)) drop-shadow(-.6px 0 0 rgba(255,255,255,.92)) drop-shadow(0 .6px 0 rgba(255,255,255,.92)) drop-shadow(0 -.6px 0 rgba(255,255,255,.92));}
+  .char{font-weight:700; font-size:30px; line-height:1; color:#09090f; text-shadow:0 1px 0 rgba(255,255,255,.25);}
+  /* drawn tetromino icon (cells in piece color, glowing) */
+  .tet{display:grid; gap:1px;}
+  .tet i{width:10px; height:10px; border-radius:2px; display:block;}
+  .tet i.on{box-shadow:0 0 5px var(--sc), inset 0 0 0 1px rgba(255,255,255,.18);}
+  .block.revealing .q{animation:bloomGlow var(--dur,2080ms) cubic-bezier(.2,.75,.2,1) forwards;}
+  @keyframes bloomGlow{
+    0%{opacity:0; box-shadow:none; transform:scale(1)}
+    5%{opacity:1; box-shadow:0 0 13px var(--bc), 0 0 28px var(--bc); transform:scale(1.06)}
+    52%{opacity:1; box-shadow:0 0 8px var(--bc); transform:scale(1)}
+    70%{opacity:.92; box-shadow:0 0 6px color-mix(in srgb, var(--bc) 55%, transparent)}
+    88%{opacity:.5; box-shadow:0 0 3px color-mix(in srgb, var(--bc) 30%, transparent)}
+    100%{opacity:0; box-shadow:none}
+  }
+  .block.revealing{animation:blockPop .5s cubic-bezier(.2,.8,.2,1);}
+  @keyframes blockPop{0%{transform:scale(.82)} 30%{transform:scale(1.05)} 100%{transform:scale(1)}}
+  .block.placed .q{opacity:1; box-shadow:0 0 7px color-mix(in srgb, var(--bc) 45%, transparent); animation:placePop .32s ease-out backwards; animation-delay:var(--pdelay,0ms);}
+  @keyframes placePop{0%{opacity:.3; transform:scale(.6)} 100%{opacity:1; transform:scale(1)}}
+  /* Tray */
+  .tray{margin-top:18px; width:100%; max-width:344px; border-radius:12px; padding:11px; background:var(--panel); border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .tray .lbl{display:flex; justify-content:space-between; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5); margin-bottom:8px;}
+  .tray .lbl span:last-child{color:var(--faint); text-shadow:none;}
+  .slots{display:grid; grid-template-columns:repeat(5,1fr); gap:7px;}
+  .slot{position:relative; height:52px; display:flex; align-items:center; justify-content:center; border-radius:10px; cursor:pointer; transition:transform .1s, filter .15s, box-shadow .15s;}
+  .slot:active{transform:translateY(1px);}
+  .slot.raised{background:var(--raised); border:1px solid rgba(40,240,255,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .slot.raised:hover{border-color:var(--cyan); box-shadow:0 0 12px rgba(40,240,255,.25);}
+  .slot.sticker:hover{filter:brightness(1.12); box-shadow:0 0 12px color-mix(in srgb, var(--bc) 55%, transparent);}
+  .slot .tgl{font-size:24px;}
+  .slot .tchar{font-weight:700; font-size:24px; color:#09090f;}
+  .slot .chip{width:28px; height:28px; border-radius:8px; box-shadow:0 0 10px currentColor, inset 0 1px 0 rgba(255,255,255,.25);}
+  .slot.spent{opacity:.32; pointer-events:none; filter:grayscale(.5);}
+  .slot .badge{position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; padding:0 4px; border-radius:99px; background:#0b0b12; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.4);}
+  .spark{position:absolute; left:50%; top:2px; z-index:5; pointer-events:none; font-size:13px; font-weight:700; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.9); animation:sparkUp .8s ease-out forwards;}
+  @keyframes sparkUp{0%{opacity:0; transform:translate(-50%,0) scale(.5)} 30%{opacity:1} 100%{opacity:0; transform:translate(-50%,-120%) scale(1.15)}}
+  .controls{margin-top:22px; display:flex; gap:10px;}
+  .btn{font-family:inherit; font-weight:600; font-size:13px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; padding:11px 18px; border-radius:8px; background:var(--raised); color:var(--cyan); border:2px solid var(--cyan); box-shadow:0 0 14px rgba(40,240,255,.25); transition:transform .1s;}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{border-color:rgba(255,255,255,.15); color:var(--faint); box-shadow:none;}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>One canvas, every category</h1>
+    <p>The same 2×2 block projects anything — a drawn tetromino, an emoji, a letter, a number, a kanji, a pure color. Same bloom, same corner-by-corner vanish. Pick a category and replay.</p>
+  </div>
+
+  <div class="cats" id="cats"></div>
+
+  <div class="hud">
+    <div><div class="lvl" id="hud-cat">Tetrominoes</div><div class="score" id="score">2400</div></div>
+    <div class="right"><div class="hearts">♥♥♥♥</div><div class="items"><span id="filled">0</span> / <span id="total">8</span><small>tiles</small></div></div>
+  </div>
+  <div class="bar"><div id="barfill" style="width:100%; background:var(--magenta); box-shadow:0 0 6px var(--magenta);"></div></div>
+  <div class="phaselabel" id="phaselabel" style="color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55);">Memorize</div>
+
+  <div class="board" id="board"></div>
+
+  <div class="tray" id="tray" style="visibility:hidden;">
+    <div class="lbl"><span id="tray-lbl">Pieces</span><span>5-item set · 8 revealed</span></div>
+    <div class="slots" id="slots"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn ghost" onclick="newSet()">↻ New set</button>
+    <button class="btn ghost" onclick="reveal()">↺ Replay</button>
+    <button class="btn" id="skipBtn" onclick="skipReveal()">Skip reveal →</button>
+  </div>
+
+<script>
+  // ── Tetromino shapes + colors ──────────────────────────────
+  const HEX={I:'#22d3ee',O:'#facc15',T:'#a855f7',S:'#4ade80',Z:'#ef4444',J:'#3b82f6',L:'#fb923c'};
+  const GLYPH={I:[[1],[1],[1],[1]],O:[[1,1],[1,1]],T:[[1,1,1],[0,1,0]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[0,1],[0,1],[1,1]],L:[[1,0],[1,0],[1,1]]};
+
+  // ── Category catalog ──────────────────────────────────────
+  const PALETTE=['#ff4d63','#ffb703','#4cc9f0','#a855f7','#6bd98a','#ff8fc7','#facc15','#5ad1c4'];
+  const CATS=[
+    {name:'Tetrominoes', kind:'shape', items:['I','O','T','S','Z','J','L']},
+    {name:'Food',     kind:'emoji', items:['🍔','🍗','🍟','🥦','🍉','🍓','🍌','🥐','🧁','🥗']},
+    {name:'Travel',   kind:'emoji', items:['🚌','🚗','✈️','🛵','🚑','🚉','🚂','⛴️','🚖','🚚']},
+    {name:'Faces',    kind:'emoji', items:['😀','😎','😴','😡','🤔','🥳','😭','😇']},
+    {name:'Hands',    kind:'emoji', items:['👍','✌️','👌','✋','🤙','👏','🤝','✊']},
+    {name:'Jobs',     kind:'emoji', items:['🧑‍🚒','👮','👩‍⚕️','👷‍♀️','👩‍💼','🧑‍🍳','🧑‍🌾','👨‍✈️','🧑‍🎨','👩‍⚖️']},
+    {name:'Tools',    kind:'emoji', items:['🔨','🪛','🔧','🪚','🧰','🪜','🔦','🧲','✂️']},
+    {name:'Landmarks',kind:'emoji', items:['🗼','🗽','🏰','🕌','⛩️','🗿','🎡','🎢','🏯','⛲']},
+    {name:'Sports',   kind:'emoji', items:['⚽','🏀','🎾','🏈','🏐','🎳','🏓','🥊']},
+    {name:'Letters',  kind:'char',  items:['A','B','E','G','K','Q','R','W']},
+    {name:'Numbers',  kind:'char',  items:['1','2','3','4','5','6','7','9']},
+    {name:'漢字',     kind:'char',  items:['水','火','木','金','土','月','日','山']},
+    {name:'Symbols',  kind:'char',  items:['★','♥','♠','✦','⚡','☯','✿','☂']},
+    {name:'Colors',   kind:'color', items:['#22d3ee','#ff2d95','#39d98a','#a855f7','#facc15','#fb923c','#ff7ac8']},
+  ];
+  let cat=CATS[0];
+
+  function accentOf(item, idx){
+    if(cat.kind==='shape') return HEX[item];
+    if(cat.kind==='color') return item;
+    return PALETTE[idx % PALETTE.length];
+  }
+  function fillOf(accent){
+    if(cat.kind==='shape') return `color-mix(in srgb, ${accent} 20%, #08080e)`;
+    if(cat.kind==='color') return `color-mix(in srgb, ${accent} 90%, #0b0b12)`;
+    return `color-mix(in srgb, ${accent} 82%, #0b0b12)`;
+  }
+  // Build the 50×50 "inner" rendering for one item (cloned into each quadrant).
+  function makeInner(item, accent){
+    const inner=document.createElement('div'); inner.className='inner';
+    if(cat.kind==='shape'){
+      const g=GLYPH[item]; const grid=document.createElement('div'); grid.className='tet';
+      grid.style.gridTemplateColumns=`repeat(${g[0].length},10px)`; grid.style.setProperty('--sc',accent);
+      g.flat().forEach(v=>{const i=document.createElement('i'); if(v){i.className='on'; i.style.background=accent;} else i.style.background='transparent'; grid.appendChild(i);});
+      inner.appendChild(grid);
+    } else if(cat.kind==='emoji'){
+      const s=document.createElement('span'); s.className='glyph stroke'; s.textContent=item; inner.appendChild(s);
+    } else if(cat.kind==='char'){
+      const s=document.createElement('span'); s.className='char'; s.textContent=item; inner.appendChild(s);
+    } // color → empty (fill carries it)
+    return inner;
+  }
+
+  // ── Set + level ───────────────────────────────────────────
+  const SETSIZE=5, REVEAL=8;
+  const ORIGINS=[]; for(const r of [0,3,6,9]) for(const c of [0,3,6,9]) ORIGINS.push({r,c});
+  const pick=(arr,n)=>{const a=[...arr],o=[];for(let i=0;i<n&&a.length;i++)o.push(a.splice(Math.floor(Math.random()*a.length),1)[0]);return o;};
+  let set=[], setAccents=[], levelItems=[], levelSlots=[];
+  function newSet(){
+    set=pick(cat.items, Math.min(SETSIZE, cat.items.length));
+    setAccents=set.map((it,i)=>accentOf(it,i));
+    reveal();
+  }
+
+  const CELL=24, SEAM=2, PITCH=CELL+SEAM, PAD=12, BLOCK=CELL*2+SEAM, HALF=BLOCK/2;
+  let blockEls=[], timers=[]; function clearTimers(){timers.forEach(clearTimeout); timers=[];}
+  const BLOOM=2080, WAVE=320, STEP=1000;
+
+  let scoreVal=2400;
+  function bumpScore(n){const el=document.getElementById('score'); const from=scoreVal; scoreVal+=n; const s=performance.now();
+    (function f(now){const t=Math.min(1,(now-s)/500); el.textContent=Math.round(from+(scoreVal-from)*(1-Math.pow(1-t,3))); if(t<1) requestAnimationFrame(f);})(performance.now());}
+
+  let filled=0;
+  function buildLevel(){
+    const b=document.getElementById('board'); b.innerHTML=''; blockEls=[];
+    for(let i=0;i<144;i++){const d=document.createElement('div'); d.className='cell'; b.appendChild(d);}
+    // 8 picks from the 5-set, placed on 8 scattered 2×2 origins
+    levelSlots=pick(ORIGINS, REVEAL);
+    levelItems=Array.from({length:REVEAL},()=>Math.floor(Math.random()*set.length)); // index into set
+    levelSlots.forEach((slot,bi)=>{
+      const si=levelItems[bi]; const item=set[si], accent=setAccents[si];
+      const blk=document.createElement('div'); blk.className='block'; blk.dataset.bi=bi; blk.dataset.si=si;
+      blk.style.left=(PAD+slot.c*PITCH)+'px'; blk.style.top=(PAD+slot.r*PITCH)+'px';
+      blk.style.width=BLOCK+'px'; blk.style.height=BLOCK+'px'; blk.style.setProperty('--bc',accent);
+      [['tl',0,0],['tr',0,1],['bl',1,0],['br',1,1]].forEach(([cls,qr,qc])=>{
+        const q=document.createElement('div'); q.className='q '+cls; q.dataset.diag=(qr+qc);
+        q.style.background=fillOf(accent);
+        const inner=makeInner(item, accent); inner.style.left=(-(qc*HALF))+'px'; inner.style.top=(-(qr*HALF))+'px';
+        q.appendChild(inner); blk.appendChild(q);
+      });
+      b.appendChild(blk); blockEls.push(blk);
+    });
+  }
+
+  function reveal(){
+    clearTimers(); filled=0;
+    if(set.length===0){set=pick(cat.items,Math.min(SETSIZE,cat.items.length)); setAccents=set.map((it,i)=>accentOf(it,i));}
+    document.getElementById('filled').textContent='0';
+    document.getElementById('total').textContent=String(REVEAL);
+    document.getElementById('tray').style.visibility='hidden';
+    document.getElementById('skipBtn').style.visibility='visible';
+    const pl=document.getElementById('phaselabel'); pl.textContent='Memorize'; pl.style.color='var(--magenta)'; pl.style.textShadow='0 0 10px rgba(255,45,155,.55)';
+    const bf=document.getElementById('barfill'); bf.style.background='var(--magenta)'; bf.style.boxShadow='0 0 6px var(--magenta)'; bf.style.width='100%';
+    buildLevel();
+    blockEls.forEach((blk,bi)=>{
+      timers.push(setTimeout(()=>{
+        blk.querySelectorAll('.q').forEach(q=>q.style.setProperty('--dur',(BLOOM+(+q.dataset.diag)*WAVE)+'ms'));
+        blk.classList.remove('revealing'); void blk.offsetWidth; blk.classList.add('revealing');
+        bf.style.width=(100-(bi+1)/blockEls.length*100)+'%';
+      }, 300+bi*STEP));
+    });
+    timers.push(setTimeout(beginRecall, 300+blockEls.length*STEP+700));
+  }
+  function skipReveal(){clearTimers(); blockEls.forEach(b=>b.classList.remove('revealing')); beginRecall();}
+
+  function beginRecall(){
+    document.getElementById('skipBtn').style.visibility='hidden';
+    blockEls.forEach(b=>b.classList.remove('revealing'));
+    const pl=document.getElementById('phaselabel'); pl.textContent='Recall'; pl.style.color='var(--amber)'; pl.style.textShadow='0 0 10px rgba(255,194,61,.5)';
+    const bf=document.getElementById('barfill'); bf.style.background='var(--amber)'; bf.style.boxShadow='0 0 6px var(--amber)'; bf.style.width='100%';
+    buildTray();
+    document.getElementById('tray').style.visibility='visible';
+  }
+
+  function remainingFor(si){return blockEls.filter(b=>(+b.dataset.si)===si && !b.classList.contains('placed')).length;}
+  function buildTray(){
+    document.getElementById('tray-lbl').textContent = cat.kind==='shape'?'Pieces' : cat.kind==='color'?'Colors':'Tiles';
+    const s=document.getElementById('slots'); s.innerHTML='';
+    set.forEach((item,si)=>{
+      const accent=setAccents[si];
+      const need=blockEls.filter(b=>(+b.dataset.si)===si).length;
+      const slot=document.createElement('div'); slot.dataset.si=si;
+      if(cat.kind==='shape'){
+        slot.className='slot raised';
+        const g=GLYPH[item]; const grid=document.createElement('div'); grid.className='tet'; grid.style.gridTemplateColumns=`repeat(${g[0].length},9px)`; grid.style.setProperty('--sc',accent);
+        g.flat().forEach(v=>{const i=document.createElement('i'); i.style.width='9px'; i.style.height='9px'; if(v){i.className='on'; i.style.background=accent;} else i.style.background='transparent'; grid.appendChild(i);});
+        slot.appendChild(grid);
+      } else if(cat.kind==='color'){
+        slot.className='slot raised'; const chip=document.createElement('div'); chip.className='chip'; chip.style.background=item; chip.style.color=item; slot.appendChild(chip);
+      } else {
+        slot.className='slot sticker'; slot.style.background=fillOf(accent); slot.style.setProperty('--bc',accent); slot.style.borderRadius='10px';
+        const sp=document.createElement('span'); sp.className = cat.kind==='emoji'?'tgl glyph stroke':'tchar';
+        sp.textContent=item; slot.appendChild(sp);
+      }
+      if(need>1){const b=document.createElement('div'); b.className='badge'; b.textContent='×'+need; slot.appendChild(b);}
+      slot.onclick=()=>onPick(si,slot);
+      s.appendChild(slot);
+    });
+  }
+
+  function onPick(si,slot){
+    const blk=blockEls.find(b=>(+b.dataset.si)===si && !b.classList.contains('placed'));
+    if(!blk){slot.animate([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:220}); return;}
+    blk.querySelectorAll('.q').forEach(q=>q.style.setProperty('--pdelay',(+q.dataset.diag)*70+'ms'));
+    blk.classList.remove('revealing'); blk.classList.add('placed');
+    filled++; document.getElementById('filled').textContent=String(filled);
+    const spark=document.createElement('div'); spark.className='spark'; spark.textContent='+100'; slot.appendChild(spark); setTimeout(()=>spark.remove(),800);
+    bumpScore(100);
+    if(remainingFor(si)===0){slot.classList.add('spent'); const bd=slot.querySelector('.badge'); if(bd) bd.remove();}
+    else {const bd=slot.querySelector('.badge'); if(bd) bd.textContent='×'+remainingFor(si);}
+    if(filled>=blockEls.length){const pl=document.getElementById('phaselabel'); pl.textContent='Clear!'; pl.style.color='var(--lime)'; pl.style.textShadow='0 0 10px rgba(182,255,60,.5)'; document.getElementById('barfill').style.background='var(--lime)';}
+  }
+
+  // ── Category bar ──────────────────────────────────────────
+  function buildCats(){
+    const c=document.getElementById('cats'); c.innerHTML='';
+    CATS.forEach((ct,i)=>{
+      const b=document.createElement('button'); b.className='cat'+(ct===cat?' active':''); b.textContent=ct.name;
+      b.onclick=()=>{cat=ct; document.getElementById('hud-cat').textContent=ct.name; buildCats(); newSet();};
+      c.appendChild(b);
+    });
+  }
+
+  buildCats(); newSet();
+</script>
+</body>
+</html>
