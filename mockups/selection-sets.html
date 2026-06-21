@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Selection sets — unified 5-item tray</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --dim:#0c0c14; --panel:#0E0E16; --raised:#15151F;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#E8E8F0; --faint:#6b6b80;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; min-height:100vh; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text);
+    background:radial-gradient(120% 90% at 50% 20%, transparent 55%, #000 130%), var(--void);
+    padding:30px 16px 60px; user-select:none;}
+  .head{max-width:1000px; margin:0 auto 26px; text-align:center;}
+  .head h1{font-size:18px; letter-spacing:.04em; margin:0 0 8px;}
+  .head p{font-size:13px; color:var(--faint); margin:0 auto; max-width:620px; line-height:1.5;}
+  .head .rule{display:inline-flex; gap:8px; align-items:center; margin-top:14px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.4);}
+  .head .rule b{color:var(--amber); text-shadow:0 0 8px rgba(255,194,61,.4);}
+  .grid{max-width:1000px; margin:0 auto; display:flex; gap:20px; flex-wrap:wrap; justify-content:center;}
+  .card{width:308px; border-radius:16px; padding:18px; background:linear-gradient(180deg,#0d0d16,#08080f);
+    border:1px solid rgba(255,255,255,.06); box-shadow:0 16px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);}
+  .ph{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); margin-bottom:3px;}
+  .nm{font-weight:700; font-size:20px; line-height:1; margin-bottom:8px;}
+  .mech{font-size:12px; color:var(--faint); line-height:1.45; min-height:34px;}
+  .setrow{display:flex; align-items:center; justify-content:space-between; margin:14px 0 9px;}
+  .setname{font-size:11px; letter-spacing:.1em; text-transform:uppercase;}
+  .setname small{color:var(--faint); letter-spacing:.04em; text-transform:none;}
+  .shuffle{font-family:inherit; cursor:pointer; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:600;
+    padding:6px 10px; border-radius:7px; background:var(--raised); color:var(--cyan); border:1px solid rgba(40,240,255,.3); transition:filter .15s, transform .1s;}
+  .shuffle:hover{filter:brightness(1.2);} .shuffle:active{transform:translateY(1px);}
+  /* tray frame */
+  .tray{border-radius:12px; padding:11px; background:var(--panel); border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .tray .lbl{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5); margin-bottom:8px;}
+  .slots{display:grid; grid-template-columns:repeat(5,1fr); gap:7px;}
+  .slot{position:relative; height:50px; display:flex; align-items:center; justify-content:center; border-radius:9px;}
+  /* tetromino slot */
+  .slot.tet{background:var(--raised); border:1px solid rgba(40,240,255,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .mini{display:grid; gap:1px;}
+  .mini i{width:7px; height:7px; border-radius:1px; display:block;}
+  /* emoji sticker slot */
+  .slot.emo{font-size:25px; line-height:1; background:color-mix(in srgb, var(--bc,#333) 82%, #0b0b12);}
+  .slot.emo .ge{filter:drop-shadow(.6px 0 0 rgba(255,255,255,.9)) drop-shadow(-.6px 0 0 rgba(255,255,255,.9)) drop-shadow(0 .6px 0 rgba(255,255,255,.9)) drop-shadow(0 -.6px 0 rgba(255,255,255,.9));}
+  /* color swatch slot */
+  .slot.col{background:var(--raised); border:1px solid rgba(255,255,255,.08);}
+  .slot.col .chip{width:26px; height:26px; border-radius:7px; box-shadow:0 0 10px currentColor, inset 0 1px 0 rgba(255,255,255,.25);}
+  .pop{animation:pop .26s cubic-bezier(.2,.8,.2,1);}
+  @keyframes pop{0%{transform:scale(.6); opacity:.3} 100%{transform:scale(1); opacity:1}}
+  /* reveal sample */
+  .rev{margin-top:14px;}
+  .rev .cap{font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:7px; display:flex; justify-content:space-between;}
+  .rev .cap b{color:var(--amber);}
+  .seq{display:flex; gap:5px; flex-wrap:wrap;}
+  .chiptile{width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; background:var(--dim);}
+  .chiptile.emo{background:color-mix(in srgb, var(--bc,#333) 82%, #0b0b12);}
+  .chiptile.emo .ge{filter:drop-shadow(.5px 0 0 rgba(255,255,255,.85)) drop-shadow(-.5px 0 0 rgba(255,255,255,.85)) drop-shadow(0 .5px 0 rgba(255,255,255,.85)) drop-shadow(0 -.5px 0 rgba(255,255,255,.85));}
+  .chiptile .mini i{width:5px; height:5px;}
+  .chiptile .chip{width:16px; height:16px; border-radius:4px; box-shadow:0 0 7px currentColor;}
+  .foot{max-width:1000px; margin:28px auto 0; text-align:center; font-size:11px; color:var(--faint); line-height:1.6;}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>One tray, five slots — a set that rotates</h1>
+    <p>Every phase presents the same shape of choice: a <b style="color:var(--text)">5-item tray</b>. Each level reveals
+       an <b style="color:var(--text)">8-tile sequence drawn from those 5</b> (repeats allowed). What changes between
+       levels is the <i>set itself</i> — different shapes, a different emoji group, a different palette — so the run
+       never settles into one fixed alphabet.</p>
+    <div class="rule">Reveal caps at <b>8</b> · drawn from <b>5</b> · per level</div>
+  </div>
+
+  <div class="grid">
+    <!-- Tetromino -->
+    <div class="card">
+      <div class="ph">Phase 1</div>
+      <div class="nm">Tetromino</div>
+      <div class="mech">Recall the shapes you saw. Each level uses 5 of the 7 tetrominoes — the mix rotates.</div>
+      <div class="setrow"><div class="setname" id="tet-set"></div><button class="shuffle" onclick="rollTet()">↻ New set</button></div>
+      <div class="tray"><div class="lbl">Pieces</div><div class="slots" id="tet-slots"></div></div>
+      <div class="rev"><div class="cap"><span>Sample reveal</span><span><b>8</b> from 5</span></div><div class="seq" id="tet-seq"></div></div>
+    </div>
+
+    <!-- Emoji -->
+    <div class="card">
+      <div class="ph">Phase 2</div>
+      <div class="nm">Emoji</div>
+      <div class="mech">Recall which icons appeared. Each level pulls 5 from one emoji group — Food, Faces, Hands, and beyond.</div>
+      <div class="setrow"><div class="setname" id="emo-set"></div><button class="shuffle" onclick="rollEmo()">↻ New group</button></div>
+      <div class="tray"><div class="lbl">Tiles</div><div class="slots" id="emo-slots"></div></div>
+      <div class="rev"><div class="cap"><span>Sample reveal</span><span><b>8</b> from 5</span></div><div class="seq" id="emo-seq"></div></div>
+    </div>
+
+    <!-- Colors -->
+    <div class="card">
+      <div class="ph">Phase 3</div>
+      <div class="nm">Chromatic</div>
+      <div class="mech">Forget the shape — recall the colors. Five hues that span the wheel; the palette can rotate too.</div>
+      <div class="setrow"><div class="setname" id="col-set"></div><button class="shuffle" onclick="rollCol()">↻ New palette</button></div>
+      <div class="tray"><div class="lbl">Colors</div><div class="slots" id="col-slots"></div></div>
+      <div class="rev"><div class="cap"><span>Sample reveal</span><span><b>8</b> from 5</span></div><div class="seq" id="col-seq"></div></div>
+    </div>
+  </div>
+
+  <div class="foot">Trays shown in each phase’s real style: tetromino mini-shapes · emoji color-fill stickers · color swatches.<br>
+    Hit “New set” on any card to see the alphabet rotate without changing the rules.</div>
+
+<script>
+  // ── helpers ──────────────────────────────────────────────
+  const pick=(arr,n)=>{const a=[...arr]; const out=[]; for(let i=0;i<n&&a.length;i++){out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]);} return out;};
+  const seq8=(items)=>Array.from({length:8},()=>items[Math.floor(Math.random()*items.length)]);
+  const animate=el=>{el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');};
+
+  // ── Tetromino ────────────────────────────────────────────
+  const HEX={I:'#22d3ee',O:'#facc15',T:'#a855f7',S:'#4ade80',Z:'#ef4444',J:'#3b82f6',L:'#fb923c'};
+  const GLYPH={I:[[1],[1],[1],[1]],O:[[1,1],[1,1]],T:[[1,1,1],[0,1,0]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[0,1],[0,1],[1,1]],L:[[1,0],[1,0],[1,1]]};
+  const ALL_TET=['I','O','T','S','Z','J','L'];
+  function miniShape(t,small){
+    const m=document.createElement('div'); m.className='mini'; const g=GLYPH[t];
+    m.style.gridTemplateColumns=`repeat(${g[0].length},${small?5:7}px)`;
+    g.flat().forEach(v=>{const i=document.createElement('i'); if(v){i.style.background=HEX[t]; i.style.boxShadow='0 0 4px '+HEX[t];} else i.style.background='transparent'; m.appendChild(i);});
+    return m;
+  }
+  let tetSet=[];
+  function rollTet(){
+    tetSet=pick(ALL_TET,5);
+    document.getElementById('tet-set').innerHTML='5 of 7 shapes';
+    const s=document.getElementById('tet-slots'); s.innerHTML='';
+    tetSet.forEach(t=>{const d=document.createElement('div'); d.className='slot tet pop'; d.appendChild(miniShape(t)); s.appendChild(d);});
+    const q=document.getElementById('tet-seq'); q.innerHTML='';
+    seq8(tetSet).forEach(t=>{const d=document.createElement('div'); d.className='chiptile'; d.appendChild(miniShape(t,true)); q.appendChild(d);});
+  }
+
+  // ── Emoji ────────────────────────────────────────────────
+  const EMO_GROUPS={
+    Food:    [['🍎','#ff4d63'],['🌮','#ffb703'],['🍔','#e8923c'],['🍩','#ff8fc7'],['🍓','#ff5d73'],['🍊','#ff9f1c'],['🥑','#7bbf4c'],['🍕','#ffae42']],
+    Faces:   [['😀','#ffd60a'],['😎','#4cc9f0'],['😴','#9b8cff'],['😡','#ff5a4d'],['🤔','#ffc24d'],['🥳','#ff7ac8'],['😭','#5ab6ff'],['😇','#ffe08a']],
+    Hands:   [['👍','#ffb703'],['✌️','#ffd60a'],['👌','#ffc24d'],['✋','#ff9f6b'],['🤙','#f4a261'],['👏','#ffcf6b'],['🤝','#e6a157'],['✊','#f0a868']],
+    Animals: [['🐶','#d6a86b'],['🐱','#ffb04d'],['🦊','#ff7a3c'],['🐢','#6bd98a'],['🐸','#8bdc5a'],['🐼','#cfd6dd'],['🦁','#f2b441'],['🐙','#ff6fae']],
+    Travel:  [['🚗','#4cc9f0'],['✈️','#9bd1ff'],['🚀','#ff6b6b'],['⛵','#5ad1c4'],['🚲','#ffd60a'],['🚂','#f29e4c'],['🛸','#9b8cff'],['🏍️','#ff7a3c']],
+    Sports:  [['⚽','#cfd6dd'],['🏀','#ff8a3c'],['🎾','#c4f24c'],['🏈','#c1743c'],['🎱','#5a6bff'],['🏐','#ffd166'],['🥊','#ff5a4d'],['🎳','#7bbfff']],
+  };
+  const GROUP_NAMES=Object.keys(EMO_GROUPS);
+  let emoSet=[], emoIdx=-1;
+  function emojiEl(pair,cls){
+    const wrap=document.createElement('div'); wrap.className=cls; wrap.style.setProperty('--bc',pair[1]);
+    const g=document.createElement('span'); g.className='ge'; g.textContent=pair[0]; wrap.appendChild(g); return wrap;
+  }
+  function rollEmo(){
+    emoIdx=(emoIdx+1+Math.floor(Math.random()*(GROUP_NAMES.length-1)))%GROUP_NAMES.length;
+    const name=GROUP_NAMES[emoIdx];
+    emoSet=pick(EMO_GROUPS[name],5);
+    document.getElementById('emo-set').innerHTML=`${name} <small>· 5 of ${EMO_GROUPS[name].length}</small>`;
+    const s=document.getElementById('emo-slots'); s.innerHTML='';
+    emoSet.forEach(p=>{const el=emojiEl(p,'slot emo pop'); s.appendChild(el);});
+    const q=document.getElementById('emo-seq'); q.innerHTML='';
+    seq8(emoSet).forEach(p=>q.appendChild(emojiEl(p,'chiptile emo')));
+  }
+
+  // ── Colors ───────────────────────────────────────────────
+  const PALETTES={
+    Neon:   ['#22d3ee','#ff2d95','#39d98a','#a855f7','#facc15'],
+    Jewel:  ['#00b4d8','#e63946','#43aa8b','#b5179e','#f9c74f'],
+    Candy:  ['#4cc9f0','#f72585','#80ed99','#b388eb','#ffd166'],
+  };
+  const PAL_NAMES=Object.keys(PALETTES);
+  let colIdx=-1, colSet=[];
+  function rollCol(){
+    colIdx=(colIdx+1)%PAL_NAMES.length;
+    const name=PAL_NAMES[colIdx]; colSet=PALETTES[name];
+    document.getElementById('col-set').innerHTML=`${name} <small>${name==='Neon'?'· default':''}</small>`;
+    const s=document.getElementById('col-slots'); s.innerHTML='';
+    colSet.forEach(c=>{const d=document.createElement('div'); d.className='slot col pop'; const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c; chip.style.color=c; d.appendChild(chip); s.appendChild(d);});
+    const q=document.getElementById('col-seq'); q.innerHTML='';
+    seq8(colSet).forEach(c=>{const d=document.createElement('div'); d.className='chiptile'; const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c; chip.style.color=c; d.appendChild(chip); q.appendChild(d);});
+  }
+
+  rollTet(); rollEmo(); rollCol();
+</script>
+</body>
+</html>
