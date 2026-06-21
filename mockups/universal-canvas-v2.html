@@ -49,9 +49,11 @@
   .glyph{font-size:42px; line-height:1;}
   .glyph.stroke{filter:drop-shadow(.6px 0 0 rgba(255,255,255,.92)) drop-shadow(-.6px 0 0 rgba(255,255,255,.92)) drop-shadow(0 .6px 0 rgba(255,255,255,.92)) drop-shadow(0 -.6px 0 rgba(255,255,255,.92));}
   .char{font-weight:700; font-size:30px; line-height:1; color:#09090f; text-shadow:0 1px 0 rgba(255,255,255,.22);}
-  /* drawn SHAPE: cells laid FLUSH — gap:0, no per-cell radius/border — so the form
-     is one solid silhouette with no internal lines, on its contrasting color bg. */
-  .shape{display:grid; gap:0; filter:drop-shadow(0 0 4px var(--sc));}
+  /* drawn SHAPE: cells laid FLUSH — gap:0, no per-cell radius/border, and NO glow on
+     the silhouette (the glow, clipped at the quadrant seams, was painting false inner
+     lines; it also read too aggressive). The form is a flat solid color on its
+     contrasting tile; only the tile blooms. */
+  .shape{display:grid; gap:0;}
   .shape i{width:11px; height:11px; display:block;}
   .block.revealing .q{animation:bloomGlow var(--dur,2080ms) cubic-bezier(.2,.75,.2,1) forwards;}
   @keyframes bloomGlow{
