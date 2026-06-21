@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phase 2 · Emoji Tiles — color fill + border</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --dim:#0c0c14; --panel:#0E0E16; --raised:#15151F;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --text:#E8E8F0; --faint:#6b6b80;
+    --cell:24px; --seam:2px; --r:6px; --bw:1.5px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; min-height:100vh; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text);
+    background:radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), var(--void);
+    display:flex; flex-direction:column; align-items:center; padding:26px 16px 44px; user-select:none;}
+  .stage-note{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); margin-bottom:16px; text-align:center;}
+  /* HUD */
+  .hud{width:100%; max-width:344px; display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:8px;}
+  .hud .lvl{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); margin-bottom:2px;}
+  .hud .score{font-weight:700; font-size:28px; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1; font-variant-numeric:tabular-nums;}
+  .hud .right{text-align:right;}
+  .hearts{color:var(--red); letter-spacing:2px; text-shadow:0 0 8px rgba(255,59,71,.5); font-size:15px;}
+  .items{margin-top:5px; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .items small{color:var(--faint); font-size:9px; letter-spacing:.12em; text-transform:uppercase; margin-left:5px;}
+  .bar{width:100%; max-width:344px; height:8px; border-radius:99px; background:#000; overflow:hidden; box-shadow:inset 0 1px 2px #000; margin-bottom:8px;}
+  .bar > div{height:100%; border-radius:99px; transition:width .3s ease;}
+  .phaselabel{width:100%; max-width:344px; text-align:center; font-size:11px; letter-spacing:.22em; text-transform:uppercase; margin:2px 0 12px; min-height:14px;}
+  /* Board */
+  .board{display:grid; grid-template-columns:repeat(12, var(--cell)); gap:var(--seam); padding:12px; background:var(--board); border-radius:12px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);}
+  .cell{position:relative; width:var(--cell); height:var(--cell); border-radius:4px; background:var(--dim); overflow:hidden;}
+  /* Emoji-gap cell: a .fill overlay carries the color FILL + the block's outer
+     BORDER (per-edge, so only the 2×2 perimeter is framed; the thin inner seam
+     stays open) + the clipped quadrant of one big stroked glyph. */
+  .egap .fill{position:absolute; inset:0; opacity:0;
+    background:color-mix(in srgb, var(--bc) 82%, #0b0b12);
+    border:0 solid color-mix(in srgb, var(--bc), #ffffff 42%);}
+  .egap.tl .fill{border-top-width:var(--bw); border-left-width:var(--bw); border-top-left-radius:var(--r);}
+  .egap.tr .fill{border-top-width:var(--bw); border-right-width:var(--bw); border-top-right-radius:var(--r);}
+  .egap.bl .fill{border-bottom-width:var(--bw); border-left-width:var(--bw); border-bottom-left-radius:var(--r);}
+  .egap.br .fill{border-bottom-width:var(--bw); border-right-width:var(--bw); border-bottom-right-radius:var(--r);}
+  .egap .g{position:absolute; width:calc(var(--cell)*2 + var(--seam)); height:calc(var(--cell)*2 + var(--seam));
+    display:flex; align-items:center; justify-content:center; font-size:44px; line-height:1;
+    /* thin near-white sticker stroke (color emoji ignore -webkit-text-stroke) */
+    filter:
+      drop-shadow(.6px 0 0 rgba(255,255,255,.9)) drop-shadow(-.6px 0 0 rgba(255,255,255,.9))
+      drop-shadow(0 .6px 0 rgba(255,255,255,.9)) drop-shadow(0 -.6px 0 rgba(255,255,255,.9));}
+  /* Reveal: the filled tile flashes in, holds, then decays per-cell along the r+c
+     diagonal so the block winks out corner-by-corner. */
+  .egap.revealing .fill{animation:emojiFill var(--dur,2080ms) cubic-bezier(.2,.75,.2,1) forwards;}
+  @keyframes emojiFill{
+    0%   {opacity:0; transform:scale(.72)}
+    7%   {opacity:1; transform:scale(1.05)}
+    55%  {opacity:1; transform:scale(1)}
+    74%  {opacity:.8; transform:scale(1)}
+    100% {opacity:0; transform:scale(.92)}
+  }
+  /* Placed: the filled tile lights back up and STAYS, popped in per-cell. */
+  .egap.placed .fill{opacity:1; animation:placePop .32s ease-out backwards; animation-delay:var(--pdelay,0ms);}
+  @keyframes placePop{0%{transform:scale(.5); opacity:.3} 100%{transform:scale(1); opacity:1}}
+  /* Tray */
+  .tray{margin-top:18px; width:100%; max-width:344px; border-radius:12px; padding:12px; background:var(--panel);
+    border:1px solid rgba(255,255,255,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
+  .tray .lbl{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .tray .lbl span:first-child{font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5);}
+  .tray .lbl span:last-child{font-size:10px; color:var(--faint);}
+  .opts{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  /* tray options echo the in-board treatment: color fill + border + stroked glyph */
+  .opt{position:relative; height:48px; display:flex; align-items:center; justify-content:center; border-radius:9px; font-size:24px; line-height:1;
+    background:color-mix(in srgb, var(--bc,#333) 82%, #0b0b12); border:var(--bw) solid color-mix(in srgb, var(--bc,#333), #ffffff 42%);
+    cursor:pointer; transition:transform .1s, filter .15s;}
+  .opt .ge{filter:drop-shadow(.6px 0 0 rgba(255,255,255,.9)) drop-shadow(-.6px 0 0 rgba(255,255,255,.9)) drop-shadow(0 .6px 0 rgba(255,255,255,.9)) drop-shadow(0 -.6px 0 rgba(255,255,255,.9));}
+  .opt:hover{filter:brightness(1.12);}
+  .opt:active{transform:translateY(1px);}
+  .opt.spent{opacity:.3; pointer-events:none; filter:grayscale(.55);}
+  .opt .badge{position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; padding:0 4px; border-radius:99px;
+    background:#0b0b12; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.4);}
+  .spark{position:absolute; left:50%; top:4px; z-index:5; pointer-events:none; font-size:13px; font-weight:700; color:#fff;
+    text-shadow:0 1px 3px rgba(0,0,0,.9); animation:sparkUp .8s ease-out forwards;}
+  @keyframes sparkUp{0%{opacity:0; transform:translate(-50%,0) scale(.5)} 30%{opacity:1} 100%{opacity:0; transform:translate(-50%,-120%) scale(1.15)}}
+  .controls{margin-top:24px; display:flex; gap:10px;}
+  .btn{font-family:inherit; font-weight:600; font-size:13px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer;
+    padding:11px 20px; border-radius:8px; background:var(--raised); color:var(--cyan); border:2px solid var(--cyan);
+    box-shadow:0 0 14px rgba(40,240,255,.25); transition:transform .1s;}
+  .btn:active{transform:translateY(1px);}
+  .btn.ghost{border-color:rgba(255,255,255,.15); color:var(--faint); box-shadow:none;}
+  .toggle{margin-top:14px; font-size:11px; color:var(--faint); display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center;}
+  .toggle label{cursor:pointer;}
+  body.nostroke .egap .g, body.nostroke .opt .ge{filter:none;}
+  body.noborder .egap .fill{border-color:transparent;} body.noborder .opt{border-color:transparent;}
+</style>
+</head>
+<body>
+  <div class="stage-note">Mockup · Phase 2 “Emoji” · color fill + outer border + sticker stroke</div>
+
+  <div class="hud">
+    <div><div class="lvl">Level 13 · Phase 2 Emoji</div><div class="score" id="score">3200</div></div>
+    <div class="right"><div class="hearts">♥♥♥♥</div><div class="items"><span id="filled">0</span> / <span id="total">5</span><small>tiles</small></div></div>
+  </div>
+  <div class="bar"><div id="barfill" style="width:100%; background:var(--magenta); box-shadow:0 0 6px var(--magenta);"></div></div>
+  <div class="phaselabel" id="phaselabel" style="color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55);">Memorize</div>
+
+  <div class="board" id="board"></div>
+
+  <div class="tray" id="tray" style="visibility:hidden;">
+    <div class="lbl"><span>Tiles</span><span>tap to place from memory</span></div>
+    <div class="opts" id="opts"></div>
+  </div>
+
+  <div class="toggle">
+    <label><input type="checkbox" id="strokeChk" checked onchange="document.body.classList.toggle('nostroke', !this.checked)"> sticker stroke</label>
+    <label><input type="checkbox" id="borderChk" checked onchange="document.body.classList.toggle('noborder', !this.checked)"> outer border</label>
+  </div>
+
+  <div class="controls">
+    <button class="btn ghost" onclick="restart()">↺ Replay</button>
+    <button class="btn" id="skipBtn" onclick="skipReveal()">Skip reveal →</button>
+  </div>
+
+<script>
+  const PAL={
+    apple:{e:'🍎', c:'#ff4d63'}, orange:{e:'🍊', c:'#ff9f1c'}, taco:{e:'🌮', c:'#ffb703'},
+    bottle:{e:'🍼', c:'#4cc9f0'}, sandwich:{e:'🥪', c:'#e8c468'}, bulb:{e:'💡', c:'#ffd60a'}, champ:{e:'🍾', c:'#7be0a3'},
+  };
+  const TRAY=['apple','orange','taco','bottle','sandwich','bulb','champ'];
+  const GAPS=[
+    {k:'apple', r:1, c:1},{k:'taco', r:2, c:7},{k:'bottle', r:6, c:2},{k:'bulb', r:7, c:8},{k:'champ', r:9, c:4},
+  ];
+  const CELL=24, SEAM=2, PITCH=CELL+SEAM;
+
+  let cellEls=[];
+  function buildBoard(){
+    const b=document.getElementById('board'); b.innerHTML=''; cellEls=[];
+    for(let i=0;i<144;i++){const d=document.createElement('div'); d.className='cell'; b.appendChild(d); cellEls.push(d);}
+    GAPS.forEach((g,gi)=>{
+      const {e,c:accent}=PAL[g.k];
+      for(let dr=0;dr<2;dr++)for(let dc=0;dc<2;dc++){
+        const cell=cellEls[(g.r+dr)*12+(g.c+dc)];
+        cell.className='cell egap'+(dr===0&&dc===0?' tl':'')+(dr===0&&dc===1?' tr':'')+(dr===1&&dc===0?' bl':'')+(dr===1&&dc===1?' br':'');
+        cell.dataset.gap=gi; cell.dataset.diag=(dr+dc); cell.style.setProperty('--bc',accent);
+        const fill=document.createElement('div'); fill.className='fill';
+        const glyph=document.createElement('div'); glyph.className='g'; glyph.textContent=e;
+        glyph.style.left=(-(dc*PITCH))+'px'; glyph.style.top=(-(dr*PITCH))+'px';
+        fill.appendChild(glyph); cell.appendChild(fill);
+      }
+    });
+  }
+  function gapCells(gi){return cellEls.filter(c=>c.dataset.gap==gi);}
+
+  let timers=[]; function clearTimers(){timers.forEach(clearTimeout); timers=[];}
+  const BLOOM=2080, WAVE=320, STEP=1120;
+
+  let scoreVal=3200;
+  function bumpScore(n){const el=document.getElementById('score'); const from=scoreVal; scoreVal+=n; const s=performance.now();
+    (function f(now){const t=Math.min(1,(now-s)/500); el.textContent=Math.round(from+(scoreVal-from)*(1-Math.pow(1-t,3))); if(t<1) requestAnimationFrame(f);})(performance.now());}
+
+  let filled=0;
+  function reveal(){
+    clearTimers(); filled=0;
+    document.getElementById('filled').textContent='0';
+    document.getElementById('total').textContent=String(GAPS.length);
+    document.getElementById('tray').style.visibility='hidden';
+    document.getElementById('skipBtn').style.visibility='visible';
+    const pl=document.getElementById('phaselabel'); pl.textContent='Memorize'; pl.style.color='var(--magenta)'; pl.style.textShadow='0 0 10px rgba(255,45,155,.55)';
+    const bf=document.getElementById('barfill'); bf.style.background='var(--magenta)'; bf.style.boxShadow='0 0 6px var(--magenta)'; bf.style.width='100%';
+    buildBoard();
+    GAPS.forEach((g,gi)=>{
+      timers.push(setTimeout(()=>{
+        gapCells(gi).forEach(cell=>{
+          const dur=BLOOM + (+cell.dataset.diag)*WAVE;
+          cell.style.setProperty('--dur',dur+'ms');
+          cell.classList.remove('revealing'); void cell.offsetWidth; cell.classList.add('revealing');
+        });
+        bf.style.width=(100-(gi+1)/GAPS.length*100)+'%';
+      }, 350+gi*STEP));
+    });
+    timers.push(setTimeout(beginRecall, 350+GAPS.length*STEP+700));
+  }
+  function skipReveal(){clearTimers(); cellEls.forEach(c=>c.classList.remove('revealing')); beginRecall();}
+
+  function beginRecall(){
+    document.getElementById('skipBtn').style.visibility='hidden';
+    cellEls.forEach(c=>c.classList.remove('revealing'));
+    const pl=document.getElementById('phaselabel'); pl.textContent='Recall'; pl.style.color='var(--amber)'; pl.style.textShadow='0 0 10px rgba(255,194,61,.5)';
+    const bf=document.getElementById('barfill'); bf.style.background='var(--amber)'; bf.style.boxShadow='0 0 6px var(--amber)'; bf.style.width='100%';
+    buildTray();
+    document.getElementById('tray').style.visibility='visible';
+  }
+
+  function remaining(k){return GAPS.filter((g,i)=>g.k===k && !document.querySelector(`.egap.placed[data-gap="${i}"]`)).length;}
+  function buildTray(){
+    const o=document.getElementById('opts'); o.innerHTML='';
+    TRAY.forEach(k=>{
+      const need=GAPS.filter(g=>g.k===k).length;
+      const btn=document.createElement('div'); btn.className='opt'; btn.dataset.k=k; btn.style.setProperty('--bc',PAL[k].c);
+      const ge=document.createElement('span'); ge.className='ge'; ge.textContent=PAL[k].e; btn.appendChild(ge);
+      if(need>1){const b=document.createElement('div'); b.className='badge'; b.textContent='×'+need; btn.appendChild(b);}
+      btn.onclick=()=>onPick(k,btn);
+      o.appendChild(btn);
+    });
+  }
+
+  function onPick(k,btn){
+    const idx=GAPS.findIndex((g,i)=>g.k===k && !document.querySelector(`.egap.placed[data-gap="${i}"]`));
+    if(idx<0){btn.animate([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:220}); return;}
+    gapCells(idx).forEach(cell=>{cell.style.setProperty('--pdelay',(+cell.dataset.diag)*70+'ms'); cell.classList.add('placed');});
+    filled++; document.getElementById('filled').textContent=String(filled);
+    const spark=document.createElement('div'); spark.className='spark'; spark.textContent='+100'; btn.appendChild(spark);
+    setTimeout(()=>spark.remove(),800);
+    bumpScore(100);
+    if(remaining(k)===0){btn.classList.add('spent'); const bd=btn.querySelector('.badge'); if(bd) bd.remove();}
+    else {const bd=btn.querySelector('.badge'); if(bd) bd.textContent='×'+remaining(k);}
+    if(filled>=GAPS.length){
+      const pl=document.getElementById('phaselabel'); pl.textContent='Clear!'; pl.style.color='var(--lime)'; pl.style.textShadow='0 0 10px rgba(182,255,60,.5)';
+      document.getElementById('barfill').style.background='var(--lime)';
+    }
+  }
+
+  function restart(){scoreVal=3200; document.getElementById('score').textContent='3200'; reveal();}
+  buildBoard(); reveal();
+</script>
+</body>
+</html>
