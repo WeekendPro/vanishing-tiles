@@ -8,8 +8,11 @@ import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { resolveTiming, NO_OVERRIDES } from '../lib/staggerMechanic'
 import { STAGGER_LEVELS, levelForScore } from '../lib/staggerLevels'
+import { isSandboxEnv } from '../lib/env'
 import { PieceShape } from './PieceShape'
+import { StaggerSandboxPanel } from './StaggerSandboxPanel'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
 
@@ -56,10 +59,12 @@ const REVEAL_MAGENTA = '#FF2D9B'
  *  self-colored graphite "impasto" surface (see .vt-paint), no color crutch. */
 interface Bloom { id: number; color: string; paint: boolean; cells: { key: string; durMs: number }[] }
 
-function bloomForGap(id: number, gap: StaggerGap, color: string, paint: boolean): Bloom {
+function bloomForGap(
+  id: number, gap: StaggerGap, color: string, paint: boolean, bloomMs: number, waveMs: number,
+): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
-    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
+    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: bloomMs + i * waveMs }))
   return { id, color, paint, cells }
 }
 
@@ -289,7 +294,7 @@ export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
-    levelIndex, sandboxLevel, completedLevelIndex,
+    levelIndex, sandboxLevel, sandboxOverrides, completedLevelIndex,
     startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
     pause, resume, exit, proceedAfterLevelComplete,
   } = useStaggerStore(useShallow(s => ({
@@ -297,7 +302,7 @@ export function StaggerScreen() {
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
     shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
-    levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, completedLevelIndex: s.completedLevelIndex,
+    levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, sandboxOverrides: s.sandboxOverrides, completedLevelIndex: s.completedLevelIndex,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
@@ -309,6 +314,14 @@ export function StaggerScreen() {
   // countdown name, the run-context label, and the sandbox banner.
   const level = activeLevel({ levelIndex, sandboxLevel })
   const sandboxed = isSandboxRun({ sandboxLevel })
+
+  // Effective reveal/decay timing for this run: the live sandbox overrides when
+  // sandboxing, else the STAGGER constants. Held in a ref so the reveal driver
+  // reads the LATEST values as each beat fires (a slider tweak shows on the next
+  // beat / next reveal) without re-arming the whole effect and flickering.
+  const timing = resolveTiming(sandboxed ? sandboxOverrides : NO_OVERRIDES)
+  const timingRef = useRef(timing)
+  timingRef.current = timing
   // "Next" must match the level the store actually adopts on proceed, which is
   // levelForScore(score) — this can SKIP levels when a streak crosses two
   // thresholds in one batch, so deriving it from completedLevelIndex + 1 would
@@ -439,11 +452,10 @@ export function StaggerScreen() {
     const paint = difficulty === 'hard'
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Step between standard beat flashes. The bloom out-runs this step, so the next
-    // beat flashes while the previous is still decaying — the overlapping cascade.
-    const step = STAGGER.REVEAL_STEP_MS
-    // How long one bloom lives on screen: its longest-wave cell, plus a hair.
-    const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
+    // Reveal/decay timing is read LIVE from timingRef per beat (see the standard-beat
+    // branch below), so a sandbox slider tweak takes effect on the next beat without
+    // re-arming this effect (no flicker). `step` (beat-to-beat spacing) outruns one
+    // bloom's lifetime, so the next beat flashes while the previous is still decaying.
     // Memorize bar DRAINS: starts full and empties one step per beat as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
@@ -494,7 +506,8 @@ export function StaggerScreen() {
       if (cancelled) return
       if (idx >= n) {
         // Let the final beat finish its decay before recall lights-out.
-        at(Math.max(0, STAGGER.REVEAL_BLOOM_MS - step), beginSelecting)
+        const { stepMs, bloomMs } = timingRef.current
+        at(Math.max(0, bloomMs - stepMs), beginSelecting)
         return
       }
       setBarPct((1 - (idx + 1) / n) * 100)
@@ -507,17 +520,26 @@ export function StaggerScreen() {
         return
       }
 
-      // Standard beat: every gap blooms on the SAME tick (a pair/triple together).
+      // Standard beat: the gaps sharing this beat (a pair/triple) bloom as ONE
+      // coupled pulse. A small per-gap onset offset (twinOffsetMs) staggers them a
+      // hair so a pair reads as a "da-dum" twin rather than two coincidences; they
+      // share flood color + decay wave so they still read as a single unit. Solo
+      // beats (length 1) get no offset. Timing is read live from timingRef.
+      const { stepMs, bloomMs, waveMs, twinOffsetMs } = timingRef.current
+      const lifetime = bloomMs + 3 * waveMs + 80
       const beatIds: number[] = []
-      beat.forEach(gi => {
+      beat.forEach((gi, k) => {
         const myId = ++id
         beatIds.push(myId)
-        setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint)])
+        at(k * twinOffsetMs, () => {
+          if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, waveMs)])
+        })
       })
-      at(lifetime, () => {
+      // Clear the beat's blooms once the LAST (latest-onset) one has fully decayed.
+      at((beat.length - 1) * twinOffsetMs + lifetime, () => {
         if (!cancelled) setBlooms(prev => prev.filter(b => !beatIds.includes(b.id)))
       })
-      at(step, () => show(idx + 1))
+      at(stepMs, () => show(idx + 1))
     }
     // A short breath before the first beat (also paces continuous next batches).
     at(350, () => show(0))
@@ -681,6 +703,10 @@ export function StaggerScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+      {/* Dev/preview-only live tuning workbench — fixed to the right edge, does not
+          constrain the centered game column. Double-gated: sandbox run AND dev env. */}
+      {sandboxed && isSandboxEnv() && <StaggerSandboxPanel />}
+
       {/* Sandbox banner — the calibration sandbox is unlosable (store-enforced,
           this just reflects it): no gameOver is reachable, so the only way out
           is this explicit exit-to-Home control. */}

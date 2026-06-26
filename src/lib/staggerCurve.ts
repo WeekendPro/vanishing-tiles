@@ -55,6 +55,8 @@ export const STAGGER = {
   REVEAL_BLOOM_MS: 2080, // total visible time for one piece (flash + ~1s hold + ~1s decay)
   REVEAL_STEP_MS: 1120,  // time between consecutive piece flashes (overlapping: next flashes as prev starts to decay)
   REVEAL_WAVE_MS: 220,   // per-cell decay wave spread (cells end at staggered times)
+  REVEAL_TWIN_OFFSET_MS: 70, // intra-beat onset offset between the gaps sharing ONE beat (a pair/triple):
+                             // 0 = perfectly simultaneous; a small offset reads as one coupled "da-dum" pulse
   SELECT_BASE: 6000,   // ms base select clock
   SELECT_PER_GAP: 1400,// ms of select clock added per gap
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap

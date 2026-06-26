@@ -3,13 +3,17 @@ import type { Gap, PieceType } from '@shared/types'
 import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import {
   STAGGER, difficultyForBatch, batchSpeedBonus,
-  allowedTypesForBatch, lockedRotationsForBatch,
+  allowedTypesForBatch, lockedRotationsForBatch, complexityForGapCount,
   pairsForBatch, triplesForBatch, invertedForBatch, buildRevealPlan,
 } from '../lib/staggerCurve'
 import {
   STAGGER_LEVELS, type LevelKey, type StaggerLevel,
   levelByKey, levelIndexByKey,
 } from '../lib/staggerLevels'
+import {
+  type SandboxOverrides, NO_OVERRIDES,
+  resolveGapCount, resolveRevealCounts, resolveMultiplier, resolveSelectDuration,
+} from '../lib/staggerMechanic'
 import { levelTransition } from '../lib/levelTransition'
 
 export type StaggerPhase =
@@ -52,6 +56,7 @@ interface StaggerState {
   // Named levels (Infinite Stagger levels riding on top of `score`).
   levelIndex: number               // index into STAGGER_LEVELS of the level being PLAYED
   sandboxLevel: LevelKey | null    // non-null while in the calibration sandbox (locks levelIndex, disables advance/lose)
+  sandboxOverrides: SandboxOverrides  // live tuning-panel overrides (dev sandbox only; all-null = use mechanic/curve defaults)
   completedLevelIndex: number | null  // set while phase === 'levelComplete', for the celebration UI
 
   // Run stats (for the Game Over screen) — reset on startRun, survive into gameOver.
@@ -72,6 +77,8 @@ interface StaggerState {
   pause: () => void           // freeze the select clock
   resume: () => void          // unfreeze, resuming the remaining select time
   proceedAfterLevelComplete: () => void  // levelComplete → adopt the next level, enter its intro countdown
+  setSandboxOverride: <K extends keyof SandboxOverrides>(key: K, value: SandboxOverrides[K]) => void  // dev sandbox: patch one live tuning override
+  rerollBatch: () => void     // dev sandbox: regenerate + replay the current batch (instant structural-knob feedback)
   exit: () => void            // tear down back to idle
 }
 
@@ -106,12 +113,50 @@ function chooseInverted(gaps: Gap[], count: number): boolean[] {
   return inverted
 }
 
-function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number[][] } {
-  const diff = difficultyForBatch(batchIndex)
-  const allowedTypes = allowedTypesForBatch(batchIndex)
-  const pairCount = pairsForBatch(batchIndex)
-  const tripleCount = triplesForBatch(batchIndex)
-  const invertedCount = invertedForBatch(batchIndex)
+/** The locked-level + live-override context that re-couples a SANDBOX batch's
+ *  reveal to its level mechanic; `null` for normal (curve-driven) runs. */
+function sandboxCtx(
+  s: Pick<StaggerState, 'sandboxLevel' | 'sandboxOverrides'>,
+): { level: StaggerLevel; overrides: SandboxOverrides } | null {
+  return s.sandboxLevel != null ? { level: levelByKey(s.sandboxLevel), overrides: s.sandboxOverrides } : null
+}
+
+function makeBatch(
+  batchIndex: number,
+  sandbox: { level: StaggerLevel; overrides: SandboxOverrides } | null = null,
+): { gaps: StaggerGap[]; revealPlan: number[][] } {
+  // Sandbox runs re-couple the reveal to the LOCKED level's mechanic (plus live
+  // tuning overrides); normal runs read the difficulty CURVE by batch index.
+  let gapCount: number
+  let complexity: ReturnType<typeof complexityForGapCount>
+  let allowedTypes: PieceType[]
+  let lockedRotations: ReturnType<typeof lockedRotationsForBatch>
+  let pairCount: number
+  let tripleCount: number
+  let invertedCount: number
+  if (sandbox) {
+    gapCount = resolveGapCount(batchIndex, sandbox.overrides)
+    const counts = resolveRevealCounts(sandbox.level, gapCount, sandbox.overrides)
+    pairCount = counts.pairs
+    tripleCount = counts.triples
+    invertedCount = counts.inverted
+    complexity = complexityForGapCount(gapCount)
+    // Calibration shows the locked mechanic on representative, varied chunks
+    // immediately: use the FULL shape pool with free orientation rather than the
+    // curve's gradual shape/orientation introduction (irrelevant when tuning one
+    // mechanic). 99 is past every SHAPE_SCHEDULE `from`, so all 7 pieces appear.
+    allowedTypes = allowedTypesForBatch(99)
+    lockedRotations = undefined
+  } else {
+    const diff = difficultyForBatch(batchIndex)
+    gapCount = diff.gapCount
+    complexity = diff.complexity
+    allowedTypes = allowedTypesForBatch(batchIndex)
+    lockedRotations = lockedRotationsForBatch(batchIndex)
+    pairCount = pairsForBatch(batchIndex)
+    tripleCount = triplesForBatch(batchIndex)
+    invertedCount = invertedForBatch(batchIndex)
+  }
 
   // Re-roll until the drawn shapes can supply the requested DISTINCT-shape pairs
   // AND triples (each pair is two different pieces; each triple ≥2 distinct), with
@@ -121,10 +166,10 @@ function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number
   let best: { gaps: Gap[]; inverted: boolean[]; plan: number[][] } | null = null
   for (let attempt = 0; attempt < 60; attempt++) {
     const { gaps } = generatePuzzle({
-      gapCount: diff.gapCount,
-      complexity: diff.complexity,
+      gapCount,
+      complexity,
       allowedTypes,
-      lockedRotations: lockedRotationsForBatch(batchIndex),
+      lockedRotations,
       // Once the pool widens past 2 shapes, variety is the run's main early lever —
       // force ≥2 distinct shapes per board so the added pieces actually appear
       // instead of being lost to an all-identical roll.
@@ -160,6 +205,7 @@ const IDLE = {
   resumeRemaining: null as number | null,
   levelIndex: 0,
   sandboxLevel: null as LevelKey | null,
+  sandboxOverrides: NO_OVERRIDES,
   completedLevelIndex: null as number | null,
   shapesRecalled: 0,
   currentCombo: 0,
@@ -178,10 +224,10 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     levelIndex: level != null ? levelIndexByKey(level) : 0,
   }),
 
-  beginReveal: () => set({ phase: 'reveal', ...makeBatch(get().batchIndex) }),
+  beginReveal: () => set({ phase: 'reveal', ...makeBatch(get().batchIndex, sandboxCtx(get())) }),
 
   beginSelecting: () => {
-    const duration = difficultyForBatch(get().batchIndex).selectDuration
+    const duration = resolveSelectDuration(get().batchIndex, sandboxCtx(get())?.overrides ?? NO_OVERRIDES)
     const resume = get().resumeRemaining
     // Coming back from a replay: resume the clock where it was paused (backdate
     // selectStartTime so `start + duration - now` equals the saved remaining).
@@ -224,7 +270,8 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     // A correct recall: extend the streak. The per-pick reward scales LINEARLY
     // with the combo (×N) AND with the active level's multiplier (×levelMultiplier).
     const nextCombo = currentCombo + 1
-    const gained = STAGGER.ACCURACY_PER_GAP * nextCombo * activeLevel(get()).multiplier
+    const gained = STAGGER.ACCURACY_PER_GAP * nextCombo *
+      resolveMultiplier(activeLevel(get()), sandboxCtx(get())?.overrides ?? NO_OVERRIDES)
     const nextGaps = gaps.map(g => (g === target ? { ...g, filled: true } : g))
     const nextScore = score + gained
     const cleared = nextGaps.every(g => g.filled)
@@ -276,7 +323,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       return
     }
     const next = batchIndex + 1
-    set({ phase: 'reveal', batchIndex: next, ...makeBatch(next) })
+    set({ phase: 'reveal', batchIndex: next, ...makeBatch(next, sandboxCtx(get())) })
   },
 
   timeoutBatch: () => {
@@ -335,6 +382,19 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     if (completedLevelIndex == null) return
     const nextLevelIndex = levelTransition(get().score, completedLevelIndex, false).nextLevelIndex
     set({ phase: 'countdown', levelIndex: nextLevelIndex, completedLevelIndex: null })
+  },
+
+  setSandboxOverride: (key, value) =>
+    set(s => ({ sandboxOverrides: { ...s.sandboxOverrides, [key]: value } })),
+
+  rerollBatch: () => {
+    // Dev sandbox only: regenerate the current batch and replay its reveal so a
+    // structural-knob change (gap count / pairs) is seen immediately without
+    // waiting for the next batch. No-op outside the sandbox or mid-celebration.
+    const s = get()
+    if (s.sandboxLevel == null) return
+    if (s.phase !== 'reveal' && s.phase !== 'selecting') return
+    set({ phase: 'reveal', currentCombo: 0, ...makeBatch(s.batchIndex, sandboxCtx(s)) })
   },
 
   exit: () => set({ ...IDLE }),
