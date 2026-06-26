@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Level announcement — centered grid flash</title>
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --panel:#0E0E16;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --lime:#B6FF3C; --dim:#2a2a38;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--void);color:#fff;
+    font-family:'Space Grotesk',Inter,ui-sans-serif,system-ui,sans-serif;}
+  .page{padding:34px 40px 48px;}
+  h1{font-size:20px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px;
+     text-shadow:0 0 12px rgba(255,45,155,.5)}
+  .sub{color:#8a8aa0;font-size:12.5px;letter-spacing:.04em;margin:0 0 26px;max-width:720px;line-height:1.6}
+  .em{color:var(--cyan)}
+  .label{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#6f6f86;margin:0 0 12px}
+  .row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;margin-bottom:36px}
+  .cap{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#6f6f86;margin:10px 0 0;text-align:center}
+
+  /* Board (dark void) */
+  .board{position:relative;background:var(--board);border-radius:14px;padding:11px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:grid;grid-template-columns:repeat(12,20px);grid-auto-rows:20px;gap:2px;width:max-content}
+  .cell{width:20px;height:20px;border-radius:3px;background:#0c0c14}
+  .cell.faint{background:#101019}
+
+  /* The centered flash — SAME look as the MEMORIZE/RECALL phase label:
+     font-grotesk · uppercase · wide tracking · magenta + glow. Just larger and
+     dead-center, shown for a beat then gone. No panel, no border — pure text. */
+  .flash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    white-space:nowrap;font-weight:700;text-transform:uppercase;
+    color:var(--magenta);
+    text-shadow:0 0 10px rgba(255,45,155,.55),0 0 22px rgba(255,45,155,.35),0 0 2px rgba(255,255,255,.4);
+    font-size:16px;letter-spacing:.26em}
+  .flash.long{font-size:13px;letter-spacing:.16em}  /* fits TRANSFORMERS */
+
+  /* Detail strip: the same flash at three motion beats (in / hold / out) */
+  .beat .flash{position:static;transform:none;display:inline-block}
+  .b-in .flash{opacity:.0;filter:blur(6px)}
+  .b-hold .flash{opacity:1}
+  .b-out .flash{opacity:.18;filter:blur(3px)}
+  .mini{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .miniboard{width:150px;height:84px;background:var(--board);border-radius:10px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Level flash — centered, minimal, non-interrupting</h1>
+  <p class="sub">Fires once when the run first reaches a new <span class="em">Level</span> (Singles → Doubles → Triples → Transformers → Inverts). Quick all-caps flash in the dead center of the grid — the <span class="em">same look as MEMORIZE / RECALL / CLEAR</span> — then gone until the next Level. Doesn't pause the round, doesn't cover a reveal: it rides the breath between rounds. ~900ms total: fade-in (140ms) · hold (560ms) · fade-out (200ms).</p>
+
+  <p class="label">The five Levels — centered flash on the board</p>
+  <div class="row" id="levels"></div>
+
+  <p class="label">Motion beats (DOUBLES) — fade in · hold · fade out</p>
+  <div class="row" id="beats"></div>
+</div>
+
+<script>
+  function board(flashText){
+    const b=document.createElement('div');b.className='board';
+    for(let i=0;i<144;i++){const d=document.createElement('div');
+      d.className='cell'+((i*37%17===0)?' faint':'');b.appendChild(d);}
+    const f=document.createElement('div');
+    f.className='flash'+(flashText.length>8?' long':'');f.textContent=flashText;
+    b.appendChild(f);
+    return b;
+  }
+  const LEVELS=['Singles','Doubles','Triples','Transformers','Inverts'];
+  const wrap=document.getElementById('levels');
+  LEVELS.forEach(name=>{
+    const c=document.createElement('div');c.className='mini';
+    c.appendChild(board(name.toUpperCase()));
+    const cap=document.createElement('p');cap.className='cap';cap.textContent='Level · '+name;
+    c.appendChild(cap);
+    wrap.appendChild(c);
+  });
+
+  // motion beats
+  const beats=document.getElementById('beats');
+  [['b-in','Fade in'],['b-hold','Hold'],['b-out','Fade out']].forEach(([cls,cap])=>{
+    const c=document.createElement('div');c.className='mini';
+    const mb=document.createElement('div');mb.className='miniboard beat '+cls;
+    const f=document.createElement('div');f.className='flash';f.textContent='DOUBLES';
+    mb.appendChild(f);c.appendChild(mb);
+    const p=document.createElement('p');p.className='cap';p.textContent=cap;
+    c.appendChild(p);beats.appendChild(c);
+  });
+</script>
+</body>
+</html>

@@ -59,18 +59,19 @@
     50%    { box-shadow:inset 0 0 0 1px rgba(255,45,155,.65), 0 0 12px rgba(255,45,155,.40); }
   }
 
-  /* A build-up cell that has just turned on. Dim magenta — present but not the
-     payload. It eases up in brightness when it lands. */
+  /* A build-up cell flowing on from the seed. Dim magenta — present, but not yet
+     the payload. It EASES in smoothly (no hard pop): a long, soft ramp of opacity
+     + glow that overlaps with the next cell's ramp, so the growth reads as one
+     continuous flow spreading outward rather than ticking one tile at a time.
+     No scale snap — it swells gently from a hair under full size. */
   .build{
     background:var(--magenta);
-    box-shadow:0 0 6px rgba(255,45,155,.35);
-    animation:landDim 240ms cubic-bezier(.1,.9,.2,1) forwards;
-    filter:brightness(.6) saturate(.85);
+    filter:brightness(.55) saturate(.85);
+    animation:flowIn 640ms cubic-bezier(.25,.6,.2,1) forwards;
   }
-  @keyframes landDim{
-    0%  { transform:scale(.4); opacity:0; }
-    60% { transform:scale(1.12); opacity:1; }
-    100%{ transform:scale(1); opacity:1; }
+  @keyframes flowIn{
+    0%   { opacity:0;   transform:scale(.86); box-shadow:0 0 0 rgba(255,45,155,0); }
+    100% { opacity:1;   transform:scale(1);   box-shadow:0 0 7px rgba(255,45,155,.42); }
   }
 
   /* COMPLETE: the full shape snaps to full bright — THIS is the memory payload.
@@ -87,15 +88,17 @@
     100%{ transform:scale(1.13); }
   }
 
-  /* POOF: the whole shape blows out in one quick flash-and-vanish (the inverse
-     of the standard per-cell decay wave — here it's instant + together). */
+  /* POOF: the whole shape vanishes together as a quick MAGENTA contract — a tiny
+     glow-swell, then it pulls inward (scales down) and snaps back to the void.
+     Stays fully in-brand: no white flash. The contract is the inverse of the
+     standard per-cell decay wave — here it's instant + together. */
   .poof{
-    animation:poof 360ms cubic-bezier(.4,0,.1,1) forwards;
+    animation:poof 320ms cubic-bezier(.5,0,.75,0) forwards;
   }
   @keyframes poof{
-    0%  { background:var(--magenta); box-shadow:0 0 16px var(--magenta), 0 0 34px rgba(255,45,155,.6); transform:scale(1.13); filter:brightness(1.4); }
-    30% { background:#fff; box-shadow:0 0 22px #fff, 0 0 44px rgba(255,255,255,.8); transform:scale(1.22); filter:brightness(1.8); }
-    100%{ background:var(--cell-void); box-shadow:none; transform:scale(1); filter:none; }
+    0%   { background:var(--magenta); box-shadow:0 0 14px var(--magenta), 0 0 30px rgba(255,45,155,.55); transform:scale(1.13); }
+    22%  { background:var(--magenta); box-shadow:0 0 20px var(--magenta), 0 0 40px rgba(255,45,155,.7);  transform:scale(1.18); }
+    100% { background:var(--cell-void); box-shadow:0 0 0 rgba(255,45,155,0); transform:scale(.55); opacity:0; }
   }
 
   /* ── controls / legend ─────────────────────────────────── */
@@ -176,9 +179,12 @@
 
   const T = {
     SEED_HOLD: 600,
-    BUILD_STEP: 360,
+    // Each cell's ease (flowIn) runs ~640ms, but the next cell STARTS every
+    // BUILD_STEP ms — much shorter than the ease — so the ramps overlap and the
+    // growth reads as one continuous flow outward, not stop-motion.
+    BUILD_STEP: 230,
     COMPLETE_HOLD: 520,
-    POOF: 360,
+    POOF: 320,
     GAP_AFTER: 700,
   };
 
@@ -207,9 +213,11 @@
       t += T.BUILD_STEP;
     });
 
-    at(t, () => { els[0].className = 'c build'; els[0].style.filter='brightness(.6) saturate(.85)'; });
+    // Let the last cell's flow finish before the seed equalizes + completion hits.
+    t += 420;
+    at(t, () => { els[0].className = 'c build'; els[0].style.filter='brightness(.55) saturate(.85)'; });
 
-    t += 120;
+    t += 160;
     at(t, () => {
       phaseLabel.textContent = 'COMPLETE';
       els.forEach(el => { el.className='c complete'; el.style.filter=''; });
@@ -247,7 +255,7 @@
   };
 
   function renderStatic(els, frame){
-    els.forEach(el => { el.className='c'; el.style.filter=''; el.style.animation='none'; el.style.transform=''; el.style.boxShadow=''; el.style.background=''; });
+    els.forEach(el => { el.className='c'; el.style.filter=''; el.style.animation='none'; el.style.transform=''; el.style.boxShadow=''; el.style.background=''; el.style.opacity=''; });
     if (frame==='seed'){
       phaseLabel.textContent='SEED';
       els[0].style.boxShadow='inset 0 0 0 1px rgba(255,45,155,.65), 0 0 12px rgba(255,45,155,.40)';
@@ -264,8 +272,10 @@
       phaseLabel.textContent='COMPLETE';
       els.forEach(el=>{ el.style.background='var(--magenta)'; el.style.boxShadow='0 0 14px var(--magenta), 0 0 30px rgba(255,45,155,.55)'; el.style.transform='scale(1.13)'; });
     } else if (frame==='poof'){
+      // The magenta contract mid-vanish: brighter glow swell, pulling inward
+      // (scaled down) toward the void. Fully in-brand — no white.
       phaseLabel.textContent='POOF!';
-      els.forEach(el=>{ el.style.background='#fff'; el.style.boxShadow='0 0 22px #fff, 0 0 44px rgba(255,255,255,.8)'; el.style.transform='scale(1.22)'; el.style.filter='brightness(1.8)'; });
+      els.forEach(el=>{ el.style.background='var(--magenta)'; el.style.boxShadow='0 0 20px var(--magenta), 0 0 40px rgba(255,45,155,.7)'; el.style.transform='scale(.78)'; el.style.opacity='.7'; });
     }
   }
 

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Transformer (Corner-Push Squeeze)</title>
+<style>
+  :root {
+    --void: #04040a; --dim: #0c0c14; --magenta: #FF2D9B; --cyan: #28f0ff; --amber:#ffc23d;
+    --cell: 28px; --pitch: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; min-height:100%;
+    background: radial-gradient(120% 90% at 50% 0%, #0a0a16 0%, #04040a 60%, #020205 100%);
+    color:#d7d9e6; font-family: ui-monospace, Menlo, monospace;
+  }
+  .stage { display:flex; flex-direction:column; align-items:center; padding:26px 16px 44px; gap:14px; }
+  .title { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); text-align:center; }
+  .phase { font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55); min-height:14px; }
+
+  .board {
+    --cols: 7; --rows: 5;
+    display:grid; grid-template-columns:repeat(var(--cols),var(--cell)); grid-template-rows:repeat(var(--rows),var(--cell));
+    gap:2px; padding:12px; background:var(--void); border-radius:12px;
+    box-shadow: inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    position:relative;
+  }
+  .cell { width:var(--cell); height:var(--cell); border-radius:4px; background:var(--dim); }
+
+  .token { position:absolute; left:12px; top:12px; pointer-events:none; }
+  /* Lit cell: magenta core + the cyan rim demarcation Lou liked. */
+  .tcell {
+    position:absolute; width:var(--cell); height:var(--cell); border-radius:4px;
+    background: linear-gradient(160deg, #ff62b8, var(--magenta) 55%, #d61f81);
+    box-shadow: 0 0 14px var(--magenta), 0 0 30px var(--magenta),
+                inset 0 0 0 1.5px rgba(40,240,255,0.95), inset 0 0 7px rgba(40,240,255,0.55);
+    transition: transform .5s cubic-bezier(0.5,0,0.2,1);
+    will-change: transform;
+  }
+
+  /* ── The four CORNER MARKERS sit on the bounding box and point inward. The two
+        "active" markers (on the push side) brighten + nudge inward to TELEGRAPH
+        the squeeze direction before it fires. ─────────────────────────────────── */
+  .corner {
+    position:absolute; width:11px; height:11px; pointer-events:none;
+    border:2px solid rgba(40,240,255,0.55);
+    filter: drop-shadow(0 0 3px rgba(40,240,255,0.5));
+    transition: transform .5s cubic-bezier(0.5,0,0.2,1), opacity .25s, border-color .25s;
+  }
+  .corner.tl { border-right:0; border-bottom:0; }
+  .corner.tr { border-left:0;  border-bottom:0; }
+  .corner.bl { border-right:0; border-top:0; }
+  .corner.br { border-left:0;  border-top:0; }
+  .corner.active { width:13px; height:13px; border-width:2.5px; border-color: rgba(160,252,255,1); filter: drop-shadow(0 0 8px rgba(40,240,255,1)); }
+  .corner.active.push-right { animation: nudgeR .7s ease-in-out infinite; }
+  .corner.active.push-left  { animation: nudgeL .7s ease-in-out infinite; }
+  .corner.active.push-down  { animation: nudgeD .7s ease-in-out infinite; }
+  @keyframes nudgeR { 0%,100%{ transform: translate(var(--cx,0),var(--cy,0)); } 50%{ transform: translate(calc(var(--cx,0) + 5px),var(--cy,0)); } }
+  @keyframes nudgeL { 0%,100%{ transform: translate(var(--cx,0),var(--cy,0)); } 50%{ transform: translate(calc(var(--cx,0) - 5px),var(--cy,0)); } }
+  @keyframes nudgeD { 0%,100%{ transform: translate(var(--cx,0),var(--cy,0)); } 50%{ transform: translate(var(--cx,0),calc(var(--cy,0) + 5px)); } }
+
+  @keyframes bloomIn {
+    0%   { background: var(--dim); box-shadow: none; transform: scale(1); }
+    20%  { box-shadow: 0 0 18px var(--magenta), 0 0 40px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,1), inset 0 0 8px rgba(40,240,255,0.7); transform: scale(1.14); }
+    100% { box-shadow: 0 0 14px var(--magenta), 0 0 30px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,0.95), inset 0 0 7px rgba(40,240,255,0.55); transform: scale(1); }
+  }
+  .tcell.bloom { animation: bloomIn .5s cubic-bezier(0.2,0.75,0.2,1) both; background: linear-gradient(160deg,#ff62b8,var(--magenta) 55%,#d61f81); }
+
+  /* The mover cell SQUEEZES: it compresses along the push axis (squash) as it
+     rides to its new home, then springs back to full size — a fold, not a glide. */
+  @keyframes squashX { 0%{transform:var(--t0) scaleX(1);} 45%{transform:var(--tm) scaleX(0.5) scaleY(1.18); filter:brightness(1.8);} 100%{transform:var(--t1) scaleX(1);} }
+  @keyframes squashY { 0%{transform:var(--t0) scaleY(1);} 45%{transform:var(--tm) scaleY(0.5) scaleX(1.18); filter:brightness(1.8);} 100%{transform:var(--t1) scaleY(1);} }
+  /* The displaced anchor recoils into its new slot (a quick squash-pop). */
+  @keyframes recoil { 0%{transform:var(--t0) scale(1);} 35%{transform:var(--t0) scale(0.88);} 70%{transform:var(--t0) scale(1.13); filter:brightness(1.5);} 100%{transform:var(--t0) scale(1);} }
+
+  .legend { margin-top:4px; font-size:10px; letter-spacing:.04em; color:#6b6e82; text-align:center; line-height:1.65; max-width:392px; }
+  .legend b { color: var(--cyan); }
+  .controls { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--cyan);
+    background:rgba(40,240,255,.06); border:1px solid rgba(40,240,255,.4); border-radius:6px; padding:8px 12px; cursor:pointer; }
+  button:hover { background:rgba(40,240,255,.14); }
+  button.amber { color:var(--amber); border-color:rgba(255,194,61,.4); background:rgba(255,194,61,.06); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="title">Vanishing Tiles · Transformer — Corner-Push Squeeze</div>
+    <div class="phase" id="phase">MEMORIZE — MEDIUM</div>
+    <div class="board" id="board"></div>
+    <div class="legend" id="legend"></div>
+    <div class="controls">
+      <button data-t="LO">L → O</button>
+      <button data-t="JO">J → O</button>
+      <button data-t="TS">T → S</button>
+      <button id="slow" class="amber">Slow-mo ⅓×</button>
+    </div>
+  </div>
+
+<script>
+/* ── Transition library. Each transition lives in a 3-wide × 2-tall window and is
+   defined PHYSICALLY by the corner-push-squeeze model: which two corners push,
+   along which axis, which single cell is the "mover" (it compresses along the push
+   axis and rides to a new slot), and which anchor it DISPLACES (that anchor recoils
+   into place). The other two cells are fixed. The markers literally show the axis
+   the mover travels, so the player can predict the result. ───────────────────── */
+const TRANSITIONS = {
+  // L (..#/###) — LEFT corners push RIGHT → O on the right (.##/.##)
+  LO: {
+    pretty:'L → O', final:'O',
+    anchors:[[0,2],[1,1],[1,2]],
+    mover:{from:[1,0], to:[0,1], axis:'X'},  // bottom-left squeezed off, rides up-right
+    displaced:[1,1],
+    push:'right', activeCorners:['tl','bl'], fromBbox:[[0,0],[1,2]], toBbox:[[0,1],[1,2]],
+    blurb:'Left markers push <b>right</b> → the bottom-left cell is squeezed off and rides up; the L folds into an O on the right.',
+  },
+  // J (#../###) — RIGHT corners push LEFT → O on the left (##./##.)
+  JO: {
+    pretty:'J → O', final:'O',
+    anchors:[[0,0],[1,0],[1,1]],
+    mover:{from:[1,2], to:[0,1], axis:'X'},
+    displaced:[1,1],
+    push:'left', activeCorners:['tr','br'], fromBbox:[[0,0],[1,2]], toBbox:[[0,0],[1,1]],
+    blurb:'Right markers push <b>left</b> → the bottom-right cell is squeezed off and rides up; the J folds into an O on the left.',
+  },
+  // T (###/.#.) — LEFT corners push DOWN → S (.##/##.)
+  TS: {
+    pretty:'T → S', final:'S',
+    anchors:[[0,1],[0,2],[1,1]],
+    mover:{from:[0,0], to:[1,0], axis:'Y'},  // top-left folds straight down
+    displaced:[1,1],
+    push:'down', activeCorners:['tl','bl'], fromBbox:[[0,0],[1,2]], toBbox:[[0,0],[1,2]],
+    blurb:'Left markers push <b>down</b> → the top-left cell folds down to the bottom row; the T tips into an S.',
+  },
+};
+
+const ANCHOR=[1,2], PITCH=30, CELL=28;
+const board=document.getElementById('board'), phaseEl=document.getElementById('phase'), legendEl=document.getElementById('legend');
+let SPEED=1;
+
+const COLS=7, ROWS=5;
+for(let i=0;i<COLS*ROWS;i++){const d=document.createElement('div');d.className='cell';board.appendChild(d);}
+
+const token=document.createElement('div'); token.className='token'; board.appendChild(token);
+const squares=[]; for(let i=0;i<4;i++){const s=document.createElement('div');s.className='tcell';token.appendChild(s);squares.push(s);}
+const CK=['tl','tr','bl','br'];
+const corners={}; CK.forEach(k=>{const c=document.createElement('div');c.className='corner '+k;token.appendChild(c);corners[k]=c;});
+
+const px=(r,c)=>[ (ANCHOR[1]+c)*PITCH, (ANCHOR[0]+r)*PITCH ];
+function placeCell(el,cell){const [x,y]=px(cell[0],cell[1]); el.style.setProperty('--t0',`translate(${x}px,${y}px)`); el.style.transform=`translate(${x}px,${y}px)`;}
+function cornerXY(k,bbox){
+  const [[r0,c0],[r1,c1]]=bbox;
+  const ax0=ANCHOR[1]*PITCH, ay0=ANCHOR[0]*PITCH;
+  const xl=ax0+c0*PITCH-3, xr=ax0+c1*PITCH+CELL-11+3;
+  const yt=ay0+r0*PITCH-3, yb=ay0+r1*PITCH+CELL-11+3;
+  return { tl:[xl,yt], tr:[xr,yt], bl:[xl,yb], br:[xr,yb] }[k];
+}
+function placeCorners(bbox){
+  CK.forEach(k=>{ const [x,y]=cornerXY(k,bbox); corners[k].style.setProperty('--cx',x+'px'); corners[k].style.setProperty('--cy',y+'px'); corners[k].style.transform=`translate(${x}px,${y}px)`; });
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms/SPEED));
+
+async function run(key){
+  const T=TRANSITIONS[key];
+  legendEl.innerHTML = T.blurb + ' &nbsp;·&nbsp; Recall: pick the <b>final</b> shape ('+T.final+').';
+  const order=[T.mover.from, ...T.anchors];   // square[0] is always the mover
+  // reset
+  squares.forEach((s,i)=>{ s.className='tcell'; s.style.transition='none'; s.style.animation='none'; s.style.filter=''; s.style.background='var(--dim)'; s.style.boxShadow='none'; placeCell(s, order[i]); });
+  CK.forEach(k=>{corners[k].className='corner '+k; corners[k].style.opacity='0'; corners[k].style.animation='';});
+  placeCorners(T.fromBbox);
+  void board.offsetWidth;
+  squares.forEach(s=>s.style.transition='transform .5s cubic-bezier(0.5,0,0.2,1)');
+
+  await wait(300);
+
+  // PHASE 1 — APPEAR (bloom + cyan rim); all four corners fade in idle.
+  phaseEl.textContent='TRANSFORMER · APPEAR';
+  squares.forEach((s,i)=>{ s.classList.add('bloom'); s.style.animationDelay=(i*35/SPEED)+'ms'; });
+  CK.forEach(k=>corners[k].style.opacity='0.55');
+  await wait(560);
+  squares.forEach(s=>{ s.classList.remove('bloom'); s.style.animationDelay=''; s.style.background='linear-gradient(160deg,#ff62b8,var(--magenta) 55%,#d61f81)'; s.style.boxShadow='0 0 14px var(--magenta),0 0 30px var(--magenta),inset 0 0 0 1.5px rgba(40,240,255,0.95),inset 0 0 7px rgba(40,240,255,0.55)'; });
+
+  // PHASE 2 — TELEGRAPH: active corners brighten + nudge inward along the axis;
+  // the inactive pair dims, so the push side is unmistakable BEFORE the squeeze.
+  phaseEl.textContent='TRANSFORMER · '+(T.push==='down'?'PUSH ↓':T.push==='left'?'PUSH ←':'PUSH →');
+  T.activeCorners.forEach(k=>corners[k].classList.add('active','push-'+T.push));
+  CK.filter(k=>!T.activeCorners.includes(k)).forEach(k=>corners[k].style.opacity='0.18');
+  await wait(950);
+
+  // PHASE 3 — SQUEEZE: active corners drive in once (hard); the mover compresses
+  // along the axis and rides home; the displaced anchor recoils into its new slot.
+  phaseEl.textContent='TRANSFORMER · SQUEEZE';
+  T.activeCorners.forEach(k=>corners[k].classList.remove('push-'+T.push));
+  const drive = T.push==='down'?[0,8]:T.push==='left'?[-8,0]:[8,0];
+  T.activeCorners.forEach(k=>{ const [bx,by]=cornerXY(k,T.fromBbox); corners[k].style.transition='transform .24s cubic-bezier(.5,0,.3,1)'; corners[k].style.transform=`translate(${bx+drive[0]}px,${by+drive[1]}px)`; });
+
+  const mover=squares[0];
+  const [mx,my]=px(T.mover.to[0],T.mover.to[1]);
+  const midR=(T.mover.from[0]+T.mover.to[0])/2, midC=(T.mover.from[1]+T.mover.to[1])/2;
+  const [mmx,mmy]=px(midR,midC);
+  mover.style.setProperty('--t1',`translate(${mx}px,${my}px)`);
+  mover.style.setProperty('--tm',`translate(${mmx}px,${mmy}px)`);
+  mover.style.transition='none';
+  mover.style.animation=`${T.mover.axis==='Y'?'squashY':'squashX'} .5s cubic-bezier(.5,0,.25,1) forwards`;
+
+  const dispIdx = 1 + T.anchors.findIndex(a=>a[0]===T.displaced[0]&&a[1]===T.displaced[1]);
+  if(dispIdx>=1){ const d=squares[dispIdx]; d.style.transition='none'; d.style.animation='recoil .5s ease-out'; d.style.animationDelay=(110/SPEED)+'ms'; }
+
+  await wait(620);
+  squares.forEach(s=>{ s.style.animation='none'; s.style.filter=''; });
+  placeCell(mover, T.mover.to);
+  T.activeCorners.forEach(k=>corners[k].classList.remove('active'));
+  CK.forEach(k=>{ corners[k].style.transition='transform .4s cubic-bezier(.5,0,.2,1), opacity .3s'; corners[k].style.opacity='0.5'; });
+  placeCorners(T.toBbox);
+  phaseEl.textContent='TRANSFORMER · RECALL: '+T.final;
+  await wait(820);
+
+  // DECAY back to void in a per-cell wave — leaves no readable hole.
+  phaseEl.textContent='MEMORIZE — MEDIUM';
+  CK.forEach(k=>corners[k].style.opacity='0');
+  squares.forEach((s,i)=>{ s.style.transition='background .9s, box-shadow .9s'; s.style.transitionDelay=(i*90/SPEED)+'ms'; s.style.background='var(--dim)'; s.style.boxShadow='none'; });
+  await wait(1250);
+}
+
+// expose for the screenshot driver
+window.__T=TRANSITIONS; window.__squares=squares; window.__corners=corners; window.__CK=CK;
+window.__px=px; window.__placeCell=placeCell; window.__placeCorners=placeCorners; window.__cornerXY=cornerXY;
+window.__ANCHOR=ANCHOR; window.__PITCH=PITCH; window.__CELL=CELL; window.__setPhase=t=>phaseEl.textContent=t; window.__run=run;
+window.__legend=t=>legendEl.innerHTML=t;
+
+document.querySelectorAll('button[data-t]').forEach(b=>b.onclick=()=>run(b.dataset.t));
+document.getElementById('slow').onclick=e=>{ SPEED=SPEED===1?(1/3):1; e.target.textContent=SPEED===1?'Slow-mo ⅓×':'Normal 1×'; };
+
+(async()=>{ while(true){ await run('LO'); await wait(450); await run('JO'); await wait(450); await run('TS'); await wait(450); } })();
+</script>
+</body>
+</html>
