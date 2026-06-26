@@ -4,6 +4,8 @@ import {
   STAGGER,
   gapCountForBatch,
   pairsForBatch,
+  triplesForBatch,
+  invertedForBatch,
   flashEventsForBatch,
   buildRevealPlan,
   revealStepMs,
@@ -16,6 +18,7 @@ import {
   lockedRotationsForBatch,
   DISPLAY_ROTATION,
   ORIENTATION_FREE_FROM,
+  INVERTED_FROM,
 } from '../../src/lib/staggerCurve'
 import type { PieceType } from '@shared/types'
 
@@ -60,10 +63,11 @@ describe('staggerCurve', () => {
     }
   })
 
-  it('pairing is feasible (2·pairs ≤ gaps) and beats = gaps − pairs', () => {
+  it('density is feasible (2·pairs + 3·triples ≤ gaps − inverted) and beats = gaps − pairs − 2·triples', () => {
     for (let b = 0; b <= 60; b++) {
-      expect(2 * pairsForBatch(b)).toBeLessThanOrEqual(gapCountForBatch(b))
-      expect(flashEventsForBatch(b)).toBe(gapCountForBatch(b) - pairsForBatch(b))
+      const chunkable = gapCountForBatch(b) - invertedForBatch(b)
+      expect(2 * pairsForBatch(b) + 3 * triplesForBatch(b)).toBeLessThanOrEqual(chunkable)
+      expect(flashEventsForBatch(b)).toBe(gapCountForBatch(b) - pairsForBatch(b) - 2 * triplesForBatch(b))
     }
     // Pairing is off through the on-ramp + shape/orientation phase (L1–12)…
     for (let b = 0; b <= 11; b++) expect(pairsForBatch(b)).toBe(0)
@@ -72,6 +76,41 @@ describe('staggerCurve', () => {
     expect(gapCountForBatch(15)).toBe(6)
     expect(pairsForBatch(15)).toBe(3)
     expect(flashEventsForBatch(15)).toBe(3)
+    // Triples are off until after the doubles section (≤ L25 / idx 24).
+    for (let b = 0; b <= 24; b++) expect(triplesForBatch(b)).toBe(0)
+  })
+
+  it('triples switch on AFTER doubles, grow one at a time, and never on a gap/pair bump', () => {
+    // First triple at L26 (idx 25); grows 1→2→3→4 by L29 (idx 28).
+    expect(triplesForBatch(25)).toBe(1)  // L26
+    expect(triplesForBatch(26)).toBe(2)  // L27
+    expect(triplesForBatch(27)).toBe(3)  // L28
+    expect(triplesForBatch(28)).toBe(4)  // L29 — fully tripled
+    // Gap count is pinned at the cap across the whole triples section (no gap bump).
+    for (let b = 24; b <= 31; b++) expect(gapCountForBatch(b)).toBe(STAGGER.MAX_GAPS)
+    // L29 is fully tripled: 4 triples · 3 = 12 gaps, 0 pairs, 4 beats.
+    expect(pairsForBatch(28)).toBe(0)
+    expect(flashEventsForBatch(28)).toBe(4)
+    // Triples never grow by more than one per level.
+    for (let b = 1; b <= 60; b++) {
+      const step = triplesForBatch(b) - triplesForBatch(b - 1)
+      expect(step).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('inverted gaps switch on after the triples section, growing one per batch', () => {
+    // Off everywhere before INVERTED_FROM.
+    for (let b = 0; b < INVERTED_FROM; b++) expect(invertedForBatch(b)).toBe(0)
+    expect(invertedForBatch(INVERTED_FROM)).toBe(1)       // L30 — first inverted
+    expect(invertedForBatch(INVERTED_FROM + 1)).toBe(2)   // L31
+    expect(invertedForBatch(100)).toBe(2)                 // capped on the endless tail
+    // Inverted lands AFTER triples grow in (idx 28 is the fully-tripled rung).
+    expect(INVERTED_FROM).toBeGreaterThan(28)
+    // Inverted gaps are solo beats, so density still fits the NON-inverted gaps.
+    for (let b = INVERTED_FROM; b <= 60; b++) {
+      const chunkable = gapCountForBatch(b) - invertedForBatch(b)
+      expect(2 * pairsForBatch(b) + 3 * triplesForBatch(b)).toBeLessThanOrEqual(chunkable)
+    }
   })
 
   it('reveal pacing is constant per beat across batches, and pairing shortens it', () => {
@@ -118,22 +157,31 @@ describe('staggerCurve', () => {
   })
 
   it('moves only one difficulty lever per level (no stacked spikes)', () => {
-    // For each level transition, count how many of the FOUR levers changed: gap
-    // count, shape-pool size, orientation freedom, and pairing. Never more than one.
-    for (let b = 1; b <= 30; b++) {
+    // For each level transition, count how many CONCEPTUAL levers changed: gap
+    // count, shape-pool size, orientation freedom, density (pairs+triples form ONE
+    // chunking lever — trading a pair for a triple is a single "densify" move), and
+    // inverted. Never more than one — EXCEPT that switching an inverted gap on must
+    // ease a chunk back to free its solo slot, so a density easing that accompanies
+    // an inverted bump is counted as part of that single "add inverted" move.
+    for (let b = 1; b <= 40; b++) {
       const gapChanged = gapCountForBatch(b) !== gapCountForBatch(b - 1)
       const poolChanged = allowedTypesForBatch(b).length !== allowedTypesForBatch(b - 1).length
       const orientChanged =
         (lockedRotationsForBatch(b) === undefined) !== (lockedRotationsForBatch(b - 1) === undefined)
-      const pairChanged = pairsForBatch(b) !== pairsForBatch(b - 1)
-      const leversMoved = [gapChanged, poolChanged, orientChanged, pairChanged].filter(Boolean).length
+      const densityChanged =
+        pairsForBatch(b) !== pairsForBatch(b - 1) || triplesForBatch(b) !== triplesForBatch(b - 1)
+      const invertedChanged = invertedForBatch(b) !== invertedForBatch(b - 1)
+      // The chunk-easing on an inverted bump is part of that move, not a second lever.
+      const densityIsOwnLever = densityChanged && !invertedChanged
+      const leversMoved =
+        [gapChanged, poolChanged, orientChanged, densityIsOwnLever, invertedChanged].filter(Boolean).length
       expect(leversMoved).toBeLessThanOrEqual(1)
     }
   })
 
   it('buildRevealPlan forms the requested distinct-shape pairs, covering every gap once', () => {
     const types: PieceType[] = ['O', 'I', 'L', 'J', 'T', 'S']  // 6 distinct shapes
-    const plan = buildRevealPlan(types, 3, seededRng(7))
+    const plan = buildRevealPlan(types, 3, 0, [], seededRng(7))
     const pairs = plan.filter(beat => beat.length === 2)
     expect(pairs.length).toBe(3)
     // Each pair is two DIFFERENT shapes (never the same piece twice).
@@ -145,8 +193,45 @@ describe('staggerCurve', () => {
   it('buildRevealPlan returns fewer pairs when the shapes cannot supply them', () => {
     // Five gaps but only one non-O shape → at most ONE distinct pair is possible.
     const types: PieceType[] = ['O', 'O', 'O', 'O', 'I']
-    const plan = buildRevealPlan(types, 2, seededRng(3))
+    const plan = buildRevealPlan(types, 2, 0, [], seededRng(3))
     expect(plan.filter(beat => beat.length === 2).length).toBe(1)
+  })
+
+  it('buildRevealPlan emits TRIPLE beats (length-3), each with ≥2 distinct shapes', () => {
+    const types: PieceType[] = ['O', 'I', 'L', 'J', 'T', 'S']  // 6 distinct
+    const plan = buildRevealPlan(types, 0, 2, [], seededRng(11))
+    const triples = plan.filter(beat => beat.length === 3)
+    expect(triples.length).toBe(2)
+    // A triple is never all-identical (mirrors the pairs no-same-same rule).
+    triples.forEach(beat => expect(new Set(beat.map(i => types[i])).size).toBeGreaterThanOrEqual(2))
+    // Every gap appears exactly once across the whole plan.
+    expect(plan.flat().sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('buildRevealPlan mixes triples and pairs, covering every gap once', () => {
+    // 12 gaps → 1 triple (3) + 2 pairs (4) + 5 singles = 12.
+    const types: PieceType[] = ['O', 'I', 'L', 'J', 'T', 'S', 'Z', 'O', 'I', 'L', 'J', 'T']
+    const plan = buildRevealPlan(types, 2, 1, [], seededRng(5))
+    expect(plan.filter(b => b.length === 3).length).toBe(1)
+    expect(plan.filter(b => b.length === 2).length).toBe(2)
+    expect(plan.flat().sort((a, b) => a - b)).toEqual([...Array(12).keys()])
+  })
+
+  it('a triple needs at least two distinct shapes (all-identical cannot triple)', () => {
+    // 3 identical O gaps can never form a valid (≥2 distinct) triple.
+    const plan = buildRevealPlan(['O', 'O', 'O'], 0, 1, [], seededRng(9))
+    expect(plan.filter(b => b.length === 3).length).toBe(0)
+  })
+
+  it('buildRevealPlan keeps inverted gaps as SOLO beats (never paired/tripled)', () => {
+    const types: PieceType[] = ['O', 'I', 'L', 'J', 'T', 'S']
+    const inverted = [true, false, false, false, false, false]  // gap 0 is inverted
+    const plan = buildRevealPlan(types, 2, 1, inverted, seededRng(13))
+    // The inverted gap is always alone in its beat…
+    const invBeat = plan.find(beat => beat.includes(0))!
+    expect(invBeat).toEqual([0])
+    // …and never appears inside a pair or triple.
+    plan.filter(b => b.length > 1).forEach(b => expect(b).not.toContain(0))
   })
 
   it('the allowed-shape set only ever grows', () => {
@@ -215,6 +300,48 @@ describe('useStaggerStore', () => {
     // Every pair beat shows two DIFFERENT shapes; every gap appears exactly once.
     pairs.forEach(([a, b]) => expect(gaps[a].pieceType).not.toBe(gaps[b].pieceType))
     expect(revealPlan.flat().sort((a, b) => a - b)).toEqual(gaps.map((_, i) => i))
+  })
+
+  it('a tripled batch reveals three gaps (≥2 distinct shapes) per triple beat', () => {
+    const st = useStaggerStore.getState()
+    st.startRun()
+    useStaggerStore.setState({ batchIndex: 28 })  // L29: 12 gaps, 4 triples, 0 pairs, 4 beats
+    st.beginReveal()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    expect(gaps.length).toBe(gapCountForBatch(28))
+    expect(revealPlan.length).toBe(flashEventsForBatch(28))
+    const triples = revealPlan.filter(beat => beat.length === 3)
+    expect(triples.length).toBe(triplesForBatch(28))
+    // Every triple beat shows at least two DIFFERENT shapes; every gap appears once.
+    triples.forEach(beat => expect(new Set(beat.map(i => gaps[i].pieceType)).size).toBeGreaterThanOrEqual(2))
+    expect(revealPlan.flat().sort((a, b) => a - b)).toEqual(gaps.map((_, i) => i))
+  })
+
+  it('an inverted batch flags inverted gaps and keeps them as SOLO reveal beats', () => {
+    const st = useStaggerStore.getState()
+    st.startRun()
+    useStaggerStore.setState({ batchIndex: INVERTED_FROM + 1 })  // L31: 2 inverted gaps
+    st.beginReveal()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    const invertedGaps = gaps.filter(g => g.inverted)
+    expect(invertedGaps.length).toBe(invertedForBatch(INVERTED_FROM + 1))
+    // Each inverted gap occupies a length-1 beat all by itself.
+    gaps.forEach((g, i) => {
+      if (!g.inverted) return
+      const beat = revealPlan.find(bt => bt.includes(i))!
+      expect(beat).toEqual([i])
+    })
+    // No pair/triple beat contains an inverted gap.
+    revealPlan.filter(bt => bt.length > 1).forEach(bt =>
+      bt.forEach(i => expect(gaps[i].inverted).toBeFalsy()))
+    // The whole plan still covers every gap exactly once.
+    expect(revealPlan.flat().sort((a, b) => a - b)).toEqual(gaps.map((_, i) => i))
+  })
+
+  it('early batches never flag any gap as inverted', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal()  // batch 0
+    expect(useStaggerStore.getState().gaps.every(g => !g.inverted)).toBe(true)
   })
 
   it('a correct pick fills exactly one matching gap and banks accuracy', () => {
