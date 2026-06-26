@@ -56,11 +56,16 @@ interface StaggerState {
 
 function makeBatch(batchIndex: number): StaggerGap[] {
   const diff = difficultyForBatch(batchIndex)
+  const allowedTypes = allowedTypesForBatch(batchIndex)
   const { gaps } = generatePuzzle({
     gapCount: diff.gapCount,
     complexity: diff.complexity,
-    allowedTypes: allowedTypesForBatch(batchIndex),
+    allowedTypes,
     lockedRotations: lockedRotationsForBatch(batchIndex),
+    // Once the pool widens past 2 shapes, variety is the run's main early lever —
+    // force ≥2 distinct shapes per board so the added pieces actually appear
+    // instead of being lost to an all-identical roll.
+    requireVariety: allowedTypes.length > 2,
   })
   return gaps.map(g => ({ ...g, filled: false }))
 }

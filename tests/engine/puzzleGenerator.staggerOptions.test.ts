@@ -32,4 +32,17 @@ describe('generatePuzzle — Infinite Stagger options', () => {
     const { gaps } = generatePuzzle({ gapCount: 6, complexity: 'complex' })
     expect(gaps.length).toBe(6)  // existing callers unaffected
   })
+
+  it('requireVariety guarantees ≥2 distinct shapes when the pool allows it', () => {
+    // A 3-gap board drawn from a 3-shape pool must never roll all-identical.
+    for (let seed = 0; seed < 40; seed++) {
+      let n = seed
+      const rng = () => { n = (n * 1103515245 + 12345) & 0x7fffffff; return n / 0x7fffffff }
+      const { gaps } = generatePuzzle(
+        { gapCount: 3, complexity: 'simple', allowedTypes: ['O', 'I', 'L'], requireVariety: true },
+        rng,
+      )
+      expect(new Set(gaps.map(g => g.pieceType)).size).toBeGreaterThanOrEqual(2)
+    }
+  })
 })

@@ -34,20 +34,31 @@ export const DISPLAY_ROTATION: Record<PieceType, Rotation> = {
 
 /** Shapes are introduced gradually. The run opens on O + I only; the trickier
  *  shapes join one at a time so memory load ramps slowly. (`from` = batch index
- *  at which the shape becomes available.) */
+ *  at which the shape becomes available.)
+ *
+ *  Variety is the PRIMARY early lever: gaps are held at 3 through the whole
+ *  on-ramp (see gapCountForBatch), so levels 1–6 grow harder only by widening
+ *  the shape pool (2 → 4) rather than by adding board volume. New shapes are
+ *  spaced so they never land on the same level as a gap-count bump or the
+ *  orientation unlock — one lever moves at a time. Z (the last shape) arrives
+ *  AFTER orientation frees up, so the hardest pieces don't debut rotated. */
 const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
-  { from: 0, type: 'O' },
-  { from: 0, type: 'I' },
-  { from: 3, type: 'L' },
-  { from: 5, type: 'J' },
-  { from: 7, type: 'S' },
-  { from: 9, type: 'T' },
-  { from: 11, type: 'Z' },
+  { from: 0,  type: 'O' },
+  { from: 0,  type: 'I' },
+  { from: 2,  type: 'L' },  // L3
+  { from: 4,  type: 'J' },  // L5
+  { from: 7,  type: 'T' },  // L8
+  { from: 9,  type: 'S' },  // L10
+  { from: 12, type: 'Z' },  // L13
 ]
 
 /** From this batch on, gaps may appear in any rotation; before it, every gap is
- *  locked to its tray orientation so the player maps shapes 1:1 with the cart. */
-export const ORIENTATION_FREE_FROM = 6
+ *  locked to its tray orientation so the player maps shapes 1:1 with the cart.
+ *  Orientation freedom is the single most disorienting lever (it multiplies the
+ *  effective shape vocabulary), so it's pushed out to L11 (idx 10) and lands
+ *  ALONE — the gap count is deliberately held at 5 across L9–11 so nothing else
+ *  moves the level it unlocks. */
+export const ORIENTATION_FREE_FROM = 10
 
 /** The piece types that may appear as gaps in a given batch. */
 export function allowedTypesForBatch(batchIndex: number): PieceType[] {
@@ -60,9 +71,24 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
   return batchIndex < ORIENTATION_FREE_FROM ? DISPLAY_ROTATION : undefined
 }
 
-/** Gap count climbs 3,3,4,4,5,5,… capped at MAX_GAPS. */
+/** Gap count (memory volume). Held flat at 3 across the whole on-ramp (L1–6) so
+ *  early difficulty comes from shape VARIETY, not volume; then it climbs one gap
+ *  at a time, never on the same level as a shape intro or the orientation unlock:
+ *
+ *    L1–6   → 3   (on-ramp: variety grows, volume held)
+ *    L7–8   → 4
+ *    L9–11  → 5   (held an extra level so the L11 orientation unlock lands alone)
+ *    L12–13 → 6
+ *    L14+   → 7,7,8,8,… +1 every 2 levels, capped at MAX_GAPS (reached ~L24)
+ *
+ *  The back half rises only via these slow gap bumps — a gentler slope than the
+ *  old +1-every-2-from-L1 ramp that hit the cap by L19. */
 export function gapCountForBatch(batchIndex: number): number {
-  return Math.min(STAGGER.MAX_GAPS, 3 + Math.floor(batchIndex / 2))
+  if (batchIndex <= 5) return 3   // L1–6
+  if (batchIndex <= 7) return 4   // L7–8
+  if (batchIndex <= 10) return 5  // L9–11
+  if (batchIndex <= 12) return 6  // L12–13
+  return Math.min(STAGGER.MAX_GAPS, 7 + Math.floor((batchIndex - 13) / 2))
 }
 
 /** Time between consecutive piece flashes during reveal — CONSTANT for every

@@ -9,6 +9,11 @@ type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   colorCoded?: { shapeTypeCount: number; palette: string[] }
   /** When true, stamp order 1..N across the gaps (Sequential theme). */
   sequential?: boolean
+  /** When true, guarantee the gaps span ≥2 distinct piece types (re-rolling the
+   *  board until they do). Used by Infinite Stagger once its shape pool grows
+   *  past 2, so a widened pool actually shows on the board instead of being
+   *  wasted on an all-identical roll (e.g. three O-gaps). */
+  requireVariety?: boolean
   /** Restrict the gaps to exactly these piece types (overrides the complexity
    *  band). Used by Infinite Stagger to introduce shapes gradually. */
   allowedTypes?: PieceType[]
@@ -163,7 +168,7 @@ export function generatePuzzle(
   // Applies to Sequential rounds and to multi-shape Color-coded rounds (so a
   // Chromatic board with shapeTypeCount>1 shows a genuine mix, never all-identical
   // by chance). Only attempt when >1 allowed type can actually satisfy it.
-  const wantsVariety = input.sequential || (!!input.colorCoded && input.colorCoded.shapeTypeCount > 1)
+  const wantsVariety = input.sequential || input.requireVariety || (!!input.colorCoded && input.colorCoded.shapeTypeCount > 1)
   if (wantsVariety && allowedTypes.length > 1) {
     let retries = 0
     while (!hasTypeVariety(gaps) && retries < 50) {

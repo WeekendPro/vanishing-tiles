@@ -29,20 +29,31 @@ beforeEach(() => {
 })
 
 describe('staggerCurve', () => {
-  it('gap count climbs 3,3,4,4,5,5,… and caps at MAX_GAPS', () => {
-    expect(gapCountForBatch(0)).toBe(3)
-    expect(gapCountForBatch(1)).toBe(3)
-    expect(gapCountForBatch(2)).toBe(4)
-    expect(gapCountForBatch(3)).toBe(4)
+  it('holds gaps at 3 through the on-ramp, then climbs one at a time, capped at MAX_GAPS', () => {
+    // L1–6: held flat at 3 (variety, not volume, is the early lever).
+    for (let b = 0; b <= 5; b++) expect(gapCountForBatch(b)).toBe(3)
+    expect(gapCountForBatch(6)).toBe(4)   // L7
+    expect(gapCountForBatch(7)).toBe(4)   // L8
+    expect(gapCountForBatch(8)).toBe(5)   // L9
+    expect(gapCountForBatch(10)).toBe(5)  // L11 — held so the orientation unlock lands alone
+    expect(gapCountForBatch(11)).toBe(6)  // L12
+    expect(gapCountForBatch(12)).toBe(6)  // L13
+    expect(gapCountForBatch(13)).toBe(7)  // L14
     expect(gapCountForBatch(100)).toBe(STAGGER.MAX_GAPS)
+    // Monotonic, never stepping by more than one gap at a time.
+    for (let b = 1; b <= 60; b++) {
+      const step = gapCountForBatch(b) - gapCountForBatch(b - 1)
+      expect(step).toBeGreaterThanOrEqual(0)
+      expect(step).toBeLessThanOrEqual(1)
+    }
   })
 
   it('reveal pacing is constant per piece across batches (no speed-up lever)', () => {
     expect(revealStepMs()).toBe(STAGGER.REVEAL_STEP_MS)
     // Batch reveal time grows ONLY because there are more pieces, at a fixed step —
     // individual pieces never get faster as the run escalates.
-    expect(batchRevealMs(2) - batchRevealMs(0)).toBe(
-      (gapCountForBatch(2) - gapCountForBatch(0)) * STAGGER.REVEAL_STEP_MS,
+    expect(batchRevealMs(8) - batchRevealMs(0)).toBe(
+      (gapCountForBatch(8) - gapCountForBatch(0)) * STAGGER.REVEAL_STEP_MS,
     )
     expect(batchRevealMs(0)).toBe(2 * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS)
   })
@@ -61,7 +72,7 @@ describe('staggerCurve', () => {
 
   it('difficultyForBatch wires gap count + complexity together', () => {
     const d = difficultyForBatch(2)
-    expect(d.gapCount).toBe(4)
+    expect(d.gapCount).toBe(3)
     expect(d.complexity).toBe('simple')
     expect(d.selectDuration).toBe(selectDurationForBatch(2))
   })
@@ -69,9 +80,24 @@ describe('staggerCurve', () => {
   it('introduces shapes gradually, starting on O + I only', () => {
     expect(new Set(allowedTypesForBatch(0))).toEqual(new Set(['O', 'I']))
     expect(new Set(allowedTypesForBatch(1))).toEqual(new Set(['O', 'I']))
-    expect(allowedTypesForBatch(3)).toContain('L')
-    expect(allowedTypesForBatch(3)).not.toContain('Z')
-    expect(new Set(allowedTypesForBatch(11))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+    expect(allowedTypesForBatch(2)).toContain('L')      // L joins at L3 (idx 2)
+    expect(allowedTypesForBatch(3)).not.toContain('Z')  // Z is last, not until L13
+    // Z (the last shape) only appears once orientation is already free (idx 10).
+    expect(allowedTypesForBatch(11)).not.toContain('Z')
+    expect(new Set(allowedTypesForBatch(12))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+  })
+
+  it('moves only one difficulty lever per level (no stacked spikes)', () => {
+    // For each level transition, count how many of the three levers changed:
+    // gap count, shape-pool size, and orientation freedom. Never more than one.
+    for (let b = 1; b <= 20; b++) {
+      const gapChanged = gapCountForBatch(b) !== gapCountForBatch(b - 1)
+      const poolChanged = allowedTypesForBatch(b).length !== allowedTypesForBatch(b - 1).length
+      const orientChanged =
+        (lockedRotationsForBatch(b) === undefined) !== (lockedRotationsForBatch(b - 1) === undefined)
+      const leversMoved = [gapChanged, poolChanged, orientChanged].filter(Boolean).length
+      expect(leversMoved).toBeLessThanOrEqual(1)
+    }
   })
 
   it('the allowed-shape set only ever grows', () => {
