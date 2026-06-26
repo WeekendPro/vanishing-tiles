@@ -6,6 +6,7 @@ import {
   resolveTiming,
   resolveMultiplier,
   resolveSelectDuration,
+  resolveMinDistance,
   NO_OVERRIDES,
   type SandboxOverrides,
 } from '../../src/lib/staggerMechanic'
@@ -121,5 +122,12 @@ describe('resolveSelectDuration', () => {
   it('falls through to the curve, honors an override', () => {
     expect(resolveSelectDuration(0, NO_OVERRIDES)).toBe(selectDurationForBatch(0))
     expect(resolveSelectDuration(0, ov({ selectDuration: 8000 }))).toBe(8000)
+  })
+})
+
+describe('resolveMinDistance', () => {
+  it('defaults to 0 (gaps may touch), honors an override', () => {
+    expect(resolveMinDistance(NO_OVERRIDES)).toBe(0)
+    expect(resolveMinDistance(ov({ minDistance: 2 }))).toBe(2)
   })
 })

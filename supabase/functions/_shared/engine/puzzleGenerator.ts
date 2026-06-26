@@ -20,6 +20,13 @@ type PuzzleInput = Pick<DifficultyConfig, 'gapCount' | 'complexity'> & {
   /** Force each listed type's gaps to a fixed rotation instead of varying it.
    *  Used by Infinite Stagger to keep early gaps matching the tray orientation. */
   lockedRotations?: Partial<Record<PieceType, Rotation>>
+  /** Minimum ORTHOGONAL (Manhattan) clearance to keep between distinct gaps:
+   *  no gap cell may sit within this many cells of another gap's cell. 0 (default)
+   *  imposes nothing — gaps may touch — so non-sandbox callers are unaffected. A
+   *  best-effort constraint: if a board can't satisfy it, placement falls back to
+   *  the unconstrained candidates rather than dropping gaps. Used by the Infinite
+   *  Stagger calibration sandbox. */
+  minGapDistance?: number
 }
 
 const COMPLEXITY_PIECES: Record<DifficultyConfig['complexity'], PieceType[]> = {
@@ -83,6 +90,34 @@ function anchorTouchesEmpty(
   })
 }
 
+// True when the piece (anchored here) keeps at least `minDistance` orthogonal
+// (Manhattan) cells of clearance from every already-empty cell — i.e. no existing
+// gap cell lies within Manhattan distance `minDistance`. minDistance ≤ 0 imposes
+// nothing. Used to SPREAD gaps apart (the opposite of anchorTouchesEmpty).
+function anchorRespectsSpacing(
+  grid: Grid,
+  cells: [number, number][],
+  anchorRow: number,
+  anchorCol: number,
+  minDistance: number
+): boolean {
+  if (minDistance <= 0) return true
+  return cells.every(([r, c]) => {
+    const ar = r + anchorRow
+    const ac = c + anchorCol
+    for (let dr = -minDistance; dr <= minDistance; dr++) {
+      const rem = minDistance - Math.abs(dr)
+      for (let dc = -rem; dc <= rem; dc++) {
+        if (dr === 0 && dc === 0) continue
+        const nr = ar + dr
+        const nc = ac + dc
+        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc].status === 'empty') return false
+      }
+    }
+    return true
+  })
+}
+
 // Places `gapCount` gaps on a fresh full grid, drawing piece types/rotations/
 // anchors from `rng`. Pulled out so the sequential variety guard can re-roll a
 // whole board on the same advancing rng stream.
@@ -91,7 +126,8 @@ function placeGaps(
   allowedTypes: PieceType[],
   adjacency: number,
   rng: () => number,
-  lockedRotations?: Partial<Record<PieceType, Rotation>>
+  lockedRotations?: Partial<Record<PieceType, Rotation>>,
+  minGapDistance = 0
 ): { grid: Grid; gaps: Gap[] } {
   const grid = makeFullGrid()
   const gaps: Gap[] = []
@@ -120,13 +156,22 @@ function placeGaps(
     }
     if (candidates.length === 0) continue
 
+    // Spacing first: when minGapDistance>0, keep only anchors that hold the
+    // required orthogonal clearance from existing gaps; fall back to all
+    // candidates if none qualify (best-effort — never drop a gap over spacing).
+    const spaced =
+      minGapDistance > 0
+        ? candidates.filter(([r, c]) => anchorRespectsSpacing(grid, cells, r, c, minGapDistance))
+        : candidates
+    const base = spaced.length > 0 ? spaced : candidates
+
     // When adjacency>0, prefer anchors that touch an existing empty cell so gaps
     // cluster; fall back to all candidates when none touch (e.g. the first gap).
     const near =
       adjacency > 0
-        ? candidates.filter(([r, c]) => anchorTouchesEmpty(grid, cells, r, c))
+        ? base.filter(([r, c]) => anchorTouchesEmpty(grid, cells, r, c))
         : []
-    const pool = near.length > 0 ? near : candidates
+    const pool = near.length > 0 ? near : base
     const [anchorRow, anchorCol] = pool[Math.floor(rng() * pool.length)]
 
     const absoluteCells = cells.map(([r, c]) => [r + anchorRow, c + anchorCol] as [number, number])
@@ -160,7 +205,8 @@ export function generatePuzzle(
       ? shuffled(COMPLEXITY_PIECES[complexity], rng).slice(0, Math.max(1, input.colorCoded.shapeTypeCount))
       : COMPLEXITY_PIECES[complexity]
 
-  let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations)
+  const minGapDistance = input.minGapDistance ?? 0
+  let { grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations, minGapDistance)
 
   // Variety guard: a round that should exercise memory across different shapes
   // must never let every gap be the same piece type. Re-roll the whole board
@@ -173,7 +219,7 @@ export function generatePuzzle(
     let retries = 0
     while (!hasTypeVariety(gaps) && retries < 50) {
       retries++
-      ;({ grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations))
+      ;({ grid, gaps } = placeGaps(gapCount, allowedTypes, adjacency, rng, input.lockedRotations, minGapDistance))
     }
   }
 

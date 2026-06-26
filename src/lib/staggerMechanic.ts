@@ -31,6 +31,7 @@ export interface RevealCounts {
 export interface SandboxOverrides {
   gapCount: number | null
   pairs: number | null
+  minDistance: number | null
   revealStepMs: number | null
   revealBloomMs: number | null
   revealWaveMs: number | null
@@ -43,6 +44,7 @@ export interface SandboxOverrides {
 export const NO_OVERRIDES: SandboxOverrides = {
   gapCount: null,
   pairs: null,
+  minDistance: null,
   revealStepMs: null,
   revealBloomMs: null,
   revealWaveMs: null,
@@ -124,4 +126,10 @@ export function resolveMultiplier(level: StaggerLevel, o: SandboxOverrides): num
 /** Effective select-clock duration (ms): the override, else the curve value. */
 export function resolveSelectDuration(batchIndex: number, o: SandboxOverrides): number {
   return o.selectDuration ?? selectDurationForBatch(batchIndex)
+}
+
+/** Effective minimum orthogonal spacing between gaps: the override, else 0 (gaps
+ *  may touch — the generator's default). Fed to generatePuzzle's minGapDistance. */
+export function resolveMinDistance(o: SandboxOverrides): number {
+  return o.minDistance ?? 0
 }

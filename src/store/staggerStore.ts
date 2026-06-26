@@ -12,7 +12,7 @@ import {
 } from '../lib/staggerLevels'
 import {
   type SandboxOverrides, NO_OVERRIDES,
-  resolveGapCount, resolveRevealCounts, resolveMultiplier, resolveSelectDuration,
+  resolveGapCount, resolveRevealCounts, resolveMultiplier, resolveSelectDuration, resolveMinDistance,
 } from '../lib/staggerMechanic'
 import { levelTransition } from '../lib/levelTransition'
 
@@ -78,6 +78,7 @@ interface StaggerState {
   resume: () => void          // unfreeze, resuming the remaining select time
   proceedAfterLevelComplete: () => void  // levelComplete → adopt the next level, enter its intro countdown
   setSandboxOverride: <K extends keyof SandboxOverrides>(key: K, value: SandboxOverrides[K]) => void  // dev sandbox: patch one live tuning override
+  setSandboxOverrides: (overrides: SandboxOverrides) => void  // dev sandbox: replace ALL overrides at once (preset load)
   rerollBatch: () => void     // dev sandbox: regenerate + replay the current batch (instant structural-knob feedback)
   exit: () => void            // tear down back to idle
 }
@@ -134,12 +135,14 @@ function makeBatch(
   let pairCount: number
   let tripleCount: number
   let invertedCount: number
+  let minGapDistance = 0
   if (sandbox) {
     gapCount = resolveGapCount(batchIndex, sandbox.overrides)
     const counts = resolveRevealCounts(sandbox.level, gapCount, sandbox.overrides)
     pairCount = counts.pairs
     tripleCount = counts.triples
     invertedCount = counts.inverted
+    minGapDistance = resolveMinDistance(sandbox.overrides)
     complexity = complexityForGapCount(gapCount)
     // Calibration shows the locked mechanic on representative, varied chunks
     // immediately: use the FULL shape pool with free orientation rather than the
@@ -174,6 +177,8 @@ function makeBatch(
       // force ≥2 distinct shapes per board so the added pieces actually appear
       // instead of being lost to an all-identical roll.
       requireVariety: allowedTypes.length > 2,
+      // 0 for normal runs (gaps may touch, unchanged); the sandbox can widen it.
+      minGapDistance,
     })
     const inverted = chooseInverted(gaps, invertedCount)
     const plan = buildRevealPlan(gaps.map(g => g.pieceType), pairCount, tripleCount, inverted)
@@ -386,6 +391,9 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   setSandboxOverride: (key, value) =>
     set(s => ({ sandboxOverrides: { ...s.sandboxOverrides, [key]: value } })),
+
+  setSandboxOverrides: (overrides) =>
+    set({ sandboxOverrides: { ...NO_OVERRIDES, ...overrides } }),
 
   rerollBatch: () => {
     // Dev sandbox only: regenerate the current batch and replay its reveal so a

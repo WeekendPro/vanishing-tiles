@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useShallow } from 'zustand/shallow'
 import { useStaggerStore } from '../store/staggerStore'
+import { useStaggerSandboxPresetStore } from '../store/staggerSandboxPresetStore'
 import { STAGGER, gapCountForBatch, selectDurationForBatch } from '../lib/staggerCurve'
-import { revealCountsForMechanic, resolveGapCount, type SandboxOverrides } from '../lib/staggerMechanic'
+import { revealCountsForMechanic, resolveGapCount, NO_OVERRIDES, type SandboxOverrides } from '../lib/staggerMechanic'
 import { levelByKey } from '../lib/staggerLevels'
+
+const DEFAULT_PRESET = 'Default'
 
 /**
  * Live calibration workbench for the Infinite Stagger sandbox (dev/preview only —
@@ -73,20 +76,60 @@ function Knob({
 }
 
 export function StaggerSandboxPanel() {
-  const { batchIndex, sandboxLevel, sandboxOverrides, setSandboxOverride, rerollBatch } = useStaggerStore(
+  const { batchIndex, sandboxLevel, sandboxOverrides, setSandboxOverride, setSandboxOverrides, rerollBatch } = useStaggerStore(
     useShallow(s => ({
       batchIndex: s.batchIndex,
       sandboxLevel: s.sandboxLevel,
       sandboxOverrides: s.sandboxOverrides,
       setSandboxOverride: s.setSandboxOverride,
+      setSandboxOverrides: s.setSandboxOverrides,
       rerollBatch: s.rerollBatch,
     })),
   )
+  const presetMap = useStaggerSandboxPresetStore(s => s.presets)
+  const { savePreset, deletePreset } = useStaggerSandboxPresetStore(
+    useShallow(s => ({ savePreset: s.savePreset, deletePreset: s.deletePreset })),
+  )
   const [open, setOpen] = useState(true)
+  const [selectedPreset, setSelectedPreset] = useState(DEFAULT_PRESET)
+  const [nameDraft, setNameDraft] = useState('')
+
+  // Switching the locked level (e.g. relaunching the sandbox on another level)
+  // resets the preset picker — presets are per-level, so a stale selection from
+  // the previous level must not linger.
+  useEffect(() => { setSelectedPreset(DEFAULT_PRESET); setNameDraft('') }, [sandboxLevel])
 
   // Only meaningful inside a sandbox run (the caller already gates on this).
   if (sandboxLevel == null) return null
   const level = levelByKey(sandboxLevel)
+  // Presets are scoped to the LOCKED level only (TWINS presets never show in SOLOS).
+  const presets = presetMap[sandboxLevel] ?? []
+
+  // Load a preset (or Default) into the live overrides and re-roll so structural
+  // values show immediately. Default = clear all overrides.
+  const applyPreset = (name: string) => {
+    setSelectedPreset(name)
+    if (name === DEFAULT_PRESET) setSandboxOverrides(NO_OVERRIDES)
+    else {
+      const preset = presets.find(p => p.name === name)
+      if (preset) setSandboxOverrides(preset.overrides)
+    }
+    rerollBatch()
+  }
+
+  const onSave = () => {
+    const name = nameDraft.trim()
+    if (!name) return
+    savePreset(sandboxLevel, name, sandboxOverrides)
+    setSelectedPreset(name)
+    setNameDraft('')
+  }
+
+  const onDelete = () => {
+    if (selectedPreset === DEFAULT_PRESET) return
+    deletePreset(sandboxLevel, selectedPreset)
+    setSelectedPreset(DEFAULT_PRESET)
+  }
 
   // Defaults track the locked level's mechanic + the curve at the current batch;
   // pairs cap follows the EFFECTIVE gap count (override or curve).
@@ -96,6 +139,7 @@ export function StaggerSandboxPanel() {
   const structure: KnobDef[] = [
     { key: 'pairs', label: 'Pairs / board', min: 0, max: Math.max(1, Math.floor(effGapCount / 2)), step: 1, def: defPairs, fmt: v => `${v}` },
     { key: 'gapCount', label: 'Gap count', min: 2, max: STAGGER.MAX_GAPS, step: 1, def: gapCountForBatch(batchIndex), fmt: v => `${v}` },
+    { key: 'minDistance', label: 'Min gap spacing', min: 0, max: 2, step: 1, def: 0, fmt: v => v === 0 ? 'touching' : `${v} cell${v > 1 ? 's' : ''}` },
   ]
   const timing: KnobDef[] = [
     { key: 'revealStepMs', label: 'Flash stagger', min: 200, max: 2200, step: 20, def: STAGGER.REVEAL_STEP_MS, fmt: v => `${v}ms` },
@@ -153,6 +197,54 @@ export function StaggerSandboxPanel() {
         >
           ▸
         </button>
+      </div>
+
+      {/* Presets — per-level named snapshots of the overrides. "Default" = the
+          built-in mechanic/curve values (all overrides cleared). Scoped to this
+          level only. Selecting one loads + re-rolls; Save captures the current
+          knobs under a free-text name (upsert). */}
+      <div className="mb-3 pb-3 border-b border-white/5">
+        <div className="font-grotesk text-[9px] uppercase tracking-[0.18em] text-vt-dim mb-1.5">Preset</div>
+        <div className="flex gap-1.5">
+          <select
+            aria-label="Load preset"
+            value={selectedPreset}
+            onChange={e => applyPreset(e.target.value)}
+            className="flex-1 min-w-0 rounded-md border border-vt-cyan/30 bg-vt-raised px-2 py-1.5 font-grotesk text-[11px] text-vt-cyan
+              focus:border-vt-cyan outline-none cursor-pointer"
+          >
+            <option value={DEFAULT_PRESET}>{DEFAULT_PRESET}</option>
+            {presets.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+          </select>
+          <button
+            onClick={onDelete}
+            disabled={selectedPreset === DEFAULT_PRESET}
+            aria-label="Delete preset"
+            className="rounded-md border border-vt-red/30 px-2.5 font-grotesk text-[12px] text-vt-red hover:bg-vt-red/10 transition
+              disabled:opacity-25 disabled:hover:bg-transparent"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex gap-1.5 mt-1.5">
+          <input
+            aria-label="Preset name"
+            value={nameDraft}
+            onChange={e => setNameDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') onSave() }}
+            placeholder="Name this config…"
+            className="flex-1 min-w-0 rounded-md border border-white/10 bg-vt-raised px-2 py-1.5 font-grotesk text-[11px] text-vt-text
+              placeholder:text-vt-faint focus:border-vt-cyan outline-none"
+          />
+          <button
+            onClick={onSave}
+            disabled={!nameDraft.trim()}
+            className="rounded-md border border-vt-cyan/40 bg-vt-raised px-3 font-grotesk text-[10px] uppercase tracking-[0.12em] text-vt-cyan
+              hover:bg-vt-cyan/10 transition disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            Save
+          </button>
+        </div>
       </div>
 
       <div className="mb-2">
