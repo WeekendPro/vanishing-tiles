@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chapter announcement — mockups</title>
+<style>
+  :root{
+    --void:#06060B; --board:#04040a; --panel:#0E0E16; --raised:#15151F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --lime:#B6FF3C; --amber:#FFC23D;
+    --dim:#2a2a38;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--void);color:#fff;
+    font-family:'Space Grotesk',Inter,ui-sans-serif,system-ui,sans-serif;}
+  .page{padding:34px 38px 50px;}
+  h1{font-size:20px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px;
+     color:#fff;text-shadow:0 0 12px rgba(255,45,155,.5)}
+  .sub{color:#8a8aa0;font-size:12.5px;letter-spacing:.04em;margin:0 0 26px}
+  .row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-bottom:40px}
+  .label{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#6f6f86;margin:0 0 9px}
+  .note{font-size:11px;color:#6f6f86;margin:9px 0 0;line-height:1.5;max-width:300px}
+  .em{color:var(--cyan)}
+
+  /* ── Board backdrop (the dark void with a few blooming gaps) ── */
+  .board{position:relative;background:var(--board);border-radius:14px;padding:11px;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:grid;grid-template-columns:repeat(12,20px);grid-auto-rows:20px;gap:2px;width:max-content}
+  .cell{width:20px;height:20px;border-radius:3px;background:#0c0c14}
+  .bloom{background:var(--magenta);
+    box-shadow:0 0 9px var(--magenta),0 0 22px rgba(255,45,155,.45)}
+  .bloom.dim{background:color-mix(in srgb,var(--magenta) 40%,#0c0c14);
+    box-shadow:0 0 6px rgba(255,45,155,.3)}
+
+  /* ── The announcement bubble (recommended style) ── */
+  .bubble{position:relative;display:inline-flex;flex-direction:column;align-items:center;
+    gap:3px;padding:13px 26px 14px;border-radius:18px;
+    background:linear-gradient(180deg,rgba(22,22,34,.92),rgba(12,12,20,.92));
+    border:1.5px solid rgba(255,45,155,.85);
+    box-shadow:0 0 18px rgba(255,45,155,.35),0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter:blur(3px)}
+  .bubble .eyebrow{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--cyan);
+    text-shadow:0 0 8px rgba(40,240,255,.55)}
+  .bubble .title{font-size:23px;font-weight:700;letter-spacing:.02em;color:#fff;
+    text-shadow:0 0 14px rgba(255,45,155,.6),0 0 2px rgba(255,255,255,.5)}
+  .bubble .hint{font-size:11px;color:#b9b9cc;letter-spacing:.02em}
+  .bubble .glyph{font-size:15px;line-height:1;color:var(--magenta);margin-bottom:1px;
+    text-shadow:0 0 10px rgba(255,45,155,.7)}
+  /* sparkle dots */
+  .spark{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan)}
+
+  /* placement framing over a board */
+  .stage{position:relative;width:max-content}
+  .overlay{position:absolute;left:50%;transform:translateX(-50%)}
+  .top{top:-14px}
+  .mid{top:50%;transform:translate(-50%,-50%)}
+  .bot{bottom:-16px}
+
+  /* compact toast variant */
+  .toast{display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:12px;
+    background:rgba(12,12,20,.92);border:1px solid rgba(255,45,155,.7);
+    box-shadow:0 0 14px rgba(255,45,155,.3),0 6px 18px rgba(0,0,0,.5)}
+  .toast .t{font-size:14px;font-weight:700;color:#fff;text-shadow:0 0 10px rgba(255,45,155,.55)}
+  .toast .e{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}
+  .toast .pip{width:7px;height:7px;border-radius:50%;background:var(--magenta);box-shadow:0 0 8px var(--magenta)}
+
+  /* corner sticker */
+  .sticker{display:inline-flex;flex-direction:column;padding:9px 14px;border-radius:14px;
+    background:rgba(12,12,20,.92);border:1px solid rgba(40,240,255,.6);
+    box-shadow:0 0 14px rgba(40,240,255,.25),0 6px 18px rgba(0,0,0,.5)}
+  .sticker .e{font-size:8px;letter-spacing:.24em;text-transform:uppercase;color:var(--cyan)}
+  .sticker .t{font-size:16px;font-weight:700;color:#fff;text-shadow:0 0 10px rgba(255,45,155,.5)}
+
+  .chip{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+  .grid5{display:flex;gap:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Chapter announcement — mockups</h1>
+  <p class="sub">Pops in when the run crosses a difficulty milestone in Infinite Stagger · Afterglow palette · motion described under each</p>
+
+  <!-- ROW 1: placement variants over the board -->
+  <p class="label">A · Placement options (same board, three positions)</p>
+  <div class="row" id="placements"></div>
+
+  <!-- ROW 2: the 5 chapters in the recommended center-bubble style -->
+  <p class="label">B · The five chapters in the center-bubble style</p>
+  <div class="row grid5" id="chapters"></div>
+</div>
+
+<script>
+  // ---- build a board backdrop with a few blooming gaps ----
+  const BLOOM = {            // map "r,c" -> 'bloom' | 'dim'
+  };
+  // a couple of tetromino gaps lit up
+  [[2,3],[2,4],[3,3],[3,4]].forEach(([r,c])=>BLOOM[r+','+c]='bloom');      // O
+  [[5,7],[5,8],[5,9],[5,10]].forEach(([r,c])=>BLOOM[r+','+c]='bloom');     // I
+  [[8,2],[9,2],[9,3],[9,4]].forEach(([r,c])=>BLOOM[r+','+c]='dim');        // J (decaying)
+  function board(){
+    const b=document.createElement('div');b.className='board';
+    for(let r=0;r<12;r++)for(let c=0;c<12;c++){
+      const d=document.createElement('div');d.className='cell';
+      const k=BLOOM[r+','+c]; if(k)d.className='cell bloom'+(k==='dim'?' dim':'');
+      b.appendChild(d);
+    }
+    return b;
+  }
+  function bubble(eyebrow,title,hint,glyph){
+    const el=document.createElement('div');el.className='bubble';
+    el.innerHTML=`<div class="spark" style="top:-3px;left:14px"></div>
+      <div class="spark" style="top:8px;right:-3px;background:var(--magenta);box-shadow:0 0 8px var(--magenta)"></div>
+      <div class="glyph">${glyph}</div>
+      <div class="eyebrow">${eyebrow}</div>
+      <div class="title">${title}</div>
+      <div class="hint">${hint}</div>`;
+    return el;
+  }
+
+  // ROW 1 placements
+  const placements=document.getElementById('placements');
+  function stageWith(overlayClass,node,caption){
+    const wrap=document.createElement('div');wrap.className='chip';
+    const stage=document.createElement('div');stage.className='stage';
+    stage.appendChild(board());
+    const ov=document.createElement('div');ov.className='overlay '+overlayClass;ov.appendChild(node);
+    stage.appendChild(ov);
+    wrap.appendChild(stage);
+    const n=document.createElement('p');n.className='note';n.innerHTML=caption;
+    wrap.appendChild(n);
+    return wrap;
+  }
+  // top toast
+  const toast=document.createElement('div');toast.className='toast';
+  toast.innerHTML=`<span class="pip"></span><span><span class="e">New chapter</span><br><span class="t">Spinners</span></span>`;
+  placements.appendChild(stageWith('top',toast,
+    '<b style="color:#cfcfe0">Top toast.</b> Slides down from under the top HUD, holds ~1.6s, slides back. Least intrusive — never covers the board.'));
+  // center bubble
+  placements.appendChild(stageWith('mid',bubble('New chapter','Spinners','Gaps now spin','&#8635;'),
+    '<b style="color:#cfcfe0">Center bubble.</b> Spring-pops with overshoot, bobs once, floats up &amp; fades over ~2s. Most celebratory; briefly sits over the board between batches (during the breath before reveal).'));
+  // bottom lozenge
+  placements.appendChild(stageWith('bot',bubble('New chapter','Spinners','Gaps now spin','&#8635;'),
+    '<b style="color:#cfcfe0">Bottom lozenge.</b> Rises from above the piece tray. Reads in the thumb zone, clear of the board.'));
+
+  // ROW 2 chapters
+  const chapters=document.getElementById('chapters');
+  const CH=[
+    ['Chapter 1','Spinners','Gaps now spin','&#8635;'],
+    ['Chapter 2','Doubles','Two gaps per flash','&#9679;&#9679;'],
+    ['Chapter 3','Triples','Three gaps per flash','&#9679;&#9679;&#9679;'],
+    ['Chapter 4','Transformers','Shapes shift mid-reveal','&#10683;'],
+    ['Chapter 5','Inverted Reveal','Watch the finish','&#9676;'],
+  ];
+  CH.forEach(([e,t,h,g])=>{
+    const wrap=document.createElement('div');wrap.className='chip';
+    wrap.appendChild(bubble(e,t,h,g));
+    chapters.appendChild(wrap);
+  });
+</script>
+</body>
+</html>

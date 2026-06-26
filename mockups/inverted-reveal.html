@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Inverted Reveal Piece (Medium)</title>
+<style>
+  :root{
+    --void:#04040a; --board:#04040a; --cell-void:#0c0c14;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --lime:#B6FF3C;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+    --cell:28px; --gap:2px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% 38%, transparent 55%, #000 130%),
+      var(--void);
+    color:var(--text);
+    font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    gap:18px; padding:34px 20px 48px;
+  }
+  .silk{font-family:'Silkscreen','Press Start 2P',monospace}
+
+  h1{font-family:'Silkscreen',monospace; font-size:15px; letter-spacing:.14em;
+     color:var(--magenta); text-shadow:0 0 12px rgba(255,45,155,.6); text-transform:uppercase}
+  .sub{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim)}
+
+  .phaseLabel{
+    font-family:'Silkscreen',monospace; font-size:12px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.6);
+    height:16px; min-width:200px; text-align:center;
+  }
+
+  /* ── BOARD (the dark void) ────────────────────────────── */
+  .board{
+    display:grid; gap:var(--gap); padding:12px;
+    background:var(--board); border-radius:12px;
+    grid-template-columns:repeat(8, var(--cell));
+    grid-template-rows:repeat(8, var(--cell));
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    position:relative;
+  }
+  .c{ width:var(--cell); height:var(--cell); border-radius:3px; background:var(--cell-void); }
+
+  /* DEMARCATION: an Inverted-Reveal gap's seed cell carries a faint magenta
+     "ember" ring + slow breathing pulse so the player knows to watch it build.
+     This is the answer to "how do you know it's an inverted gap": the seed
+     ember is the tell, reinforced by the build-up pattern itself. */
+  .seed-marker{
+    box-shadow:inset 0 0 0 1px rgba(255,45,155,.45), 0 0 8px rgba(255,45,155,.25);
+    background:#140810;
+    animation:ember 1.6s ease-in-out infinite;
+  }
+  @keyframes ember{
+    0%,100%{ box-shadow:inset 0 0 0 1px rgba(255,45,155,.30), 0 0 6px rgba(255,45,155,.18); }
+    50%    { box-shadow:inset 0 0 0 1px rgba(255,45,155,.65), 0 0 12px rgba(255,45,155,.40); }
+  }
+
+  /* A build-up cell that has just turned on. Dim magenta — present but not the
+     payload. It eases up in brightness when it lands. */
+  .build{
+    background:var(--magenta);
+    box-shadow:0 0 6px rgba(255,45,155,.35);
+    animation:landDim 240ms cubic-bezier(.1,.9,.2,1) forwards;
+    filter:brightness(.6) saturate(.85);
+  }
+  @keyframes landDim{
+    0%  { transform:scale(.4); opacity:0; }
+    60% { transform:scale(1.12); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+
+  /* COMPLETE: the full shape snaps to full bright — THIS is the memory payload.
+     Every cell jumps to full magenta + strong glow at the same tick. */
+  .complete{
+    background:var(--magenta) !important;
+    filter:none !important;
+    box-shadow:0 0 14px var(--magenta), 0 0 30px rgba(255,45,155,.55) !important;
+    transform:scale(1.13);
+    animation:completePulse 320ms cubic-bezier(.1,.9,.2,1) forwards;
+  }
+  @keyframes completePulse{
+    0%  { transform:scale(1); }
+    100%{ transform:scale(1.13); }
+  }
+
+  /* POOF: the whole shape blows out in one quick flash-and-vanish (the inverse
+     of the standard per-cell decay wave — here it's instant + together). */
+  .poof{
+    animation:poof 360ms cubic-bezier(.4,0,.1,1) forwards;
+  }
+  @keyframes poof{
+    0%  { background:var(--magenta); box-shadow:0 0 16px var(--magenta), 0 0 34px rgba(255,45,155,.6); transform:scale(1.13); filter:brightness(1.4); }
+    30% { background:#fff; box-shadow:0 0 22px #fff, 0 0 44px rgba(255,255,255,.8); transform:scale(1.22); filter:brightness(1.8); }
+    100%{ background:var(--cell-void); box-shadow:none; transform:scale(1); filter:none; }
+  }
+
+  /* ── controls / legend ─────────────────────────────────── */
+  .panel{ display:flex; gap:24px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  button{
+    font-family:'Silkscreen',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cyan); background:#10101a; border:1px solid rgba(40,240,255,.35);
+    padding:9px 14px; border-radius:7px; cursor:pointer; transition:.15s;
+  }
+  button:hover{ border-color:var(--cyan); box-shadow:0 0 10px rgba(40,240,255,.3); }
+  .legend{ font-size:11px; color:var(--text-dim); max-width:380px; line-height:1.6; text-align:center; }
+  .legend b{ color:var(--magenta); }
+
+  .row{ display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .stack{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .caption{ font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--text-faint); }
+</style>
+</head>
+<body>
+  <h1>Inverted Reveal Piece</h1>
+  <div class="sub">Medium Mode · Infinite Stagger</div>
+
+  <div class="phaseLabel" id="phaseLabel">MEMORIZE</div>
+
+  <div class="row">
+    <div class="stack">
+      <div class="caption">Inverted gap (build &rarr; complete &rarr; poof)</div>
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <button id="replay">Replay</button>
+    <button id="step">Step frame</button>
+    <select id="shape" style="font-family:'Silkscreen',monospace;font-size:10px;background:#10101a;color:var(--cyan);border:1px solid rgba(40,240,255,.35);padding:8px;border-radius:7px;">
+      <option value="T">T piece</option>
+      <option value="L">L piece</option>
+      <option value="S">S piece</option>
+      <option value="I">I piece</option>
+      <option value="O">O piece</option>
+    </select>
+  </div>
+
+  <div class="legend">
+    The <b>seed cell</b> breathes with a faint magenta ember &mdash; the tell that this
+    gap is an Inverted Reveal. It fills its neighbors one at a time (dim), snaps to
+    full <b>complete</b> brightness for a held instant, then <b>poofs</b> out together.
+    The memory payload lands at the very end.
+  </div>
+
+<script>
+  // Shapes as [row,col] offsets from a seed cell. Fill order is an adjacency walk
+  // from the seed so cells light up as a connected, growing organism.
+  const SHAPES = {
+    T: [[0,0],[0,1],[0,-1],[1,0]],
+    L: [[0,0],[1,0],[2,0],[2,1]],
+    S: [[0,0],[0,1],[1,0],[1,-1]],
+    I: [[0,0],[0,1],[0,2],[0,3]],
+    O: [[0,0],[0,1],[1,0],[1,1]],
+  };
+
+  const BOARD_N = 8;
+  const board = document.getElementById('board');
+  const phaseLabel = document.getElementById('phaseLabel');
+  let cells = [];
+
+  function buildBoard(){
+    board.innerHTML = '';
+    cells = [];
+    for (let i=0;i<BOARD_N*BOARD_N;i++){
+      const d = document.createElement('div');
+      d.className='c';
+      board.appendChild(d);
+      cells.push(d);
+    }
+  }
+  buildBoard();
+
+  const T = {
+    SEED_HOLD: 600,
+    BUILD_STEP: 360,
+    COMPLETE_HOLD: 520,
+    POOF: 360,
+    GAP_AFTER: 700,
+  };
+
+  let timers = [];
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+  function at(ms, fn){ timers.push(setTimeout(fn, ms)); }
+  function idxFor(r,c){ return r*BOARD_N + c; }
+
+  function run(shapeKey){
+    clearTimers();
+    buildBoard();
+    const offs = SHAPES[shapeKey];
+    const baseR = 3, baseC = 3;
+    const els = offs.map(([dr,dc]) => cells[idxFor(baseR+dr, baseC+dc)]);
+
+    phaseLabel.textContent = 'SEED';
+    els[0].className = 'c seed-marker';
+
+    let t = T.SEED_HOLD;
+    els.forEach((el, k) => {
+      if (k===0) return;
+      at(t, () => {
+        phaseLabel.textContent = 'BUILDING';
+        el.className = 'c build';
+      });
+      t += T.BUILD_STEP;
+    });
+
+    at(t, () => { els[0].className = 'c build'; els[0].style.filter='brightness(.6) saturate(.85)'; });
+
+    t += 120;
+    at(t, () => {
+      phaseLabel.textContent = 'COMPLETE';
+      els.forEach(el => { el.className='c complete'; el.style.filter=''; });
+    });
+
+    t += T.COMPLETE_HOLD;
+    at(t, () => {
+      phaseLabel.textContent = 'POOF!';
+      els.forEach(el => el.className='c poof');
+    });
+
+    t += T.POOF + T.GAP_AFTER;
+    at(t, () => {
+      phaseLabel.textContent = 'MEMORIZE';
+      els.forEach(el => { el.className='c'; el.style.filter=''; });
+      at(500, () => run(shapeKey));
+    });
+  }
+
+  document.getElementById('replay').onclick = () => run(document.getElementById('shape').value);
+  document.getElementById('shape').onchange = () => run(document.getElementById('shape').value);
+
+  const STEP_FRAMES = ['seed','build1','build2','build3','complete','poof'];
+  let stepIdx = 0;
+  document.getElementById('step').onclick = () => {
+    clearTimers();
+    buildBoard();
+    const shapeKey = document.getElementById('shape').value;
+    const offs = SHAPES[shapeKey];
+    const baseR=3, baseC=3;
+    const els = offs.map(([dr,dc]) => cells[idxFor(baseR+dr, baseC+dc)]);
+    const frame = STEP_FRAMES[stepIdx % STEP_FRAMES.length];
+    stepIdx++;
+    renderStatic(els, frame);
+  };
+
+  function renderStatic(els, frame){
+    els.forEach(el => { el.className='c'; el.style.filter=''; el.style.animation='none'; el.style.transform=''; el.style.boxShadow=''; el.style.background=''; });
+    if (frame==='seed'){
+      phaseLabel.textContent='SEED';
+      els[0].style.boxShadow='inset 0 0 0 1px rgba(255,45,155,.65), 0 0 12px rgba(255,45,155,.40)';
+      els[0].style.background='#140810';
+    } else if (frame.startsWith('build')){
+      phaseLabel.textContent='BUILDING';
+      const n = parseInt(frame.replace('build',''),10);
+      els.forEach((el,k)=>{
+        if (k>=1 && k<=n){ el.style.background='var(--magenta)'; el.style.boxShadow='0 0 6px rgba(255,45,155,.35)'; el.style.filter='brightness(.6) saturate(.85)'; }
+      });
+      els[0].style.boxShadow='inset 0 0 0 1px rgba(255,45,155,.55), 0 0 10px rgba(255,45,155,.35)';
+      els[0].style.background='#140810';
+    } else if (frame==='complete'){
+      phaseLabel.textContent='COMPLETE';
+      els.forEach(el=>{ el.style.background='var(--magenta)'; el.style.boxShadow='0 0 14px var(--magenta), 0 0 30px rgba(255,45,155,.55)'; el.style.transform='scale(1.13)'; });
+    } else if (frame==='poof'){
+      phaseLabel.textContent='POOF!';
+      els.forEach(el=>{ el.style.background='#fff'; el.style.boxShadow='0 0 22px #fff, 0 0 44px rgba(255,255,255,.8)'; el.style.transform='scale(1.22)'; el.style.filter='brightness(1.8)'; });
+    }
+  }
+
+  window.renderFrame = (shapeKey, frame) => {
+    clearTimers();
+    buildBoard();
+    const offs = SHAPES[shapeKey];
+    const baseR=3, baseC=3;
+    const els = offs.map(([dr,dc]) => cells[idxFor(baseR+dr, baseC+dc)]);
+    renderStatic(els, frame);
+  };
+
+  run('T');
+</script>
+</body>
+</html>
