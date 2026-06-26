@@ -30,17 +30,20 @@ import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
  * pairsForBatch clamp defensively (triples first, then pairs against what's left).
  *
  * Curve shape (gaps N, pairs P, triples Tr, inverted Inv):
- *    L1–6   N3                       on-ramp: held flat, variety is the only lever
- *    L7–8   N4                       +gap, then +shape (T)
- *    L9–12  N5                       +gap, +shape (S), orientation unlock, +shape (Z)
- *    L13–14 N5  P1→P2                pairing switches on with NO extra recall load
- *    L15–16 N6  P2→P3                L16 is fully paired: 3 pairs, 3 beats
- *    L17–25 N7→12 P3→P6              gap and pair levers alternate up to the cap
- *    L26–29 N12 Tr1→Tr4             triples switch on, trading pairs one at a time;
- *                                    L29 is fully tripled (4 triples, 0 pairs, 4 beats)
- *    L30–31 N12 Inv1→Inv2           inverted gaps switch on (1 then 2 per batch); a
+ *    L1–3   N3                       on-ramp: only 3 levels held at 3 gaps (variety
+ *                                    grows via +L, +J while the gap count holds)
+ *    L4–5   N4                       +gap, then +shape (T)
+ *    L6–9   N5                       +gap, +shape (S), orientation unlock, +shape (Z)
+ *    L10–11 N5  P1→P2                pairing switches on with NO extra recall load
+ *    L12–13 N6  P2→P3                L13 is fully paired: 3 pairs, 3 beats
+ *    L14–22 N7→12 P3→P6              gap and pair levers alternate up to the cap;
+ *                                    L22 is the LAST Doubles round (12 gaps, 6 pairs)
+ *    L23–26 N12 Tr1→Tr4             Triples switch on — a GENTLE intro (L23 = 1 triple
+ *                                    + 2 pairs + singles), ramping to fully tripled at
+ *                                    L26 (4 triples, 4 beats)
+ *    L27–28 N12 Inv1→Inv2           inverted gaps switch on (1 then 2 per batch); a
  *                                    triple eases back so the inverted solo beats fit
- *    L32+   N12 Tr3 Inv2            terminal rung: 3 triples + 2 inverted solos (6 beats)
+ *    L29+   N12 Tr3 Inv2            terminal rung: 3 triples + 2 inverted solos (6 beats)
  */
 export const STAGGER = {
   MAX_GAPS: 12,        // cap so the 12×12 board stays solvable
@@ -87,24 +90,25 @@ export const DISPLAY_ROTATION: Record<PieceType, Rotation> = {
  *  the shape pool (2 → 4) rather than by adding board volume. New shapes are
  *  spaced so they never land on the same level as a gap-count bump or the
  *  orientation unlock — one lever moves at a time. Z (the last shape) arrives
- *  AFTER orientation frees up, so the hardest pieces don't debut rotated. */
+ *  AFTER orientation frees up (idx 8 > idx 7), so the hardest pieces don't debut
+ *  rotated. The on-ramp is short (only L1–3 hold 3 gaps), so all 7 shapes are in
+ *  by L9, the level before pairing begins. */
 const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
-  { from: 0,  type: 'O' },
-  { from: 0,  type: 'I' },
-  { from: 2,  type: 'L' },  // L3
-  { from: 4,  type: 'J' },  // L5
-  { from: 7,  type: 'T' },  // L8
-  { from: 9,  type: 'S' },  // L10
-  { from: 11, type: 'Z' },  // L12 — last shape, the level after orientation frees
+  { from: 0, type: 'O' },
+  { from: 0, type: 'I' },
+  { from: 1, type: 'L' },  // L2
+  { from: 2, type: 'J' },  // L3
+  { from: 4, type: 'T' },  // L5
+  { from: 6, type: 'S' },  // L7
+  { from: 8, type: 'Z' },  // L9 — last shape, the level after orientation frees
 ]
 
 /** From this batch on, gaps may appear in any rotation; before it, every gap is
  *  locked to its tray orientation so the player maps shapes 1:1 with the cart.
  *  Orientation freedom is the single most disorienting lever (it multiplies the
- *  effective shape vocabulary), so it's pushed out to L11 (idx 10) and lands
- *  ALONE — the gap count is deliberately held at 5 across L9–11 so nothing else
- *  moves the level it unlocks. */
-export const ORIENTATION_FREE_FROM = 10
+ *  effective shape vocabulary), so it lands ALONE on L8 (idx 7) — the gap count
+ *  is held at 5 across L6–9 so nothing else moves the level it unlocks. */
+export const ORIENTATION_FREE_FROM = 7
 
 /** The piece types that may appear as gaps in a given batch. */
 export function allowedTypesForBatch(batchIndex: number): PieceType[] {
@@ -139,35 +143,32 @@ interface StaggerRung { gaps: number; pairs: number; triples: number }
 const STAGGER_CURVE: StaggerRung[] = [
   { gaps: 3,  pairs: 0, triples: 0 }, // L1
   { gaps: 3,  pairs: 0, triples: 0 }, // L2
-  { gaps: 3,  pairs: 0, triples: 0 }, // L3
-  { gaps: 3,  pairs: 0, triples: 0 }, // L4
-  { gaps: 3,  pairs: 0, triples: 0 }, // L5
-  { gaps: 3,  pairs: 0, triples: 0 }, // L6
-  { gaps: 4,  pairs: 0, triples: 0 }, // L7
-  { gaps: 4,  pairs: 0, triples: 0 }, // L8
-  { gaps: 5,  pairs: 0, triples: 0 }, // L9
-  { gaps: 5,  pairs: 0, triples: 0 }, // L10
-  { gaps: 5,  pairs: 0, triples: 0 }, // L11
-  { gaps: 5,  pairs: 0, triples: 0 }, // L12
-  { gaps: 5,  pairs: 1, triples: 0 }, // L13 — first pair (recall load unchanged)
-  { gaps: 5,  pairs: 2, triples: 0 }, // L14
-  { gaps: 6,  pairs: 2, triples: 0 }, // L15
-  { gaps: 6,  pairs: 3, triples: 0 }, // L16 — fully paired: 3 pairs / 3 beats
-  { gaps: 7,  pairs: 3, triples: 0 }, // L17
-  { gaps: 8,  pairs: 3, triples: 0 }, // L18
-  { gaps: 8,  pairs: 4, triples: 0 }, // L19
-  { gaps: 9,  pairs: 4, triples: 0 }, // L20
-  { gaps: 10, pairs: 4, triples: 0 }, // L21
-  { gaps: 10, pairs: 5, triples: 0 }, // L22
-  { gaps: 11, pairs: 5, triples: 0 }, // L23
-  { gaps: 12, pairs: 5, triples: 0 }, // L24
-  { gaps: 12, pairs: 6, triples: 0 }, // L25 — 12 gaps fully paired into 6 dense beats
-  { gaps: 12, pairs: 4, triples: 1 }, // L26 — first triple (one beat denser, same beat count)
-  { gaps: 12, pairs: 3, triples: 2 }, // L27
-  { gaps: 12, pairs: 1, triples: 3 }, // L28
-  { gaps: 12, pairs: 0, triples: 4 }, // L29 — fully tripled: 4 triples / 4 beats
-  { gaps: 12, pairs: 1, triples: 3 }, // L30 — Inv1: a triple eases to a pair, 1 inverted solo
-  { gaps: 12, pairs: 0, triples: 3 }, // L31 — Inv2: 3 triples + 2 inverted solos (terminal)
+  { gaps: 3,  pairs: 0, triples: 0 }, // L3 — last 3-beat level (on-ramp halved to 3 levels)
+  { gaps: 4,  pairs: 0, triples: 0 }, // L4
+  { gaps: 4,  pairs: 0, triples: 0 }, // L5
+  { gaps: 5,  pairs: 0, triples: 0 }, // L6
+  { gaps: 5,  pairs: 0, triples: 0 }, // L7
+  { gaps: 5,  pairs: 0, triples: 0 }, // L8 — orientation unlocks here
+  { gaps: 5,  pairs: 0, triples: 0 }, // L9 — last shape (Z) joins; all 7 in
+  { gaps: 5,  pairs: 1, triples: 0 }, // L10 — first pair (Doubles begin, recall load unchanged)
+  { gaps: 5,  pairs: 2, triples: 0 }, // L11
+  { gaps: 6,  pairs: 2, triples: 0 }, // L12
+  { gaps: 6,  pairs: 3, triples: 0 }, // L13 — fully paired at 6 gaps: 3 pairs / 3 beats
+  { gaps: 7,  pairs: 3, triples: 0 }, // L14
+  { gaps: 8,  pairs: 3, triples: 0 }, // L15
+  { gaps: 8,  pairs: 4, triples: 0 }, // L16
+  { gaps: 9,  pairs: 4, triples: 0 }, // L17
+  { gaps: 10, pairs: 4, triples: 0 }, // L18
+  { gaps: 10, pairs: 5, triples: 0 }, // L19
+  { gaps: 11, pairs: 5, triples: 0 }, // L20
+  { gaps: 12, pairs: 5, triples: 0 }, // L21
+  { gaps: 12, pairs: 6, triples: 0 }, // L22 — last Doubles round: 12 gaps fully paired (6 beats)
+  { gaps: 12, pairs: 2, triples: 1 }, // L23 — Triples begin, gentle: 1 triple + 2 pairs (+5 singles)
+  { gaps: 12, pairs: 2, triples: 2 }, // L24 — 2 triples + 2 pairs
+  { gaps: 12, pairs: 0, triples: 3 }, // L25 — 3 triples
+  { gaps: 12, pairs: 0, triples: 4 }, // L26 — fully tripled: 4 triples / 4 beats
+  { gaps: 12, pairs: 0, triples: 3 }, // L27 — Inv1: a triple eases for the inverted solo
+  { gaps: 12, pairs: 0, triples: 3 }, // L28 — Inv2: 3 triples + 2 inverted solos (terminal)
 ]
 
 function rung(batchIndex: number): StaggerRung {
@@ -179,7 +180,7 @@ function rung(batchIndex: number): StaggerRung {
  *  moving on the level it switches on (one-lever-per-level discipline). Each
  *  inverted gap takes a SOLO beat, so the density chunks below clamp against the
  *  NON-inverted gaps only. */
-export const INVERTED_FROM = 29
+export const INVERTED_FROM = 26
 const INVERTED_MAX = 2
 
 /** Gap count (memory volume / recall load) for a batch, capped at MAX_GAPS. */
