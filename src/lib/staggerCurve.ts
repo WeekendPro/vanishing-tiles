@@ -3,18 +3,44 @@ import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
 /**
  * Infinite Stagger's own difficulty + scoring curve, expressed as a hand-authored
  * rung table (STAGGER_CURVE) indexed by the 0-based batch index, clamped to the
- * last rung for the endless tail. Difficulty is split across four INDEPENDENT
- * levers so only ONE ever moves per level (no stacked spikes):
+ * last rung for the endless tail. Difficulty is split across INDEPENDENT levers so
+ * only ONE conceptual lever ever moves per level (no stacked spikes):
  *
  *   1. shape variety   — how many distinct piece types may appear (SHAPE_SCHEDULE)
  *   2. orientation      — gaps locked to the tray rotation, then freed (ORIENTATION_FREE_FROM)
  *   3. gap count (N)    — how many gaps to recall (STAGGER_CURVE[i].gaps)
- *   4. pairing (P)      — how many gaps are revealed TWO-at-a-once in a single
- *                         flash beat instead of one (STAGGER_CURVE[i].pairs)
+ *   4. density (P / Tr) — how many gaps share a single flash beat: a PAIR collapses
+ *                         two gaps into one beat (saves 1 beat), a TRIPLE collapses
+ *                         three (saves 2). Pairs and triples together form the one
+ *                         "density" lever — the late curve trades pairs for triples,
+ *                         monotonically shrinking the beat count (denser chunks).
+ *   5. inverted (Inv)   — how many gaps reveal with the back-loaded INVERTED build
+ *                         (seed → flow-in build → bright COMPLETE → magenta poof; see
+ *                         InvertedReveal in StaggerScreen). Inverted gaps always take
+ *                         a SOLO beat (never paired/tripled); they switch on after the
+ *                         triples section (INVERTED_FROM), growing one per level.
  *
- * Pairing is a DENSITY lever, not a volume one: a board of N gaps with P pairs
- * plays in N − P flash beats (fewer, denser beats), so recall load can climb
- * while the reveal rhythm stays low. Each pair is always two DISTINCT shapes.
+ * Density is a chunking lever, not a volume one: a board of N gaps with P pairs and
+ * Tr triples plays in N − P − 2·Tr flash beats (fewer, denser beats), so recall load
+ * can climb while the reveal rhythm stays low. A pair is always two DISTINCT shapes;
+ * a triple is at least two distinct shapes (never all-identical).
+ *
+ * Feasibility: chunks only draw from the NON-inverted gaps, so 2·P + 3·Tr ≤ N − Inv
+ * on every rung. The rung table is authored to respect this, and triplesForBatch /
+ * pairsForBatch clamp defensively (triples first, then pairs against what's left).
+ *
+ * Curve shape (gaps N, pairs P, triples Tr, inverted Inv):
+ *    L1–6   N3                       on-ramp: held flat, variety is the only lever
+ *    L7–8   N4                       +gap, then +shape (T)
+ *    L9–12  N5                       +gap, +shape (S), orientation unlock, +shape (Z)
+ *    L13–14 N5  P1→P2                pairing switches on with NO extra recall load
+ *    L15–16 N6  P2→P3                L16 is fully paired: 3 pairs, 3 beats
+ *    L17–25 N7→12 P3→P6              gap and pair levers alternate up to the cap
+ *    L26–29 N12 Tr1→Tr4             triples switch on, trading pairs one at a time;
+ *                                    L29 is fully tripled (4 triples, 0 pairs, 4 beats)
+ *    L30–31 N12 Inv1→Inv2           inverted gaps switch on (1 then 2 per batch); a
+ *                                    triple eases back so the inverted solo beats fit
+ *    L32+   N12 Tr3 Inv2            terminal rung: 3 triples + 2 inverted solos (6 beats)
  */
 export const STAGGER = {
   MAX_GAPS: 12,        // cap so the 12×12 board stays solvable
@@ -33,6 +59,16 @@ export const STAGGER = {
   START_LIVES: 5,      // shared lives for the whole run
   LIFE_EVERY: 5000,    // every N cumulative points earns one life back
   REPLAY_COST: 500,    // points spent to replay the memorize sequence mid-batch
+  // ── Inverted Reveal sub-timeline (constant per batch, like the standard bloom).
+  // A beat whose gap is `inverted` plays: seed ember → smooth overlapping flow-in
+  // build → full-bright magenta COMPLETE (the memory payload) → magenta CONTRACT
+  // poof (no white flash). The build STEP (start-to-start) is much shorter than the
+  // per-cell flow ease (~640ms in CSS) so the ramps overlap into one growth.
+  INV_SEED_MS: 600,       // seed ember hold before the build starts
+  INV_BUILD_STEP_MS: 230, // start-to-start gap between build cells (overlapping ease)
+  INV_EQUALIZE_MS: 580,   // after the last cell starts: seed equalizes, shape settles dim
+  INV_COMPLETE_HOLD_MS: 520, // full-bright payload hold
+  INV_POOF_MS: 320,       // magenta contract poof
 } as const
 
 /** The rotation each piece is drawn at in the tray — and the rotation its gaps
@@ -82,67 +118,109 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
 }
 
 /** The difficulty rungs (one per level), indexed by batch index and clamped to
- *  the last rung for the endless tail. `gaps` is the recall load (N); `pairs` is
- *  how many of those gaps reveal two-at-a-once (P). The back half is irregular by
- *  DESIGN — the gap and pair levers alternate so exactly one moves per level, and
- *  a pair always needs two gaps (2·P ≤ N) — so it's a table, not a formula.
+ *  the last rung for the endless tail. `gaps` is the recall load (N); `pairs` /
+ *  `triples` are how many of those gaps reveal two- / three-at-a-once (P / Tr). The
+ *  back half is irregular by DESIGN — the gap and density levers alternate so
+ *  exactly one conceptual lever moves per level, and the chunked gaps must fit
+ *  (2·P + 3·Tr ≤ N − Inv) — so it's a table, not a formula.
  *
- *    L1–6   N3            on-ramp: held flat, variety is the only lever
- *    L7–8   N4            +gap, then +shape (T)
- *    L9–12  N5            +gap, +shape (S), orientation unlock, +shape (Z) — N held
- *    L13–14 N5  P1→P2     pairing switches on with NO extra recall load (density only)
- *    L15–16 N6  P2→P3     L16 is fully paired: 3 pairs, 0 singles, 3 beats
- *    L17–24 N7→12 P3→P5   gap and pair levers alternate up to the cap
- *    L25+   N12 P6        the 12-gap board fully paired into 6 dense beats */
-interface StaggerRung { gaps: number; pairs: number }
+ *    L1–6   N3                on-ramp: held flat, variety is the only lever
+ *    L7–8   N4                +gap, then +shape (T)
+ *    L9–12  N5                +gap, +shape (S), orientation unlock, +shape (Z) — N held
+ *    L13–14 N5  P1→P2         pairing switches on with NO extra recall load (density only)
+ *    L15–16 N6  P2→P3         L16 is fully paired: 3 pairs, 0 singles, 3 beats
+ *    L17–25 N7→12 P3→P6       gap and pair levers alternate up to the cap
+ *    L26–29 N12 Tr1→Tr4      triples switch on, trading pairs one at a time
+ *                             (L29 fully tripled: 4 triples, 0 pairs, 4 beats)
+ *    L30–31 N12 Inv1→Inv2    inverted gaps switch on (see INVERTED_FROM); a triple
+ *                             eases back so the inverted SOLO beats fit
+ *    L32+   N12 Tr3 Inv2     terminal rung: 3 triples + 2 inverted solos (6 beats) */
+interface StaggerRung { gaps: number; pairs: number; triples: number }
 const STAGGER_CURVE: StaggerRung[] = [
-  { gaps: 3,  pairs: 0 }, // L1
-  { gaps: 3,  pairs: 0 }, // L2
-  { gaps: 3,  pairs: 0 }, // L3
-  { gaps: 3,  pairs: 0 }, // L4
-  { gaps: 3,  pairs: 0 }, // L5
-  { gaps: 3,  pairs: 0 }, // L6
-  { gaps: 4,  pairs: 0 }, // L7
-  { gaps: 4,  pairs: 0 }, // L8
-  { gaps: 5,  pairs: 0 }, // L9
-  { gaps: 5,  pairs: 0 }, // L10
-  { gaps: 5,  pairs: 0 }, // L11
-  { gaps: 5,  pairs: 0 }, // L12
-  { gaps: 5,  pairs: 1 }, // L13 — first pair (recall load unchanged)
-  { gaps: 5,  pairs: 2 }, // L14
-  { gaps: 6,  pairs: 2 }, // L15
-  { gaps: 6,  pairs: 3 }, // L16 — fully paired: 3 pairs / 3 beats
-  { gaps: 7,  pairs: 3 }, // L17
-  { gaps: 8,  pairs: 3 }, // L18
-  { gaps: 8,  pairs: 4 }, // L19
-  { gaps: 9,  pairs: 4 }, // L20
-  { gaps: 10, pairs: 4 }, // L21
-  { gaps: 10, pairs: 5 }, // L22
-  { gaps: 11, pairs: 5 }, // L23
-  { gaps: 12, pairs: 5 }, // L24
-  { gaps: 12, pairs: 6 }, // L25 — 12 gaps in 6 dense beats (terminal rung)
+  { gaps: 3,  pairs: 0, triples: 0 }, // L1
+  { gaps: 3,  pairs: 0, triples: 0 }, // L2
+  { gaps: 3,  pairs: 0, triples: 0 }, // L3
+  { gaps: 3,  pairs: 0, triples: 0 }, // L4
+  { gaps: 3,  pairs: 0, triples: 0 }, // L5
+  { gaps: 3,  pairs: 0, triples: 0 }, // L6
+  { gaps: 4,  pairs: 0, triples: 0 }, // L7
+  { gaps: 4,  pairs: 0, triples: 0 }, // L8
+  { gaps: 5,  pairs: 0, triples: 0 }, // L9
+  { gaps: 5,  pairs: 0, triples: 0 }, // L10
+  { gaps: 5,  pairs: 0, triples: 0 }, // L11
+  { gaps: 5,  pairs: 0, triples: 0 }, // L12
+  { gaps: 5,  pairs: 1, triples: 0 }, // L13 — first pair (recall load unchanged)
+  { gaps: 5,  pairs: 2, triples: 0 }, // L14
+  { gaps: 6,  pairs: 2, triples: 0 }, // L15
+  { gaps: 6,  pairs: 3, triples: 0 }, // L16 — fully paired: 3 pairs / 3 beats
+  { gaps: 7,  pairs: 3, triples: 0 }, // L17
+  { gaps: 8,  pairs: 3, triples: 0 }, // L18
+  { gaps: 8,  pairs: 4, triples: 0 }, // L19
+  { gaps: 9,  pairs: 4, triples: 0 }, // L20
+  { gaps: 10, pairs: 4, triples: 0 }, // L21
+  { gaps: 10, pairs: 5, triples: 0 }, // L22
+  { gaps: 11, pairs: 5, triples: 0 }, // L23
+  { gaps: 12, pairs: 5, triples: 0 }, // L24
+  { gaps: 12, pairs: 6, triples: 0 }, // L25 — 12 gaps fully paired into 6 dense beats
+  { gaps: 12, pairs: 4, triples: 1 }, // L26 — first triple (one beat denser, same beat count)
+  { gaps: 12, pairs: 3, triples: 2 }, // L27
+  { gaps: 12, pairs: 1, triples: 3 }, // L28
+  { gaps: 12, pairs: 0, triples: 4 }, // L29 — fully tripled: 4 triples / 4 beats
+  { gaps: 12, pairs: 1, triples: 3 }, // L30 — Inv1: a triple eases to a pair, 1 inverted solo
+  { gaps: 12, pairs: 0, triples: 3 }, // L31 — Inv2: 3 triples + 2 inverted solos (terminal)
 ]
 
 function rung(batchIndex: number): StaggerRung {
   return STAGGER_CURVE[Math.min(Math.max(batchIndex, 0), STAGGER_CURVE.length - 1)]
 }
 
+/** From this batch on, a growing number of gaps reveal with the INVERTED build
+ *  (InvertedReveal). It lands AFTER the triples section so it's the only lever
+ *  moving on the level it switches on (one-lever-per-level discipline). Each
+ *  inverted gap takes a SOLO beat, so the density chunks below clamp against the
+ *  NON-inverted gaps only. */
+export const INVERTED_FROM = 29
+const INVERTED_MAX = 2
+
 /** Gap count (memory volume / recall load) for a batch, capped at MAX_GAPS. */
 export function gapCountForBatch(batchIndex: number): number {
   return Math.min(STAGGER.MAX_GAPS, rung(batchIndex).gaps)
 }
 
-/** How many of the batch's gaps are revealed as PAIRS (two distinct shapes on a
- *  single flash beat). Clamped to ⌊N/2⌋ so we never ask for more pairs than the
- *  gap count can supply. */
-export function pairsForBatch(batchIndex: number): number {
-  return Math.min(rung(batchIndex).pairs, Math.floor(gapCountForBatch(batchIndex) / 2))
+/** How many of the batch's gaps reveal with the INVERTED build, growing one per
+ *  level from INVERTED_FROM and capped (and never more than the gap count). */
+export function invertedForBatch(batchIndex: number): number {
+  if (batchIndex < INVERTED_FROM) return 0
+  const want = Math.min(INVERTED_MAX, batchIndex - INVERTED_FROM + 1)
+  return Math.min(want, gapCountForBatch(batchIndex))
 }
 
-/** Number of flash BEATS in a batch's reveal: each pair collapses two gaps into
- *  one beat, so beats = N − P. This (not the gap count) sets the reveal rhythm. */
+/** Gaps available for density chunking — every gap MINUS the inverted ones (which
+ *  always reveal as solo beats and are never paired/tripled). */
+function chunkableForBatch(batchIndex: number): number {
+  return gapCountForBatch(batchIndex) - invertedForBatch(batchIndex)
+}
+
+/** How many of the batch's gaps are revealed as TRIPLES (three gaps — at least two
+ *  distinct shapes — on a single flash beat). Clamped so 3·Tr ≤ chunkable gaps. */
+export function triplesForBatch(batchIndex: number): number {
+  return Math.max(0, Math.min(rung(batchIndex).triples, Math.floor(chunkableForBatch(batchIndex) / 3)))
+}
+
+/** How many of the batch's gaps are revealed as PAIRS (two distinct shapes on a
+ *  single flash beat). Clamped to the chunkable gaps LEFT after triples, so we
+ *  never ask for more pairs than the board can supply (2·P + 3·Tr ≤ N − Inv). */
+export function pairsForBatch(batchIndex: number): number {
+  const left = chunkableForBatch(batchIndex) - 3 * triplesForBatch(batchIndex)
+  return Math.max(0, Math.min(rung(batchIndex).pairs, Math.floor(left / 2)))
+}
+
+/** Number of flash BEATS in a batch's reveal: a pair collapses two gaps into one
+ *  beat (−1), a triple collapses three (−2), so beats = N − P − 2·Tr. This (not the
+ *  gap count) sets the reveal rhythm. Inverted gaps stay solo, so they're already
+ *  counted as their own beats here (they're excluded from P and Tr). */
 export function flashEventsForBatch(batchIndex: number): number {
-  return gapCountForBatch(batchIndex) - pairsForBatch(batchIndex)
+  return gapCountForBatch(batchIndex) - pairsForBatch(batchIndex) - 2 * triplesForBatch(batchIndex)
 }
 
 // Fisher–Yates shuffle of `a` IN PLACE, driven by `rng`. Returns `a`.
@@ -154,18 +232,50 @@ function shuffleInPlace<T>(a: T[], rng: () => number): T[] {
   return a
 }
 
-/** Group a batch's gaps into reveal BEATS. `pairCount` beats bloom two gaps of
- *  DISTINCT shapes at once; the rest bloom one. Returns beats as arrays of gap
- *  indices (length 1 or 2) in shuffled order. Greedy distinct-shape pairing —
- *  when the drawn shapes can't supply `pairCount` distinct pairs it returns as
- *  many as it can (makeBatch re-rolls the board to hit the target). */
+/** Group a batch's gaps into reveal BEATS. `tripleCount` beats bloom THREE gaps at
+ *  once (at least two distinct shapes — never all-identical); `pairCount` beats
+ *  bloom TWO gaps of DISTINCT shapes; the rest bloom one. `inverted[i]` gaps always
+ *  fall through to a SOLO beat (never paired/tripled). Returns beats as arrays of
+ *  gap indices (length 1, 2, or 3) in shuffled order.
+ *
+ *  Triples are formed first (they're the scarcer constraint), then pairs, then the
+ *  leftover singles. Greedy — when the drawn shapes can't supply the requested
+ *  distinct chunks it returns as many as it can (makeBatch re-rolls to hit the
+ *  target). */
 export function buildRevealPlan(
   types: PieceType[],
   pairCount: number,
+  tripleCount = 0,
+  inverted: boolean[] = [],
   rng: () => number = Math.random,
 ): number[][] {
   const order = shuffleInPlace(types.map((_, i) => i), rng)
+  // `used` marks gaps already committed to a pair/triple. Inverted gaps are seeded
+  // in up front so they can never be pulled into a chunk — but they are NOT dropped
+  // from the plan: they resurface below as their own SOLO beats.
   const used = new Set<number>()
+  order.forEach(i => { if (inverted[i]) used.add(i) })
+
+  // Triples: pick a seed `i`, then any two more unused gaps such that the trio is
+  // NOT all-identical (require ≥2 distinct shapes; prefer 3 distinct).
+  const triples: number[][] = []
+  for (const i of order) {
+    if (triples.length >= tripleCount) break
+    if (used.has(i)) continue
+    const rest = order.filter(k => k !== i && !used.has(k))
+    if (rest.length < 2) continue
+    // Prefer a partner of a DIFFERENT shape first so the trio is never same-same-x.
+    const diff = rest.find(k => types[k] !== types[i])
+    const j = diff ?? rest[0]
+    const third = rest.find(k => k !== j && (types[k] !== types[i] || types[k] !== types[j]))
+    if (third === undefined) continue
+    // Distinctness guard: a valid triple has at least two distinct shapes.
+    const distinct = new Set([types[i], types[j], types[third]]).size
+    if (distinct < 2) continue
+    used.add(i); used.add(j); used.add(third)
+    triples.push([i, j, third])
+  }
+
   const pairs: number[][] = []
   for (const i of order) {
     if (pairs.length >= pairCount) break
@@ -176,9 +286,12 @@ export function buildRevealPlan(
     used.add(i); used.add(j)
     pairs.push([i, j])
   }
-  const singles = order.filter(i => !used.has(i)).map(i => [i])
-  // Mix pairs and singles so a pair beat isn't always first.
-  return shuffleInPlace([...pairs, ...singles], rng)
+
+  // Everything not committed to a pair/triple becomes a solo beat — this INCLUDES
+  // the inverted gaps (which were never chunked), so they surface as length-1 beats.
+  const singles = order.filter(i => !used.has(i) || inverted[i]).map(i => [i])
+  // Mix chunk beats and singles so a chunked beat isn't always first.
+  return shuffleInPlace([...triples, ...pairs, ...singles], rng)
 }
 
 /** Time between consecutive piece flashes during reveal — CONSTANT for every
