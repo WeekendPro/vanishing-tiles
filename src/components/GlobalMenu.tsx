@@ -3,6 +3,9 @@ import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useProgressStore } from '../store/progressStore'
+import { useStaggerStore } from '../store/staggerStore'
+import { STAGGER_LEVELS } from '../lib/staggerLevels'
+import { isSandboxEnv } from '../lib/env'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
 
@@ -46,8 +49,9 @@ function Action({ label, onClick, tone = 'default' }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goHome, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goHome, goStagger, reset: resetNav } = useNavStore(useShallow(s => ({
     goHome: s.goHome,
+    goStagger: s.goStagger,
     reset: s.reset,
   })))
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
@@ -56,6 +60,7 @@ export function GlobalMenu() {
     resetGame: s.resetGame,
   })))
   const resetProgress = useProgressStore(s => s.resetProgress)
+  const startStaggerRun = useStaggerStore(s => s.startRun)
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
   // Journey/Practice round shells.
@@ -99,6 +104,15 @@ export function GlobalMenu() {
     resetProgress()
     resetGame()
     goHome()
+  }
+  // Dev/preview only: launch Infinite Stagger locked into a single named
+  // level for calibration. The store makes this run unlosable and pins the
+  // level (no advance/lose) — same launch shape as HomeScreen's Play button,
+  // just with the level argument threaded through.
+  const launchSandboxLevel = (key: (typeof STAGGER_LEVELS)[number]['key']) => {
+    setOpen(false)
+    startStaggerRun(key)
+    goStagger()
   }
 
   return (
@@ -149,6 +163,21 @@ export function GlobalMenu() {
                 onClick={quitToHome}
               />
             </>
+          )}
+
+          {isSandboxEnv() && (
+            <div className="mt-2">
+              <div className="font-pixel text-[9px] uppercase tracking-[0.2em] text-neon-magenta text-glow-magenta mb-1">
+                Sandbox
+              </div>
+              {STAGGER_LEVELS.map(level => (
+                <Action
+                  key={level.key}
+                  label={level.name}
+                  onClick={() => launchSandboxLevel(level.key)}
+                />
+              ))}
+            </div>
           )}
 
           <div className="mt-auto">
