@@ -7,7 +7,7 @@ import {
   isWon,
   levelByKey,
   levelIndexByKey,
-} from './staggerLevels'
+} from '../../src/lib/staggerLevels'
 
 describe('STAGGER_LEVELS', () => {
   it('has the exact 5 keys/names/thresholds/multipliers, in order', () => {
