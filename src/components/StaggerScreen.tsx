@@ -447,7 +447,7 @@ export function StaggerScreen() {
   if (phase === 'idle') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center vt-vignette select-none">
-        <NeonButton variant="primary" onClick={startRun}>Start Staggered Vanishing Tiles</NeonButton>
+        <NeonButton variant="primary" onClick={() => startRun()}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
   }
@@ -648,7 +648,7 @@ export function StaggerScreen() {
             )}
 
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={startRun}>Play again</NeonButton>
+              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>
           </div>
