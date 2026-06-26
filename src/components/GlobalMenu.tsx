@@ -4,7 +4,7 @@ import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useProgressStore } from '../store/progressStore'
 import { useStaggerStore } from '../store/staggerStore'
-import { STAGGER_LEVELS } from '../lib/staggerLevels'
+import { STAGGER_LEVELS, type LevelKey } from '../lib/staggerLevels'
 import { isSandboxEnv } from '../lib/env'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
@@ -109,7 +109,7 @@ export function GlobalMenu() {
   // level for calibration. The store makes this run unlosable and pins the
   // level (no advance/lose) — same launch shape as HomeScreen's Play button,
   // just with the level argument threaded through.
-  const launchSandboxLevel = (key: (typeof STAGGER_LEVELS)[number]['key']) => {
+  const launchSandboxLevel = (key: LevelKey) => {
     setOpen(false)
     startStaggerRun(key)
     goStagger()

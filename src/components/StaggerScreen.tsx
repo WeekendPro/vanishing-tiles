@@ -8,7 +8,7 @@ import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
-import { STAGGER_LEVELS } from '../lib/staggerLevels'
+import { STAGGER_LEVELS, levelForScore } from '../lib/staggerLevels'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
@@ -242,7 +242,11 @@ export function StaggerScreen() {
   // countdown name, the run-context label, and the sandbox banner.
   const level = activeLevel({ levelIndex, sandboxLevel })
   const sandboxed = isSandboxRun({ sandboxLevel })
-  const nextLevel = completedLevelIndex != null ? STAGGER_LEVELS[completedLevelIndex + 1] : undefined
+  // "Next" must match the level the store actually adopts on proceed, which is
+  // levelForScore(score) — this can SKIP levels when a streak crosses two
+  // thresholds in one batch, so deriving it from completedLevelIndex + 1 would
+  // mislabel the jump. Gated to the celebration phase.
+  const nextLevel = phase === 'levelComplete' ? levelForScore(score) : undefined
 
   const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
 
