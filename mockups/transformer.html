@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Transformer (Chain Squeeze)</title>
+<style>
+  :root {
+    --void: #04040a; --dim: #0c0c14; --magenta: #FF2D9B; --cyan: #28f0ff; --amber:#ffc23d;
+    --cell: 28px; --pitch: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin:0; min-height:100%;
+    background: radial-gradient(120% 90% at 50% 0%, #0a0a16 0%, #04040a 60%, #020205 100%);
+    color:#d7d9e6; font-family: ui-monospace, Menlo, monospace;
+  }
+  .stage { display:flex; flex-direction:column; align-items:center; padding:22px 16px 40px; gap:12px; }
+  .title { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); text-align:center; }
+  .phase { font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55); min-height:14px; }
+  /* chain progress dots above the board */
+  .steps { display:flex; gap:7px; align-items:center; min-height:14px; }
+  .dot { font-size:11px; letter-spacing:.05em; color:#555a70; transition:color .2s, text-shadow .2s; }
+  .dot.done { color:var(--magenta); }
+  .dot.cur  { color:#fff; text-shadow:0 0 8px var(--magenta); }
+  .dot.final { color:var(--cyan); }
+  .dot.final.cur { color:#fff; text-shadow:0 0 10px var(--cyan); }
+  .arrow { color:#3a3e52; font-size:10px; }
+
+  .board {
+    --cols: 8; --rows: 5;
+    display:grid; grid-template-columns:repeat(var(--cols),var(--cell)); grid-template-rows:repeat(var(--rows),var(--cell));
+    gap:2px; padding:12px; background:var(--void); border-radius:12px;
+    box-shadow: inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    position:relative;
+  }
+  .cell { width:var(--cell); height:var(--cell); border-radius:4px; background:var(--dim); }
+
+  .token { position:absolute; left:12px; top:12px; pointer-events:none; }
+  /* whole-body judder for the FINAL tension beat (big); a softer one for steps. */
+  .token.shaking      { animation: bodyShake .07s linear infinite; }
+  .token.shaking-soft { animation: bodyShakeSoft .08s linear infinite; }
+  @keyframes bodyShake { 0%{transform:translate(0,0)}25%{transform:translate(-1.5px,1px)}50%{transform:translate(1.5px,-1px)}75%{transform:translate(-1px,-1.5px)}100%{transform:translate(1px,1.5px)} }
+  @keyframes bodyShakeSoft { 0%{transform:translate(0,0)}50%{transform:translate(.8px,-.6px)}100%{transform:translate(-.7px,.7px)} }
+
+  /* Lit cell. Cyan rim = the static "Transformer" demarcation tell (unchanged). */
+  .tcell {
+    position:absolute; width:var(--cell); height:var(--cell); border-radius:4px;
+    background: linear-gradient(160deg, #ff62b8, var(--magenta) 55%, #d61f81);
+    box-shadow: 0 0 14px var(--magenta), 0 0 30px var(--magenta),
+                inset 0 0 0 1.5px rgba(40,240,255,0.9), inset 0 0 7px rgba(40,240,255,0.5);
+    transform-origin: center; will-change: transform, filter;
+  }
+
+  @keyframes bloomIn {
+    0%   { background: var(--dim); box-shadow: none; transform: scale(1); }
+    18%  { box-shadow: 0 0 20px var(--magenta), 0 0 44px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,1), inset 0 0 9px rgba(40,240,255,0.75); transform: scale(1.18); }
+    100% { box-shadow: 0 0 14px var(--magenta), 0 0 30px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,0.9), inset 0 0 7px rgba(40,240,255,0.5); transform: scale(1); }
+  }
+  .tcell.bloom { animation: bloomIn .46s cubic-bezier(0.2,0.85,0.25,1) both; }
+
+  /* STRAIN (full, final step): hard compress + hold. The cell rides via JS --t0/--t1. */
+  @keyframes strainX { 0%{transform:var(--t0) scale(1); filter:brightness(1);} 100%{transform:var(--t0) scaleX(0.42) scaleY(1.28); filter:brightness(2.1) saturate(1.3);} }
+  @keyframes strainY { 0%{transform:var(--t0) scale(1); filter:brightness(1);} 100%{transform:var(--t0) scaleY(0.42) scaleX(1.28); filter:brightness(2.1) saturate(1.3);} }
+  .tcell.strainX { animation: strainX .30s cubic-bezier(.7,0,.9,.3) forwards; }
+  .tcell.strainY { animation: strainY .30s cubic-bezier(.7,0,.9,.3) forwards; }
+  /* STRAIN (light, intermediate steps): a quicker, gentler compress. */
+  @keyframes strainXq { 0%{transform:var(--t0) scale(1);} 100%{transform:var(--t0) scaleX(0.6) scaleY(1.18); filter:brightness(1.7);} }
+  @keyframes strainYq { 0%{transform:var(--t0) scale(1);} 100%{transform:var(--t0) scaleY(0.6) scaleX(1.18); filter:brightness(1.7);} }
+  .tcell.strainXq { animation: strainXq .18s cubic-bezier(.6,0,.9,.4) forwards; }
+  .tcell.strainYq { animation: strainYq .18s cubic-bezier(.6,0,.9,.4) forwards; }
+
+  @keyframes braceX { 0%{transform:var(--t0) scale(1);} 100%{transform:var(--t0) scaleX(1.1) scaleY(0.94); filter:brightness(1.3);} }
+  @keyframes braceY { 0%{transform:var(--t0) scale(1);} 100%{transform:var(--t0) scaleY(1.1) scaleX(0.94); filter:brightness(1.3);} }
+  .tcell.braceX { animation: braceX .30s cubic-bezier(.7,0,.9,.3) forwards; }
+  .tcell.braceY { animation: braceY .30s cubic-bezier(.7,0,.9,.3) forwards; }
+
+  /* SHAKE (final energy peak): high-freq judder in place, hot core. */
+  @keyframes judX {
+    0%{transform:var(--t0) translate(0,0) scaleX(.42) scaleY(1.28)} 25%{transform:var(--t0) translate(2px,-1px) scaleX(.4) scaleY(1.3)}
+    50%{transform:var(--t0) translate(-2px,1px) scaleX(.44) scaleY(1.26)} 75%{transform:var(--t0) translate(2px,1px) scaleX(.4) scaleY(1.3)} 100%{transform:var(--t0) translate(-2px,-1px) scaleX(.44) scaleY(1.26)}
+  }
+  @keyframes judY {
+    0%{transform:var(--t0) translate(0,0) scaleY(.42) scaleX(1.28)} 25%{transform:var(--t0) translate(-1px,2px) scaleY(.4) scaleX(1.3)}
+    50%{transform:var(--t0) translate(1px,-2px) scaleY(.44) scaleX(1.26)} 75%{transform:var(--t0) translate(1px,2px) scaleY(.4) scaleX(1.3)} 100%{transform:var(--t0) translate(-1px,-2px) scaleY(.44) scaleX(1.26)}
+  }
+  .tcell.judderX { animation: judX .055s linear infinite; filter: brightness(2.4) saturate(1.4); }
+  .tcell.judderY { animation: judY .055s linear infinite; filter: brightness(2.4) saturate(1.4); }
+  .tcell.hot { box-shadow: 0 0 16px #fff, 0 0 34px var(--magenta), 0 0 54px var(--magenta), inset 0 0 0 1.5px rgba(255,255,255,0.9); }
+
+  /* SNAP (final): fire + overshoot + settle. Intermediate steps use snapQuick. */
+  @keyframes snapX {
+    0%{transform:var(--t0) scaleX(.42) scaleY(1.28); filter:brightness(2.4);}
+    45%{transform:var(--tover) scaleX(1.35) scaleY(.7); filter:brightness(1.8);}
+    72%{transform:var(--t1) scaleX(.85) scaleY(1.12);} 100%{transform:var(--t1) scale(1); filter:brightness(1);}
+  }
+  @keyframes snapY {
+    0%{transform:var(--t0) scaleY(.42) scaleX(1.28); filter:brightness(2.4);}
+    45%{transform:var(--tover) scaleY(1.35) scaleX(.7); filter:brightness(1.8);}
+    72%{transform:var(--t1) scaleY(.85) scaleX(1.12);} 100%{transform:var(--t1) scale(1); filter:brightness(1);}
+  }
+  .tcell.snapX { animation: snapX .42s cubic-bezier(.2,1.5,.35,1) forwards; }
+  .tcell.snapY { animation: snapY .42s cubic-bezier(.2,1.5,.35,1) forwards; }
+  /* quick snap for intermediates: smaller overshoot, faster settle */
+  @keyframes snapXq { 0%{transform:var(--t0) scaleX(.6) scaleY(1.18);} 55%{transform:var(--t1) scaleX(1.12) scaleY(.9);} 100%{transform:var(--t1) scale(1); filter:brightness(1);} }
+  @keyframes snapYq { 0%{transform:var(--t0) scaleY(.6) scaleX(1.18);} 55%{transform:var(--t1) scaleY(1.12) scaleX(.9);} 100%{transform:var(--t1) scale(1); filter:brightness(1);} }
+  .tcell.snapXq { animation: snapXq .24s cubic-bezier(.25,1.3,.4,1) forwards; }
+  .tcell.snapYq { animation: snapYq .24s cubic-bezier(.25,1.3,.4,1) forwards; }
+
+  @keyframes knock { 0%{transform:var(--t0) scale(1);} 30%{transform:var(--t0) scale(.8); filter:brightness(1.7);} 60%{transform:var(--t0) scale(1.18);} 100%{transform:var(--t0) scale(1);} }
+  .tcell.knock { animation: knock .42s cubic-bezier(.2,1.4,.4,1) forwards; }
+
+  /* a final-resolve flash ring to mark "THIS is the shape" */
+  @keyframes finalPop { 0%{box-shadow:0 0 14px var(--magenta),0 0 30px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,.9);} 30%{box-shadow:0 0 22px #fff,0 0 50px var(--magenta),0 0 70px var(--magenta), inset 0 0 0 2px rgba(255,255,255,.9);} 100%{box-shadow:0 0 16px var(--magenta),0 0 36px var(--magenta), inset 0 0 0 1.5px rgba(40,240,255,.9);} }
+  .tcell.finalpop { animation: finalPop .55s ease-out; }
+
+  .legend { margin-top:4px; font-size:10px; letter-spacing:.03em; color:#6b6e82; text-align:center; line-height:1.6; max-width:404px; }
+  .legend b { color: var(--cyan); }
+  .controls { display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:10px; letter-spacing:.05em; text-transform:uppercase; color:var(--cyan);
+    background:rgba(40,240,255,.06); border:1px solid rgba(40,240,255,.4); border-radius:6px; padding:8px 10px; cursor:pointer; }
+  button:hover { background:rgba(40,240,255,.14); }
+  button.amber { color:var(--amber); border-color:rgba(255,194,61,.4); background:rgba(255,194,61,.06); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="title">Vanishing Tiles · Transformer — Chain Squeeze</div>
+    <div class="steps" id="steps"></div>
+    <div class="phase" id="phase">MEMORIZE — MEDIUM</div>
+    <div class="board" id="board"></div>
+    <div class="legend" id="legend"></div>
+    <div class="controls">
+      <button data-c="LTJO">L → T → J → O</button>
+      <button data-c="STZL">S → T → Z → L</button>
+      <button data-c="ILOJ">I → L → O → J</button>
+      <button id="slow" class="amber">Slow-mo ⅓×</button>
+    </div>
+  </div>
+
+<script>
+/* ── Canonical anchored footprints (each shape always drawn at the SAME spot in the
+   window so the chain folds IN PLACE, never drifting). 3 rows × 4 cols local frame. ── */
+const F = {
+  I: [[0,0],[0,1],[0,2],[0,3]],   // top row, 4 wide
+  L: [[0,2],[1,0],[1,1],[1,2]],   // ..#. / ###.
+  J: [[0,0],[1,0],[1,1],[1,2]],   // #... / ###.
+  T: [[0,0],[0,1],[0,2],[1,1]],   // ###. / .#..
+  S: [[0,1],[0,2],[1,0],[1,1]],   // .##. / ##..
+  Z: [[0,0],[0,1],[1,1],[1,2]],   // ##.. / .##.
+  O: [[0,0],[0,1],[1,0],[1,1]],   // ##.. / ##..
+};
+/* The three canonical chains (4 shapes / 3 morphs). Recall = the LAST shape. */
+const CHAINS = {
+  LTJO: { shapes:['L','T','J','O'], recall:'O' },
+  STZL: { shapes:['S','T','Z','L'], recall:'L' },
+  ILOJ: { shapes:['I','L','O','J'], recall:'J' },
+};
+
+/* For a step A→B (fixed footprints): cells in BOTH are FIXED; A-only cells are MOVERS,
+   each paired to its nearest B-only cell; the dominant axis sets strain direction. */
+function planStep(aKey,bKey){
+  const A=F[aKey], B=F[bKey];
+  const bs=new Set(B.map(x=>x.join(','))), as=new Set(A.map(x=>x.join(',')));
+  const fixed=A.filter(x=>bs.has(x.join(',')));
+  const mf=A.filter(x=>!bs.has(x.join(',')));
+  const mt=B.filter(x=>!as.has(x.join(',')));
+  const used=new Array(mt.length).fill(false);
+  const pairs=mf.map(s=>{ let bi=-1,bd=1e9; mt.forEach((t,i)=>{ if(used[i])return; const d=(t[0]-s[0])**2+(t[1]-s[1])**2; if(d<bd){bd=d;bi=i;} }); used[bi]=true; return {from:s,to:mt[bi]}; });
+  // axis from the largest-travel mover
+  let axis='X', big=-1;
+  pairs.forEach(p=>{ const dx=Math.abs(p.to[1]-p.from[1]), dy=Math.abs(p.to[0]-p.from[0]); const m=Math.max(dx,dy); if(m>big){big=m; axis=dx>=dy?'X':'Y';} });
+  return { fixed, pairs, axis, fromCells:A.map(c=>c.slice()), toCells:B.map(c=>c.slice()) };
+}
+
+const ANCHOR=[1,2], PITCH=30, CELL=28;
+const board=document.getElementById('board'), phaseEl=document.getElementById('phase'), legendEl=document.getElementById('legend'), stepsEl=document.getElementById('steps');
+let SPEED=1;
+const COLS=8, ROWS=5;
+for(let i=0;i<COLS*ROWS;i++){const d=document.createElement('div');d.className='cell';board.appendChild(d);}
+const token=document.createElement('div'); token.className='token'; board.appendChild(token);
+const squares=[]; for(let i=0;i<4;i++){const s=document.createElement('div');s.className='tcell';token.appendChild(s);squares.push(s);}
+
+const px=(r,c)=>[ (ANCHOR[1]+c)*PITCH, (ANCHOR[0]+r)*PITCH ];
+function setHome(el,cell){const [x,y]=px(cell[0],cell[1]); el.style.setProperty('--t0',`translate(${x}px,${y}px)`); el.style.transform=`translate(${x}px,${y}px)`;}
+const wait=ms=>new Promise(r=>setTimeout(r,ms/SPEED));
+
+/* Render the 4 cells of a shape onto the squares[] pool in a STABLE order: shared
+   cells keep their square, movers get reassigned. We keep it simple — re-seat all 4
+   squares to the shape's footprint each settle (positions are what matter). */
+function seat(shapeCells){ squares.forEach((s,i)=>{ if(shapeCells[i]) setHome(s, shapeCells[i]); }); }
+
+function renderSteps(shapes, idx){
+  // idx = index of the shape currently SHOWN (0..3)
+  stepsEl.innerHTML='';
+  shapes.forEach((sh,i)=>{
+    if(i>0){ const a=document.createElement('span'); a.className='arrow'; a.textContent='›'; stepsEl.appendChild(a); }
+    const d=document.createElement('span');
+    const isFinal=i===shapes.length-1;
+    d.className='dot'+(isFinal?' final':'')+(i<idx?' done':'')+(i===idx?' cur':'');
+    d.textContent=sh;
+    stepsEl.appendChild(d);
+  });
+}
+
+async function run(chainKey){
+  const ch=CHAINS[chainKey]; const shapes=ch.shapes;
+  legendEl.innerHTML = `Watch the gap squeeze through <b>${shapes.join(' › ')}</b> — decoys are the feint. `+
+    `Intermediate morphs are quick squeezes; the <b>final</b> morph gets the big tension-shake. `+
+    `Recall: pick the <b>final</b> shape (<b>${ch.recall}</b>).`;
+  token.className='token';
+  // start parked dim on shape[0]
+  squares.forEach((s,i)=>{ s.className='tcell'; s.style.animation='none'; s.style.transition='none'; s.style.filter=''; s.style.background='var(--dim)'; s.style.boxShadow='none'; setHome(s, F[shapes[0]][i]); });
+  renderSteps(shapes, 0);
+  void board.offsetWidth;
+  await wait(300);
+
+  // APPEAR — bloom on shape[0] with the cyan rim (demarcation tell).
+  phaseEl.textContent='TRANSFORMER · APPEAR';
+  squares.forEach((s,i)=>{ s.style.background='linear-gradient(160deg,#ff62b8,var(--magenta) 55%,#d61f81)'; s.style.boxShadow='0 0 14px var(--magenta),0 0 30px var(--magenta),inset 0 0 0 1.5px rgba(40,240,255,0.9),inset 0 0 7px rgba(40,240,255,0.5)'; s.classList.add('bloom'); s.style.animationDelay=(i*28/SPEED)+'ms'; });
+  await wait(560);
+  squares.forEach(s=>{ s.classList.remove('bloom'); s.style.animationDelay=''; });
+  await wait(260);  // a beat to register shape[0]
+
+  // Play the 3 morphs. Steps 0,1 = QUICK; step 2 (final) = FULL drama.
+  for(let k=0;k<shapes.length-1;k++){
+    const isFinal = k===shapes.length-2;
+    const plan=planStep(shapes[k], shapes[k+1]);
+    renderSteps(shapes, k);   // current = the shape we're leaving
+    await morph(plan, isFinal, shapes[k], shapes[k+1]);
+    renderSteps(shapes, k+1); // now showing shapes[k+1]
+    if(!isFinal) await wait(180);
+  }
+
+  // FINAL hold — the resolved shape pops + holds long so it's the memorable one.
+  phaseEl.textContent='TRANSFORMER · RECALL: '+ch.recall;
+  squares.forEach(s=>{ s.classList.add('finalpop'); });
+  await wait(560);
+  squares.forEach(s=>s.classList.remove('finalpop'));
+  await wait(900);   // long, clean hold on the FINAL shape
+
+  // DECAY back to void in a per-cell wave.
+  phaseEl.textContent='MEMORIZE — MEDIUM';
+  squares.forEach((s,i)=>{ s.style.transition='background .9s, box-shadow .9s'; s.style.transitionDelay=(i*85/SPEED)+'ms'; s.style.background='var(--dim)'; s.style.boxShadow='none'; });
+  await wait(1150);
+  squares.forEach(s=>{ s.style.transition=''; s.style.transitionDelay=''; });
+}
+
+/* One morph. movers strain → (final: shake) → snap to new cells; fixed cells hold;
+   displaced (a fixed cell a mover lands on) gets knocked. */
+async function morph(plan, isFinal, aKey, bKey){
+  const ax=plan.axis;
+  // identify which squares are movers vs fixed by their CURRENT home (--t0).
+  const homeOf = s => s.style.getPropertyValue('--t0');
+  const cellHome = ([r,c]) => { const [x,y]=px(r,c); return `translate(${x}px,${y}px)`; };
+  const moverSquares = plan.pairs.map(p=>{
+    const h=cellHome(p.from);
+    return { sq: squares.find(s=>homeOf(s)===h), pair:p };
+  }).filter(m=>m.sq);
+  const moverSet=new Set(moverSquares.map(m=>m.sq));
+  const fixedSquares=squares.filter(s=>!moverSet.has(s));
+
+  phaseEl.textContent = isFinal ? 'TRANSFORMER · STRAIN' : `TRANSFORMER · ${aKey} › ${bKey}`;
+
+  // STRAIN
+  moverSquares.forEach(m=>{ m.sq.style.animation='none'; void m.sq.offsetWidth; m.sq.classList.remove('strainX','strainY','strainXq','strainYq'); m.sq.classList.add(isFinal?('strain'+ax):('strain'+ax+'q')); });
+  fixedSquares.forEach(s=>{ if(isFinal){ s.classList.remove('braceX','braceY'); s.classList.add('brace'+ax);} });
+  await wait(isFinal?300:180);
+
+  // SHAKE (final only — the big tension beat). Intermediates get a tiny soft body shudder.
+  if(isFinal){
+    phaseEl.textContent='TRANSFORMER · ⚡ TENSION';
+    moverSquares.forEach(m=>{ m.sq.classList.remove('strain'+ax); m.sq.classList.add('judder'+ax,'hot'); });
+    token.classList.add('shaking');
+    await wait(320);
+    token.classList.remove('shaking');
+    moverSquares.forEach(m=>{ m.sq.classList.remove('judder'+ax,'hot'); });
+    phaseEl.textContent='TRANSFORMER · ✸ SNAP';
+  } else {
+    token.classList.add('shaking-soft');
+  }
+
+  // SNAP — movers fire to their target cells (with overshoot on final).
+  moverSquares.forEach(m=>{
+    const [x1,y1]=px(m.pair.to[0], m.pair.to[1]);
+    m.sq.style.setProperty('--t1',`translate(${x1}px,${y1}px)`);
+    if(isFinal){
+      const oR=m.pair.to[0]+(m.pair.to[0]-m.pair.from[0])*0.22, oC=m.pair.to[1]+(m.pair.to[1]-m.pair.from[1])*0.22;
+      const [xo,yo]=px(oR,oC); m.sq.style.setProperty('--tover',`translate(${xo}px,${yo}px)`);
+    }
+    m.sq.style.animation='none'; void m.sq.offsetWidth;
+    m.sq.classList.remove('strain'+ax+'q','strain'+ax);
+    m.sq.classList.add(isFinal?('snap'+ax):('snap'+ax+'q'));
+  });
+  // displaced knock: any fixed square sitting on a mover's TARGET cell
+  plan.pairs.forEach(p=>{
+    const h=cellHome(p.to);
+    const hit=fixedSquares.find(s=>s.style.getPropertyValue('--t0')===h);
+    if(hit && isFinal){ hit.style.animation='none'; void hit.offsetWidth; hit.classList.add('knock'); hit.style.animationDelay=(40/SPEED)+'ms'; }
+  });
+  await wait(isFinal?440:240);
+
+  // settle: lock each mover's home to its new cell; clear classes; reseat to footprint.
+  token.classList.remove('shaking-soft');
+  moverSquares.forEach(m=>{ m.sq.classList.remove('snap'+ax,'snap'+ax+'q','brace'+ax); setHome(m.sq, m.pair.to); m.sq.style.filter=''; m.sq.style.animation='none'; });
+  fixedSquares.forEach(s=>{ s.classList.remove('knock','braceX','braceY'); s.style.filter=''; });
+}
+
+// expose for the screenshot driver
+window.__F=F; window.__CHAINS=CHAINS; window.__planStep=planStep; window.__squares=squares; window.__token=token;
+window.__px=px; window.__setHome=setHome; window.__seat=seat; window.__renderSteps=renderSteps;
+window.__setPhase=t=>phaseEl.textContent=t; window.__legend=t=>legendEl.innerHTML=t; window.__run=run; window.__ANCHOR=ANCHOR;
+window.__autoStop=false;
+
+document.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{ window.__autoStop=true; run(b.dataset.c); });
+document.getElementById('slow').onclick=e=>{ SPEED=SPEED===1?(1/3):1; e.target.textContent=SPEED===1?'Slow-mo ⅓×':'Normal 1×'; };
+
+(async()=>{ const order=['LTJO','STZL','ILOJ']; let i=0; while(!window.__autoStop){ await run(order[i%order.length]); if(window.__autoStop)break; await wait(500); i++; } })();
+</script>
+</body>
+</html>
