@@ -4,7 +4,7 @@ import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import {
   STAGGER, difficultyForBatch, batchSpeedBonus,
   allowedTypesForBatch, lockedRotationsForBatch,
-  pairsForBatch, buildRevealPlan,
+  pairsForBatch, triplesForBatch, invertedForBatch, buildRevealPlan,
 } from '../lib/staggerCurve'
 import {
   STAGGER_LEVELS, type LevelKey, type StaggerLevel,
@@ -16,9 +16,13 @@ export type StaggerPhase =
   | 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
   | 'levelComplete' | 'won'
 
-/** A batch gap plus whether the player has correctly recalled (filled) it. */
+/** A batch gap plus whether the player has correctly recalled (filled) it, and
+ *  whether it reveals with the back-loaded INVERTED build (seed → flow-in →
+ *  bright complete → magenta poof). Inverted gaps always take a SOLO reveal beat;
+ *  recall/resolution is unchanged (the player still picks the matching shape). */
 export interface StaggerGap extends Gap {
   filled: boolean
+  inverted?: boolean
 }
 
 /** What a pick resolved to — drives the per-pick animation (snap vs ✕), the
@@ -29,14 +33,15 @@ export interface PickResult {
   batchCleared: boolean
   gameOver: boolean
   combo: number   // streak length AFTER this pick (0 on a miss)
-  gained: number  // points this pick earned (base × combo; 0 on a miss)
+  gained: number  // points this pick earned (base × streak; 0 on a miss)
+  speedBonus: number  // leftover-time bonus to bank during the clear payoff (0 unless this pick cleared the batch)
 }
 
 interface StaggerState {
   phase: StaggerPhase
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
-  revealPlan: number[][]      // reveal beats: each beat is 1 or 2 indices into `gaps`
+  revealPlan: number[][]      // reveal beats: each beat is 1, 2, or 3 indices into `gaps`
   score: number               // cumulative across the whole run
   lives: number               // shared pool; run ends at 0
   selectStartTime: number     // Date.now() when selecting began (for speed scoring)
@@ -60,6 +65,7 @@ interface StaggerState {
   beginReveal: () => void     // countdown → reveal (generates the current batch)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
+  bankSpeedBonus: (amount: number) => void  // fold the deferred leftover-time bonus into the score (drives the time→score payoff)
   advanceBatch: () => void    // batch cleared → evaluates level transition, then next batch's reveal
   timeoutBatch: () => void    // select clock expired → costs a life, replays the same phase
   replayReveal: () => boolean // spend points to replay the memorize sequence
@@ -83,16 +89,36 @@ export function isSandboxRun(s: Pick<StaggerState, 'sandboxLevel'>): boolean {
   return s.sandboxLevel != null
 }
 
+/** Flag `count` random gaps as inverted, biased toward gaps whose shape is the
+ *  LEAST useful for forming distinct chunks (most-common shapes first) so the
+ *  remaining pool stays rich enough to satisfy the requested pairs/triples. */
+function chooseInverted(gaps: Gap[], count: number): boolean[] {
+  const inverted = gaps.map(() => false)
+  if (count <= 0) return inverted
+  // Count shapes; prefer to invert duplicates of the commonest shapes so the
+  // distinct-shape variety left for chunking is maximised.
+  const freq = new Map<PieceType, number>()
+  gaps.forEach(g => freq.set(g.pieceType, (freq.get(g.pieceType) ?? 0) + 1))
+  const byCommonness = gaps
+    .map((_g, i) => i)
+    .sort((a, b) => (freq.get(gaps[b].pieceType)! - freq.get(gaps[a].pieceType)!))
+  for (let k = 0; k < count && k < byCommonness.length; k++) inverted[byCommonness[k]] = true
+  return inverted
+}
+
 function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number[][] } {
   const diff = difficultyForBatch(batchIndex)
   const allowedTypes = allowedTypesForBatch(batchIndex)
   const pairCount = pairsForBatch(batchIndex)
+  const tripleCount = triplesForBatch(batchIndex)
+  const invertedCount = invertedForBatch(batchIndex)
 
-  // Re-roll until the drawn shapes can supply `pairCount` DISTINCT-shape pairs
-  // (each reveal pair must be two different pieces). With the wide late-game pool
-  // this practically always succeeds on the first try; the loop just guarantees
-  // it, falling back to the best board found if a degenerate roll persists.
-  let best: { gaps: Gap[]; plan: number[][] } | null = null
+  // Re-roll until the drawn shapes can supply the requested DISTINCT-shape pairs
+  // AND triples (each pair is two different pieces; each triple ≥2 distinct), with
+  // the inverted gaps held out as solo beats. With the wide late-game pool this
+  // practically always succeeds on the first try; the loop just guarantees it,
+  // falling back to the best board found if a degenerate roll persists.
+  let best: { gaps: Gap[]; inverted: boolean[]; plan: number[][] } | null = null
   for (let attempt = 0; attempt < 60; attempt++) {
     const { gaps } = generatePuzzle({
       gapCount: diff.gapCount,
@@ -104,14 +130,21 @@ function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number
       // instead of being lost to an all-identical roll.
       requireVariety: allowedTypes.length > 2,
     })
-    const plan = buildRevealPlan(gaps.map(g => g.pieceType), pairCount)
+    const inverted = chooseInverted(gaps, invertedCount)
+    const plan = buildRevealPlan(gaps.map(g => g.pieceType), pairCount, tripleCount, inverted)
+    const achievedTriples = plan.filter(beat => beat.length === 3).length
     const achievedPairs = plan.filter(beat => beat.length === 2).length
-    if (achievedPairs >= pairCount) { best = { gaps, plan }; break }
-    if (!best) best = { gaps, plan }
+    if (achievedTriples >= tripleCount && achievedPairs >= pairCount) {
+      best = { gaps, inverted, plan }; break
+    }
+    if (!best) best = { gaps, inverted, plan }
   }
 
-  const { gaps, plan } = best!
-  return { gaps: gaps.map(g => ({ ...g, filled: false })), revealPlan: plan }
+  const { gaps, inverted, plan } = best!
+  return {
+    gaps: gaps.map((g, i) => ({ ...g, filled: false, inverted: inverted[i] })),
+    revealPlan: plan,
+  }
 }
 
 const IDLE = {
@@ -168,7 +201,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
       sandboxLevel,
     } = get()
-    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0 }
+    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
     // Tetromino types are shape-unique, so piece-type equality IS the shape match.
@@ -182,10 +215,10 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       // Sandbox is unlosable: lives never drop and gameOver is never reachable.
       if (!isSandbox && nextLives <= 0) {
         set({ lives: 0, phase: 'gameOver', ...baseStats })
-        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0 }
+        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0, speedBonus: 0 }
       }
       set({ lives: nextLives, ...baseStats })
-      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0 }
+      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
     }
 
     // A correct recall: extend the streak. The per-pick reward scales LINEARLY
@@ -193,14 +226,16 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     const nextCombo = currentCombo + 1
     const gained = STAGGER.ACCURACY_PER_GAP * nextCombo * activeLevel(get()).multiplier
     const nextGaps = gaps.map(g => (g === target ? { ...g, filled: true } : g))
-    let nextScore = score + gained
+    const nextScore = score + gained
     const cleared = nextGaps.every(g => g.filled)
-    if (cleared) {
-      const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
-      nextScore += batchSpeedBonus(remaining, selectDuration)
-    }
-    // Earn-a-life: every LIFE_EVERY cumulative points awards a life (handles
-    // crossing several thresholds at once, e.g. a big combo pick + speed bonus).
+    // On a clear the leftover-time bonus is NOT folded in here — it's returned and
+    // banked separately (via bankSpeedBonus) so the UI can pour it into the score
+    // as the timer bar drains: the "time → points" payoff.
+    const speedBonus = cleared
+      ? batchSpeedBonus(Math.max(0, selectStartTime + selectDuration - Date.now()), selectDuration)
+      : 0
+    // Earn-a-life: every LIFE_EVERY cumulative points awards a life. The deferred
+    // speed bonus awards its own lives when it's banked.
     const livesGained =
       Math.floor(nextScore / STAGGER.LIFE_EVERY) - Math.floor(score / STAGGER.LIFE_EVERY)
     set({
@@ -213,7 +248,16 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       currentCombo: nextCombo,
       bestCombo: Math.max(bestCombo, nextCombo),
     })
-    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained }
+    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus }
+  },
+
+  bankSpeedBonus: (amount) => {
+    if (amount <= 0) return
+    const { score, lives } = get()
+    const nextScore = score + amount
+    const livesGained =
+      Math.floor(nextScore / STAGGER.LIFE_EVERY) - Math.floor(score / STAGGER.LIFE_EVERY)
+    set({ score: nextScore, lives: lives + livesGained })
   },
 
   advanceBatch: () => {

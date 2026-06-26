@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
@@ -17,10 +17,18 @@ const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
 const BOARD_PAD = 12          // p-3 around the board
 
-// Combo chip: hold the multiplier fully visible for COMBO_HOLD_MS after the last
-// streak step, then let it fade away over COMBO_FADE_MS in the signature style.
-const COMBO_HOLD_MS = 2000
-const COMBO_FADE_MS = 900
+// Streak chip: hold the multiplier fully visible for STREAK_HOLD_MS after the last
+// streak step, then let it fade away over STREAK_FADE_MS in the signature style.
+const STREAK_HOLD_MS = 2000
+const STREAK_FADE_MS = 900
+
+// Time → score "Lift" payoff (the cleared-batch animation): after a short
+// anticipation BEAT the timer bar rushes to empty over LIFT_MS while a single
+// big "+bonus" lifts off the bar and dissolves into the score, and the score
+// counts up by exactly that bonus over the SAME window — remaining time visibly
+// turning into points.
+const LIFT_BEAT_MS = 260
+const LIFT_MS = 1300
 
 // Floating white labels (the per-pick "+points" and the "+N" in the earned-life
 // heart) sit over bright piece/heart color. Contrast comes from a soft DOWNWARD
@@ -54,6 +62,47 @@ function bloomForGap(id: number, gap: StaggerGap, color: string, paint: boolean)
     .map(([r, c], i) => ({ key: `${r},${c}`, durMs: STAGGER.REVEAL_BLOOM_MS + i * STAGGER.REVEAL_WAVE_MS }))
   return { id, color, paint, cells }
 }
+
+// ── Inverted reveal ───────────────────────────────────────────────────────────
+// A gap flagged `inverted` reveals back-loaded: a seed cell embers, neighbours
+// flow in dim one at a time (overlapping ramps → one continuous growth), the whole
+// shape snaps to full-bright COMPLETE for a held instant (the payload), then POOFS
+// out together as a magenta contract. Each cell carries its current sub-state; the
+// board renders the matching iv-* class.
+type InvSub = 'seed' | 'build' | 'complete' | 'poof'
+
+/** A live inverted instance: per-cell current sub-state, keyed by cell. */
+interface InvertedBloom { id: number; sub: Map<string, InvSub> }
+
+/** Order a gap's cells as an ADJACENCY WALK from a central seed, so the build grows
+ *  like a connected organism rather than teleporting cells. The seed is the cell
+ *  with the most orthogonal neighbours in the shape (the T-junction / L-elbow / an
+ *  O corner); ties break toward the top-left. */
+function invertedCellOrder(cells: [number, number][]): string[] {
+  const keyOf = ([r, c]: [number, number]) => `${r},${c}`
+  const present = new Set(cells.map(keyOf))
+  const neighbours = ([r, c]: [number, number]): [number, number][] =>
+    ([[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]] as [number, number][])
+      .filter(n => present.has(keyOf(n)))
+  // Seed: max in-shape degree, tie-break top-left.
+  const seed = [...cells].sort(
+    (a, b) => neighbours(b).length - neighbours(a).length || a[0] - b[0] || a[1] - b[1],
+  )[0]
+  // BFS from the seed; queue neighbours top-left first for a stable, radiating walk.
+  const order: string[] = []
+  const seen = new Set<string>()
+  const queue: [number, number][] = [seed]
+  seen.add(keyOf(seed))
+  while (queue.length) {
+    const cur = queue.shift()!
+    order.push(keyOf(cur))
+    for (const n of neighbours(cur).sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
+      if (!seen.has(keyOf(n))) { seen.add(keyOf(n)); queue.push(n) }
+    }
+  }
+  return order
+}
+
 
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
  *  `durationMs` (so every banked pick — and the end-of-batch speed bonus — counts
@@ -93,8 +142,12 @@ function useCountUp(value: number, durationMs = 600): number {
 // placed gaps keep their piece color (a correct pick lighting out of the dark),
 // ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomByCell,
-}: { gaps: StaggerGap[]; bloomByCell: Map<string, { id: number; durMs: number; color: string; paint: boolean }> }) {
+  gaps, bloomByCell, invertedByCell,
+}: {
+  gaps: StaggerGap[]
+  bloomByCell: Map<string, { id: number; durMs: number; color: string; paint: boolean }>
+  invertedByCell: Map<string, { id: number; sub: InvSub }>
+}) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
     if (g.filled) g.cells.forEach(([r, c]) => colorByCell.set(`${r},${c}`, g.pieceType))
@@ -120,6 +173,19 @@ function StaggerBoard({
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className={`w-7 h-7 rounded-sm ${getPieceColor(piece)} ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
+            />
+          )
+        }
+        // An inverted gap's cells carry a sub-state (seed/build/complete/poof) and
+        // render the matching iv-* class. Keyed by instance id + sub so a state
+        // change re-triggers the animation. Magenta is driven via --magenta.
+        const inv = invertedByCell.get(key)
+        if (inv) {
+          return (
+            <div
+              key={`${i}-iv-${inv.id}-${inv.sub}`}
+              className={`w-7 h-7 rounded-sm iv-${inv.sub}`}
+              style={{ ['--magenta']: REVEAL_MAGENTA } as CSSProperties}
             />
           )
         }
@@ -222,17 +288,18 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
-    shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
+    shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
     levelIndex, sandboxLevel, completedLevelIndex,
-    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
+    startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
     pause, resume, exit, proceedAfterLevelComplete,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
-    shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
+    // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
+    shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
     levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, completedLevelIndex: s.completedLevelIndex,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
-    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
+    pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
   })))
   const goHome = useNavStore(s => s.goHome)
@@ -258,15 +325,16 @@ export function StaggerScreen() {
     if (phase === 'gameOver' && !recordedRef.current) {
       recordedRef.current = true
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
-      const run = recordRun({ score, recalled: shapesRecalled, combo: bestCombo, accuracy })
+      const run = recordRun({ score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
     } else if (phase !== 'gameOver') {
       recordedRef.current = false
       setCurrentRunId(null)
     }
-  }, [phase, score, shapesRecalled, bestCombo, totalPicks, correctPicks, recordRun])
+  }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
+  const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
@@ -275,38 +343,49 @@ export function StaggerScreen() {
   const [cleared, setCleared] = useState(false)
   const boardRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
+  const scoreRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
 
-  // Smoothly counted-up score: every banked pick (and the end-of-batch speed
-  // bonus) ticks the displayed number up rather than snapping.
-  const displayScore = useCountUp(score)
+  // The leftover-time "+bonus" that lifts off the bar and dissolves into the score
+  // on a cleared batch (the "Lift" payoff). Null when no payoff is in flight.
+  const [liftFlyer, setLiftFlyer] = useState<{ value: number; x0: number; y0: number; x1: number; y1: number } | null>(null)
 
-  // Combo: a streak of correct recalls (tracked in the store). Each correct pick
+  // Score count-up duration: snappy (600ms) per pick, stretched to the drain
+  // window (LIFT_MS) while the cleared-batch speed bonus pours in, so the number
+  // climbs in lockstep with the bar emptying.
+  const [scoreCountMs, setScoreCountMs] = useState(600)
+
+  // Smoothly counted-up score: every banked pick (and the lifted speed bonus)
+  // ticks the displayed number up rather than snapping.
+  const displayScore = useCountUp(score, scoreCountMs)
+
+  // Streak: a run of correct recalls (tracked in the store). Each correct pick
   // floats the "+points" it earned over the just-filled gap; the running ×N
   // multiplier shows as a chip above the board.
-  const [combos, setCombos] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
-  const comboId = useRef(0)
+  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
+  const streakBurstId = useRef(0)
 
-  // Combo chip lifecycle: a fresh streak step pops the chip in and holds it for
-  // COMBO_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
+  // Streak chip lifecycle: a fresh streak step pops the chip in and holds it for
+  // STREAK_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
   // hold → opacity/blur to nothing) and unmounts. Each new step re-arms the hold,
   // so the chip lingers a beat after the last correct pick. A broken streak
-  // (currentCombo < 3) clears it immediately — the streak shattered.
-  const [comboChip, setComboChip] = useState<{ value: number; fading: boolean } | null>(null)
-  const comboTimers = useRef<number[]>([])
+  // (currentStreak < 3) clears it immediately — the streak shattered.
+  const [streakChip, setStreakChip] = useState<{ value: number; fading: boolean } | null>(null)
+  const streakTimers = useRef<number[]>([])
   useEffect(() => {
-    comboTimers.current.forEach(clearTimeout)
-    comboTimers.current = []
-    if (currentCombo >= 3) {
-      setComboChip({ value: currentCombo, fading: false })
-      comboTimers.current.push(window.setTimeout(
-        () => setComboChip(c => (c ? { ...c, fading: true } : c)), COMBO_HOLD_MS))
-      comboTimers.current.push(window.setTimeout(
-        () => setComboChip(null), COMBO_HOLD_MS + COMBO_FADE_MS))
+    streakTimers.current.forEach(clearTimeout)
+    streakTimers.current = []
+    if (currentStreak >= 3) {
+      setStreakChip({ value: currentStreak, fading: false })
+      streakTimers.current.push(window.setTimeout(
+        () => setStreakChip(c => (c ? { ...c, fading: true } : c)), STREAK_HOLD_MS))
+      streakTimers.current.push(window.setTimeout(
+        () => setStreakChip(null), STREAK_HOLD_MS + STREAK_FADE_MS))
     } else {
-      setComboChip(null)
+      setStreakChip(null)
     }
-    return () => { comboTimers.current.forEach(clearTimeout); comboTimers.current = [] }
-  }, [currentCombo])
+    return () => { streakTimers.current.forEach(clearTimeout); streakTimers.current = [] }
+  }, [currentStreak])
 
   // Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
   // celebratory heart burst over the board.
@@ -326,23 +405,29 @@ export function StaggerScreen() {
   // A fresh run / game over / a broken board clears any lingering bursts.
   useEffect(() => {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
-      setCombos([])
-      setComboChip(null)
+      setStreakBursts([])
+      setStreakChip(null)
+      setLiftFlyer(null)
+      setScoreCountMs(600)
     }
   }, [phase])
 
   // Reveal driver (shape-bloom): bloom each BEAT as a whole — every gap in the
   // beat gets .vt-bloom at the same tick, floods magenta, then decays along a
-  // ghost tail back to the void (fading away in a per-cell wave). A beat holds
-  // one gap, or TWO (a pair) that flash together — denser memory chunks late in
-  // the run. Decays cascade (the next beat blooms before the last finishes
-  // dying), draining the bar one step per beat as a COUNT, then hand off to
-  // selecting. Because .vt-bloom forwards-fills back to the void, past gaps leave
+  // ghost tail back to the void (fading away in a per-cell wave). A beat holds one
+  // gap, or TWO/THREE (a pair/triple) that flash together — denser memory chunks
+  // late in the run. A beat whose (solo) gap is `inverted` BRANCHES to the inverted
+  // sub-timeline instead (seed → flow-in build → bright complete → magenta poof);
+  // because that beat runs longer than REVEAL_STEP_MS, the loop waits its full
+  // duration before advancing. Decays cascade (the next beat blooms before the last
+  // finishes dying), draining the bar one step per beat as a COUNT, then hand off to
+  // selecting. Because the reveals forwards-fill back to the void, past gaps leave
   // no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
     let cancelled = false
     const timers: number[] = []
+    const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
     // The reveal plays as a sequence of beats; fall back to one-gap-per-beat if a
     // batch somehow arrived without a plan (e.g. legacy state).
     const beats = revealPlan.length ? revealPlan : gaps.map((_, i) => [i])
@@ -354,39 +439,88 @@ export function StaggerScreen() {
     const paint = difficulty === 'hard'
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Step between beat flashes. The bloom out-runs this step, so the next beat
-    // flashes while the previous is still decaying — the overlapping cascade.
+    // Step between standard beat flashes. The bloom out-runs this step, so the next
+    // beat flashes while the previous is still decaying — the overlapping cascade.
     const step = STAGGER.REVEAL_STEP_MS
     // How long one bloom lives on screen: its longest-wave cell, plus a hair.
     const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
     // Memorize bar DRAINS: starts full and empties one step per beat as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
-    setBlooms([])
+    setBlooms([]); setInvertedBlooms([])
     let id = 0
+
+    // Drive one inverted beat's sub-timeline (seed → build → equalize → complete →
+    // poof) over the cells of `gap`, then invoke `done()` when the beat is fully
+    // over. The accumulator `t` makes the beat's duration VARIABLE (longer than a
+    // standard REVEAL_STEP_MS beat), so the loop advances via `done()` rather than a
+    // fixed step.
+    const runInverted = (gap: StaggerGap, done: () => void): void => {
+      const myId = ++id
+      const order = invertedCellOrder(gap.cells as [number, number][])
+      const setSub = (key: string, sub: InvSub) =>
+        setInvertedBlooms(prev => prev.map(b => b.id === myId
+          ? { ...b, sub: new Map(b.sub).set(key, sub) } : b))
+      const setAll = (sub: InvSub) =>
+        setInvertedBlooms(prev => prev.map(b => b.id === myId
+          ? { ...b, sub: new Map([...b.sub.keys()].map(k => [k, sub])) } : b))
+
+      // Phase 0 · seed ember on the anchor cell. Build cells aren't in the map yet
+      // (they render as plain void until their tick adds them with iv-build, whose
+      // flowIn ramps from opacity 0 — so they fade in smoothly).
+      setInvertedBlooms(prev => [...prev, { id: myId, sub: new Map([[order[0], 'seed']]) }])
+
+      let t = STAGGER.INV_SEED_MS
+      // Phase 1 · build: neighbours flow in one at a time (overlapping ramps).
+      order.forEach((key, k) => {
+        if (k === 0) return
+        at(t, () => setSub(key, 'build'))
+        t += STAGGER.INV_BUILD_STEP_MS
+      })
+      // Phase 1b · seed equalizes: drop its ember, match the dim flow cells.
+      at(t, () => setSub(order[0], 'build'))
+      t += STAGGER.INV_EQUALIZE_MS
+      // Phase 2 · complete: every cell snaps to full bright magenta (the payload).
+      at(t, () => setAll('complete'))
+      t += STAGGER.INV_COMPLETE_HOLD_MS
+      // Phase 3 · poof: the whole shape contracts to the void together (no white).
+      at(t, () => setAll('poof'))
+      t += STAGGER.INV_POOF_MS
+      // Tear the instance down and hand back control once the poof has resolved.
+      at(t, () => { setInvertedBlooms(prev => prev.filter(b => b.id !== myId)); done() })
+    }
 
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
         // Let the final beat finish its decay before recall lights-out.
-        timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS - step)))
+        at(Math.max(0, STAGGER.REVEAL_BLOOM_MS - step), beginSelecting)
         return
       }
-      // Every gap in this beat blooms on the SAME tick (a pair flashes together).
+      setBarPct((1 - (idx + 1) / n) * 100)
+      const beat = beats[idx]
+      const invertedGap = beat.length === 1 && gaps[beat[0]].inverted ? gaps[beat[0]] : null
+
+      if (invertedGap) {
+        // Inverted beats own their full duration: advance only once the poof ends.
+        runInverted(invertedGap, () => show(idx + 1))
+        return
+      }
+
+      // Standard beat: every gap blooms on the SAME tick (a pair/triple together).
       const beatIds: number[] = []
-      beats[idx].forEach(gi => {
+      beat.forEach(gi => {
         const myId = ++id
         beatIds.push(myId)
         setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint)])
       })
-      setBarPct((1 - (idx + 1) / n) * 100)
-      timers.push(window.setTimeout(() => {
+      at(lifetime, () => {
         if (!cancelled) setBlooms(prev => prev.filter(b => !beatIds.includes(b.id)))
-      }, lifetime))
-      timers.push(window.setTimeout(() => show(idx + 1), step))
+      })
+      at(step, () => show(idx + 1))
     }
     // A short breath before the first beat (also paces continuous next batches).
-    timers.push(window.setTimeout(() => show(0), 350))
+    at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
   }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty])
 
@@ -424,6 +558,22 @@ export function StaggerScreen() {
     return () => clearInterval(id)
   }, [phase, paused, cleared, selectStartTime, selectDuration])
 
+  // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
+  // bar up to the score readout. Skipped under reduced motion — the score still
+  // counts up, just without the traveling flyer.
+  const spawnLiftFlyer = (value: number, barRect: DOMRect | null) => {
+    if (reduceMotion) return
+    const sc = scoreRef.current?.getBoundingClientRect()
+    if (!barRect || !sc) return
+    setLiftFlyer({
+      value,
+      x0: barRect.right,
+      y0: barRect.top + barRect.height / 2,
+      x1: sc.left + sc.width / 2,
+      y1: sc.top + sc.height / 2,
+    })
+  }
+
   const onPick = (type: PieceType) => {
     if (cleared || paused) return
     const res = pickPiece(type)
@@ -438,7 +588,7 @@ export function StaggerScreen() {
       window.setTimeout(() => setXMark(false), 440)
       return
     }
-    // Correct recall. Float the "+points" earned (base × combo) over the filled
+    // Correct recall. Float the "+points" earned (base × streak) over the filled
     // gap; the running ×N multiplier lives in the chip by the score.
     if (res.gap) {
       const cells = res.gap.cells
@@ -446,25 +596,39 @@ export function StaggerScreen() {
       const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
       const x = BOARD_PAD + avgC * CELL_PITCH + CELL / 2
       const y = BOARD_PAD + avgR * CELL_PITCH + CELL / 2
-      const id = (comboId.current += 1)
-      setCombos(prev => [...prev, { id, pts: res.gained, x, y }])
-      window.setTimeout(() => setCombos(prev => prev.filter(p => p.id !== id)), 700)
+      const id = (streakBurstId.current += 1)
+      setStreakBursts(prev => [...prev, { id, pts: res.gained, x, y }])
+      window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 700)
     }
     if (res.batchCleared) {
       setCleared(true)
-      // Freeze the green bar where it currently sits, then — after a quick beat —
-      // visibly rush it down to empty. The leftover-time speed bonus is already
-      // banked, so the score count-up rises as the bar drains: time → points.
+      const bonus = res.speedBonus
+      // Freeze the lime bar where it currently sits (the leftover time), holding it
+      // for a short anticipation beat before the payoff.
       const el = barRef.current, parent = el?.parentElement
       const frozenPct = el && parent
         ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
         : barPct
       setBarColor('lime'); setBarTransition('none'); setBarPct(frozenPct)
-      // A relaxed, savor-it drain — fast enough to feel like a reward, slow
-      // enough to enjoy the leftover time pouring into the score. The bar goes
-      // lime for the exhale (amber→lime payoff arc).
-      window.setTimeout(() => { setBarTransition('width 1400ms cubic-bezier(0.33,1,0.68,1)'); setBarPct(0) }, 220)
-      window.setTimeout(() => { setCleared(false); advanceBatch() }, 1900)
+      // Release: the bar rushes to empty while the leftover time LIFTS off it as a
+      // single big "+bonus" that floats up and dissolves into the score, and the
+      // score counts up by exactly that bonus — all over the same LIFT_MS window,
+      // so remaining time is read as turning into points.
+      window.setTimeout(() => {
+        const barRect = barRef.current?.getBoundingClientRect() ?? null
+        setBarTransition(`width ${LIFT_MS}ms cubic-bezier(0.33,1,0.68,1)`)
+        setBarPct(0)
+        if (bonus > 0) {
+          spawnLiftFlyer(bonus, barRect)
+          setScoreCountMs(LIFT_MS)
+          bankSpeedBonus(bonus)
+        }
+      }, LIFT_BEAT_MS)
+      window.setTimeout(() => {
+        setScoreCountMs(600)
+        setCleared(false)
+        advanceBatch()
+      }, LIFT_BEAT_MS + LIFT_MS + 240)
     }
   }
 
@@ -479,8 +643,10 @@ export function StaggerScreen() {
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
   const bloomByCell = new Map<string, { id: number; durMs: number; color: string; paint: boolean }>()
+  const invertedByCell = new Map<string, { id: number; sub: InvSub }>()
   if (phase === 'reveal') {
     for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs, color: b.color, paint: b.paint })
+    for (const b of invertedBlooms) for (const [key, sub] of b.sub) invertedByCell.set(key, { id: b.id, sub })
   }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
@@ -541,7 +707,7 @@ export function StaggerScreen() {
                 loudest text on screen and stands on its own. */}
             <div>
               <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">{level.name}</div>
-              <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
+              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
@@ -564,17 +730,17 @@ export function StaggerScreen() {
           {/* Phase label (centered) above the grid; the running STREAK multiplier
               rides the right of this row — labeled, so it never reads as score×N.
               It pops in on each streak step, holds, then fades in the signature
-              style (see comboChip lifecycle above). ("Streak" is player-facing
+              style (see streakChip lifecycle above). ("Streak" is player-facing
               copy only — the underlying store field is still `currentCombo`.) */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
-            {comboChip && (
+            {streakChip && (
               <span
-                key={comboChip.fading ? `fade-${comboChip.value}` : comboChip.value}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${comboChip.fading ? 'vt-fade-away' : 'combo-pop'}`}
-                style={comboChip.fading ? { animationDuration: `${COMBO_FADE_MS}ms` } : undefined}
+                key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
+                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
+                style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
               >
-                STREAK ×{comboChip.value}
+                STREAK ×{streakChip.value}
               </span>
             )}
           </div>
@@ -584,12 +750,12 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
+          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} invertedByCell={invertedByCell} />
         </div>
 
-        {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
+        {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
         <AnimatePresence>
-          {combos.map(cb => (
+          {streakBursts.map(cb => (
             <motion.div
               key={cb.id}
               initial={{ opacity: 0, scale: 0.4, y: 6 }}
@@ -671,7 +837,7 @@ export function StaggerScreen() {
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Items recalled</div>
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
+                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestStreak > 0 ? `×${bestStreak}` : 'N/A'}</div>
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best streak</div>
               </div>
               <div className="flex-1 text-center py-3.5">
@@ -775,6 +941,28 @@ export function StaggerScreen() {
             <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>
           </div>
         </div>
+      )}
+
+      {/* Time → score "Lift": the leftover-time "+bonus" rises off the right end of
+          the timer bar and dissolves into the score readout as the bar drains and
+          the number climbs (fired from onPick on a cleared batch). */}
+      {liftFlyer && (
+        <motion.div
+          initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
+          animate={{
+            x: liftFlyer.x1 - liftFlyer.x0,
+            y: liftFlyer.y1 - liftFlyer.y0,
+            opacity: [0, 1, 1, 0],
+            scale: [0.6, 1.1, 1, 0.7],
+          }}
+          transition={{ duration: LIFT_MS / 1000, ease: [0.33, 1, 0.68, 1], times: [0, 0.18, 0.72, 1] }}
+          onAnimationComplete={() => setLiftFlyer(null)}
+          transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
+          className="fixed z-[60] pointer-events-none font-silk font-bold text-2xl whitespace-nowrap text-vt-lime text-glow-vt-lime tabular-nums"
+          style={{ left: liftFlyer.x0, top: liftFlyer.y0, textShadow: FLOAT_TEXT_SHADOW }}
+        >
+          +{liftFlyer.value}
+        </motion.div>
       )}
     </div>
   )

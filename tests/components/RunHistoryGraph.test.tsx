@@ -36,7 +36,7 @@ describe('RunHistoryGraph', () => {
 
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /recall/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /combo/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /streak/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /accuracy/i })).toBeInTheDocument()
   })
 
@@ -60,14 +60,14 @@ describe('RunHistoryGraph', () => {
     const records = makeSampleRecords()
     render(<RunHistoryGraph records={records} currentId="r7" />)
 
-    // Default is 'score'. Click 'Combo' tab.
-    const comboTab = screen.getByRole('button', { name: /combo/i })
-    fireEvent.click(comboTab)
+    // Default is 'score'. Click 'Streak' tab.
+    const streakTab = screen.getByRole('button', { name: /streak/i })
+    fireEvent.click(streakTab)
 
-    // After switching to combo, the active tab should have the data-active attr or aria-pressed
+    // After switching to streak, the active tab should have the data-active attr or aria-pressed
     // We use data-testid="active-tab" on the active tab button
     const activeTab = screen.getByTestId('active-tab')
-    expect(activeTab.textContent?.toLowerCase()).toContain('combo')
+    expect(activeTab.textContent?.toLowerCase()).toContain('streak')
   })
 
   it('renders without throwing for records.length === 1 (current run only)', () => {
