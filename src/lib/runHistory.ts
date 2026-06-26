@@ -4,15 +4,16 @@ export interface MetricDef {
   key: RunMetric
   label: string    // tab label
   hex: string      // series color
-  prefix?: string  // e.g. '×' for combo
+  prefix?: string  // e.g. '×' for streak
   suffix?: string  // e.g. '%' for accuracy
 }
 
-// Order = tab order. Colors per Global Constraints.
+// Order = tab order. Colors per Global Constraints. (The 'combo' key is the
+// internal/persisted field name; the player-facing label is "Streak".)
 export const METRICS: MetricDef[] = [
   { key: 'score',    label: 'Score',    hex: '#FFC23D' },
   { key: 'recalled', label: 'Recalled', hex: '#FF2D9B' },
-  { key: 'combo',    label: 'Combo',    hex: '#B6FF3C', prefix: '×' },
+  { key: 'combo',    label: 'Streak',   hex: '#B6FF3C', prefix: '×' },
   { key: 'accuracy', label: 'Accuracy', hex: '#28F0FF', suffix: '%' },
 ]
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
@@ -16,10 +16,18 @@ const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
 const BOARD_PAD = 12          // p-3 around the board
 
-// Combo chip: hold the multiplier fully visible for COMBO_HOLD_MS after the last
-// streak step, then let it fade away over COMBO_FADE_MS in the signature style.
-const COMBO_HOLD_MS = 2000
-const COMBO_FADE_MS = 900
+// Streak chip: hold the multiplier fully visible for STREAK_HOLD_MS after the last
+// streak step, then let it fade away over STREAK_FADE_MS in the signature style.
+const STREAK_HOLD_MS = 2000
+const STREAK_FADE_MS = 900
+
+// Time → score "Lift" payoff (the cleared-batch animation): after a short
+// anticipation BEAT the timer bar rushes to empty over LIFT_MS while a single
+// big "+bonus" lifts off the bar and dissolves into the score, and the score
+// counts up by exactly that bonus over the SAME window — remaining time visibly
+// turning into points.
+const LIFT_BEAT_MS = 260
+const LIFT_MS = 1300
 
 // Floating white labels (the per-pick "+points" and the "+N" in the earned-life
 // heart) sit over bright piece/heart color. Contrast comes from a soft DOWNWARD
@@ -268,15 +276,15 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
-    shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
-    startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
+    shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
+    startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
     pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
-    shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
+    shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
-    pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
+    pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
@@ -292,13 +300,13 @@ export function StaggerScreen() {
     if (phase === 'gameOver' && !recordedRef.current) {
       recordedRef.current = true
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
-      const run = recordRun({ score, recalled: shapesRecalled, combo: bestCombo, accuracy })
+      const run = recordRun({ score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
     } else if (phase !== 'gameOver') {
       recordedRef.current = false
       setCurrentRunId(null)
     }
-  }, [phase, score, shapesRecalled, bestCombo, totalPicks, correctPicks, recordRun])
+  }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
@@ -310,38 +318,49 @@ export function StaggerScreen() {
   const [cleared, setCleared] = useState(false)
   const boardRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
+  const scoreRef = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
 
-  // Smoothly counted-up score: every banked pick (and the end-of-batch speed
-  // bonus) ticks the displayed number up rather than snapping.
-  const displayScore = useCountUp(score)
+  // The leftover-time "+bonus" that lifts off the bar and dissolves into the score
+  // on a cleared batch (the "Lift" payoff). Null when no payoff is in flight.
+  const [liftFlyer, setLiftFlyer] = useState<{ value: number; x0: number; y0: number; x1: number; y1: number } | null>(null)
 
-  // Combo: a streak of correct recalls (tracked in the store). Each correct pick
+  // Score count-up duration: snappy (600ms) per pick, stretched to the drain
+  // window (LIFT_MS) while the cleared-batch speed bonus pours in, so the number
+  // climbs in lockstep with the bar emptying.
+  const [scoreCountMs, setScoreCountMs] = useState(600)
+
+  // Smoothly counted-up score: every banked pick (and the lifted speed bonus)
+  // ticks the displayed number up rather than snapping.
+  const displayScore = useCountUp(score, scoreCountMs)
+
+  // Streak: a run of correct recalls (tracked in the store). Each correct pick
   // floats the "+points" it earned over the just-filled gap; the running ×N
   // multiplier shows as a chip above the board.
-  const [combos, setCombos] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
-  const comboId = useRef(0)
+  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
+  const streakBurstId = useRef(0)
 
-  // Combo chip lifecycle: a fresh streak step pops the chip in and holds it for
-  // COMBO_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
+  // Streak chip lifecycle: a fresh streak step pops the chip in and holds it for
+  // STREAK_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
   // hold → opacity/blur to nothing) and unmounts. Each new step re-arms the hold,
   // so the chip lingers a beat after the last correct pick. A broken streak
-  // (currentCombo < 3) clears it immediately — the streak shattered.
-  const [comboChip, setComboChip] = useState<{ value: number; fading: boolean } | null>(null)
-  const comboTimers = useRef<number[]>([])
+  // (currentStreak < 3) clears it immediately — the streak shattered.
+  const [streakChip, setStreakChip] = useState<{ value: number; fading: boolean } | null>(null)
+  const streakTimers = useRef<number[]>([])
   useEffect(() => {
-    comboTimers.current.forEach(clearTimeout)
-    comboTimers.current = []
-    if (currentCombo >= 3) {
-      setComboChip({ value: currentCombo, fading: false })
-      comboTimers.current.push(window.setTimeout(
-        () => setComboChip(c => (c ? { ...c, fading: true } : c)), COMBO_HOLD_MS))
-      comboTimers.current.push(window.setTimeout(
-        () => setComboChip(null), COMBO_HOLD_MS + COMBO_FADE_MS))
+    streakTimers.current.forEach(clearTimeout)
+    streakTimers.current = []
+    if (currentStreak >= 3) {
+      setStreakChip({ value: currentStreak, fading: false })
+      streakTimers.current.push(window.setTimeout(
+        () => setStreakChip(c => (c ? { ...c, fading: true } : c)), STREAK_HOLD_MS))
+      streakTimers.current.push(window.setTimeout(
+        () => setStreakChip(null), STREAK_HOLD_MS + STREAK_FADE_MS))
     } else {
-      setComboChip(null)
+      setStreakChip(null)
     }
-    return () => { comboTimers.current.forEach(clearTimeout); comboTimers.current = [] }
-  }, [currentCombo])
+    return () => { streakTimers.current.forEach(clearTimeout); streakTimers.current = [] }
+  }, [currentStreak])
 
   // Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
   // celebratory heart burst over the board.
@@ -361,8 +380,10 @@ export function StaggerScreen() {
   // A fresh run / game over / a broken board clears any lingering bursts.
   useEffect(() => {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
-      setCombos([])
-      setComboChip(null)
+      setStreakBursts([])
+      setStreakChip(null)
+      setLiftFlyer(null)
+      setScoreCountMs(600)
     }
   }, [phase])
 
@@ -512,6 +533,22 @@ export function StaggerScreen() {
     return () => clearInterval(id)
   }, [phase, paused, cleared, selectStartTime, selectDuration])
 
+  // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
+  // bar up to the score readout. Skipped under reduced motion — the score still
+  // counts up, just without the traveling flyer.
+  const spawnLiftFlyer = (value: number, barRect: DOMRect | null) => {
+    if (reduceMotion) return
+    const sc = scoreRef.current?.getBoundingClientRect()
+    if (!barRect || !sc) return
+    setLiftFlyer({
+      value,
+      x0: barRect.right,
+      y0: barRect.top + barRect.height / 2,
+      x1: sc.left + sc.width / 2,
+      y1: sc.top + sc.height / 2,
+    })
+  }
+
   const onPick = (type: PieceType) => {
     if (cleared || paused) return
     const res = pickPiece(type)
@@ -526,7 +563,7 @@ export function StaggerScreen() {
       window.setTimeout(() => setXMark(false), 440)
       return
     }
-    // Correct recall. Float the "+points" earned (base × combo) over the filled
+    // Correct recall. Float the "+points" earned (base × streak) over the filled
     // gap; the running ×N multiplier lives in the chip by the score.
     if (res.gap) {
       const cells = res.gap.cells
@@ -534,25 +571,39 @@ export function StaggerScreen() {
       const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
       const x = BOARD_PAD + avgC * CELL_PITCH + CELL / 2
       const y = BOARD_PAD + avgR * CELL_PITCH + CELL / 2
-      const id = (comboId.current += 1)
-      setCombos(prev => [...prev, { id, pts: res.gained, x, y }])
-      window.setTimeout(() => setCombos(prev => prev.filter(p => p.id !== id)), 700)
+      const id = (streakBurstId.current += 1)
+      setStreakBursts(prev => [...prev, { id, pts: res.gained, x, y }])
+      window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 700)
     }
     if (res.batchCleared) {
       setCleared(true)
-      // Freeze the green bar where it currently sits, then — after a quick beat —
-      // visibly rush it down to empty. The leftover-time speed bonus is already
-      // banked, so the score count-up rises as the bar drains: time → points.
+      const bonus = res.speedBonus
+      // Freeze the lime bar where it currently sits (the leftover time), holding it
+      // for a short anticipation beat before the payoff.
       const el = barRef.current, parent = el?.parentElement
       const frozenPct = el && parent
         ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
         : barPct
       setBarColor('lime'); setBarTransition('none'); setBarPct(frozenPct)
-      // A relaxed, savor-it drain — fast enough to feel like a reward, slow
-      // enough to enjoy the leftover time pouring into the score. The bar goes
-      // lime for the exhale (amber→lime payoff arc).
-      window.setTimeout(() => { setBarTransition('width 1400ms cubic-bezier(0.33,1,0.68,1)'); setBarPct(0) }, 220)
-      window.setTimeout(() => { setCleared(false); advanceBatch() }, 1900)
+      // Release: the bar rushes to empty while the leftover time LIFTS off it as a
+      // single big "+bonus" that floats up and dissolves into the score, and the
+      // score counts up by exactly that bonus — all over the same LIFT_MS window,
+      // so remaining time is read as turning into points.
+      window.setTimeout(() => {
+        const barRect = barRef.current?.getBoundingClientRect() ?? null
+        setBarTransition(`width ${LIFT_MS}ms cubic-bezier(0.33,1,0.68,1)`)
+        setBarPct(0)
+        if (bonus > 0) {
+          spawnLiftFlyer(bonus, barRect)
+          setScoreCountMs(LIFT_MS)
+          bankSpeedBonus(bonus)
+        }
+      }, LIFT_BEAT_MS)
+      window.setTimeout(() => {
+        setScoreCountMs(600)
+        setCleared(false)
+        advanceBatch()
+      }, LIFT_BEAT_MS + LIFT_MS + 240)
     }
   }
 
@@ -613,7 +664,7 @@ export function StaggerScreen() {
                 screen and stands on its own — no label. */}
             <div>
               <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">Phase {batchIndex + 1}</div>
-              <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
+              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
@@ -633,19 +684,19 @@ export function StaggerScreen() {
             />
           </div>
 
-          {/* Phase label (centered) above the grid; the running COMBO multiplier
+          {/* Phase label (centered) above the grid; the running STREAK multiplier
               rides the right of this row — labeled, so it never reads as score×N.
               It pops in on each streak step, holds, then fades in the signature
-              style (see comboChip lifecycle above). */}
+              style (see streakChip lifecycle above). */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
-            {comboChip && (
+            {streakChip && (
               <span
-                key={comboChip.fading ? `fade-${comboChip.value}` : comboChip.value}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${comboChip.fading ? 'vt-fade-away' : 'combo-pop'}`}
-                style={comboChip.fading ? { animationDuration: `${COMBO_FADE_MS}ms` } : undefined}
+                key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
+                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
+                style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
               >
-                COMBO ×{comboChip.value}
+                STREAK ×{streakChip.value}
               </span>
             )}
           </div>
@@ -658,9 +709,9 @@ export function StaggerScreen() {
           <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} invertedByCell={invertedByCell} />
         </div>
 
-        {/* Combo bursts — a "Combo N" flourish floats up from each filled gap. */}
+        {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
         <AnimatePresence>
-          {combos.map(cb => (
+          {streakBursts.map(cb => (
             <motion.div
               key={cb.id}
               initial={{ opacity: 0, scale: 0.4, y: 6 }}
@@ -744,8 +795,8 @@ export function StaggerScreen() {
                 <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Items recalled</div>
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best combo</div>
+                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestStreak > 0 ? `×${bestStreak}` : 'N/A'}</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best streak</div>
               </div>
               <div className="flex-1 text-center py-3.5">
                 <div className="font-silk font-bold text-base text-vt-cyan text-glow-vt-cyan tabular-nums">
@@ -808,6 +859,28 @@ export function StaggerScreen() {
             <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>
           </div>
         </div>
+      )}
+
+      {/* Time → score "Lift": the leftover-time "+bonus" rises off the right end of
+          the timer bar and dissolves into the score readout as the bar drains and
+          the number climbs (fired from onPick on a cleared batch). */}
+      {liftFlyer && (
+        <motion.div
+          initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
+          animate={{
+            x: liftFlyer.x1 - liftFlyer.x0,
+            y: liftFlyer.y1 - liftFlyer.y0,
+            opacity: [0, 1, 1, 0],
+            scale: [0.6, 1.1, 1, 0.7],
+          }}
+          transition={{ duration: LIFT_MS / 1000, ease: [0.33, 1, 0.68, 1], times: [0, 0.18, 0.72, 1] }}
+          onAnimationComplete={() => setLiftFlyer(null)}
+          transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
+          className="fixed z-[60] pointer-events-none font-silk font-bold text-2xl whitespace-nowrap text-vt-lime text-glow-vt-lime tabular-nums"
+          style={{ left: liftFlyer.x0, top: liftFlyer.y0, textShadow: FLOAT_TEXT_SHADOW }}
+        >
+          +{liftFlyer.value}
+        </motion.div>
       )}
     </div>
   )

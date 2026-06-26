@@ -347,15 +347,15 @@
   50% { opacity: 0.6; }
 }
 
-/* Combo multiplier chip — a quick pop each time the streak climbs. */
-@keyframes comboPop {
+/* Streak multiplier chip — a quick pop each time the streak climbs. */
+@keyframes streakPop {
   0% { transform: scale(1.5); }
   100% { transform: scale(1); }
 }
-.combo-pop { animation: comboPop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.streak-pop { animation: streakPop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 
 @media (prefers-reduced-motion: reduce) {
-  .combo-pop { animation: none; }
+  .streak-pop { animation: none; }
 }
 
 /* Auth-motif flicker: a soft, graceful bloom that rests dim most of the cycle,

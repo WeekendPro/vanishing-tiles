@@ -26,7 +26,8 @@ export interface PickResult {
   batchCleared: boolean
   gameOver: boolean
   combo: number   // streak length AFTER this pick (0 on a miss)
-  gained: number  // points this pick earned (base × combo; 0 on a miss)
+  gained: number  // points this pick earned (base × streak; 0 on a miss)
+  speedBonus: number  // leftover-time bonus to bank during the clear payoff (0 unless this pick cleared the batch)
 }
 
 interface StaggerState {
@@ -52,6 +53,7 @@ interface StaggerState {
   beginReveal: () => void     // countdown → reveal (generates batch 0)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
+  bankSpeedBonus: (amount: number) => void  // fold the deferred leftover-time bonus into the score (drives the time→score payoff)
   advanceBatch: () => void    // batch cleared → next, harder batch's reveal
   timeoutBatch: () => void    // select clock expired → costs a life, replays the same phase
   replayReveal: () => boolean // spend points to replay the memorize sequence
@@ -163,7 +165,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       phase, gaps, lives, score, selectStartTime, selectDuration,
       totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
     } = get()
-    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0 }
+    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
     // Tetromino types are shape-unique, so piece-type equality IS the shape match.
@@ -175,10 +177,10 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       const baseStats = { totalPicks: totalPicks + 1, currentCombo: 0 }
       if (nextLives <= 0) {
         set({ lives: 0, phase: 'gameOver', ...baseStats })
-        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0 }
+        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0, speedBonus: 0 }
       }
       set({ lives: nextLives, ...baseStats })
-      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0 }
+      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
     }
 
     // A correct recall: extend the streak. The per-pick reward scales LINEARLY
@@ -186,14 +188,16 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     const nextCombo = currentCombo + 1
     const gained = STAGGER.ACCURACY_PER_GAP * nextCombo
     const nextGaps = gaps.map(g => (g === target ? { ...g, filled: true } : g))
-    let nextScore = score + gained
+    const nextScore = score + gained
     const cleared = nextGaps.every(g => g.filled)
-    if (cleared) {
-      const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
-      nextScore += batchSpeedBonus(remaining, selectDuration)
-    }
-    // Earn-a-life: every LIFE_EVERY cumulative points awards a life (handles
-    // crossing several thresholds at once, e.g. a big combo pick + speed bonus).
+    // On a clear the leftover-time bonus is NOT folded in here — it's returned and
+    // banked separately (via bankSpeedBonus) so the UI can pour it into the score
+    // as the timer bar drains: the "time → points" payoff.
+    const speedBonus = cleared
+      ? batchSpeedBonus(Math.max(0, selectStartTime + selectDuration - Date.now()), selectDuration)
+      : 0
+    // Earn-a-life: every LIFE_EVERY cumulative points awards a life. The deferred
+    // speed bonus awards its own lives when it's banked.
     const livesGained =
       Math.floor(nextScore / STAGGER.LIFE_EVERY) - Math.floor(score / STAGGER.LIFE_EVERY)
     set({
@@ -206,7 +210,16 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       currentCombo: nextCombo,
       bestCombo: Math.max(bestCombo, nextCombo),
     })
-    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained }
+    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus }
+  },
+
+  bankSpeedBonus: (amount) => {
+    if (amount <= 0) return
+    const { score, lives } = get()
+    const nextScore = score + amount
+    const livesGained =
+      Math.floor(nextScore / STAGGER.LIFE_EVERY) - Math.floor(score / STAGGER.LIFE_EVERY)
+    set({ score: nextScore, lives: lives + livesGained })
   },
 
   advanceBatch: () => {

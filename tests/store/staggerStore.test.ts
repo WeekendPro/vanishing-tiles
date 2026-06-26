@@ -376,19 +376,25 @@ describe('useStaggerStore', () => {
     expect(useStaggerStore.getState().pickPiece(type).ok).toBe(false)
   })
 
-  it('filling the last gap clears the batch and adds a speed bonus', () => {
+  it('filling the last gap clears the batch and reports a deferred speed bonus', () => {
     const st = useStaggerStore.getState()
     st.startRun(); st.beginReveal(); st.beginSelecting()
     const gaps = [...useStaggerStore.getState().gaps]
     let res = { batchCleared: false } as ReturnType<typeof st.pickPiece>
     gaps.forEach(g => { res = useStaggerStore.getState().pickPiece(g.pieceType) })
     expect(res.batchCleared).toBe(true)
-    // Combo-scaled accuracy: a clean run scores base×1 + base×2 + … + base×n
-    // (linear multiplier), plus a speed bonus in [0, SPEED_MAX].
+    // Streak-scaled accuracy: a clean run scores base×1 + base×2 + … + base×n
+    // (linear multiplier). pickPiece banks ONLY those per-pick points; the
+    // leftover-time speed bonus is returned for the UI to bank during the
+    // time→score animation, not folded into the score here.
     const n = gaps.length
     const accuracy = (STAGGER.ACCURACY_PER_GAP * n * (n + 1)) / 2
-    expect(useStaggerStore.getState().score).toBeGreaterThanOrEqual(accuracy)
-    expect(useStaggerStore.getState().score).toBeLessThanOrEqual(accuracy + STAGGER.SPEED_MAX)
+    expect(useStaggerStore.getState().score).toBe(accuracy)
+    expect(res.speedBonus).toBeGreaterThanOrEqual(0)
+    expect(res.speedBonus).toBeLessThanOrEqual(STAGGER.SPEED_MAX)
+    // Banking the deferred bonus adds it to the cumulative score.
+    useStaggerStore.getState().bankSpeedBonus(res.speedBonus)
+    expect(useStaggerStore.getState().score).toBe(accuracy + res.speedBonus)
   })
 
   it('combo multiplies per-pick points linearly and resets on a miss', () => {
