@@ -41,19 +41,18 @@ beforeEach(() => {
 })
 
 describe('staggerCurve', () => {
-  it('holds gaps at 3 through the on-ramp, then climbs one at a time, capped at MAX_GAPS', () => {
-    // L1–6: held flat at 3 (variety, not volume, is the early lever).
-    for (let b = 0; b <= 5; b++) expect(gapCountForBatch(b)).toBe(3)
-    expect(gapCountForBatch(6)).toBe(4)   // L7
-    expect(gapCountForBatch(7)).toBe(4)   // L8
-    // L9–12: held at 5 while shapes finish (S, Z) and orientation unlocks.
-    for (let b = 8; b <= 11; b++) expect(gapCountForBatch(b)).toBe(5)
-    // L13–14: still 5 — pairing switches on with no extra recall load.
-    expect(gapCountForBatch(12)).toBe(5)  // L13
-    expect(gapCountForBatch(13)).toBe(5)  // L14
-    expect(gapCountForBatch(14)).toBe(6)  // L15
-    expect(gapCountForBatch(15)).toBe(6)  // L16
-    expect(gapCountForBatch(23)).toBe(STAGGER.MAX_GAPS)  // L24 reaches the cap
+  it('holds gaps at 3 for only the first 3 levels, then climbs one at a time, capped at MAX_GAPS', () => {
+    // L1–3: only the first 3 levels hold 3 gaps (on-ramp halved).
+    for (let b = 0; b <= 2; b++) expect(gapCountForBatch(b)).toBe(3)
+    expect(gapCountForBatch(3)).toBe(4)   // L4
+    expect(gapCountForBatch(4)).toBe(4)   // L5
+    // L6–11: held at 5 while the last shapes (S, Z) land, orientation unlocks, and
+    // pairing switches on with no extra recall load.
+    for (let b = 5; b <= 10; b++) expect(gapCountForBatch(b)).toBe(5)
+    expect(gapCountForBatch(11)).toBe(6)  // L12
+    expect(gapCountForBatch(12)).toBe(6)  // L13
+    expect(gapCountForBatch(13)).toBe(7)  // L14
+    expect(gapCountForBatch(20)).toBe(STAGGER.MAX_GAPS)  // L21 reaches the cap
     expect(gapCountForBatch(100)).toBe(STAGGER.MAX_GAPS)
     // Monotonic, never stepping by more than one gap at a time.
     for (let b = 1; b <= 60; b++) {
@@ -69,28 +68,28 @@ describe('staggerCurve', () => {
       expect(2 * pairsForBatch(b) + 3 * triplesForBatch(b)).toBeLessThanOrEqual(chunkable)
       expect(flashEventsForBatch(b)).toBe(gapCountForBatch(b) - pairsForBatch(b) - 2 * triplesForBatch(b))
     }
-    // Pairing is off through the on-ramp + shape/orientation phase (L1–12)…
-    for (let b = 0; b <= 11; b++) expect(pairsForBatch(b)).toBe(0)
-    expect(pairsForBatch(12)).toBe(1)  // L13 — first pair
-    // …and L16 is fully paired: 6 gaps, 3 pairs → just 3 dense beats.
-    expect(gapCountForBatch(15)).toBe(6)
-    expect(pairsForBatch(15)).toBe(3)
-    expect(flashEventsForBatch(15)).toBe(3)
-    // Triples are off until after the doubles section (≤ L25 / idx 24).
-    for (let b = 0; b <= 24; b++) expect(triplesForBatch(b)).toBe(0)
+    // Pairing is off through the on-ramp + shape/orientation phase (L1–9)…
+    for (let b = 0; b <= 8; b++) expect(pairsForBatch(b)).toBe(0)
+    expect(pairsForBatch(9)).toBe(1)  // L10 — first pair
+    // …and L13 is fully paired: 6 gaps, 3 pairs → just 3 dense beats.
+    expect(gapCountForBatch(12)).toBe(6)
+    expect(pairsForBatch(12)).toBe(3)
+    expect(flashEventsForBatch(12)).toBe(3)
+    // Triples are off until after the doubles section (≤ L22 / idx 21).
+    for (let b = 0; b <= 21; b++) expect(triplesForBatch(b)).toBe(0)
   })
 
-  it('triples switch on AFTER doubles, grow one at a time, and never on a gap/pair bump', () => {
-    // First triple at L26 (idx 25); grows 1→2→3→4 by L29 (idx 28).
-    expect(triplesForBatch(25)).toBe(1)  // L26
-    expect(triplesForBatch(26)).toBe(2)  // L27
-    expect(triplesForBatch(27)).toBe(3)  // L28
-    expect(triplesForBatch(28)).toBe(4)  // L29 — fully tripled
+  it('triples switch on AFTER doubles, grow one at a time, and never on a gap bump', () => {
+    // First triple at L23 (idx 22), a gentle intro; grows 1→2→3→4 by L26 (idx 25).
+    expect(triplesForBatch(22)).toBe(1)  // L23
+    expect(triplesForBatch(23)).toBe(2)  // L24
+    expect(triplesForBatch(24)).toBe(3)  // L25
+    expect(triplesForBatch(25)).toBe(4)  // L26 — fully tripled
     // Gap count is pinned at the cap across the whole triples section (no gap bump).
-    for (let b = 24; b <= 31; b++) expect(gapCountForBatch(b)).toBe(STAGGER.MAX_GAPS)
-    // L29 is fully tripled: 4 triples · 3 = 12 gaps, 0 pairs, 4 beats.
-    expect(pairsForBatch(28)).toBe(0)
-    expect(flashEventsForBatch(28)).toBe(4)
+    for (let b = 20; b <= 28; b++) expect(gapCountForBatch(b)).toBe(STAGGER.MAX_GAPS)
+    // L26 is fully tripled: 4 triples · 3 = 12 gaps, 0 pairs, 4 beats.
+    expect(pairsForBatch(25)).toBe(0)
+    expect(flashEventsForBatch(25)).toBe(4)
     // Triples never grow by more than one per level.
     for (let b = 1; b <= 60; b++) {
       const step = triplesForBatch(b) - triplesForBatch(b - 1)
@@ -101,11 +100,11 @@ describe('staggerCurve', () => {
   it('inverted gaps switch on after the triples section, growing one per batch', () => {
     // Off everywhere before INVERTED_FROM.
     for (let b = 0; b < INVERTED_FROM; b++) expect(invertedForBatch(b)).toBe(0)
-    expect(invertedForBatch(INVERTED_FROM)).toBe(1)       // L30 — first inverted
-    expect(invertedForBatch(INVERTED_FROM + 1)).toBe(2)   // L31
+    expect(invertedForBatch(INVERTED_FROM)).toBe(1)       // L27 — first inverted
+    expect(invertedForBatch(INVERTED_FROM + 1)).toBe(2)   // L28
     expect(invertedForBatch(100)).toBe(2)                 // capped on the endless tail
-    // Inverted lands AFTER triples grow in (idx 28 is the fully-tripled rung).
-    expect(INVERTED_FROM).toBeGreaterThan(28)
+    // Inverted lands AFTER triples grow in (idx 25 is the fully-tripled rung).
+    expect(INVERTED_FROM).toBeGreaterThan(25)
     // Inverted gaps are solo beats, so density still fits the NON-inverted gaps.
     for (let b = INVERTED_FROM; b <= 60; b++) {
       const chunkable = gapCountForBatch(b) - invertedForBatch(b)
@@ -121,9 +120,9 @@ describe('staggerCurve', () => {
       (flashEventsForBatch(8) - flashEventsForBatch(0)) * STAGGER.REVEAL_STEP_MS,
     )
     expect(batchRevealMs(0)).toBe(2 * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS)
-    // L14 (5 gaps, 2 pairs → 3 beats) reveals FASTER than L9 (5 gaps, 0 pairs →
-    // 5 beats) despite the same recall load — pairing collapses beats.
-    expect(batchRevealMs(13)).toBeLessThan(batchRevealMs(8))
+    // L14 (7 gaps, 3 pairs → 4 beats) reveals FASTER than L6 (5 gaps, 0 pairs →
+    // 5 beats) despite MORE recall load — pairing collapses beats.
+    expect(batchRevealMs(13)).toBeLessThan(batchRevealMs(5))
   })
 
   it('select clock grows with gap count and exceeds the reveal time', () => {
@@ -147,13 +146,12 @@ describe('staggerCurve', () => {
 
   it('introduces shapes gradually, starting on O + I only', () => {
     expect(new Set(allowedTypesForBatch(0))).toEqual(new Set(['O', 'I']))
-    expect(new Set(allowedTypesForBatch(1))).toEqual(new Set(['O', 'I']))
-    expect(allowedTypesForBatch(2)).toContain('L')      // L joins at L3 (idx 2)
-    expect(allowedTypesForBatch(9)).not.toContain('Z')  // Z is last
-    // Z (the last shape) debuts at L12 (idx 11), the level AFTER orientation frees
-    // (idx 10) — the hardest piece never arrives already rotated.
-    expect(allowedTypesForBatch(10)).not.toContain('Z')
-    expect(new Set(allowedTypesForBatch(11))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+    expect(allowedTypesForBatch(1)).toContain('L')      // L joins at L2 (idx 1)
+    expect(allowedTypesForBatch(2)).toContain('J')      // J joins at L3 (idx 2)
+    expect(allowedTypesForBatch(7)).not.toContain('Z')  // Z is last
+    // Z (the last shape) debuts at L9 (idx 8), the level AFTER orientation frees
+    // (idx 7) — the hardest piece never arrives already rotated.
+    expect(new Set(allowedTypesForBatch(8))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
   })
 
   it('moves only one difficulty lever per level (no stacked spikes)', () => {
@@ -290,7 +288,7 @@ describe('useStaggerStore', () => {
   it('a paired batch reveals two distinct shapes per pair beat', () => {
     const st = useStaggerStore.getState()
     st.startRun()
-    useStaggerStore.setState({ batchIndex: 15 })  // L16: 6 gaps, 3 pairs, 3 beats
+    useStaggerStore.setState({ batchIndex: 15 })  // L16: 8 gaps, 4 pairs
     st.beginReveal()
     const { gaps, revealPlan } = useStaggerStore.getState()
     expect(gaps.length).toBe(gapCountForBatch(15))
@@ -305,13 +303,13 @@ describe('useStaggerStore', () => {
   it('a tripled batch reveals three gaps (≥2 distinct shapes) per triple beat', () => {
     const st = useStaggerStore.getState()
     st.startRun()
-    useStaggerStore.setState({ batchIndex: 28 })  // L29: 12 gaps, 4 triples, 0 pairs, 4 beats
+    useStaggerStore.setState({ batchIndex: 25 })  // L26: 12 gaps, 4 triples, 0 pairs, 4 beats (no inverted)
     st.beginReveal()
     const { gaps, revealPlan } = useStaggerStore.getState()
-    expect(gaps.length).toBe(gapCountForBatch(28))
-    expect(revealPlan.length).toBe(flashEventsForBatch(28))
+    expect(gaps.length).toBe(gapCountForBatch(25))
+    expect(revealPlan.length).toBe(flashEventsForBatch(25))
     const triples = revealPlan.filter(beat => beat.length === 3)
-    expect(triples.length).toBe(triplesForBatch(28))
+    expect(triples.length).toBe(triplesForBatch(25))
     // Every triple beat shows at least two DIFFERENT shapes; every gap appears once.
     triples.forEach(beat => expect(new Set(beat.map(i => gaps[i].pieceType)).size).toBeGreaterThanOrEqual(2))
     expect(revealPlan.flat().sort((a, b) => a - b)).toEqual(gaps.map((_, i) => i))
@@ -320,7 +318,7 @@ describe('useStaggerStore', () => {
   it('an inverted batch flags inverted gaps and keeps them as SOLO reveal beats', () => {
     const st = useStaggerStore.getState()
     st.startRun()
-    useStaggerStore.setState({ batchIndex: INVERTED_FROM + 1 })  // L31: 2 inverted gaps
+    useStaggerStore.setState({ batchIndex: INVERTED_FROM + 1 })  // L28: 2 inverted gaps
     st.beginReveal()
     const { gaps, revealPlan } = useStaggerStore.getState()
     const invertedGaps = gaps.filter(g => g.inverted)
