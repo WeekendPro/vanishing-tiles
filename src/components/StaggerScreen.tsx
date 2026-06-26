@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
-import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
+import { useStaggerStore, activeLevel, isSandboxRun, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { STAGGER_LEVELS } from '../lib/staggerLevels'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
@@ -151,8 +152,15 @@ function StaggerBoard({
 // Smear: blurs + swells + fades to nothing) over the beat, just as the next
 // number takes its place. The CSS animation length (.vt-num-decay, 850ms) is
 // kept in lockstep with BEAT_MS.
+//
+// The countdown is anchored OVER the board/grid (not a full-screen void) so
+// the player sees the level's frame before the gaps reveal: the active level
+// NAME sits just above the 3·2·1. Fires at run start AND after each
+// levelComplete (proceedAfterLevelComplete sets phase back to 'countdown').
 const BEAT_MS = 850
-function StaggerCountdown({ onDone }: { onDone: () => void }) {
+function StaggerCountdown({
+  levelName, modeLabel, modeColor, onDone,
+}: { levelName: string; modeLabel: string; modeColor: string; onDone: () => void }) {
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
@@ -163,15 +171,19 @@ function StaggerCountdown({ onDone }: { onDone: () => void }) {
     return () => clearTimeout(t)
   }, [count, onDone])
   return (
-    <div className="relative flex h-44 w-44 items-center justify-center">
-      {count > 0 && (
-        <span
-          key={count}
-          className="absolute vt-num-decay font-silk font-black leading-none text-vt-cyan text-[6rem]"
-        >
-          {count}
-        </span>
-      )}
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] pointer-events-none">
+      <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.16em]">{levelName}</div>
+      <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] mb-2 ${modeColor}`}>{modeLabel}</div>
+      <div className="relative flex h-44 w-44 items-center justify-center">
+        {count > 0 && (
+          <span
+            key={count}
+            className="absolute vt-num-decay font-silk font-black leading-none text-vt-cyan text-[6rem]"
+          >
+            {count}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -211,18 +223,26 @@ export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
+    levelIndex, sandboxLevel, completedLevelIndex,
     startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
-    pause, resume, exit,
+    pause, resume, exit, proceedAfterLevelComplete,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
+    levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, completedLevelIndex: s.completedLevelIndex,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
-    pause: s.pause, resume: s.resume, exit: s.exit,
+    pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
   })))
   const goHome = useNavStore(s => s.goHome)
   const difficulty = useSettingsStore(s => s.settings.difficulty)
+
+  // Active level (sandbox-locked or score-derived) + sandbox flag, for the
+  // countdown name, the run-context label, and the sandbox banner.
+  const level = activeLevel({ levelIndex, sandboxLevel })
+  const sandboxed = isSandboxRun({ sandboxLevel })
+  const nextLevel = completedLevelIndex != null ? STAGGER_LEVELS[completedLevelIndex + 1] : undefined
 
   const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
 
@@ -491,14 +511,32 @@ export function StaggerScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+      {/* Sandbox banner — the calibration sandbox is unlosable (store-enforced,
+          this just reflects it): no gameOver is reachable, so the only way out
+          is this explicit exit-to-Home control. */}
+      {sandboxed && (
+        <div className="w-full max-w-sm flex items-center justify-between mb-3 rounded-md border border-vt-amber/40 bg-vt-amber/10 px-3 py-1.5">
+          <span className="font-grotesk text-[10px] tracking-[0.16em] uppercase text-vt-amber text-glow-vt-amber">
+            Sandbox · {level.name}
+          </span>
+          <button
+            onClick={() => { exit(); goHome() }}
+            className="font-grotesk text-[10px] tracking-[0.1em] uppercase text-vt-text/70 hover:text-vt-amber transition pointer-events-auto"
+          >
+            Exit
+          </button>
+        </div>
+      )}
+
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
           <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
-            {/* Phase count sits ABOVE the score; the score is the loudest text on
-                screen and stands on its own — no label. */}
+            {/* The active level NAME sits ABOVE the score as the run-context
+                label (replaces the old "Phase N" framing); the score is the
+                loudest text on screen and stands on its own. */}
             <div>
-              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">Phase {batchIndex + 1}</div>
+              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">{level.name}</div>
               <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="text-right">
@@ -519,10 +557,11 @@ export function StaggerScreen() {
             />
           </div>
 
-          {/* Phase label (centered) above the grid; the running COMBO multiplier
+          {/* Phase label (centered) above the grid; the running STREAK multiplier
               rides the right of this row — labeled, so it never reads as score×N.
               It pops in on each streak step, holds, then fades in the signature
-              style (see comboChip lifecycle above). */}
+              style (see comboChip lifecycle above). ("Streak" is player-facing
+              copy only — the underlying store field is still `currentCombo`.) */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
             <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
             {comboChip && (
@@ -531,7 +570,7 @@ export function StaggerScreen() {
                 className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${comboChip.fading ? 'vt-fade-away' : 'combo-pop'}`}
                 style={comboChip.fading ? { animationDuration: `${COMBO_FADE_MS}ms` } : undefined}
               >
-                COMBO ×{comboChip.value}
+                STREAK ×{comboChip.value}
               </span>
             )}
           </div>
@@ -592,14 +631,12 @@ export function StaggerScreen() {
           ))}
         </AnimatePresence>
 
+        {/* Level-intro countdown — anchored OVER the board (not a full-screen
+            void): the board/grid is visible underneath, the level NAME sits
+            above the 3·2·1. Fires at run start and after every levelComplete
+            (proceedAfterLevelComplete routes back through this same phase). */}
         {phase === 'countdown' && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vt-void pointer-events-none">
-            <div className="flex flex-col items-center gap-1 mb-2">
-              <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.12em]">Vanishing Tiles</div>
-              <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] ${modeColor}`}>{modeLabel}</div>
-            </div>
-            <StaggerCountdown onDone={beginReveal} />
-          </div>
+          <StaggerCountdown levelName={level.name} modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
         )}
 
         {/* Wrong pick: a red border flashes around the board (with the shake). */}
@@ -631,7 +668,7 @@ export function StaggerScreen() {
               </div>
               <div className="flex-1 text-center py-3.5 border-x border-white/10">
                 <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestCombo > 0 ? `×${bestCombo}` : 'N/A'}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best combo</div>
+                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best streak</div>
               </div>
               <div className="flex-1 text-center py-3.5">
                 <div className="font-silk font-bold text-base text-vt-cyan text-glow-vt-cyan tabular-nums">
@@ -647,6 +684,46 @@ export function StaggerScreen() {
               </div>
             )}
 
+            <div className="flex flex-col gap-3 w-44 pointer-events-auto">
+              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
+              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
+            </div>
+          </div>
+        )}
+
+        {/* Level-complete celebration — e.g. "SOLOS COMPLETE", the running score,
+            and the next level + its multiplier. CTA proceeds into that level's
+            intro countdown (proceedAfterLevelComplete → phase 'countdown'). */}
+        {phase === 'levelComplete' && completedLevelIndex != null && (
+          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-vt-void px-6 text-center">
+            <ScanlineOverlay />
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-lime text-glow-vt-lime mb-2">Level cleared</div>
+            <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.1em] mb-5">
+              {STAGGER_LEVELS[completedLevelIndex].name} COMPLETE
+            </div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
+            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-6 tabular-nums">{score}</div>
+            {nextLevel && (
+              <div className="font-grotesk text-sm tracking-[0.08em] uppercase text-vt-text mb-8">
+                Next: <span className="text-vt-magenta text-glow-vt-magenta">{nextLevel.name}</span> · ×{nextLevel.multiplier}
+              </div>
+            )}
+            <div className="w-44 pointer-events-auto">
+              <NeonButton variant="primary" fullWidth onClick={() => proceedAfterLevelComplete()}>Next →</NeonButton>
+            </div>
+          </div>
+        )}
+
+        {/* Win celebration — crossing the final (crawlers) threshold at 500000.
+            Distinct from levelComplete: no "Next" CTA, just final score +
+            exit/replay via the same controls as gameOver. */}
+        {phase === 'won' && (
+          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-vt-void px-6 text-center">
+            <ScanlineOverlay />
+            <div className="font-silk text-4xl text-vt-lime text-glow-vt-lime uppercase tracking-[0.15em] mb-2">You Win</div>
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-magenta text-glow-vt-magenta mb-6 vt-fade-away">All Levels Cleared</div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Final score</div>
+            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-8 tabular-nums">{score}</div>
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
               <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
