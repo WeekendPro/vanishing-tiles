@@ -4,6 +4,7 @@ import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import {
   STAGGER, difficultyForBatch, batchSpeedBonus,
   allowedTypesForBatch, lockedRotationsForBatch,
+  pairsForBatch, buildRevealPlan,
 } from '../lib/staggerCurve'
 
 export type StaggerPhase = 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
@@ -28,6 +29,7 @@ interface StaggerState {
   phase: StaggerPhase
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
+  revealPlan: number[][]      // reveal beats: each beat is 1 or 2 indices into `gaps`
   score: number               // cumulative across the whole run
   lives: number               // shared pool; run ends at 0
   selectStartTime: number     // Date.now() when selecting began (for speed scoring)
@@ -54,26 +56,42 @@ interface StaggerState {
   exit: () => void            // tear down back to idle
 }
 
-function makeBatch(batchIndex: number): StaggerGap[] {
+function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number[][] } {
   const diff = difficultyForBatch(batchIndex)
   const allowedTypes = allowedTypesForBatch(batchIndex)
-  const { gaps } = generatePuzzle({
-    gapCount: diff.gapCount,
-    complexity: diff.complexity,
-    allowedTypes,
-    lockedRotations: lockedRotationsForBatch(batchIndex),
-    // Once the pool widens past 2 shapes, variety is the run's main early lever —
-    // force ≥2 distinct shapes per board so the added pieces actually appear
-    // instead of being lost to an all-identical roll.
-    requireVariety: allowedTypes.length > 2,
-  })
-  return gaps.map(g => ({ ...g, filled: false }))
+  const pairCount = pairsForBatch(batchIndex)
+
+  // Re-roll until the drawn shapes can supply `pairCount` DISTINCT-shape pairs
+  // (each reveal pair must be two different pieces). With the wide late-game pool
+  // this practically always succeeds on the first try; the loop just guarantees
+  // it, falling back to the best board found if a degenerate roll persists.
+  let best: { gaps: Gap[]; plan: number[][] } | null = null
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const { gaps } = generatePuzzle({
+      gapCount: diff.gapCount,
+      complexity: diff.complexity,
+      allowedTypes,
+      lockedRotations: lockedRotationsForBatch(batchIndex),
+      // Once the pool widens past 2 shapes, variety is the run's main early lever —
+      // force ≥2 distinct shapes per board so the added pieces actually appear
+      // instead of being lost to an all-identical roll.
+      requireVariety: allowedTypes.length > 2,
+    })
+    const plan = buildRevealPlan(gaps.map(g => g.pieceType), pairCount)
+    const achievedPairs = plan.filter(beat => beat.length === 2).length
+    if (achievedPairs >= pairCount) { best = { gaps, plan }; break }
+    if (!best) best = { gaps, plan }
+  }
+
+  const { gaps, plan } = best!
+  return { gaps: gaps.map(g => ({ ...g, filled: false })), revealPlan: plan }
 }
 
 const IDLE = {
   phase: 'idle' as StaggerPhase,
   batchIndex: 0,
   gaps: [] as StaggerGap[],
+  revealPlan: [] as number[][],
   score: 0,
   lives: STAGGER.START_LIVES,
   selectStartTime: 0,
@@ -92,7 +110,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   startRun: () => set({ ...IDLE, phase: 'countdown' }),
 
-  beginReveal: () => set({ phase: 'reveal', gaps: makeBatch(get().batchIndex) }),
+  beginReveal: () => set({ phase: 'reveal', ...makeBatch(get().batchIndex) }),
 
   beginSelecting: () => {
     const duration = difficultyForBatch(get().batchIndex).selectDuration
@@ -162,7 +180,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   advanceBatch: () => {
     const next = get().batchIndex + 1
-    set({ phase: 'reveal', batchIndex: next, gaps: makeBatch(next) })
+    set({ phase: 'reveal', batchIndex: next, ...makeBatch(next) })
   },
 
   timeoutBatch: () => {

@@ -209,12 +209,12 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
   const {
-    phase, batchIndex, gaps, score, lives, selectDuration, selectStartTime, paused,
+    phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentCombo, bestCombo, totalPicks, correctPicks,
     startRun, beginReveal, beginSelecting, pickPiece, advanceBatch, timeoutBatch,
     pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
-    phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, score: s.score,
+    phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     shapesRecalled: s.shapesRecalled, currentCombo: s.currentCombo, bestCombo: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
@@ -307,17 +307,22 @@ export function StaggerScreen() {
     }
   }, [phase])
 
-  // Reveal driver (shape-bloom): bloom each gap as a WHOLE tetromino — all its
-  // cells get .vt-bloom at the same tick, flood magenta, then decay along a
-  // ghost tail back to the void (fading away in a per-cell wave). Decays cascade
-  // (the next shape blooms before the last finishes dying), draining the bar one
-  // step per gap as a COUNT, then hand off to selecting. Because .vt-bloom
-  // forwards-fills back to the void, past gaps leave no readable hole.
+  // Reveal driver (shape-bloom): bloom each BEAT as a whole — every gap in the
+  // beat gets .vt-bloom at the same tick, floods magenta, then decays along a
+  // ghost tail back to the void (fading away in a per-cell wave). A beat holds
+  // one gap, or TWO (a pair) that flash together — denser memory chunks late in
+  // the run. Decays cascade (the next beat blooms before the last finishes
+  // dying), draining the bar one step per beat as a COUNT, then hand off to
+  // selecting. Because .vt-bloom forwards-fills back to the void, past gaps leave
+  // no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
     let cancelled = false
     const timers: number[] = []
-    const n = gaps.length
+    // The reveal plays as a sequence of beats; fall back to one-gap-per-beat if a
+    // batch somehow arrived without a plan (e.g. legacy state).
+    const beats = revealPlan.length ? revealPlan : gaps.map((_, i) => [i])
+    const n = beats.length
     // Difficulty shapes the reveal: EASY floods each gap in its own piece colour;
     // MEDIUM floods the uniform branded pink; HARD paints in graphite "impasto"
     // (self-colored, no bright flood) so the murky low-contrast tiles are the
@@ -325,12 +330,12 @@ export function StaggerScreen() {
     const paint = difficulty === 'hard'
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Step between piece flashes. The bloom out-runs this step, so the next piece
+    // Step between beat flashes. The bloom out-runs this step, so the next beat
     // flashes while the previous is still decaying — the overlapping cascade.
     const step = STAGGER.REVEAL_STEP_MS
     // How long one bloom lives on screen: its longest-wave cell, plus a hair.
     const lifetime = STAGGER.REVEAL_BLOOM_MS + 3 * STAGGER.REVEAL_WAVE_MS + 80
-    // Memorize bar DRAINS: starts full and empties one step per gap as the
+    // Memorize bar DRAINS: starts full and empties one step per beat as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
     setBlooms([])
@@ -339,24 +344,27 @@ export function StaggerScreen() {
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
-        // Let the final piece finish its decay before recall lights-out.
+        // Let the final beat finish its decay before recall lights-out.
         timers.push(window.setTimeout(beginSelecting, Math.max(0, STAGGER.REVEAL_BLOOM_MS - step)))
         return
       }
-      const myId = ++id
-      // Add a fresh bloom that runs CONCURRENTLY with earlier still-decaying ones
-      // (the overlap), and self-removes once its full decay completes.
-      setBlooms(prev => [...prev, bloomForGap(myId, gaps[idx], colorFor(gaps[idx]), paint)])
+      // Every gap in this beat blooms on the SAME tick (a pair flashes together).
+      const beatIds: number[] = []
+      beats[idx].forEach(gi => {
+        const myId = ++id
+        beatIds.push(myId)
+        setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint)])
+      })
       setBarPct((1 - (idx + 1) / n) * 100)
       timers.push(window.setTimeout(() => {
-        if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
+        if (!cancelled) setBlooms(prev => prev.filter(b => !beatIds.includes(b.id)))
       }, lifetime))
       timers.push(window.setTimeout(() => show(idx + 1), step))
     }
-    // A short breath before the first gap (also paces continuous next batches).
+    // A short breath before the first beat (also paces continuous next batches).
     timers.push(window.setTimeout(() => show(0), 350))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, beginSelecting, difficulty])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when

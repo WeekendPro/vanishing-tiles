@@ -3,6 +3,9 @@ import { useStaggerStore } from '../../src/store/staggerStore'
 import {
   STAGGER,
   gapCountForBatch,
+  pairsForBatch,
+  flashEventsForBatch,
+  buildRevealPlan,
   revealStepMs,
   selectDurationForBatch,
   complexityForGapCount,
@@ -15,6 +18,12 @@ import {
   ORIENTATION_FREE_FROM,
 } from '../../src/lib/staggerCurve'
 import type { PieceType } from '@shared/types'
+
+/** A tiny deterministic LCG so reveal-plan tests don't depend on Math.random. */
+function seededRng(seed: number): () => number {
+  let s = seed >>> 0
+  return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
+}
 
 const ALL_TYPES: PieceType[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L']
 
@@ -34,11 +43,14 @@ describe('staggerCurve', () => {
     for (let b = 0; b <= 5; b++) expect(gapCountForBatch(b)).toBe(3)
     expect(gapCountForBatch(6)).toBe(4)   // L7
     expect(gapCountForBatch(7)).toBe(4)   // L8
-    expect(gapCountForBatch(8)).toBe(5)   // L9
-    expect(gapCountForBatch(10)).toBe(5)  // L11 — held so the orientation unlock lands alone
-    expect(gapCountForBatch(11)).toBe(6)  // L12
-    expect(gapCountForBatch(12)).toBe(6)  // L13
-    expect(gapCountForBatch(13)).toBe(7)  // L14
+    // L9–12: held at 5 while shapes finish (S, Z) and orientation unlocks.
+    for (let b = 8; b <= 11; b++) expect(gapCountForBatch(b)).toBe(5)
+    // L13–14: still 5 — pairing switches on with no extra recall load.
+    expect(gapCountForBatch(12)).toBe(5)  // L13
+    expect(gapCountForBatch(13)).toBe(5)  // L14
+    expect(gapCountForBatch(14)).toBe(6)  // L15
+    expect(gapCountForBatch(15)).toBe(6)  // L16
+    expect(gapCountForBatch(23)).toBe(STAGGER.MAX_GAPS)  // L24 reaches the cap
     expect(gapCountForBatch(100)).toBe(STAGGER.MAX_GAPS)
     // Monotonic, never stepping by more than one gap at a time.
     for (let b = 1; b <= 60; b++) {
@@ -48,14 +60,31 @@ describe('staggerCurve', () => {
     }
   })
 
-  it('reveal pacing is constant per piece across batches (no speed-up lever)', () => {
+  it('pairing is feasible (2·pairs ≤ gaps) and beats = gaps − pairs', () => {
+    for (let b = 0; b <= 60; b++) {
+      expect(2 * pairsForBatch(b)).toBeLessThanOrEqual(gapCountForBatch(b))
+      expect(flashEventsForBatch(b)).toBe(gapCountForBatch(b) - pairsForBatch(b))
+    }
+    // Pairing is off through the on-ramp + shape/orientation phase (L1–12)…
+    for (let b = 0; b <= 11; b++) expect(pairsForBatch(b)).toBe(0)
+    expect(pairsForBatch(12)).toBe(1)  // L13 — first pair
+    // …and L16 is fully paired: 6 gaps, 3 pairs → just 3 dense beats.
+    expect(gapCountForBatch(15)).toBe(6)
+    expect(pairsForBatch(15)).toBe(3)
+    expect(flashEventsForBatch(15)).toBe(3)
+  })
+
+  it('reveal pacing is constant per beat across batches, and pairing shortens it', () => {
     expect(revealStepMs()).toBe(STAGGER.REVEAL_STEP_MS)
-    // Batch reveal time grows ONLY because there are more pieces, at a fixed step —
+    // Reveal time grows ONLY with the number of flash BEATS, at a fixed step —
     // individual pieces never get faster as the run escalates.
     expect(batchRevealMs(8) - batchRevealMs(0)).toBe(
-      (gapCountForBatch(8) - gapCountForBatch(0)) * STAGGER.REVEAL_STEP_MS,
+      (flashEventsForBatch(8) - flashEventsForBatch(0)) * STAGGER.REVEAL_STEP_MS,
     )
     expect(batchRevealMs(0)).toBe(2 * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS)
+    // L14 (5 gaps, 2 pairs → 3 beats) reveals FASTER than L9 (5 gaps, 0 pairs →
+    // 5 beats) despite the same recall load — pairing collapses beats.
+    expect(batchRevealMs(13)).toBeLessThan(batchRevealMs(8))
   })
 
   it('select clock grows with gap count and exceeds the reveal time', () => {
@@ -81,23 +110,43 @@ describe('staggerCurve', () => {
     expect(new Set(allowedTypesForBatch(0))).toEqual(new Set(['O', 'I']))
     expect(new Set(allowedTypesForBatch(1))).toEqual(new Set(['O', 'I']))
     expect(allowedTypesForBatch(2)).toContain('L')      // L joins at L3 (idx 2)
-    expect(allowedTypesForBatch(3)).not.toContain('Z')  // Z is last, not until L13
-    // Z (the last shape) only appears once orientation is already free (idx 10).
-    expect(allowedTypesForBatch(11)).not.toContain('Z')
-    expect(new Set(allowedTypesForBatch(12))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+    expect(allowedTypesForBatch(9)).not.toContain('Z')  // Z is last
+    // Z (the last shape) debuts at L12 (idx 11), the level AFTER orientation frees
+    // (idx 10) — the hardest piece never arrives already rotated.
+    expect(allowedTypesForBatch(10)).not.toContain('Z')
+    expect(new Set(allowedTypesForBatch(11))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
   })
 
   it('moves only one difficulty lever per level (no stacked spikes)', () => {
-    // For each level transition, count how many of the three levers changed:
-    // gap count, shape-pool size, and orientation freedom. Never more than one.
-    for (let b = 1; b <= 20; b++) {
+    // For each level transition, count how many of the FOUR levers changed: gap
+    // count, shape-pool size, orientation freedom, and pairing. Never more than one.
+    for (let b = 1; b <= 30; b++) {
       const gapChanged = gapCountForBatch(b) !== gapCountForBatch(b - 1)
       const poolChanged = allowedTypesForBatch(b).length !== allowedTypesForBatch(b - 1).length
       const orientChanged =
         (lockedRotationsForBatch(b) === undefined) !== (lockedRotationsForBatch(b - 1) === undefined)
-      const leversMoved = [gapChanged, poolChanged, orientChanged].filter(Boolean).length
+      const pairChanged = pairsForBatch(b) !== pairsForBatch(b - 1)
+      const leversMoved = [gapChanged, poolChanged, orientChanged, pairChanged].filter(Boolean).length
       expect(leversMoved).toBeLessThanOrEqual(1)
     }
+  })
+
+  it('buildRevealPlan forms the requested distinct-shape pairs, covering every gap once', () => {
+    const types: PieceType[] = ['O', 'I', 'L', 'J', 'T', 'S']  // 6 distinct shapes
+    const plan = buildRevealPlan(types, 3, seededRng(7))
+    const pairs = plan.filter(beat => beat.length === 2)
+    expect(pairs.length).toBe(3)
+    // Each pair is two DIFFERENT shapes (never the same piece twice).
+    pairs.forEach(([a, b]) => expect(types[a]).not.toBe(types[b]))
+    // Every gap appears exactly once across the whole plan.
+    expect(plan.flat().sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('buildRevealPlan returns fewer pairs when the shapes cannot supply them', () => {
+    // Five gaps but only one non-O shape → at most ONE distinct pair is possible.
+    const types: PieceType[] = ['O', 'O', 'O', 'O', 'I']
+    const plan = buildRevealPlan(types, 2, seededRng(3))
+    expect(plan.filter(beat => beat.length === 2).length).toBe(1)
   })
 
   it('the allowed-shape set only ever grows', () => {
@@ -140,13 +189,32 @@ describe('useStaggerStore', () => {
     expect(s.batchIndex).toBe(0)
   })
 
-  it('beginReveal generates the first batch of unfilled gaps', () => {
+  it('beginReveal generates the first batch of unfilled gaps with a single-flash plan', () => {
     useStaggerStore.getState().startRun()
     useStaggerStore.getState().beginReveal()
     const s = useStaggerStore.getState()
     expect(s.phase).toBe('reveal')
     expect(s.gaps.length).toBe(gapCountForBatch(0))
     expect(s.gaps.every(g => !g.filled)).toBe(true)
+    // Batch 0 has no pairs: one gap per beat, every gap covered once.
+    expect(s.revealPlan.length).toBe(flashEventsForBatch(0))
+    expect(s.revealPlan.every(beat => beat.length === 1)).toBe(true)
+    expect(s.revealPlan.flat().sort((a, b) => a - b)).toEqual(s.gaps.map((_, i) => i))
+  })
+
+  it('a paired batch reveals two distinct shapes per pair beat', () => {
+    const st = useStaggerStore.getState()
+    st.startRun()
+    useStaggerStore.setState({ batchIndex: 15 })  // L16: 6 gaps, 3 pairs, 3 beats
+    st.beginReveal()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    expect(gaps.length).toBe(gapCountForBatch(15))
+    expect(revealPlan.length).toBe(flashEventsForBatch(15))
+    const pairs = revealPlan.filter(beat => beat.length === 2)
+    expect(pairs.length).toBe(pairsForBatch(15))
+    // Every pair beat shows two DIFFERENT shapes; every gap appears exactly once.
+    pairs.forEach(([a, b]) => expect(gaps[a].pieceType).not.toBe(gaps[b].pieceType))
+    expect(revealPlan.flat().sort((a, b) => a - b)).toEqual(gaps.map((_, i) => i))
   })
 
   it('a correct pick fills exactly one matching gap and banks accuracy', () => {

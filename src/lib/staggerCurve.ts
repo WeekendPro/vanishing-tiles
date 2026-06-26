@@ -1,10 +1,20 @@
 import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
 
 /**
- * Infinite Stagger's own difficulty + scoring curve. The run is endless, so the
- * curve is a *formula* of the 0-based batch index rather than a finite table
- * (cf. The Classic's DIFFICULTY_TABLE). Early batches are generous — both the
- * gap count and the per-gap reveal hold tighten as the run escalates.
+ * Infinite Stagger's own difficulty + scoring curve, expressed as a hand-authored
+ * rung table (STAGGER_CURVE) indexed by the 0-based batch index, clamped to the
+ * last rung for the endless tail. Difficulty is split across four INDEPENDENT
+ * levers so only ONE ever moves per level (no stacked spikes):
+ *
+ *   1. shape variety   — how many distinct piece types may appear (SHAPE_SCHEDULE)
+ *   2. orientation      — gaps locked to the tray rotation, then freed (ORIENTATION_FREE_FROM)
+ *   3. gap count (N)    — how many gaps to recall (STAGGER_CURVE[i].gaps)
+ *   4. pairing (P)      — how many gaps are revealed TWO-at-a-once in a single
+ *                         flash beat instead of one (STAGGER_CURVE[i].pairs)
+ *
+ * Pairing is a DENSITY lever, not a volume one: a board of N gaps with P pairs
+ * plays in N − P flash beats (fewer, denser beats), so recall load can climb
+ * while the reveal rhythm stays low. Each pair is always two DISTINCT shapes.
  */
 export const STAGGER = {
   MAX_GAPS: 12,        // cap so the 12×12 board stays solvable
@@ -49,7 +59,7 @@ const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
   { from: 4,  type: 'J' },  // L5
   { from: 7,  type: 'T' },  // L8
   { from: 9,  type: 'S' },  // L10
-  { from: 12, type: 'Z' },  // L13
+  { from: 11, type: 'Z' },  // L12 — last shape, the level after orientation frees
 ]
 
 /** From this batch on, gaps may appear in any rotation; before it, every gap is
@@ -71,24 +81,104 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
   return batchIndex < ORIENTATION_FREE_FROM ? DISPLAY_ROTATION : undefined
 }
 
-/** Gap count (memory volume). Held flat at 3 across the whole on-ramp (L1–6) so
- *  early difficulty comes from shape VARIETY, not volume; then it climbs one gap
- *  at a time, never on the same level as a shape intro or the orientation unlock:
+/** The difficulty rungs (one per level), indexed by batch index and clamped to
+ *  the last rung for the endless tail. `gaps` is the recall load (N); `pairs` is
+ *  how many of those gaps reveal two-at-a-once (P). The back half is irregular by
+ *  DESIGN — the gap and pair levers alternate so exactly one moves per level, and
+ *  a pair always needs two gaps (2·P ≤ N) — so it's a table, not a formula.
  *
- *    L1–6   → 3   (on-ramp: variety grows, volume held)
- *    L7–8   → 4
- *    L9–11  → 5   (held an extra level so the L11 orientation unlock lands alone)
- *    L12–13 → 6
- *    L14+   → 7,7,8,8,… +1 every 2 levels, capped at MAX_GAPS (reached ~L24)
- *
- *  The back half rises only via these slow gap bumps — a gentler slope than the
- *  old +1-every-2-from-L1 ramp that hit the cap by L19. */
+ *    L1–6   N3            on-ramp: held flat, variety is the only lever
+ *    L7–8   N4            +gap, then +shape (T)
+ *    L9–12  N5            +gap, +shape (S), orientation unlock, +shape (Z) — N held
+ *    L13–14 N5  P1→P2     pairing switches on with NO extra recall load (density only)
+ *    L15–16 N6  P2→P3     L16 is fully paired: 3 pairs, 0 singles, 3 beats
+ *    L17–24 N7→12 P3→P5   gap and pair levers alternate up to the cap
+ *    L25+   N12 P6        the 12-gap board fully paired into 6 dense beats */
+interface StaggerRung { gaps: number; pairs: number }
+const STAGGER_CURVE: StaggerRung[] = [
+  { gaps: 3,  pairs: 0 }, // L1
+  { gaps: 3,  pairs: 0 }, // L2
+  { gaps: 3,  pairs: 0 }, // L3
+  { gaps: 3,  pairs: 0 }, // L4
+  { gaps: 3,  pairs: 0 }, // L5
+  { gaps: 3,  pairs: 0 }, // L6
+  { gaps: 4,  pairs: 0 }, // L7
+  { gaps: 4,  pairs: 0 }, // L8
+  { gaps: 5,  pairs: 0 }, // L9
+  { gaps: 5,  pairs: 0 }, // L10
+  { gaps: 5,  pairs: 0 }, // L11
+  { gaps: 5,  pairs: 0 }, // L12
+  { gaps: 5,  pairs: 1 }, // L13 — first pair (recall load unchanged)
+  { gaps: 5,  pairs: 2 }, // L14
+  { gaps: 6,  pairs: 2 }, // L15
+  { gaps: 6,  pairs: 3 }, // L16 — fully paired: 3 pairs / 3 beats
+  { gaps: 7,  pairs: 3 }, // L17
+  { gaps: 8,  pairs: 3 }, // L18
+  { gaps: 8,  pairs: 4 }, // L19
+  { gaps: 9,  pairs: 4 }, // L20
+  { gaps: 10, pairs: 4 }, // L21
+  { gaps: 10, pairs: 5 }, // L22
+  { gaps: 11, pairs: 5 }, // L23
+  { gaps: 12, pairs: 5 }, // L24
+  { gaps: 12, pairs: 6 }, // L25 — 12 gaps in 6 dense beats (terminal rung)
+]
+
+function rung(batchIndex: number): StaggerRung {
+  return STAGGER_CURVE[Math.min(Math.max(batchIndex, 0), STAGGER_CURVE.length - 1)]
+}
+
+/** Gap count (memory volume / recall load) for a batch, capped at MAX_GAPS. */
 export function gapCountForBatch(batchIndex: number): number {
-  if (batchIndex <= 5) return 3   // L1–6
-  if (batchIndex <= 7) return 4   // L7–8
-  if (batchIndex <= 10) return 5  // L9–11
-  if (batchIndex <= 12) return 6  // L12–13
-  return Math.min(STAGGER.MAX_GAPS, 7 + Math.floor((batchIndex - 13) / 2))
+  return Math.min(STAGGER.MAX_GAPS, rung(batchIndex).gaps)
+}
+
+/** How many of the batch's gaps are revealed as PAIRS (two distinct shapes on a
+ *  single flash beat). Clamped to ⌊N/2⌋ so we never ask for more pairs than the
+ *  gap count can supply. */
+export function pairsForBatch(batchIndex: number): number {
+  return Math.min(rung(batchIndex).pairs, Math.floor(gapCountForBatch(batchIndex) / 2))
+}
+
+/** Number of flash BEATS in a batch's reveal: each pair collapses two gaps into
+ *  one beat, so beats = N − P. This (not the gap count) sets the reveal rhythm. */
+export function flashEventsForBatch(batchIndex: number): number {
+  return gapCountForBatch(batchIndex) - pairsForBatch(batchIndex)
+}
+
+// Fisher–Yates shuffle of `a` IN PLACE, driven by `rng`. Returns `a`.
+function shuffleInPlace<T>(a: T[], rng: () => number): T[] {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** Group a batch's gaps into reveal BEATS. `pairCount` beats bloom two gaps of
+ *  DISTINCT shapes at once; the rest bloom one. Returns beats as arrays of gap
+ *  indices (length 1 or 2) in shuffled order. Greedy distinct-shape pairing —
+ *  when the drawn shapes can't supply `pairCount` distinct pairs it returns as
+ *  many as it can (makeBatch re-rolls the board to hit the target). */
+export function buildRevealPlan(
+  types: PieceType[],
+  pairCount: number,
+  rng: () => number = Math.random,
+): number[][] {
+  const order = shuffleInPlace(types.map((_, i) => i), rng)
+  const used = new Set<number>()
+  const pairs: number[][] = []
+  for (const i of order) {
+    if (pairs.length >= pairCount) break
+    if (used.has(i)) continue
+    // Pair `i` with the first unused gap of a DIFFERENT shape (no (I,I) pairs).
+    const j = order.find(k => k !== i && !used.has(k) && types[k] !== types[i])
+    if (j === undefined) continue
+    used.add(i); used.add(j)
+    pairs.push([i, j])
+  }
+  const singles = order.filter(i => !used.has(i)).map(i => [i])
+  // Mix pairs and singles so a pair beat isn't always first.
+  return shuffleInPlace([...pairs, ...singles], rng)
 }
 
 /** Time between consecutive piece flashes during reveal — CONSTANT for every
@@ -97,11 +187,12 @@ export function revealStepMs(): number {
   return STAGGER.REVEAL_STEP_MS
 }
 
-/** Total reveal (memorize) time for a batch. Pieces overlap, so it's the last
- *  piece's flash plus one full bloom — grows only with the piece COUNT, never
- *  by speeding individual pieces up. */
+/** Total reveal (memorize) time for a batch. Beats overlap, so it's the last
+ *  beat's flash plus one full bloom — grows only with the number of flash BEATS
+ *  (N − P), never by speeding individual pieces up. Pairing therefore SHORTENS
+ *  the reveal even as recall load climbs (two gaps share one beat). */
 export function batchRevealMs(batchIndex: number): number {
-  return (gapCountForBatch(batchIndex) - 1) * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS
+  return (flashEventsForBatch(batchIndex) - 1) * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS
 }
 
 /** Select clock grows with the gap count so picking is never the bottleneck. */
