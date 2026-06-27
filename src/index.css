@@ -150,42 +150,56 @@
    void — a light that burns bright and dies into nothingness, leaving no hole.
    Applied per cell; each cell of a tetromino sets its OWN duration + delay
    inline so the shape fades away in a WAVE rather than in lockstep. */
-@keyframes vtBloom {
+@keyframes vtBloomHold {
   0% {
     background: #0c0c14;
     box-shadow: none;
     transform: scale(1);
   }
-  4% {
+  8% {
     background: var(--bloom-color, #ff2d9b);
     box-shadow: 0 0 14px var(--bloom-color, #ff2d9b), 0 0 30px var(--bloom-color, #ff2d9b);
     transform: scale(1.13);
   }
-  52% {
+  100% {
     background: var(--bloom-color, #ff2d9b);
     box-shadow: 0 0 9px var(--bloom-color, #ff2d9b);
     transform: scale(1);
   }
-  70% {
+}
+@keyframes vtBloomDecay {
+  0% {
+    background: var(--bloom-color, #ff2d9b);
+    box-shadow: 0 0 9px var(--bloom-color, #ff2d9b);
+  }
+  40% {
     background: color-mix(in srgb, var(--bloom-color, #ff2d9b) 62%, #0c0c14);
     box-shadow: 0 0 8px color-mix(in srgb, var(--bloom-color, #ff2d9b) 50%, transparent);
   }
-  88% {
+  75% {
     background: color-mix(in srgb, var(--bloom-color, #ff2d9b) 22%, #0c0c14);
     box-shadow: 0 0 3px color-mix(in srgb, var(--bloom-color, #ff2d9b) 18%, transparent);
   }
   100% {
     background: #0c0c14;
     box-shadow: none;
-    transform: scale(1);
   }
 }
-/* Flash to ~4% (instant, all cells together), HOLD bright to ~52% (~1s), then
-   decay to void over the rest (~1s). Duration is overridden per cell inline (the
-   wave: STAGGER.REVEAL_BLOOM_MS + a per-cell offset); this is the base/fallback.
-   The flood color is driven by --bloom-color (set per gap to its piece color so
-   the reveal carries shape AND color); it falls back to the signature magenta. */
-.vt-bloom { animation: vtBloom 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
+/* Flash + HOLD bright (vtBloomHold), then a separate chained decay-to-void
+   (vtBloomDecay) — split into two animations so the sandbox can tune "Visible
+   duration" (hold) and "Decay duration" independently. Each cell sets its own
+   decay duration + start delay inline (the wave: STAGGER.REVEAL_WAVE_MS spreads
+   the decay only, so cells end at staggered times); these are the base/fallback
+   durations. The flood color is driven by --bloom-color (set per gap to its piece
+   color so the reveal carries shape AND color); it falls back to the signature
+   magenta. */
+.vt-bloom {
+  animation-name: vtBloomHold, vtBloomDecay;
+  animation-duration: 1082ms, 998ms;
+  animation-delay: 0ms, 1082ms;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.2, 1), cubic-bezier(0.3, 0, 0.1, 1);
+  animation-fill-mode: forwards, forwards;
+}
 
 /* HARD-mode "impasto" reveal (Severance glossy-black paint): instead of a bright
    color flood, a gap paints in as a heavy graphite gloss — deep near-black with
@@ -202,7 +216,7 @@
    a linear, identical stop positions) and only interpolates its colours: void →
    impasto → void. The element stays fully opaque throughout, landing exactly on the
    resting cell colour so the unmount is seamless. */
-@keyframes vtPaint {
+@keyframes vtPaintHold {
   0% {
     background:
       radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0), transparent 55%),
@@ -212,7 +226,7 @@
     filter: brightness(1);
     transform: scale(1);
   }
-  4% {
+  8% {
     background:
       radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
       radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
@@ -223,7 +237,20 @@
     filter: brightness(1.9);
     transform: scale(1.13);
   }
-  52% {
+  100% {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
+      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
+      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+@keyframes vtPaintDecay {
+  0% {
     background:
       radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
       radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
@@ -244,7 +271,13 @@
     transform: scale(1);
   }
 }
-.vt-paint { animation: vtPaint 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
+.vt-paint {
+  animation-name: vtPaintHold, vtPaintDecay;
+  animation-duration: 1082ms, 998ms;
+  animation-delay: 0ms, 1082ms;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.2, 1), cubic-bezier(0.3, 0, 0.1, 1);
+  animation-fill-mode: forwards, forwards;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .vt-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }

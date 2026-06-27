@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
+  },
   resolve: {
     alias: {
       '@shared': fileURLToPath(new URL('./supabase/functions/_shared', import.meta.url)),

@@ -407,3 +407,5 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   exit: () => set({ ...IDLE }),
 }))
+
+if (import.meta.env.DEV) (window as any).__staggerStore = useStaggerStore

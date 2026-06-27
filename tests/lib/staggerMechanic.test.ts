@@ -95,6 +95,7 @@ describe('resolveTiming', () => {
     expect(resolveTiming(NO_OVERRIDES)).toEqual({
       stepMs: STAGGER.REVEAL_STEP_MS,
       bloomMs: STAGGER.REVEAL_BLOOM_MS,
+      decayMs: STAGGER.REVEAL_DECAY_MS,
       waveMs: STAGGER.REVEAL_WAVE_MS,
       twinOffsetMs: STAGGER.REVEAL_TWIN_OFFSET_MS,
     })
@@ -104,6 +105,7 @@ describe('resolveTiming', () => {
     expect(resolveTiming(ov({ revealStepMs: 500, twinOffsetMs: 0 }))).toEqual({
       stepMs: 500,
       bloomMs: STAGGER.REVEAL_BLOOM_MS,
+      decayMs: STAGGER.REVEAL_DECAY_MS,
       waveMs: STAGGER.REVEAL_WAVE_MS,
       twinOffsetMs: 0,
     })

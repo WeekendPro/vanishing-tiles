@@ -9,7 +9,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { resolveTiming, NO_OVERRIDES } from '../lib/staggerMechanic'
-import { STAGGER_LEVELS, levelForScore } from '../lib/staggerLevels'
+import { STAGGER_LEVELS } from '../lib/staggerLevels'
 import { isSandboxEnv } from '../lib/env'
 import { PieceShape } from './PieceShape'
 import { StaggerSandboxPanel } from './StaggerSandboxPanel'
@@ -57,14 +57,14 @@ const REVEAL_MAGENTA = '#FF2D9B'
  *  CONCURRENTLY with later ones (the overlapping cascade). `color` floods the
  *  whole bloom (EASY/MEDIUM); `paint` swaps the bright color flood for HARD's
  *  self-colored graphite "impasto" surface (see .vt-paint), no color crutch. */
-interface Bloom { id: number; color: string; paint: boolean; cells: { key: string; durMs: number }[] }
+interface Bloom { id: number; color: string; paint: boolean; cells: { key: string; holdMs: number; decayMs: number }[] }
 
 function bloomForGap(
-  id: number, gap: StaggerGap, color: string, paint: boolean, bloomMs: number, waveMs: number,
+  id: number, gap: StaggerGap, color: string, paint: boolean, bloomMs: number, decayMs: number, waveMs: number,
 ): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
-    .map(([r, c], i) => ({ key: `${r},${c}`, durMs: bloomMs + i * waveMs }))
+    .map(([r, c], i) => ({ key: `${r},${c}`, holdMs: bloomMs, decayMs: decayMs + i * waveMs }))
   return { id, color, paint, cells }
 }
 
@@ -150,7 +150,7 @@ function StaggerBoard({
   gaps, bloomByCell, invertedByCell,
 }: {
   gaps: StaggerGap[]
-  bloomByCell: Map<string, { id: number; durMs: number; color: string; paint: boolean }>
+  bloomByCell: Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>
   invertedByCell: Map<string, { id: number; sub: InvSub }>
 }) {
   const colorByCell = new Map<string, PieceType>()
@@ -206,7 +206,8 @@ function StaggerBoard({
               key={`${i}-bloom-${bloom.id}`}
               className={`w-7 h-7 rounded-sm ${bloom.paint ? 'vt-paint' : 'vt-bloom'}`}
               style={{
-                animationDuration: `${bloom.durMs}ms`,
+                animationDuration: `${bloom.holdMs}ms, ${bloom.decayMs}ms`,
+                animationDelay: `0ms, ${bloom.holdMs}ms`,
                 ...(bloom.paint ? {} : { ['--bloom-color']: bloom.color }),
               } as CSSProperties}
             />
@@ -296,7 +297,7 @@ export function StaggerScreen() {
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
     levelIndex, sandboxLevel, sandboxOverrides, completedLevelIndex,
     startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
-    pause, resume, exit, proceedAfterLevelComplete,
+    pause, resume, exit, proceedAfterLevelComplete, rerollBatch,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
@@ -306,6 +307,7 @@ export function StaggerScreen() {
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
+    rerollBatch: s.rerollBatch,
   })))
   const goHome = useNavStore(s => s.goHome)
   const difficulty = useSettingsStore(s => s.settings.difficulty)
@@ -322,11 +324,6 @@ export function StaggerScreen() {
   const timing = resolveTiming(sandboxed ? sandboxOverrides : NO_OVERRIDES)
   const timingRef = useRef(timing)
   timingRef.current = timing
-  // "Next" must match the level the store actually adopts on proceed, which is
-  // levelForScore(score) — this can SKIP levels when a streak crosses two
-  // thresholds in one batch, so deriving it from completedLevelIndex + 1 would
-  // mislabel the jump. Gated to the celebration phase.
-  const nextLevel = phase === 'levelComplete' ? levelForScore(score) : undefined
 
   const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
 
@@ -346,6 +343,14 @@ export function StaggerScreen() {
     }
   }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
+  const [sandboxPanelOpen, setSandboxPanelOpen] = useState(true)
+  // Which phase(s) the sandbox plays through: 'both' (normal flow), 'memorize'
+  // (loop the reveal animation forever, never enter selecting — for tuning reveal
+  // timing in isolation), or 'recall' (skip straight to selecting on every batch —
+  // for tuning select-clock/scoring without sitting through the reveal). A
+  // viewing preference, not a puzzle parameter, so it's local UI state rather
+  // than a persisted/preset-able SandboxOverrides field.
+  const [sandboxViewMode, setSandboxViewMode] = useState<'both' | 'memorize' | 'recall'>('both')
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
   const [barPct, setBarPct] = useState(0)
@@ -438,6 +443,10 @@ export function StaggerScreen() {
   // no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
+    // Sandbox "Recall only" view: skip the reveal animation entirely and jump
+    // straight to selecting on every batch (the puzzle is still generated as
+    // normal — only the timed playback is bypassed).
+    if (sandboxed && sandboxViewMode === 'recall') { beginSelecting(); return }
     let cancelled = false
     const timers: number[] = []
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
@@ -505,9 +514,12 @@ export function StaggerScreen() {
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
-        // Let the final beat finish its decay before recall lights-out.
-        const { stepMs, bloomMs } = timingRef.current
-        at(Math.max(0, bloomMs - stepMs), beginSelecting)
+        // Let the final beat finish its decay before recall lights-out. Sandbox
+        // "Memorize only" view: never hand off to selecting — reroll a fresh
+        // batch and loop the reveal forever instead.
+        const { stepMs, bloomMs, decayMs } = timingRef.current
+        const onDone = sandboxed && sandboxViewMode === 'memorize' ? rerollBatch : beginSelecting
+        at(Math.max(0, bloomMs + decayMs - stepMs), onDone)
         return
       }
       setBarPct((1 - (idx + 1) / n) * 100)
@@ -525,14 +537,14 @@ export function StaggerScreen() {
       // hair so a pair reads as a "da-dum" twin rather than two coincidences; they
       // share flood color + decay wave so they still read as a single unit. Solo
       // beats (length 1) get no offset. Timing is read live from timingRef.
-      const { stepMs, bloomMs, waveMs, twinOffsetMs } = timingRef.current
-      const lifetime = bloomMs + 3 * waveMs + 80
+      const { stepMs, bloomMs, decayMs, waveMs, twinOffsetMs } = timingRef.current
+      const lifetime = bloomMs + decayMs + 3 * waveMs + 80
       const beatIds: number[] = []
       beat.forEach((gi, k) => {
         const myId = ++id
         beatIds.push(myId)
         at(k * twinOffsetMs, () => {
-          if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, waveMs)])
+          if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, decayMs, waveMs)])
         })
       })
       // Clear the beat's blooms once the LAST (latest-onset) one has fully decayed.
@@ -544,7 +556,7 @@ export function StaggerScreen() {
     // A short breath before the first beat (also paces continuous next batches).
     at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty, sandboxed, sandboxViewMode, rerollBatch])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
@@ -664,10 +676,10 @@ export function StaggerScreen() {
 
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
-  const bloomByCell = new Map<string, { id: number; durMs: number; color: string; paint: boolean }>()
+  const bloomByCell = new Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>()
   const invertedByCell = new Map<string, { id: number; sub: InvSub }>()
   if (phase === 'reveal') {
-    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, durMs: cell.durMs, color: b.color, paint: b.paint })
+    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color, paint: b.paint })
     for (const b of invertedBlooms) for (const [key, sub] of b.sub) invertedByCell.set(key, { id: b.id, sub })
   }
   const phaseLabel =
@@ -701,11 +713,26 @@ export function StaggerScreen() {
     difficulty === 'hard' ? 'text-vt-red text-glow-vt-red' :
     'text-vt-amber text-glow-vt-amber'
 
+  const panelVisible = sandboxed && isSandboxEnv()
+
   return (
-    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
-      {/* Dev/preview-only live tuning workbench — fixed to the right edge, does not
-          constrain the centered game column. Double-gated: sandbox run AND dev env. */}
-      {sandboxed && isSandboxEnv() && <StaggerSandboxPanel />}
+    <div
+      className={`min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none
+        ${panelVisible && sandboxPanelOpen ? 'sm:pr-96' : ''}`}
+    >
+      {/* Dev/preview-only live tuning workbench — fixed to the right edge. Its
+          width is mirrored as padding-right on this centered column (above the
+          mobile breakpoint only) so the game re-centers in the REMAINING width
+          while the panel is open, and returns to full-viewport centering when
+          it's closed or on mobile. Double-gated: sandbox run AND dev env. */}
+      {panelVisible && (
+        <StaggerSandboxPanel
+          open={sandboxPanelOpen}
+          onOpenChange={setSandboxPanelOpen}
+          viewMode={sandboxViewMode}
+          onViewModeChange={setSandboxViewMode}
+        />
+      )}
 
       {/* Sandbox banner — the calibration sandbox is unlosable (store-enforced,
           this just reflects it): no gameOver is reachable, so the only way out
@@ -887,27 +914,25 @@ export function StaggerScreen() {
           </div>
         )}
 
-        {/* Level-complete celebration — e.g. "SOLOS COMPLETE", the running score,
-            and the next level + its multiplier. CTA proceeds into that level's
-            intro countdown (proceedAfterLevelComplete → phase 'countdown'). */}
+        {/* Level-complete celebration — overlays the board only (not the HUD above
+            it, so score/lives stay visible), with a confetti burst. Tap anywhere
+            to proceed into the next level's intro countdown
+            (proceedAfterLevelComplete → phase 'countdown'). */}
         {phase === 'levelComplete' && completedLevelIndex != null && (
-          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-vt-void px-6 text-center">
+          <button
+            type="button"
+            onClick={() => proceedAfterLevelComplete()}
+            className="absolute inset-0 z-40 flex flex-col items-center justify-center
+              rounded-xl bg-vt-void/85 backdrop-blur-sm px-6 text-center pointer-events-auto cursor-pointer"
+          >
             <ScanlineOverlay />
+            <ConfettiBurst />
             <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-lime text-glow-vt-lime mb-2">Level cleared</div>
             <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.1em] mb-5">
-              {STAGGER_LEVELS[completedLevelIndex].name} COMPLETE
+              {STAGGER_LEVELS[completedLevelIndex].name} COMPLETED
             </div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
-            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-6 tabular-nums">{score}</div>
-            {nextLevel && (
-              <div className="font-grotesk text-sm tracking-[0.08em] uppercase text-vt-text mb-8">
-                Next: <span className="text-vt-magenta text-glow-vt-magenta">{nextLevel.name}</span> · ×{nextLevel.multiplier}
-              </div>
-            )}
-            <div className="w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => proceedAfterLevelComplete()}>Next →</NeonButton>
-            </div>
-          </div>
+            <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-faint vt-fade-away">Tap to continue</div>
+          </button>
         )}
 
         {/* Win celebration — crossing the final (crawlers) threshold at 500000.
@@ -990,6 +1015,41 @@ export function StaggerScreen() {
           +{liftFlyer.value}
         </motion.div>
       )}
+    </div>
+  )
+}
+
+// The board (and this overlay) is a fixed square footprint: CELL_PITCH * 12
+// cols/rows, minus the one gap that doesn't exist past the last cell, plus
+// the padding on both sides. Confetti uses this to fall in PIXELS (matching
+// the proven streakBursts/lifeBursts pattern below) rather than percentages —
+// Framer/CSS resolve a transform percentage against the ELEMENT'S OWN box,
+// not the container, so at 6x10px a "fall 110%" only ever moved ~11px and
+// the piece just sat near the top, fading in and out without visibly falling.
+const CONFETTI_BOARD_PX = CELL_PITCH * 12 - 2 + 2 * BOARD_PAD
+const CONFETTI_COLORS = ['#22d3ee', '#facc15', '#ec4899', '#84cc16', '#f97316']
+const CONFETTI_PIECES = Array.from({ length: 18 }, (_, i) => ({
+  left: 10 + (i / 17) * (CONFETTI_BOARD_PX - 20),
+  delay: (i % 6) * 0.05,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  rotate: i % 2 === 0 ? 1 : -1,
+}))
+
+// One-shot confetti burst for the level-complete overlay: pieces fall from
+// above the board and fade out, no looping/repeat (it plays once per mount).
+function ConfettiBurst() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {CONFETTI_PIECES.map((p, i) => (
+        <motion.span
+          key={i}
+          className="absolute top-0 rounded-sm"
+          style={{ width: 6, height: 10, left: p.left, background: p.color }}
+          initial={{ y: -24, opacity: 0, rotate: 0 }}
+          animate={{ y: CONFETTI_BOARD_PX + 30, opacity: [0, 1, 1, 0], rotate: p.rotate * 360 }}
+          transition={{ duration: 1.6, delay: p.delay, ease: 'easeIn', times: [0, 0.1, 0.7, 1] }}
+        />
+      ))}
     </div>
   )
 }

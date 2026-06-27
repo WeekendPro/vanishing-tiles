@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/shallow'
 import { useStaggerStore } from '../store/staggerStore'
 import { useStaggerSandboxPresetStore } from '../store/staggerSandboxPresetStore'
 import { STAGGER, gapCountForBatch, selectDurationForBatch } from '../lib/staggerCurve'
-import { revealCountsForMechanic, resolveGapCount, NO_OVERRIDES, type SandboxOverrides } from '../lib/staggerMechanic'
+import { NO_OVERRIDES, type SandboxOverrides } from '../lib/staggerMechanic'
 import { levelByKey } from '../lib/staggerLevels'
 
 const DEFAULT_PRESET = 'Default'
@@ -75,7 +75,20 @@ function Knob({
   )
 }
 
-export function StaggerSandboxPanel() {
+/** Panel width — kept in lockstep with the game board's own `max-w-sm` (384px)
+ *  so the control panel never reads as a mismatched sidebar width. */
+export const SANDBOX_PANEL_WIDTH_PX = 384
+
+export type SandboxViewMode = 'both' | 'memorize' | 'recall'
+
+export function StaggerSandboxPanel({
+  open, onOpenChange, viewMode, onViewModeChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  viewMode: SandboxViewMode
+  onViewModeChange: (mode: SandboxViewMode) => void
+}) {
   const { batchIndex, sandboxLevel, sandboxOverrides, setSandboxOverride, setSandboxOverrides, rerollBatch } = useStaggerStore(
     useShallow(s => ({
       batchIndex: s.batchIndex,
@@ -90,7 +103,6 @@ export function StaggerSandboxPanel() {
   const { savePreset, deletePreset } = useStaggerSandboxPresetStore(
     useShallow(s => ({ savePreset: s.savePreset, deletePreset: s.deletePreset })),
   )
-  const [open, setOpen] = useState(true)
   const [selectedPreset, setSelectedPreset] = useState(DEFAULT_PRESET)
   const [nameDraft, setNameDraft] = useState('')
 
@@ -131,19 +143,28 @@ export function StaggerSandboxPanel() {
     setSelectedPreset(DEFAULT_PRESET)
   }
 
-  // Defaults track the locked level's mechanic + the curve at the current batch;
-  // pairs cap follows the EFFECTIVE gap count (override or curve).
-  const effGapCount = resolveGapCount(batchIndex, sandboxOverrides)
-  const defPairs = revealCountsForMechanic(level.mechanic.kind, effGapCount).pairs
+  // A loaded preset is "dirty" once the live knobs drift from its saved
+  // snapshot — that's when the save-changes icon appears, offering an
+  // upsert back onto the SAME name (distinct from the name-a-new-preset Save
+  // below, which always creates/renames).
+  const activePreset = selectedPreset !== DEFAULT_PRESET ? presets.find(p => p.name === selectedPreset) : undefined
+  const dirty = activePreset != null && (Object.keys(NO_OVERRIDES) as NumericKey[])
+    .some(k => (activePreset.overrides[k] ?? null) !== (sandboxOverrides[k] ?? null))
 
+  const onSaveChanges = () => {
+    if (!activePreset) return
+    savePreset(sandboxLevel, activePreset.name, sandboxOverrides)
+  }
+
+  // Gap count default tracks the curve at the current batch.
   const structure: KnobDef[] = [
-    { key: 'pairs', label: 'Pairs / board', min: 0, max: Math.max(1, Math.floor(effGapCount / 2)), step: 1, def: defPairs, fmt: v => `${v}` },
     { key: 'gapCount', label: 'Gap count', min: 2, max: STAGGER.MAX_GAPS, step: 1, def: gapCountForBatch(batchIndex), fmt: v => `${v}` },
     { key: 'minDistance', label: 'Min gap spacing', min: 0, max: 2, step: 1, def: 0, fmt: v => v === 0 ? 'touching' : `${v} cell${v > 1 ? 's' : ''}` },
   ]
   const timing: KnobDef[] = [
     { key: 'revealStepMs', label: 'Flash stagger', min: 200, max: 2200, step: 20, def: STAGGER.REVEAL_STEP_MS, fmt: v => `${v}ms` },
     { key: 'revealBloomMs', label: 'Visible duration', min: 400, max: 4000, step: 40, def: STAGGER.REVEAL_BLOOM_MS, fmt: v => `${v}ms` },
+    { key: 'revealDecayMs', label: 'Decay duration', min: 100, max: 3000, step: 20, def: STAGGER.REVEAL_DECAY_MS, fmt: v => `${v}ms` },
     { key: 'revealWaveMs', label: 'Decay wave', min: 0, max: 600, step: 10, def: STAGGER.REVEAL_WAVE_MS, fmt: v => `${v}ms` },
     { key: 'twinOffsetMs', label: 'Twin offset', min: 0, max: 400, step: 5, def: STAGGER.REVEAL_TWIN_OFFSET_MS, fmt: v => `${v}ms` },
   ]
@@ -172,7 +193,7 @@ export function StaggerSandboxPanel() {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => onOpenChange(true)}
         className="fixed right-0 top-1/2 -translate-y-1/2 z-40 rounded-l-md border border-r-0 border-vt-amber/40 bg-vt-amber/10 px-1.5 py-3
           font-grotesk text-[10px] uppercase tracking-[0.18em] text-vt-amber text-glow-vt-amber hover:bg-vt-amber/20 transition
           [writing-mode:vertical-rl]"
@@ -183,7 +204,7 @@ export function StaggerSandboxPanel() {
   }
 
   return (
-    <div className="fixed right-0 top-0 z-40 h-screen w-72 overflow-y-auto border-l border-vt-amber/25 bg-vt-panel/95 backdrop-blur-sm p-4
+    <div className="fixed right-0 top-0 z-40 h-screen w-96 overflow-y-auto border-l border-vt-amber/25 bg-vt-panel/95 backdrop-blur-sm p-4
       shadow-[inset_1px_0_0_rgba(255,255,255,0.04)]">
       <div className="flex items-center justify-between mb-3">
         <div>
@@ -191,12 +212,32 @@ export function StaggerSandboxPanel() {
           <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan leading-none mt-0.5">{level.name}</div>
         </div>
         <button
-          onClick={() => setOpen(false)}
+          onClick={() => onOpenChange(false)}
           aria-label="Collapse panel"
           className="font-grotesk text-[11px] uppercase tracking-[0.12em] text-vt-dim hover:text-vt-amber transition"
         >
           ▸
         </button>
+      </div>
+
+      {/* View mode — which phase(s) to play through. "Memorize only" loops the
+          reveal forever (never hands off to selecting); "Recall only" skips the
+          reveal animation and jumps straight to selecting on every batch; "Both"
+          is the normal flow. A viewing preference, not a tuning knob — not
+          included in presets. */}
+      <div className="mb-3 pb-3 border-b border-white/5">
+        <div className="font-grotesk text-[9px] uppercase tracking-[0.18em] text-vt-dim mb-1.5">View</div>
+        <select
+          aria-label="Sandbox view mode"
+          value={viewMode}
+          onChange={e => onViewModeChange(e.target.value as SandboxViewMode)}
+          className="w-full rounded-md border border-vt-cyan/30 bg-vt-raised px-2 py-1.5 font-grotesk text-[11px] text-vt-cyan
+            focus:border-vt-cyan outline-none cursor-pointer"
+        >
+          <option value="both">Both phases</option>
+          <option value="memorize">Memorize only</option>
+          <option value="recall">Recall only</option>
+        </select>
       </div>
 
       {/* Presets — per-level named snapshots of the overrides. "Default" = the
@@ -216,6 +257,21 @@ export function StaggerSandboxPanel() {
             <option value={DEFAULT_PRESET}>{DEFAULT_PRESET}</option>
             {presets.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
           </select>
+          {dirty && (
+            <button
+              onClick={onSaveChanges}
+              aria-label="Save changes to this preset"
+              title="Save changes"
+              className="rounded-md border border-vt-amber/50 bg-vt-amber/10 px-2.5 text-vt-amber text-glow-vt-amber
+                hover:bg-vt-amber/20 transition animate-pulse"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+                <path d="M2 2h9l3 3v9H2V2z" />
+                <path d="M5 2v4h6V2" />
+                <path d="M4 9h8v5H4z" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={onDelete}
             disabled={selectedPreset === DEFAULT_PRESET}

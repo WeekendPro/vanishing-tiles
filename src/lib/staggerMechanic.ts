@@ -34,6 +34,7 @@ export interface SandboxOverrides {
   minDistance: number | null
   revealStepMs: number | null
   revealBloomMs: number | null
+  revealDecayMs: number | null
   revealWaveMs: number | null
   twinOffsetMs: number | null
   multiplier: number | null
@@ -47,6 +48,7 @@ export const NO_OVERRIDES: SandboxOverrides = {
   minDistance: null,
   revealStepMs: null,
   revealBloomMs: null,
+  revealDecayMs: null,
   revealWaveMs: null,
   twinOffsetMs: null,
   multiplier: null,
@@ -104,6 +106,7 @@ export function resolveRevealCounts(level: StaggerLevel, gapCount: number, o: Sa
 export interface ResolvedTiming {
   stepMs: number
   bloomMs: number
+  decayMs: number
   waveMs: number
   twinOffsetMs: number
 }
@@ -113,6 +116,7 @@ export function resolveTiming(o: SandboxOverrides): ResolvedTiming {
   return {
     stepMs: o.revealStepMs ?? STAGGER.REVEAL_STEP_MS,
     bloomMs: o.revealBloomMs ?? STAGGER.REVEAL_BLOOM_MS,
+    decayMs: o.revealDecayMs ?? STAGGER.REVEAL_DECAY_MS,
     waveMs: o.revealWaveMs ?? STAGGER.REVEAL_WAVE_MS,
     twinOffsetMs: o.twinOffsetMs ?? STAGGER.REVEAL_TWIN_OFFSET_MS,
   }

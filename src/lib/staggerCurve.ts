@@ -52,9 +52,10 @@ export const STAGGER = {
   // Each piece: flash all cells at once → hold bright → decay to nothing in a
   // per-cell wave. The bloom keyframe (vtBloom) encodes the flash/hold/decay
   // split; these drive the JS pacing and the wave spread.
-  REVEAL_BLOOM_MS: 2080, // total visible time for one piece (flash + ~1s hold + ~1s decay)
+  REVEAL_BLOOM_MS: 1082, // flash + HOLD bright time for one piece (the "visible" phase, before it starts decaying)
+  REVEAL_DECAY_MS: 998,  // decay-to-void time for one piece, independent of the hold above
   REVEAL_STEP_MS: 1120,  // time between consecutive piece flashes (overlapping: next flashes as prev starts to decay)
-  REVEAL_WAVE_MS: 220,   // per-cell decay wave spread (cells end at staggered times)
+  REVEAL_WAVE_MS: 220,   // per-cell DECAY wave spread (only the decay tail stretches per cell, so cells end at staggered times)
   REVEAL_TWIN_OFFSET_MS: 70, // intra-beat onset offset between the gaps sharing ONE beat (a pair/triple):
                              // 0 = perfectly simultaneous; a small offset reads as one coupled "da-dum" pulse
   SELECT_BASE: 6000,   // ms base select clock
