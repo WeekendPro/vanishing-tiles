@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Training HUD v2: flat bar + error count</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --grid:#1C1C28; --edge:#3A3E4F;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --lime:#B6FF3C; --cyan:#28F0FF; --magenta:#FF2D9B; --red:#FF3B47;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:680px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:18px 0 4px; font-weight:600}
+  .caption:first-child{margin-top:0}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:8px 4px 0}
+  .statelabel{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin:0 0 5px 4px}
+
+  .frame{
+    position:relative; width:320px; border-radius:20px 20px 0 0;
+    background:var(--void); border:1px solid #1a1a26; border-bottom:0;
+    box-shadow:0 0 0 2px #0b0b14;
+    overflow:hidden; padding:16px 18px 0;
+    margin-bottom:14px;
+  }
+  .frame::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+  .prompt{text-align:center; font-size:10px; letter-spacing:.22em; text-transform:uppercase;
+          color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.5); margin:10px 0}
+  .boardtop{
+    height:74px; border-radius:12px 12px 0 0; background:#04040a;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; padding:10px 10px 0;
+  }
+  .boardtop i{aspect-ratio:1; border-radius:2px; background:#0d0d15}
+
+  .label{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .num{font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+  .lime{color:var(--lime); text-shadow:0 0 6px #B6FF3C66, 0 0 22px rgba(182,255,60,.45)}
+  .limedim{color:rgba(182,255,60,.55)}
+  .cyan{color:var(--cyan); text-shadow:0 0 6px #28F0FF66, 0 0 22px rgba(40,240,255,.45)}
+  .reddim{color:rgba(255,59,71,.75)}
+
+  /* Flat bar: EVERY value is 20px — streak no longer towers over speed. */
+  .hud{display:flex; align-items:flex-end; justify-content:space-between}
+  .hud .val{font-size:20px}
+  .hud .speed{text-align:right}
+
+  /* H1a/H1b cluster: streak + a small stacked key-value pair riding right of it */
+  .cluster{display:flex; align-items:flex-end; gap:10px}
+  .kvstack{display:flex; flex-direction:column; gap:2px; padding-bottom:1px}
+  .kv{display:flex; align-items:baseline; gap:5px; font-size:10px; font-weight:600; line-height:1.1}
+  .kv .label{font-size:8px; letter-spacing:.14em; color:var(--faint)}
+  .kv .v{font-variant-numeric:tabular-nums}
+
+  /* H1c: flat four-across */
+  .four{display:flex; align-items:flex-end; justify-content:space-between}
+  .four .stat{display:flex; flex-direction:column; gap:3px}
+  .four .stat.r{text-align:right; align-items:flex-end}
+  .four .val{font-size:18px}
+
+  /* H3 ratio */
+  .ratio{display:flex; align-items:baseline; gap:4px}
+  .ratio .den{font-size:12px; font-weight:600}
+</style>
+</head>
+<body>
+<h1>Training HUD v2 — flat bar, flirting with an error count</h1>
+<p class="sub">
+  All values are now the SAME size (streak no longer towers over avg speed) — the whole strip
+  reads as one flat metadata bar. H1a = flattened H1 as-was. H1b = your flirt: a BEST/ERR
+  key-value stack riding the streak. H1c = my alternative: four stats flat across, one baseline.
+  H3 = the ratio, flattened. Errors need no store changes: totalPicks − correctPicks.
+</p>
+
+<div class="grid">
+
+  <!-- H1a -->
+  <div class="col">
+    <p class="caption">H1a — Flat cluster, no errors</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="hud">
+        <div>
+          <div class="label">Streak</div>
+          <div class="cluster">
+            <span class="num val lime">3</span>
+            <span class="kv"><span class="label">Best</span><span class="v limedim">19</span></span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">The v1 recommendation, de-heightened: streak and speed are both 20px on one
+      shared baseline; BEST tucks in at the streak's ankle.</p>
+  </div>
+
+  <!-- H1b -->
+  <div class="col">
+    <p class="caption">H1b — Your flirt: BEST / ERR stack</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="hud">
+        <div>
+          <div class="label">Streak</div>
+          <div class="cluster">
+            <span class="num val lime">3</span>
+            <span class="kvstack">
+              <span class="kv"><span class="label">Best</span><span class="v limedim">19</span></span>
+              <span class="kv"><span class="label">Err</span><span class="v reddim">4</span></span>
+            </span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session (stack hidden until there's data)</p>
+    <div class="frame">
+      <div class="hud">
+        <div>
+          <div class="label">Streak</div>
+          <div class="cluster">
+            <span class="num val lime">0</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">The two-row key-value stack sits exactly one 20px number tall, so the bar
+      stays flat. BEST stays lime-family, ERR goes muted red — punishment-colored but quiet, so
+      a fumble doesn't dominate the header forever.</p>
+  </div>
+
+  <!-- H1c -->
+  <div class="col">
+    <p class="caption">H1c — Alternative: four flat across</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="four">
+        <div class="stat">
+          <div class="label">Streak</div>
+          <div class="num val lime">3</div>
+        </div>
+        <div class="stat">
+          <div class="label">Best</div>
+          <div class="num val limedim">19</div>
+        </div>
+        <div class="stat">
+          <div class="label">Miss</div>
+          <div class="num val reddim">4</div>
+        </div>
+        <div class="stat r">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session</p>
+    <div class="frame">
+      <div class="four">
+        <div class="stat">
+          <div class="label">Streak</div>
+          <div class="num val lime">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Best</div>
+          <div class="num val limedim">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Miss</div>
+          <div class="num val reddim">0</div>
+        </div>
+        <div class="stat r">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">The flattest possible read: four stats, one baseline, all 18px, labels above.
+      Uses MISS — the game's own word for a wrong pick — instead of ERR; same stat either way.
+      Scanning order: run → record → fumbles → speed.</p>
+  </div>
+
+  <!-- H3 -->
+  <div class="col">
+    <p class="caption">H3 — Ratio, flattened</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="hud">
+        <div>
+          <div class="label">Streak · Best</div>
+          <div class="ratio">
+            <span class="num val lime">3</span>
+            <span class="num den limedim">/ 19</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session</p>
+    <div class="frame">
+      <div class="hud">
+        <div>
+          <div class="label">Streak · Best</div>
+          <div class="ratio">
+            <span class="num val lime">0</span>
+            <span class="num den limedim">/ 0</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num val cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">Same ratio idiom as v1, with the numerator shrunk to the shared 20px. The
+      "3 of 19?" misread and the "0 / 0" opener are still its weak points.</p>
+  </div>
+
+</div>
+</body>
+</html>
