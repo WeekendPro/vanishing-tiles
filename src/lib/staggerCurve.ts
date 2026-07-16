@@ -3,9 +3,11 @@ import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
 /**
  * Infinite Stagger's own difficulty + scoring curve, expressed as a hand-authored
  * rung table (STAGGER_CURVE) indexed by the 0-based batch index, clamped to the
- * last rung for the endless tail. Difficulty is split across mostly-INDEPENDENT
- * levers so at most one conceptual lever moves per level (two known exceptions,
- * see the "moves at most one difficulty lever" test):
+ * last rung for the endless tail. Difficulty is split across INDEPENDENT levers
+ * so exactly one conceptual lever moves per level — shape joins land on
+ * batch indices 1, 2, 5, 6, 9; orientation frees at index 8; gap bumps land at
+ * 4, 7, 10, 13, …, 28 (see STAGGER_CURVE below) — no two levers ever share a
+ * level (see the "moves at most one difficulty lever" test):
  *
  *   1. shape variety — how many distinct piece types may appear (SHAPE_SCHEDULE)
  *   2. orientation    — gaps locked to the tray rotation, then freed (ORIENTATION_FREE_FROM)
@@ -54,29 +56,29 @@ export const DISPLAY_ROTATION: Record<PieceType, Rotation> = {
  *
  *  Variety is the PRIMARY early lever: gaps are held at 3 through the runway
  *  (see gapCountForBatch), so levels 1–4 grow harder only by widening the
- *  shape pool rather than by adding board volume. New shapes are spaced so
- *  they mostly avoid landing on the same level as a gap-count bump or the
- *  orientation unlock; L5 (T joining) and L8 (orientation freeing) are the two
- *  known exceptions where the plan-mandated gap-count table doubles up with
- *  another lever (see the "moves at most one difficulty lever" test). Z (the
- *  last shape) arrives AFTER orientation frees up (idx 8 > idx 7), so the
- *  hardest pieces don't debut rotated. All 7 shapes are in by L9. */
+ *  shape pool rather than by adding board volume. New shapes are spaced onto
+ *  batch indices 1, 2, 5, 6, 9 — all held-gap levels (STAGGER_CURVE holds gaps
+ *  flat across each of those spans) — so no shape join ever lands on the same
+ *  level as a gap-count bump or the orientation unlock (idx 8). Z (the last
+ *  shape) arrives AFTER orientation frees up (idx 9 > idx 8), so the hardest
+ *  piece doesn't debut rotated. All 7 shapes are in by L10. */
 const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
   { from: 0, type: 'O' },
   { from: 0, type: 'I' },
   { from: 1, type: 'L' },  // L2
   { from: 2, type: 'J' },  // L3
-  { from: 4, type: 'T' },  // L5
+  { from: 5, type: 'T' },  // L6
   { from: 6, type: 'S' },  // L7
-  { from: 8, type: 'Z' },  // L9 — last shape, the level after orientation frees
+  { from: 9, type: 'Z' },  // L10 — last shape, the level after orientation frees
 ]
 
 /** From this batch on, gaps may appear in any rotation; before it, every gap is
  *  locked to its tray orientation so the player maps shapes 1:1 with the cart.
  *  Orientation freedom is the single most disorienting lever (it multiplies the
- *  effective shape vocabulary), so it lands ALONE on L8 (idx 7) — the gap count
- *  is held at 5 across L6–9 so nothing else moves the level it unlocks. */
-export const ORIENTATION_FREE_FROM = 7
+ *  effective shape vocabulary), so it lands ALONE on L9 (idx 8) — the gap count
+ *  is held at 5 across L8–10 and no shape joins there, so nothing else moves
+ *  the level it unlocks. */
+export const ORIENTATION_FREE_FROM = 8
 
 /** The piece types that may appear as gaps in a given batch. */
 export function allowedTypesForBatch(batchIndex: number): PieceType[] {
@@ -98,8 +100,8 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
  *  (see selectDurationForBatch) rather than from a steeper gap-count curve.
  *
  *    L1–4   N3   runway: held flat while shape variety grows (+L, +J)
- *    L5–7   N4
- *    L8–10  N5   orientation unlocks (L8), last shape (Z) joins (L9)
+ *    L5–7   N4   held flat while T (L6) and S (L7) join
+ *    L8–10  N5   held flat while orientation unlocks (L9), last shape (Z) joins (L10)
  *    L11–13 N6
  *    L14–16 N7
  *    L17–19 N8
@@ -110,8 +112,8 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
 interface StaggerRung { gaps: number }
 const STAGGER_CURVE: StaggerRung[] = [
   { gaps: 3 }, { gaps: 3 }, { gaps: 3 }, { gaps: 3 },   // L1–4 on-ramp
-  { gaps: 4 }, { gaps: 4 }, { gaps: 4 },                 // L5–7 (orientation unlocks L8 — next block)
-  { gaps: 5 }, { gaps: 5 }, { gaps: 5 },                 // L8–10
+  { gaps: 4 }, { gaps: 4 }, { gaps: 4 },                 // L5–7 (T joins L6, S joins L7)
+  { gaps: 5 }, { gaps: 5 }, { gaps: 5 },                 // L8–10 (orientation unlocks L9, Z joins L10)
   { gaps: 6 }, { gaps: 6 }, { gaps: 6 },                 // L11–13
   { gaps: 7 }, { gaps: 7 }, { gaps: 7 },                 // L14–16
   { gaps: 8 }, { gaps: 8 }, { gaps: 8 },                 // L17–19

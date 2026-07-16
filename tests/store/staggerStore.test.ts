@@ -79,10 +79,10 @@ describe('staggerCurve', () => {
     expect(new Set(allowedTypesForBatch(0))).toEqual(new Set(['O', 'I']))
     expect(allowedTypesForBatch(1)).toContain('L')      // L joins at L2 (idx 1)
     expect(allowedTypesForBatch(2)).toContain('J')      // J joins at L3 (idx 2)
-    expect(allowedTypesForBatch(7)).not.toContain('Z')  // Z is last
-    // Z (the last shape) debuts at L9 (idx 8), the level AFTER orientation frees
-    // (idx 7) — the hardest piece never arrives already rotated.
-    expect(new Set(allowedTypesForBatch(8))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
+    expect(allowedTypesForBatch(8)).not.toContain('Z')  // Z is last
+    // Z (the last shape) debuts at L10 (idx 9), the level AFTER orientation frees
+    // (idx 8) — the hardest piece never arrives already rotated.
+    expect(new Set(allowedTypesForBatch(9))).toEqual(new Set(['O', 'I', 'L', 'J', 'S', 'T', 'Z']))
   })
 
   it('the allowed-shape set only ever grows', () => {
@@ -102,18 +102,13 @@ describe('staggerCurve', () => {
     expect(DISPLAY_ROTATION.O).toBe(0)
   })
 
-  it('moves at most one difficulty lever per level, with two known exceptions', () => {
-    // The three remaining levers: gap count, shape-pool size, and the
-    // orientation-locked→free transition. Verified against the plan-mandated
-    // table (see task-3-brief.md): it happens to double up at two levels —
-    //   idx 4 (L5): gap bump 3→4 lands on the same level T joins the pool
-    //   idx 7 (L8): gap bump 4→5 lands on the same level orientation frees
-    //     (ORIENTATION_FREE_FROM = 7)
-    // Both are plan-mandated, not a bug — called out explicitly rather than
-    // silently asserted away.
-    const KNOWN_DOUBLE_LEVER_INDICES = new Set([4, 7])
+  it('moves at most one difficulty lever per level', () => {
+    // The three levers: gap count, shape-pool size, and the orientation-locked
+    // → free transition. Shape joins are spaced onto held-gap levels (idx 1, 2,
+    // 5, 6, 9) and the orientation unlock sits alone on idx 8, so none of them
+    // ever coincide with a gap-count bump (idx 4, 7, 10, 13, …, 28) or each
+    // other — checked across every consecutive index in the explicit table.
     for (let b = 1; b <= 28; b++) {
-      if (KNOWN_DOUBLE_LEVER_INDICES.has(b)) continue
       const gapChanged = gapCountForBatch(b) !== gapCountForBatch(b - 1)
       const poolChanged = allowedTypesForBatch(b).length !== allowedTypesForBatch(b - 1).length
       const orientChanged =
