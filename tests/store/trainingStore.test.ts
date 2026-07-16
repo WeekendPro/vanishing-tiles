@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTrainingStore, randomTrainingPiece, TRAINING_TYPES } from '../../src/store/trainingStore'
 import { DISPLAY_ROTATION } from '../../src/lib/staggerCurve'
 import { ROWS, COLS, type PieceType } from '@shared/types'
@@ -149,5 +149,63 @@ describe('trainingStore', () => {
     expect(s.piece).toBeNull()
     expect(s.currentStreak).toBe(0)
     expect(s.bestStreak).toBe(0)
+  })
+
+  describe('pause / resume', () => {
+    it('freezes the speed clock: paused time never reaches the selection speed', () => {
+      vi.useFakeTimers()
+      try {
+        useTrainingStore.getState().start()
+        vi.advanceTimersByTime(1000)
+        useTrainingStore.getState().pause()
+        expect(useTrainingStore.getState().paused).toBe(true)
+        vi.advanceTimersByTime(60_000) // a long coffee break
+        useTrainingStore.getState().resume()
+        expect(useTrainingStore.getState().paused).toBe(false)
+        vi.advanceTimersByTime(500)
+        const res = useTrainingStore.getState().guess(useTrainingStore.getState().piece!.type)
+        expect(res.ok).toBe(true)
+        expect(res.elapsedMs).toBe(1500)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('guesses are ignored while paused', () => {
+      useTrainingStore.getState().start()
+      useTrainingStore.getState().pause()
+      const res = useTrainingStore.getState().guess(useTrainingStore.getState().piece!.type)
+      expect(res.ok).toBe(false)
+      expect(useTrainingStore.getState().totalPicks).toBe(0)
+    })
+
+    it('a piece that rolled in mid-pause starts its clock at resume', () => {
+      vi.useFakeTimers()
+      try {
+        useTrainingStore.getState().start()
+        vi.advanceTimersByTime(1000)
+        useTrainingStore.getState().pause()
+        vi.advanceTimersByTime(300)
+        // A fade-out timer landing under the overlay rolls the next piece.
+        useTrainingStore.getState().nextPiece()
+        vi.advanceTimersByTime(5000)
+        useTrainingStore.getState().resume()
+        vi.advanceTimersByTime(700)
+        const res = useTrainingStore.getState().guess(useTrainingStore.getState().piece!.type)
+        expect(res.elapsedMs).toBe(700)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('pause is a no-op while idle; exit clears a paused session', () => {
+      useTrainingStore.getState().pause()
+      expect(useTrainingStore.getState().paused).toBe(false)
+      useTrainingStore.getState().start()
+      useTrainingStore.getState().pause()
+      useTrainingStore.getState().exit()
+      expect(useTrainingStore.getState().paused).toBe(false)
+      expect(useTrainingStore.getState().active).toBe(false)
+    })
   })
 })

@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
 import { useNavStore } from '../store/navStore'
-import { NeonButton } from './ui'
+import { PauseOverlay } from './ui'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
@@ -105,16 +105,53 @@ function LetterTray({
   )
 }
 
+// ── Stats bar ─────────────────────────────────────────────────────────────────
+// The flat four-stat readout — run → record → fumbles → speed — shared by the
+// in-game HUD (spread edge-to-edge over the board) and the pause overlay
+// (gathered into a centered row).
+function TrainingStats({
+  spread, currentStreak, bestStreak, misses, avgLabel,
+}: { spread?: boolean; currentStreak: number; bestStreak: number; misses: number; avgLabel: string }) {
+  return (
+    <div className={`flex items-end pointer-events-none ${spread ? 'w-full max-w-sm justify-between' : 'gap-8'}`}>
+      <div>
+        <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
+        <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
+          {currentStreak}
+        </div>
+      </div>
+      <div>
+        <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
+        <div className="mt-1 font-silk font-bold text-lg text-vt-lime/55 leading-none tabular-nums">
+          {bestStreak}
+        </div>
+      </div>
+      <div>
+        <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Miss</div>
+        <div className="mt-1 font-silk font-bold text-lg text-vt-red/75 leading-none tabular-nums">
+          {misses}
+        </div>
+      </div>
+      <div className={spread ? 'text-right' : ''}>
+        <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Avg speed</div>
+        <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+          {avgLabel}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function TrainingScreen() {
   const {
-    active, piece, round, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs,
-    start, nextPiece, guess, exit,
+    active, piece, round, paused, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs,
+    start, nextPiece, guess, pause, resume, exit,
   } = useTrainingStore(useShallow(s => ({
-    active: s.active, piece: s.piece, round: s.round,
+    active: s.active, piece: s.piece, round: s.round, paused: s.paused,
     currentStreak: s.currentStreak, bestStreak: s.bestStreak,
     totalPicks: s.totalPicks, correctPicks: s.correctPicks, totalCorrectMs: s.totalCorrectMs,
-    start: s.start, nextPiece: s.nextPiece, guess: s.guess, exit: s.exit,
+    start: s.start, nextPiece: s.nextPiece, guess: s.guess, pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
 
@@ -181,35 +218,17 @@ export function TrainingScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
-      {/* HUD — no score, no lives, no clock: a flat four-stat bar, one shared
-          size and baseline, reading run → record → fumbles → speed. Streaks
-          are lime-family (BEST dimmed), MISS a muted red (a record, not an
-          alarm), speed cyan. */}
-      <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
-            {currentStreak}
-          </div>
-        </div>
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-lime/55 leading-none tabular-nums">
-            {bestStreak}
-          </div>
-        </div>
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Miss</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-red/75 leading-none tabular-nums">
-            {totalPicks - correctPicks}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Avg speed</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-            {avgLabel}
-          </div>
-        </div>
+      {/* HUD — no score, no lives, no visible clock: the flat four-stat bar,
+          one shared size and baseline. Streaks are lime-family (BEST dimmed),
+          MISS a muted red (a record, not an alarm), speed cyan. */}
+      <div className="w-full max-w-sm mb-2">
+        <TrainingStats
+          spread
+          currentStreak={currentStreak}
+          bestStreak={bestStreak}
+          misses={totalPicks - correctPicks}
+          avgLabel={avgLabel}
+        />
       </div>
 
       {/* Prompt line — flips to the lime CORRECT beat while the piece fades
@@ -267,12 +286,38 @@ export function TrainingScreen() {
         <LetterTray onPick={onPick} disabled={leaving} />
       </div>
 
-      {/* Exit — always available; training can be left at any moment. */}
+      {/* Pause — the same full-width control as the game's run screen. The
+          speed clock is training's only timer (invisible but always running),
+          so leaving mid-session goes through pause → Exit to Home, which also
+          freezes the clock the moment you look away. */}
       <div className="mt-3 w-full max-w-sm">
-        <NeonButton variant="ghost" fullWidth onClick={exitTraining}>
-          ‹ Exit Training
-        </NeonButton>
+        <button
+          aria-label="Pause"
+          onClick={() => pause()}
+          className="w-full flex items-center justify-center gap-2 rounded-md border-2 bg-vt-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
+            border-vt-cyan text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
+            transition active:translate-y-px"
+        >
+          <span className="flex gap-[3px]">
+            <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+            <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+          </span>
+          Pause
+        </button>
       </div>
+
+      {/* Hard pause — covers the whole screen (the held piece stays hidden, so
+          no free memorizing) with the session's full stat bar riding along. */}
+      {paused && (
+        <PauseOverlay onResume={() => resume()} onExit={exitTraining}>
+          <TrainingStats
+            currentStreak={currentStreak}
+            bestStreak={bestStreak}
+            misses={totalPicks - correctPicks}
+            avgLabel={avgLabel}
+          />
+        </PauseOverlay>
+      )}
     </div>
   )
 }

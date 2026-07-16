@@ -8,7 +8,7 @@ import { useNavStore } from '../store/navStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { PieceShape } from './PieceShape'
-import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
+import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
 
 const CELL = 28
@@ -764,17 +764,29 @@ export function StaggerScreen() {
       )}
 
       {/* Hard pause — covers the whole screen so no memorizing happens while
-          frozen; resume picks the clock back up, exit bails to the landing page. */}
+          frozen; resume picks the clock back up, exit bails to the landing page.
+          The run's live stats ride along: a pause doubles as a scoreboard check. */}
       {paused && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8
-          bg-vt-void text-vt-text px-6">
-          <ScanlineOverlay />
-          <div className="font-silk text-lg text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.2em]">Paused</div>
-          <div className="flex flex-col gap-3 w-52">
-            <NeonButton variant="primary" fullWidth onClick={() => resume()}>Resume</NeonButton>
-            <NeonButton variant="danger" fullWidth onClick={() => { exit(); goHome() }}>Exit to Home</NeonButton>
+        <PauseOverlay onResume={() => resume()} onExit={() => { exit(); goHome() }}>
+          <div className="flex items-end gap-10 pointer-events-none">
+            <div>
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
+              <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+                {score}
+              </div>
+            </div>
+            <div>
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
+              <div className="mt-1.5"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
+            </div>
+            <div>
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
+              <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
+                {currentStreak}
+              </div>
+            </div>
           </div>
-        </div>
+        </PauseOverlay>
       )}
 
       {/* Time → score "Lift": the leftover-time "+bonus" rises off the right end of

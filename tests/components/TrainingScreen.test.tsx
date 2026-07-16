@@ -94,10 +94,37 @@ describe('TrainingScreen', () => {
     expect(missValue).toHaveTextContent('1')
   })
 
-  it('Exit tears the session down and returns home at any moment', async () => {
+  it('Pause freezes the session and surfaces the full stat bar on the overlay', async () => {
     const user = userEvent.setup()
     render(<TrainingScreen />)
-    await user.click(screen.getByRole('button', { name: /Exit Training/i }))
+    expect(screen.queryByRole('button', { name: /Exit Training/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Pause/i }))
+    expect(useTrainingStore.getState().paused).toBe(true)
+    expect(screen.getByText('Paused')).toBeInTheDocument()
+    // The overlay carries the session's metadata — every HUD stat appears
+    // twice (once on the board HUD, once on the pause screen).
+    for (const label of ['Streak', 'Best', 'Miss', 'Avg speed']) {
+      expect(screen.getAllByText(label)).toHaveLength(2)
+    }
+    expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Exit to Home/i })).toBeInTheDocument()
+  })
+
+  it('Resume unfreezes and returns to the session', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    await user.click(screen.getByRole('button', { name: /Pause/i }))
+    await user.click(screen.getByRole('button', { name: /Resume/i }))
+    expect(useTrainingStore.getState().paused).toBe(false)
+    expect(screen.queryByText('Paused')).not.toBeInTheDocument()
+    expect(useTrainingStore.getState().active).toBe(true)
+  })
+
+  it('Exit to Home (via pause) tears the session down and returns home', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    await user.click(screen.getByRole('button', { name: /Pause/i }))
+    await user.click(screen.getByRole('button', { name: /Exit to Home/i }))
     expect(useNavStore.getState().appView).toBe('home')
     expect(useTrainingStore.getState().active).toBe(false)
   })

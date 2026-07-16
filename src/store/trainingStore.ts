@@ -54,6 +54,8 @@ interface TrainingState {
   piece: TrainingPiece | null
   round: number // 1-based; bumps per fresh piece (keys the bloom animation)
   shownAt: number // Date.now() when the current piece appeared — the speed clock
+  paused: boolean // hard pause: speed clock frozen, screen hidden
+  pausedAt: number // Date.now() when pause() hit — resume() re-dates shownAt from it
 
   currentStreak: number
   bestStreak: number
@@ -67,6 +69,10 @@ interface TrainingState {
   /** Resolve a letter pick against the current piece. Does NOT advance the
    *  piece — the screen owns the fade-out timing and calls nextPiece after. */
   guess: (type: PieceType) => TrainingGuess
+  /** Freeze the speed clock (training's only timer) and hide the screen. */
+  pause: () => void
+  /** Unfreeze: paused time never counts against the selection speed. */
+  resume: () => void
   exit: () => void
 }
 
@@ -75,6 +81,8 @@ const IDLE = {
   piece: null as TrainingPiece | null,
   round: 0,
   shownAt: 0,
+  paused: false,
+  pausedAt: 0,
   currentStreak: 0,
   bestStreak: 0,
   totalPicks: 0,
@@ -94,8 +102,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   },
 
   guess: (type) => {
-    const { active, piece, shownAt, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs } = get()
-    if (!active || !piece) return { ok: false, piece: null, streak: 0, elapsedMs: 0 }
+    const { active, piece, shownAt, paused, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs } = get()
+    if (!active || !piece || paused) return { ok: false, piece: null, streak: 0, elapsedMs: 0 }
     if (type !== piece.type) {
       // A miss: breaks the streak (no lives here — training is consequence-free).
       // The speed clock keeps running: fumbling costs time on the eventual
@@ -114,6 +122,25 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       bestStreak: Math.max(bestStreak, streak),
     })
     return { ok: true, piece, streak, elapsedMs }
+  },
+
+  pause: () => {
+    const { active, paused } = get()
+    if (!active || paused) return
+    set({ paused: true, pausedAt: Date.now() })
+  },
+
+  resume: () => {
+    const { paused, pausedAt, shownAt } = get()
+    if (!paused) return
+    // Re-date the speed clock so the frozen stretch never counts. If the next
+    // piece rolled in mid-pause (a fade-out timer landing under the overlay),
+    // the player first SEES it now — its clock starts here.
+    set({
+      paused: false,
+      pausedAt: 0,
+      shownAt: shownAt > pausedAt ? Date.now() : shownAt + (Date.now() - pausedAt),
+    })
   },
 
   exit: () => set({ ...IDLE }),
