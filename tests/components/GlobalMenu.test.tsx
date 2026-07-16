@@ -95,6 +95,28 @@ describe('GlobalMenu', () => {
     expect(useNavStore.getState().appView).toBe('auth')
   })
 
+  it('Leaderboard entry navigates to the leaderboard view and closes the menu', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Leaderboard/i }))
+    expect(useNavStore.getState().appView).toBe('leaderboard')
+    // Menu overlay is gone — only the reopen toggle remains.
+    expect(screen.queryByRole('button', { name: /Leaderboard/i })).not.toBeInTheDocument()
+  })
+
+  it('guests also get the Leaderboard entry (the board is viewable; only ranking needs an account)', async () => {
+    vi.mocked(auth.getUser).mockResolvedValueOnce({
+      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
+    } as never)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByRole('button', { name: /Leaderboard/i })).toBeInTheDocument()
+  })
+
   it('Logout calls signOut and resets navigation', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()

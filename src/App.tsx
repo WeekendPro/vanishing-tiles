@@ -10,6 +10,7 @@ import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
 import { StaggerScreen } from './components/StaggerScreen'
 import { TrainingScreen } from './components/TrainingScreen'
+import { LeaderboardScreen } from './components/LeaderboardScreen'
 import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
 import { GlobalMenu } from './components/GlobalMenu'
 
@@ -41,6 +42,7 @@ export default function App() {
       case 'results': return <ResultsScreen />
       case 'stagger': return <StaggerScreen />
       case 'training': return <TrainingScreen />
+      case 'leaderboard': return <LeaderboardScreen />
       case 'playing':
       case 'practice':
         return <GameShell />

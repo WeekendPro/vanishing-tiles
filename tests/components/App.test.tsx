@@ -6,8 +6,11 @@ vi.mock('../../src/lib/auth', () => ({
   getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
   signOut: vi.fn(),
 }))
-// Keep the journey screen from hitting the network in this routing test.
-vi.mock('../../src/lib/api', () => ({ getJourney: vi.fn().mockResolvedValue([]) }))
+// Keep the journey/leaderboard screens from hitting the network in this routing test.
+vi.mock('../../src/lib/api', () => ({
+  getJourney: vi.fn().mockResolvedValue([]),
+  getStaggerLeaderboard: vi.fn().mockResolvedValue({ total: 0, top: [], me: null }),
+}))
 import * as auth from '../../src/lib/auth'
 import App from '../../src/App'
 import { useNavStore } from '../../src/store/navStore'
@@ -29,5 +32,15 @@ describe('App routing', () => {
     ;(auth.getSession as any).mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
     render(<App />)
     await waitFor(() => expect(useNavStore.getState().appView).toBe('home'))
+  })
+
+  it('renders the leaderboard screen on the leaderboard view', async () => {
+    ;(auth.getSession as any).mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    render(<App />)
+    await waitFor(() => expect(useNavStore.getState().appView).toBe('home'))
+
+    useNavStore.getState().goLeaderboard()
+
+    expect(await screen.findByText(/Global rankings/i)).toBeInTheDocument()
   })
 })

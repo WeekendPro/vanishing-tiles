@@ -20,7 +20,7 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 
 ### Entry flow
 
-`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`, session present → `HomeScreen`. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. `HomeScreen` is one decision + one action: a four-segment **Mode** switch — **Training / Easy / Medium / Hard** — above a single **PLAY** button. The three difficulties persist via `useSettingsStore` (localStorage); **Training is "mode zero"** on the same switch but deliberately EPHEMERAL (component state only — selecting it never overwrites the persisted difficulty, and it resets when the screen unmounts, so a returning player's PLAY always starts Infinite Stagger). PLAY launches whatever the switch says: a Stagger run (`src/components/StaggerScreen.tsx`) at the selected difficulty, or Training mode (see below) — the label always reads PLAY; only its glow goes cyan while Training is selected. Training's ONLY entry point is this switch — it was removed from the global hamburger menu (`GlobalMenu.tsx`), which is now just the profile header + Logout (Settings and Reset Journey were removed; guests get a generic person-icon avatar instead of initials). An "Experimental Modes" entry point (Practice, the legacy gauntlet + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
+`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`, session present → `HomeScreen`. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. `HomeScreen` is one decision + one action: a four-segment **Mode** switch — **Training / Easy / Medium / Hard** — above a single **PLAY** button. The three difficulties persist via `useSettingsStore` (localStorage); **Training is "mode zero"** on the same switch but deliberately EPHEMERAL (component state only — selecting it never overwrites the persisted difficulty, and it resets when the screen unmounts, so a returning player's PLAY always starts Infinite Stagger). PLAY launches whatever the switch says: a Stagger run (`src/components/StaggerScreen.tsx`) at the selected difficulty, or Training mode (see below) — the label always reads PLAY; only its glow goes cyan while Training is selected. Training's ONLY entry point is this switch — it was removed from the global hamburger menu (`GlobalMenu.tsx`), which is now the profile header + **Leaderboard** + Logout (Settings and Reset Journey were removed; guests get a generic person-icon avatar instead of initials, and "Sign up" instead of Logout). Leaderboard opens the global rankings screen (`LeaderboardScreen.tsx`): per-mode Easy/Medium/Hard boards (tabs echo the Home mode switch), a "you-hero" card with the caller's rank + per-metric ranks, and a top-50 table where the caller's row wears a YOU tag. Data comes from the `get_stagger_leaderboard` RPC (migration `0014`, layered on `0013`'s `stagger_stats`); guests see the board but rank as null and get a dashed sign-up nudge instead of the hero card. An "Experimental Modes" entry point (Practice, the legacy gauntlet + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
 
 ### Infinite Stagger
 
@@ -70,12 +70,12 @@ supabase/functions/_shared/
     levelConfig.ts     — LEVEL_CONFIGS server-side difficulty table (legacy Journey/Practice only)
 
 src/
-  App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/journey/levelDetail/results/stagger/playing/practice)
+  App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/journey/levelDetail/results/stagger/playing/practice/training/leaderboard)
   store/
     staggerStore.ts        — Infinite Stagger's Zustand store: phase/mode/batchIndex/gaps/score/lives/streak; startRun / pickPiece / advanceBatch / timeoutBatch
     trainingStore.ts       — Training mode's Zustand store: current piece / round / streak / selection-speed clock; start / guess / nextPiece / exit
     settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), map style, briefing opt-outs
-    navStore.ts            — appView routing state (auth/home/journey/levelDetail/playing/results/practice/stagger/training)
+    navStore.ts            — appView routing state (auth/home/journey/levelDetail/playing/results/practice/stagger/training/leaderboard)
     runHistoryStore.ts     — Recent Infinite Stagger run history (for the post-run graph)
     gameStore.ts       (legacy) — Journey/Practice Zustand store; all game state + actions (startComponent / retryComponent / replayComponent for Journey; startLevel/startPractice for Practice); also owns the legacy DIFFICULTY_TABLE
     progressStore.ts   (legacy) — localStorage store for per-component best scores and level progress (key: gapcity:progress:v1)
@@ -87,6 +87,7 @@ src/
   components/
     StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (own inline board, not Grid.tsx), piece tray, pause overlay, game-over summary
     TrainingScreen.tsx     — Training mode's screen: streak/avg-speed HUD, single held-bloom piece board, letter-name tray, exit button
+    LeaderboardScreen.tsx  — Global rankings: Easy/Medium/Hard tabs (Home switch styling), you-hero card (rank + per-metric ranks), top-50 table with YOU tag, guest sign-up footer
     HomeScreen.tsx         — Landing screen after sign-in: PLAY (→ Infinite Stagger) + Easy/Medium/Hard switch; Experimental Modes pane hidden behind SHOW_EXPERIMENTAL
     AuthScreen.tsx         — Email/password + Google OAuth + guest sign-in
     PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by both StaggerScreen and legacy SelectingPhase)

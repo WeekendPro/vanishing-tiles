@@ -61,8 +61,9 @@ function Action({ label, onClick, tone = 'default' }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goHome, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goHome, goLeaderboard, reset: resetNav } = useNavStore(useShallow(s => ({
     goHome: s.goHome,
+    goLeaderboard: s.goLeaderboard,
     reset: s.reset,
   })))
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
@@ -105,6 +106,9 @@ export function GlobalMenu() {
   })
 
   const quitToHome = () => { setOpen(false); resetGame(); goHome() }
+  // Leaving a paused Journey/Practice round for the leaderboard is a quit —
+  // same teardown as quitToHome, different destination.
+  const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
 
   return (
@@ -156,6 +160,10 @@ export function GlobalMenu() {
               />
             </>
           )}
+
+          {/* Global rankings — visible to guests too (the board is public;
+              only RANKING needs a named account). */}
+          <Action label="Leaderboard" onClick={openLeaderboard} />
 
           {/* Settings is deliberately absent — there's nothing behind it yet;
               it returns when there are real settings to expose. Training left

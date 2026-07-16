@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 export type AppView =
   | 'auth' | 'home' | 'journey' | 'levelDetail' | 'playing' | 'results' | 'practice' | 'stagger' | 'training'
+  | 'leaderboard'
 
 interface NavState {
   appView: AppView
@@ -18,6 +19,7 @@ interface NavState {
   goPractice: () => void
   goStagger: () => void
   goTraining: () => void
+  goLeaderboard: () => void
   setLevelOrder: (ids: string[]) => void
   goNextLevel: () => void
   hasNextLevel: () => boolean
@@ -44,6 +46,7 @@ export const useNavStore = create<NavState>((set, get) => ({
   goPractice: () => set({ appView: 'practice' }),
   goStagger: () => set({ appView: 'stagger' }),
   goTraining: () => set({ appView: 'training' }),
+  goLeaderboard: () => set({ appView: 'leaderboard' }),
   setLevelOrder: (ids) => set({ levelOrder: ids }),
   goNextLevel: () => {
     const { levelOrder, selectedLevelId } = get()

@@ -45,6 +45,64 @@ export async function submitStaggerRun(a: SubmitStaggerRunInput): Promise<unknow
   return data
 }
 
+/** One ranked (non-guest) player on a mode's global board. */
+export interface LeaderboardRow {
+  rank: number
+  displayName: string
+  highScore: number
+  bestStreak: number
+  bestAccuracy: number
+}
+
+/** The caller's own standing. Stats are null until they finish a run in the
+ *  mode; every rank is null for guests — their bests record privately but
+ *  never rank (see stagger_mode_best in migration 0013). */
+export interface LeaderboardMe {
+  displayName: string
+  isGuest: boolean
+  highScore: number | null
+  bestStreak: number | null
+  bestAccuracy: number | null
+  rank: number | null
+  streakRank: number | null
+  accuracyRank: number | null
+}
+
+export interface StaggerLeaderboard {
+  total: number            // ranked (non-guest) players on this mode's board
+  top: LeaderboardRow[]
+  me: LeaderboardMe | null // null only when unauthenticated
+}
+
+interface RawLeaderboardRow {
+  rank: number; display_name: string; high_score: number; best_streak: number; best_accuracy: number
+}
+interface RawLeaderboardMe {
+  display_name: string; is_guest: boolean
+  high_score: number | null; best_streak: number | null; best_accuracy: number | null
+  rank: number | null; streak_rank: number | null; accuracy_rank: number | null
+}
+
+/** Fetches one mode's global leaderboard (migration 0014): the top ranked
+ *  players plus the caller's own bests and per-metric ranks. */
+export async function getStaggerLeaderboard(mode: Difficulty): Promise<StaggerLeaderboard> {
+  const { data, error } = await supabase.rpc('get_stagger_leaderboard', { p_mode: mode })
+  if (error) throw error
+  const raw = data as { total: number; top: RawLeaderboardRow[]; me: RawLeaderboardMe | null }
+  return {
+    total: raw.total,
+    top: (raw.top ?? []).map(r => ({
+      rank: r.rank, displayName: r.display_name,
+      highScore: r.high_score, bestStreak: r.best_streak, bestAccuracy: r.best_accuracy,
+    })),
+    me: raw.me && {
+      displayName: raw.me.display_name, isGuest: raw.me.is_guest,
+      highScore: raw.me.high_score, bestStreak: raw.me.best_streak, bestAccuracy: raw.me.best_accuracy,
+      rank: raw.me.rank, streakRank: raw.me.streak_rank, accuracyRank: raw.me.accuracy_rank,
+    },
+  }
+}
+
 export async function getJourney() {
   const { data, error } = await supabase.rpc('get_journey')
   if (error) throw error

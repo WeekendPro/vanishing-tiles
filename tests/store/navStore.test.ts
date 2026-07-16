@@ -46,6 +46,11 @@ describe('navStore', () => {
     useNavStore.getState().goTraining()
     expect(useNavStore.getState().appView).toBe('training')
   })
+
+  it('goLeaderboard enters the leaderboard view', () => {
+    useNavStore.getState().goLeaderboard()
+    expect(useNavStore.getState().appView).toBe('leaderboard')
+  })
 })
 
 describe('level order + next level', () => {
