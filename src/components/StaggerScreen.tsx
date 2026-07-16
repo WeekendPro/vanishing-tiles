@@ -3,16 +3,12 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
-import { useStaggerStore, activeLevel, isSandboxRun, type StaggerGap } from '../store/staggerStore'
+import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
-import { resolveTiming, NO_OVERRIDES } from '../lib/staggerMechanic'
-import { STAGGER_LEVELS } from '../lib/staggerLevels'
-import { isSandboxEnv } from '../lib/env'
 import { PieceShape } from './PieceShape'
-import { StaggerSandboxPanel } from './StaggerSandboxPanel'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
 
@@ -226,13 +222,12 @@ function StaggerBoard({
 // kept in lockstep with BEAT_MS.
 //
 // The countdown is anchored OVER the board/grid (not a full-screen void) so
-// the player sees the level's frame before the gaps reveal: the active level
-// NAME sits just above the 3·2·1. Fires at run start AND after each
-// levelComplete (proceedAfterLevelComplete sets phase back to 'countdown').
+// the player sees the mode's frame before the gaps reveal: the mode label
+// sits just above the 3·2·1. Fires at run start.
 const BEAT_MS = 850
 function StaggerCountdown({
-  levelName, modeLabel, modeColor, onDone,
-}: { levelName: string; modeLabel: string; modeColor: string; onDone: () => void }) {
+  modeLabel, modeColor, onDone,
+}: { modeLabel: string; modeColor: string; onDone: () => void }) {
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
@@ -244,7 +239,6 @@ function StaggerCountdown({
   }, [count, onDone])
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] pointer-events-none">
-      <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.16em]">{levelName}</div>
       <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] mb-2 ${modeColor}`}>{modeLabel}</div>
       <div className="relative flex h-44 w-44 items-center justify-center">
         {count > 0 && (
@@ -295,33 +289,30 @@ export function StaggerScreen() {
   const {
     phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
-    levelIndex, sandboxLevel, sandboxOverrides, completedLevelIndex,
     startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
-    pause, resume, exit, proceedAfterLevelComplete, rerollBatch,
+    pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
     phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
     shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
-    levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, sandboxOverrides: s.sandboxOverrides, completedLevelIndex: s.completedLevelIndex,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
-    pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
-    rerollBatch: s.rerollBatch,
+    pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
   const difficulty = useSettingsStore(s => s.settings.difficulty)
 
-  // Active level (sandbox-locked or score-derived) + sandbox flag, for the
-  // countdown name, the run-context label, and the sandbox banner.
-  const level = activeLevel({ levelIndex, sandboxLevel })
-  const sandboxed = isSandboxRun({ sandboxLevel })
-
-  // Effective reveal/decay timing for this run: the live sandbox overrides when
-  // sandboxing, else the STAGGER constants. Held in a ref so the reveal driver
-  // reads the LATEST values as each beat fires (a slider tweak shows on the next
-  // beat / next reveal) without re-arming the whole effect and flickering.
-  const timing = resolveTiming(sandboxed ? sandboxOverrides : NO_OVERRIDES)
+  // Reveal/decay timing for this run — the STAGGER constants. Held in a ref so
+  // the reveal driver reads the LATEST values as each beat fires without
+  // re-arming the whole effect and flickering.
+  const timing = {
+    stepMs: STAGGER.REVEAL_STEP_MS,
+    bloomMs: STAGGER.REVEAL_BLOOM_MS,
+    decayMs: STAGGER.REVEAL_DECAY_MS,
+    waveMs: STAGGER.REVEAL_WAVE_MS,
+    twinOffsetMs: STAGGER.REVEAL_TWIN_OFFSET_MS,
+  }
   const timingRef = useRef(timing)
   timingRef.current = timing
 
@@ -343,14 +334,6 @@ export function StaggerScreen() {
     }
   }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
-  const [sandboxPanelOpen, setSandboxPanelOpen] = useState(true)
-  // Which phase(s) the sandbox plays through: 'both' (normal flow), 'memorize'
-  // (loop the reveal animation forever, never enter selecting — for tuning reveal
-  // timing in isolation), or 'recall' (skip straight to selecting on every batch —
-  // for tuning select-clock/scoring without sitting through the reveal). A
-  // viewing preference, not a puzzle parameter, so it's local UI state rather
-  // than a persisted/preset-able SandboxOverrides field.
-  const [sandboxViewMode, setSandboxViewMode] = useState<'both' | 'memorize' | 'recall'>('both')
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
   const [barPct, setBarPct] = useState(0)
@@ -443,10 +426,6 @@ export function StaggerScreen() {
   // no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
-    // Sandbox "Recall only" view: skip the reveal animation entirely and jump
-    // straight to selecting on every batch (the puzzle is still generated as
-    // normal — only the timed playback is bypassed).
-    if (sandboxed && sandboxViewMode === 'recall') { beginSelecting(); return }
     let cancelled = false
     const timers: number[] = []
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
@@ -462,9 +441,8 @@ export function StaggerScreen() {
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
     // Reveal/decay timing is read LIVE from timingRef per beat (see the standard-beat
-    // branch below), so a sandbox slider tweak takes effect on the next beat without
-    // re-arming this effect (no flicker). `step` (beat-to-beat spacing) outruns one
-    // bloom's lifetime, so the next beat flashes while the previous is still decaying.
+    // branch below). `step` (beat-to-beat spacing) outruns one bloom's lifetime, so
+    // the next beat flashes while the previous is still decaying.
     // Memorize bar DRAINS: starts full and empties one step per beat as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
@@ -514,12 +492,9 @@ export function StaggerScreen() {
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
-        // Let the final beat finish its decay before recall lights-out. Sandbox
-        // "Memorize only" view: never hand off to selecting — reroll a fresh
-        // batch and loop the reveal forever instead.
+        // Let the final beat finish its decay before recall lights-out.
         const { stepMs, bloomMs, decayMs } = timingRef.current
-        const onDone = sandboxed && sandboxViewMode === 'memorize' ? rerollBatch : beginSelecting
-        at(Math.max(0, bloomMs + decayMs - stepMs), onDone)
+        at(Math.max(0, bloomMs + decayMs - stepMs), beginSelecting)
         return
       }
       setBarPct((1 - (idx + 1) / n) * 100)
@@ -556,7 +531,7 @@ export function StaggerScreen() {
     // A short breath before the first beat (also paces continuous next batches).
     at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty, sandboxed, sandboxViewMode, rerollBatch])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
@@ -713,55 +688,13 @@ export function StaggerScreen() {
     difficulty === 'hard' ? 'text-vt-red text-glow-vt-red' :
     'text-vt-amber text-glow-vt-amber'
 
-  const panelVisible = sandboxed && isSandboxEnv()
-
   return (
-    <div
-      className={`min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none
-        ${panelVisible && sandboxPanelOpen ? 'sm:pr-96' : ''}`}
-    >
-      {/* Dev/preview-only live tuning workbench — fixed to the right edge. Its
-          width is mirrored as padding-right on this centered column (above the
-          mobile breakpoint only) so the game re-centers in the REMAINING width
-          while the panel is open, and returns to full-viewport centering when
-          it's closed or on mobile. Double-gated: sandbox run AND dev env. */}
-      {panelVisible && (
-        <StaggerSandboxPanel
-          open={sandboxPanelOpen}
-          onOpenChange={setSandboxPanelOpen}
-          viewMode={sandboxViewMode}
-          onViewModeChange={setSandboxViewMode}
-        />
-      )}
-
-      {/* Sandbox banner — the calibration sandbox is unlosable (store-enforced,
-          this just reflects it): no gameOver is reachable, so the only way out
-          is this explicit exit-to-Home control. */}
-      {sandboxed && (
-        <div className="w-full max-w-sm flex items-center justify-between mb-3 rounded-md border border-vt-amber/40 bg-vt-amber/10 px-3 py-1.5">
-          <span className="font-grotesk text-[10px] tracking-[0.16em] uppercase text-vt-amber text-glow-vt-amber">
-            Sandbox · {level.name}
-          </span>
-          <button
-            onClick={() => { exit(); goHome() }}
-            className="font-grotesk text-[10px] tracking-[0.1em] uppercase text-vt-text/70 hover:text-vt-amber transition pointer-events-auto"
-          >
-            Exit
-          </button>
-        </div>
-      )}
-
+    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
           <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
-            {/* The active level NAME sits ABOVE the score as the run-context
-                label (replaces the old "Phase N" framing); the score is the
-                loudest text on screen and stands on its own. */}
-            <div>
-              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">{level.name}</div>
-              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
-            </div>
+            <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
               <div className="mt-1.5 font-grotesk font-semibold text-sm text-vt-text tabular-nums">
@@ -854,12 +787,11 @@ export function StaggerScreen() {
           ))}
         </AnimatePresence>
 
-        {/* Level-intro countdown — anchored OVER the board (not a full-screen
-            void): the board/grid is visible underneath, the level NAME sits
-            above the 3·2·1. Fires at run start and after every levelComplete
-            (proceedAfterLevelComplete routes back through this same phase). */}
+        {/* Run-intro countdown — anchored OVER the board (not a full-screen
+            void): the board/grid is visible underneath, the mode label sits
+            above the 3·2·1. Fires at run start. */}
         {phase === 'countdown' && (
-          <StaggerCountdown levelName={level.name} modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
+          <StaggerCountdown modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
         )}
 
         {/* Wrong pick: a red border flashes around the board (with the shake). */}
@@ -914,43 +846,6 @@ export function StaggerScreen() {
           </div>
         )}
 
-        {/* Level-complete celebration — overlays the board only (not the HUD above
-            it, so score/lives stay visible), with a confetti burst. Tap anywhere
-            to proceed into the next level's intro countdown
-            (proceedAfterLevelComplete → phase 'countdown'). */}
-        {phase === 'levelComplete' && completedLevelIndex != null && (
-          <button
-            type="button"
-            onClick={() => proceedAfterLevelComplete()}
-            className="absolute inset-0 z-40 flex flex-col items-center justify-center
-              rounded-xl bg-vt-void/85 backdrop-blur-sm px-6 text-center pointer-events-auto cursor-pointer"
-          >
-            <ScanlineOverlay />
-            <ConfettiBurst />
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-lime text-glow-vt-lime mb-2">Level cleared</div>
-            <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.1em] mb-5">
-              {STAGGER_LEVELS[completedLevelIndex].name} COMPLETED
-            </div>
-            <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-faint vt-fade-away">Tap to continue</div>
-          </button>
-        )}
-
-        {/* Win celebration — crossing the final (crawlers) threshold at 500000.
-            Distinct from levelComplete: no "Next" CTA, just final score +
-            exit/replay via the same controls as gameOver. */}
-        {phase === 'won' && (
-          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-vt-void px-6 text-center">
-            <ScanlineOverlay />
-            <div className="font-silk text-4xl text-vt-lime text-glow-vt-lime uppercase tracking-[0.15em] mb-2">You Win</div>
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-magenta text-glow-vt-magenta mb-6 vt-fade-away">All Levels Cleared</div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Final score</div>
-            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-8 tabular-nums">{score}</div>
-            <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Tray */}
@@ -1019,37 +914,3 @@ export function StaggerScreen() {
   )
 }
 
-// The board (and this overlay) is a fixed square footprint: CELL_PITCH * 12
-// cols/rows, minus the one gap that doesn't exist past the last cell, plus
-// the padding on both sides. Confetti uses this to fall in PIXELS (matching
-// the proven streakBursts/lifeBursts pattern below) rather than percentages —
-// Framer/CSS resolve a transform percentage against the ELEMENT'S OWN box,
-// not the container, so at 6x10px a "fall 110%" only ever moved ~11px and
-// the piece just sat near the top, fading in and out without visibly falling.
-const CONFETTI_BOARD_PX = CELL_PITCH * 12 - 2 + 2 * BOARD_PAD
-const CONFETTI_COLORS = ['#22d3ee', '#facc15', '#ec4899', '#84cc16', '#f97316']
-const CONFETTI_PIECES = Array.from({ length: 18 }, (_, i) => ({
-  left: 10 + (i / 17) * (CONFETTI_BOARD_PX - 20),
-  delay: (i % 6) * 0.05,
-  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  rotate: i % 2 === 0 ? 1 : -1,
-}))
-
-// One-shot confetti burst for the level-complete overlay: pieces fall from
-// above the board and fade out, no looping/repeat (it plays once per mount).
-function ConfettiBurst() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {CONFETTI_PIECES.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute top-0 rounded-sm"
-          style={{ width: 6, height: 10, left: p.left, background: p.color }}
-          initial={{ y: -24, opacity: 0, rotate: 0 }}
-          animate={{ y: CONFETTI_BOARD_PX + 30, opacity: [0, 1, 1, 0], rotate: p.rotate * 360 }}
-          transition={{ duration: 1.6, delay: p.delay, ease: 'easeIn', times: [0, 0.1, 0.7, 1] }}
-        />
-      ))}
-    </div>
-  )
-}
