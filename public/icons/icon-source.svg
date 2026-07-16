@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="32%" r="85%">
+      <stop offset="0%" stop-color="#13131f"/>
+      <stop offset="60%" stop-color="#06060B"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <filter id="mag" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#FF2D9B" flood-opacity="0.9"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- S-piece tetromino motif: filled magenta cells + dark "gap" cells, centered -->
+  <g filter="url(#mag)">
+    <rect x="166" y="146" width="74" height="74" rx="13" fill="#FF2D9B"/>
+    <rect x="248" y="146" width="74" height="74" rx="13" fill="#FF2D9B"/>
+    <rect x="120" y="228" width="74" height="74" rx="13" fill="#FF2D9B"/>
+    <rect x="166" y="228" width="74" height="74" rx="13" fill="#FF2D9B"/>
+  </g>
+  <!-- gap cells (unfilled board) -->
+  <rect x="248" y="228" width="74" height="74" rx="13" fill="#3a1b2e"/>
+  <rect x="166" y="310" width="74" height="74" rx="13" fill="#3a1b2e"/>
+  <rect x="248" y="310" width="74" height="74" rx="13" fill="#3a1b2e"/>
+  <rect x="330" y="310" width="74" height="74" rx="13" fill="#3a1b2e"/>
+</svg>
