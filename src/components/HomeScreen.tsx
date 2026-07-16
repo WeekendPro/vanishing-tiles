@@ -9,9 +9,10 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
  * The primary landing page shown right after sign-in. One decision, one
- * action: a MODE switch (Training | Easy | Medium | Hard), then PLAY —
- * pinned to the bottom thumb arc. Logout is intentionally absent here — it
- * lives in the global menu.
+ * action: the brand block sits in the upper-left corner, while the MODE
+ * switch (Training | Easy | Medium | Hard) and PLAY are centered on the
+ * page — switch in the upper third, PLAY at the middle. Logout is
+ * intentionally absent here — it lives in the global menu.
  *
  * The "Experimental Modes" entry (Practice, the legacy gauntlet + the three
  * Journey map styles) is HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and
@@ -110,23 +111,28 @@ export function HomeScreen() {
         {/* ── Home pane ── */}
         <section
           aria-hidden={pane !== 'home'}
-          className="w-1/2 min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
+          className="w-1/2 min-h-dvh flex flex-col px-6 pt-8 pb-10"
         >
-          {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
-          <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
+          {/* Brand block, tucked into the upper-left corner: motif beside the
+              stacked wordmark so the header stays shallow and the page center
+              belongs to PLAY. */}
+          <header className="self-start flex items-start gap-4">
             {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
-            <VanishingMotif className="mb-5" />
-            {/* VANISHING / TILES stacked, glowing */}
-            <Wordmark size="lg" stacked className="text-3xl" />
-            <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
-              A memory game
-            </p>
-          </div>
-
-          {/* Bottom-pinned cluster: mode switch + PLAY. */}
-          <div className="w-full max-w-sm flex flex-col gap-4">
-            {/* Mode — segmented neon switch (Training / Easy / Medium / Hard). */}
+            <VanishingMotif />
             <div>
+              {/* VANISHING / TILES stacked, glowing */}
+              <Wordmark size="lg" stacked className="text-2xl" />
+              <p className="mt-2 font-display text-[10px] font-medium uppercase tracking-[0.18em] text-neon-magenta text-glow-magenta">
+                A memory game
+              </p>
+            </div>
+          </header>
+
+          {/* PLAY holds the page's midline; the mode switch rides the bottom
+              of the space above it, landing in the upper third. */}
+          <div className="flex-1 w-full max-w-sm self-center flex flex-col">
+            {/* Mode — segmented neon switch (Training / Easy / Medium / Hard). */}
+            <div className="flex-1 flex flex-col justify-end pb-4">
               <p className="text-center font-display text-[10px] font-medium uppercase tracking-[0.22em] text-gray-500 mb-2">
                 Mode
               </p>
@@ -167,19 +173,23 @@ export function HomeScreen() {
               Play
             </button>
 
-            {/* Experimental Modes → slide to second pane (hidden for now). */}
-            {SHOW_EXPERIMENTAL && (
-              <button
-                onClick={() => setPane('experimental')}
-                aria-label="Experimental Modes"
-                className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                  transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
-                  border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
-              >
-                <span>Experimental Modes</span>
-                <span className="text-lg leading-none">›</span>
-              </button>
-            )}
+            {/* Balancing spacer below PLAY — keeps the button on the midline.
+                Experimental Modes rides its top when the flag is on. */}
+            <div className="flex-1 pt-4">
+              {/* Experimental Modes → slide to second pane (hidden for now). */}
+              {SHOW_EXPERIMENTAL && (
+                <button
+                  onClick={() => setPane('experimental')}
+                  aria-label="Experimental Modes"
+                  className="w-full font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                    transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
+                    border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
+                >
+                  <span>Experimental Modes</span>
+                  <span className="text-lg leading-none">›</span>
+                </button>
+              )}
+            </div>
           </div>
         </section>
 
