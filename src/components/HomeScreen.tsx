@@ -20,8 +20,9 @@ const SHOW_EXPERIMENTAL: boolean = false
 
 /** The three reveal difficulties, rendered as a segmented neon switch. Each tier
  *  owns a colour on the heat arc (green → amber → red) and a one-line description
- *  of that mode's reveal/tray visuals + recall ordering (shown under the switch
- *  for whichever tier is selected). */
+ *  of that mode's reveal visuals + recall ordering (shown under the switch for
+ *  whichever tier is selected). The recall tray is always piece-colored, in
+ *  every mode. */
 const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: string }[] = [
   {
     value: 'easy',
@@ -32,13 +33,13 @@ const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: st
   {
     value: 'medium',
     label: 'Medium',
-    hint: 'Monochrome tray. Recall in any order.',
+    hint: 'Monochrome reveal. Recall in any order.',
     active: 'bg-neon-yellow text-arcade-bg shadow-[inset_0_0_14px_rgba(250,204,21,0.5),0_0_12px_rgba(250,204,21,0.35)]',
   },
   {
     value: 'hard',
     label: 'Hard',
-    hint: 'Monochrome. Recall in the order shown.',
+    hint: 'Monochrome reveal. Recall in the order shown.',
     active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
   },
 ]

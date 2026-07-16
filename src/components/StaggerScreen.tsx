@@ -36,22 +36,23 @@ const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95
 
 /** Reveal-bloom flood color per piece type (hex of each piece's Tailwind class —
  *  I=cyan-400, O=yellow-400, T=purple-500, S=green-400, Z=red-500, J=blue-500,
- *  L=orange-400). On EASY and MEDIUM, gaps bloom in their own piece color during
- *  reveal so the player can track shape AND color, easing the memory load. */
+ *  L=orange-400). On EASY, gaps bloom in their own piece color during reveal
+ *  so the player can track shape AND color, easing the memory load. The recall
+ *  tray always uses these same piece colors, in every mode. */
 const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
-/** The uniform branded pink the reveal floods on HARD (the signature Afterglow
- *  magenta — shape only, no colour crutch). Also the monochrome tray color for
- *  MEDIUM and HARD. */
+/** The uniform branded pink the reveal floods on MEDIUM and HARD (the signature
+ *  Afterglow magenta — shape only, no colour crutch). The recall tray always
+ *  shows each piece's own color, in every mode. */
 const REVEAL_MAGENTA = '#FF2D9B'
 
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
  *  CONCURRENTLY with later ones (the overlapping cascade). `color` floods the
- *  whole bloom (EASY/MEDIUM in piece color, HARD in the branded magenta). */
+ *  whole bloom (EASY in piece color, MEDIUM/HARD in the branded magenta). */
 interface Bloom { id: number; color: string; cells: { key: string; holdMs: number; decayMs: number }[] }
 
 function bloomForGap(
@@ -93,8 +94,8 @@ function useCountUp(value: number, durationMs = 600): number {
 // The Vanishing Tiles board is the dark VOID throughout (.vt-dim) — gaps are concealed
 // within one uniform near-black field, never a readable hole. A gap is only ever
 // exposed by a live BLOOM: the whole tetromino's cells get .vt-bloom at the same
-// tick, flood a color (the gap's PIECE COLOR on EASY/MEDIUM, the branded magenta
-// on HARD via --bloom-color), then decay along a luminous ghost tail back to the
+// tick, flood a color (the gap's PIECE COLOR on EASY, the branded magenta on
+// MEDIUM/HARD via --bloom-color), then decay along a luminous ghost tail back to the
 // void — fading away in a WAVE (each cell sets its own duration + delay). Filled/
 // placed gaps keep their piece color (a correct pick lighting out of the dark),
 // ringed with a soft glow.
@@ -138,7 +139,7 @@ function StaggerBoard({
         const bloom = bloomByCell.get(key)
         if (bloom) {
           // Every tier floods --bloom-color (.vt-bloom) — piece color on
-          // EASY/MEDIUM, the branded magenta on HARD.
+          // EASY, the branded magenta on MEDIUM/HARD.
           return (
             <div
               key={`${i}-bloom-${bloom.id}`}
@@ -197,12 +198,11 @@ function StaggerCountdown({
 }
 
 // ── Piece tray ────────────────────────────────────────────────────────────────
-// On MEDIUM and HARD the tray is monochrome (uniform branded pink, via
-// `colorClass` on PieceShape) — shape only, no color crutch. EASY keeps each
-// piece's own color (colorClass undefined → PieceShape's default).
+// The recall tray always shows each piece's own color, in every mode
+// (PieceShape's default) — the monochrome-pink tray treatment is reveal-only.
 function PieceTray({
-  onPick, disabled, colorClass,
-}: { onPick: (t: PieceType) => void; disabled: boolean; colorClass?: string }) {
+  onPick, disabled,
+}: { onPick: (t: PieceType) => void; disabled: boolean }) {
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
@@ -221,7 +221,7 @@ function PieceTray({
               hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
               disabled:opacity-40 disabled:pointer-events-none"
           >
-            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={colorClass} />
+            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
           </button>
         ))}
       </div>
@@ -358,8 +358,8 @@ export function StaggerScreen() {
   }, [phase])
 
   // Reveal driver (shape-bloom): bloom each gap in turn — the gap's cells all get
-  // .vt-bloom at the same tick, flood the piece color (EASY/MEDIUM) or magenta
-  // (HARD), then decay along a ghost tail back to the void (fading away in a
+  // .vt-bloom at the same tick, flood the piece color (EASY) or magenta
+  // (MEDIUM/HARD), then decay along a ghost tail back to the void (fading away in a
   // per-cell wave).
   // Decays cascade (the next gap blooms before the last finishes dying), draining
   // the bar one step per gap as a COUNT, then hand off to selecting. Because the
@@ -373,11 +373,11 @@ export function StaggerScreen() {
     // back to index order if a batch somehow arrived without a plan (e.g. legacy state).
     const order = revealPlan.length ? revealPlan : gaps.map((_, i) => i)
     const n = order.length
-    // Difficulty shapes the reveal: EASY and MEDIUM flood each gap in its own
-    // piece colour; HARD floods the uniform branded pink (shape only, no colour
-    // crutch). All tiers play at the same (normal) reveal speed.
+    // Difficulty shapes the reveal: EASY floods each gap in its own piece
+    // colour; MEDIUM and HARD flood the uniform branded pink (shape only, no
+    // colour crutch). All tiers play at the same (normal) reveal speed.
     const colorFor = (gap: StaggerGap) =>
-      mode === 'hard' ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[gap.pieceType]
+      mode === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
     // Reveal/decay timing is read LIVE from timingRef per gap. `step` (gap-to-gap
     // spacing) outruns one bloom's lifetime, so the next gap flashes while the
     // previous is still decaying.
@@ -736,7 +736,7 @@ export function StaggerScreen() {
         )}
         <div className="min-h-[88px] w-full flex justify-center">
           {phase === 'selecting' && (
-            <PieceTray onPick={onPick} disabled={cleared || paused} colorClass={mode === 'easy' ? undefined : 'bg-vt-magenta'} />
+            <PieceTray onPick={onPick} disabled={cleared || paused} />
           )}
         </div>
       </div>

@@ -18,12 +18,14 @@ export type MapStyle = 'transit' | 'mentalBrain' | 'git'
 /**
  * Stagger reveal difficulty (set from the home screen; snapshotted into
  * `staggerStore.mode` at `startRun` — that snapshot, not this setting, drives
- * all in-run visuals and ordering). Each tier layers on the last:
- *  - `easy`   — reveal in piece colours; tray in piece colours; recall in any order.
- *  - `medium` — reveal in piece colours; tray monochrome branded pink; recall in any order.
- *  - `hard`   — reveal monochrome branded pink; tray monochrome branded pink;
- *               recall must follow the reveal order (ordered-recall enforced in
- *               `pickPiece`, surfaced as an "IN ORDER" chip during selecting).
+ * all in-run visuals and ordering). The recall tray is always in piece colours,
+ * in every tier — only the memorize/reveal phase and recall ordering change.
+ * Each tier layers on the last:
+ *  - `easy`   — reveal in piece colours; recall in any order.
+ *  - `medium` — reveal monochrome branded pink; recall in any order.
+ *  - `hard`   — reveal monochrome branded pink; recall must follow the reveal
+ *               order (ordered-recall enforced in `pickPiece`, surfaced as an
+ *               "IN ORDER" chip during selecting).
  */
 export type Difficulty = 'easy' | 'medium' | 'hard'
 

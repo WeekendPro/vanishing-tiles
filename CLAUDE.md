@@ -28,9 +28,11 @@ One continuous run: each **batch** reveals `N` gaps one at a time (a "bloom" fla
 
 **Three player-selected modes** (`mode`, a `Difficulty` from `src/store/settingsStore.ts`, snapshotted into `staggerStore.mode` at `startRun(mode)` — that snapshot, not the live setting, drives all in-run visuals/ordering):
 
-- **Easy** — gaps reveal in their own piece color; tray pieces are shown in piece colors; recall in any order.
-- **Medium** — gaps reveal in piece colors; tray is monochrome neon pink (`#FF2D9B`); recall in any order.
-- **Hard** — gaps reveal monochrome neon pink; tray is monochrome; picks must match the **order the gaps were revealed in** (enforced in `pickPiece` against `revealPlan`), with an "IN ORDER" chip shown above the tray as a reminder.
+- **Easy** — gaps reveal in their own piece color; recall in any order.
+- **Medium** — gaps reveal monochrome neon pink (`#FF2D9B`); recall in any order.
+- **Hard** — gaps reveal monochrome neon pink; picks must match the **order the gaps were revealed in** (enforced in `pickPiece` against `revealPlan`), with an "IN ORDER" chip shown above the tray as a reminder.
+
+The recall tray always shows pieces in their own piece colors, in every mode — only the reveal phase goes monochrome on Medium/Hard.
 
 **Difficulty ramp** (`src/lib/staggerCurve.ts`, `STAGGER_CURVE` + `SHAPE_SCHEDULE`) — a single infinite ramp, not per-level tables: gap count holds at 3 for levels 1–4, then climbs one gap every three levels up to a cap of 12 at level 29+ (terminal rung for the endless tail). The shape pool opens on O + I, then adds one shape at a time — L (L2), J (L3), T (L6), S (L7), Z (L10) — so all seven tetrominoes are in play by level 10. Gap rotation is locked to the tray's display rotation until orientation frees at level 9 (`ORIENTATION_FREE_FROM = 8`, 0-based). Exactly one of these levers (gap count / shape variety / orientation) moves per level. Reveal pacing (flash/hold/decay timing) is **constant** across the whole run — the ramp never speeds up the reveal itself. The select clock is `(6000 + gaps × 1400) × max(0.7, 1 − 0.005 × batchIndex)` ms — it grows with gap count but slowly tightens (floor 70% of nominal) as the run goes on, so late-run batches stay tense even after the gap count caps out.
 
