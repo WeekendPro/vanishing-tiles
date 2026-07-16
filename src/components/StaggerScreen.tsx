@@ -159,10 +159,11 @@ function StaggerBoard({
 }
 
 // ── Countdown ───────────────────────────────────────────────────────────────
-// Each number burns bright the instant it appears, then dissipates (Afterglow
-// Smear: blurs + swells + fades to nothing) over the beat, just as the next
-// number takes its place. The CSS animation length (.vt-num-decay, 850ms) is
-// kept in lockstep with BEAT_MS.
+// Each number burns bright the instant it appears, holds at full strength for
+// ~72% of its beat, then dissipates (Afterglow Smear: blurs + swells + fades
+// to nothing) in the final stretch, just as the next number takes its place.
+// The CSS animation length (.vt-num-decay, 850ms) is kept in lockstep with
+// BEAT_MS.
 //
 // The countdown is anchored OVER the board/grid (not a full-screen void) so
 // the player sees the mode's frame before the gaps reveal: the mode label

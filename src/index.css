@@ -229,13 +229,16 @@
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
-   appears, then the light dissipates — blurring and swelling outward as it fades
-   to full-zero visibility, just before the next number takes its place. Duration
-   is kept in lockstep with the per-beat timer in StaggerCountdown. */
+   appears, HOLDS at full strength for most of its beat, then smears out —
+   blurring and swelling outward as it fades to nothing — in the final ~28%,
+   just as the next number takes its place. Same flash → hold → decay grammar
+   as the gap-reveal bloom. Duration is kept in lockstep with the per-beat
+   timer in StaggerCountdown. */
 @keyframes vtNumDecay {
   0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40, 240, 255, 0); }
-  9%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
-  100% { opacity: 0; transform: scale(1.22); filter: blur(7px); text-shadow: 0 0 50px rgba(40, 240, 255, 0.4); }
+  8%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
+  72%  { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40, 240, 255, 0.8), 0 0 60px rgba(40, 240, 255, 0.5); }
+  100% { opacity: 0; transform: scale(1.18); filter: blur(7px); text-shadow: 0 0 50px rgba(40, 240, 255, 0.4); }
 }
 .vt-num-decay { animation: vtNumDecay 850ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
 
