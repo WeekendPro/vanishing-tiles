@@ -70,14 +70,28 @@ describe('TrainingScreen', () => {
     expect(document.querySelector(`[data-letter-option="${before!.type}"]`)).toBeEnabled()
   })
 
-  it('shows the streak, best, and avg speed in the HUD, with no score, lives, or timer', async () => {
+  it('shows the flat streak / best / miss / avg-speed bar, with no score, lives, or timer', async () => {
     const user = userEvent.setup()
     render(<TrainingScreen />)
     expect(screen.getByText('Streak')).toBeInTheDocument()
     expect(screen.getByText('Best')).toBeInTheDocument()
+    expect(screen.getByText('Miss')).toBeInTheDocument()
+    expect(screen.getByText('Avg speed')).toBeInTheDocument()
     await user.click(document.querySelector(`[data-letter-option="${useTrainingStore.getState().piece!.type}"]`)!)
     expect(useTrainingStore.getState().bestStreak).toBe(1)
     expect(screen.queryByText(/score/i)).toBeNull()
+  })
+
+  it('counts misses in the HUD (totalPicks − correctPicks)', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    const missValue = screen.getByText('Miss').nextElementSibling!
+    expect(missValue).toHaveTextContent('0')
+    await user.click(document.querySelector(`[data-letter-option="${wrongType()}"]`)!)
+    expect(missValue).toHaveTextContent('1')
+    // A correct pick doesn't move the miss count.
+    await user.click(document.querySelector(`[data-letter-option="${useTrainingStore.getState().piece!.type}"]`)!)
+    expect(missValue).toHaveTextContent('1')
   })
 
   it('Exit tears the session down and returns home at any moment', async () => {

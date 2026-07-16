@@ -108,12 +108,12 @@ function LetterTray({
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function TrainingScreen() {
   const {
-    active, piece, round, currentStreak, bestStreak, correctPicks, totalCorrectMs,
+    active, piece, round, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs,
     start, nextPiece, guess, exit,
   } = useTrainingStore(useShallow(s => ({
     active: s.active, piece: s.piece, round: s.round,
     currentStreak: s.currentStreak, bestStreak: s.bestStreak,
-    correctPicks: s.correctPicks, totalCorrectMs: s.totalCorrectMs,
+    totalPicks: s.totalPicks, correctPicks: s.correctPicks, totalCorrectMs: s.totalCorrectMs,
     start: s.start, nextPiece: s.nextPiece, guess: s.guess, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
@@ -181,26 +181,33 @@ export function TrainingScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
-      {/* HUD — no score, no lives, no clock: only the streak survives here. */}
+      {/* HUD — no score, no lives, no clock: a flat four-stat bar, one shared
+          size and baseline, reading run → record → fumbles → speed. Streaks
+          are lime-family (BEST dimmed), MISS a muted red (a record, not an
+          alarm), speed cyan. */}
       <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
         <div>
           <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
-          <div className="font-silk font-bold text-3xl text-vt-lime text-glow-vt-lime leading-none tabular-nums">
+          <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
             {currentStreak}
           </div>
         </div>
-        <div className="text-right flex flex-col gap-2">
-          <div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Avg speed</div>
-            <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-              {avgLabel}
-            </div>
+        <div>
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
+          <div className="mt-1 font-silk font-bold text-lg text-vt-lime/55 leading-none tabular-nums">
+            {bestStreak}
           </div>
-          <div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
-            <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-              {bestStreak}
-            </div>
+        </div>
+        <div>
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Miss</div>
+          <div className="mt-1 font-silk font-bold text-lg text-vt-red/75 leading-none tabular-nums">
+            {totalPicks - correctPicks}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Avg speed</div>
+          <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+            {avgLabel}
           </div>
         </div>
       </div>
