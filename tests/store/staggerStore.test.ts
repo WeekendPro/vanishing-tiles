@@ -29,18 +29,14 @@ beforeEach(() => {
 })
 
 describe('staggerCurve', () => {
-  it('holds gaps at 3 for only the first 3 levels, then climbs one at a time, capped at MAX_GAPS', () => {
-    // L1–3: only the first 3 levels hold 3 gaps (on-ramp halved).
-    for (let b = 0; b <= 2; b++) expect(gapCountForBatch(b)).toBe(3)
-    expect(gapCountForBatch(3)).toBe(4)   // L4
-    expect(gapCountForBatch(4)).toBe(4)   // L5
-    // L6–11: held at 5 while the last shapes (S, Z) land, orientation unlocks, and
-    // pairing switches on with no extra recall load.
-    for (let b = 5; b <= 10; b++) expect(gapCountForBatch(b)).toBe(5)
-    expect(gapCountForBatch(11)).toBe(6)  // L12
-    expect(gapCountForBatch(12)).toBe(6)  // L13
+  it('holds gaps at 3 for the first four levels, then climbs one gap every three levels, capped at MAX_GAPS', () => {
+    // L1–4: the runway — the first four levels hold 3 gaps flat.
+    for (let b = 0; b <= 3; b++) expect(gapCountForBatch(b)).toBe(3)
+    for (let b = 4; b <= 6; b++) expect(gapCountForBatch(b)).toBe(4)    // L5–7
+    for (let b = 7; b <= 9; b++) expect(gapCountForBatch(b)).toBe(5)    // L8–10
+    for (let b = 10; b <= 12; b++) expect(gapCountForBatch(b)).toBe(6) // L11–13
     expect(gapCountForBatch(13)).toBe(7)  // L14
-    expect(gapCountForBatch(20)).toBe(STAGGER.MAX_GAPS)  // L21 reaches the cap
+    expect(gapCountForBatch(28)).toBe(STAGGER.MAX_GAPS)  // L29 reaches the cap
     expect(gapCountForBatch(100)).toBe(STAGGER.MAX_GAPS)
     // Monotonic, never stepping by more than one gap at a time.
     for (let b = 1; b <= 60; b++) {
@@ -106,6 +102,27 @@ describe('staggerCurve', () => {
     expect(DISPLAY_ROTATION.O).toBe(0)
   })
 
+  it('moves at most one difficulty lever per level, with two known exceptions', () => {
+    // The three remaining levers: gap count, shape-pool size, and the
+    // orientation-locked→free transition. Verified against the plan-mandated
+    // table (see task-3-brief.md): it happens to double up at two levels —
+    //   idx 4 (L5): gap bump 3→4 lands on the same level T joins the pool
+    //   idx 7 (L8): gap bump 4→5 lands on the same level orientation frees
+    //     (ORIENTATION_FREE_FROM = 7)
+    // Both are plan-mandated, not a bug — called out explicitly rather than
+    // silently asserted away.
+    const KNOWN_DOUBLE_LEVER_INDICES = new Set([4, 7])
+    for (let b = 1; b <= 28; b++) {
+      if (KNOWN_DOUBLE_LEVER_INDICES.has(b)) continue
+      const gapChanged = gapCountForBatch(b) !== gapCountForBatch(b - 1)
+      const poolChanged = allowedTypesForBatch(b).length !== allowedTypesForBatch(b - 1).length
+      const orientChanged =
+        (lockedRotationsForBatch(b) === undefined) !== (lockedRotationsForBatch(b - 1) === undefined)
+      const leversMoved = [gapChanged, poolChanged, orientChanged].filter(Boolean).length
+      expect(leversMoved).toBeLessThanOrEqual(1)
+    }
+  })
+
   it('starts the run with five lives', () => {
     expect(STAGGER.START_LIVES).toBe(5)
   })
@@ -116,6 +133,22 @@ describe('staggerCurve', () => {
     expect(batchSpeedBonus(2500, 5000)).toBe(Math.round(STAGGER.SPEED_MAX * 0.5))
     expect(batchSpeedBonus(9999, 5000)).toBe(STAGGER.SPEED_MAX) // clamped
     expect(batchSpeedBonus(100, 0)).toBe(0)                     // guard
+  })
+})
+
+describe('single ramp with runway', () => {
+  it('holds 3 gaps for the first four levels, then climbs one gap every three levels to 12', () => {
+    const expected = [3,3,3,3, 4,4,4, 5,5,5, 6,6,6, 7,7,7, 8,8,8, 9,9,9, 10,10,10, 11,11,11, 12]
+    expected.forEach((gaps, i) => expect(gapCountForBatch(i)).toBe(gaps))
+    expect(gapCountForBatch(60)).toBe(12) // endless tail clamps at the cap
+  })
+
+  it('tightens the select clock slowly: -0.5% per batch, floored at 70%', () => {
+    const base = (n: number) => STAGGER.SELECT_BASE + gapCountForBatch(n) * STAGGER.SELECT_PER_GAP
+    expect(selectDurationForBatch(0)).toBe(Math.round(base(0)))            // factor 1.0
+    expect(selectDurationForBatch(20)).toBe(Math.round(base(20) * 0.9))   // 1 - 20*0.005
+    expect(selectDurationForBatch(60)).toBe(Math.round(base(60) * 0.7))   // floor
+    expect(selectDurationForBatch(200)).toBe(Math.round(base(200) * 0.7)) // stays floored
   })
 })
 

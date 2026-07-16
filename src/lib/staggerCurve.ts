@@ -3,12 +3,18 @@ import type { DifficultyConfig, PieceType, Rotation } from '@shared/types'
 /**
  * Infinite Stagger's own difficulty + scoring curve, expressed as a hand-authored
  * rung table (STAGGER_CURVE) indexed by the 0-based batch index, clamped to the
- * last rung for the endless tail. Difficulty is split across INDEPENDENT levers so
- * only ONE conceptual lever ever moves per level (no stacked spikes):
+ * last rung for the endless tail. Difficulty is split across mostly-INDEPENDENT
+ * levers so at most one conceptual lever moves per level (two known exceptions,
+ * see the "moves at most one difficulty lever" test):
  *
  *   1. shape variety — how many distinct piece types may appear (SHAPE_SCHEDULE)
  *   2. orientation    — gaps locked to the tray rotation, then freed (ORIENTATION_FREE_FROM)
- *   3. gap count (N)  — how many gaps to recall (STAGGER_CURVE[i].gaps)
+ *   3. gap count (N)  — how many gaps to recall (STAGGER_CURVE[i].gaps); a single
+ *      gentle ramp with a runway, capped at MAX_GAPS
+ *
+ * A fourth, orthogonal lever runs on wall-clock time rather than per-level: the
+ * select clock slowly tightens as the run goes on (selectDurationForBatch), so
+ * the endless tail keeps getting tenser even after the gap count caps out.
  *
  * Every gap reveals as its own SOLO beat — there is no chunking or back-loaded
  * reveal variant; recall load is driven purely by gap count and shape variety.
@@ -26,6 +32,8 @@ export const STAGGER = {
   REVEAL_WAVE_MS: 220,   // per-cell DECAY wave spread (only the decay tail stretches per cell, so cells end at staggered times)
   SELECT_BASE: 6000,   // ms base select clock
   SELECT_PER_GAP: 1400,// ms of select clock added per gap
+  SELECT_TIGHTEN_PER_BATCH: 0.005, // select clock loses 0.5% per level…
+  SELECT_MIN_FACTOR: 0.7,          // …until it bottoms out at 70% (batch 60+)
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap
   SPEED_MAX: 500,      // max per-batch speed bonus
   START_LIVES: 5,      // shared lives for the whole run
@@ -44,14 +52,15 @@ export const DISPLAY_ROTATION: Record<PieceType, Rotation> = {
  *  shapes join one at a time so memory load ramps slowly. (`from` = batch index
  *  at which the shape becomes available.)
  *
- *  Variety is the PRIMARY early lever: gaps are held at 3 through the whole
- *  on-ramp (see gapCountForBatch), so levels 1–6 grow harder only by widening
- *  the shape pool (2 → 4) rather than by adding board volume. New shapes are
- *  spaced so they never land on the same level as a gap-count bump or the
- *  orientation unlock — one lever moves at a time. Z (the last shape) arrives
- *  AFTER orientation frees up (idx 8 > idx 7), so the hardest pieces don't debut
- *  rotated. The on-ramp is short (only L1–3 hold 3 gaps), so all 7 shapes are in
- *  by L9, the level before pairing begins. */
+ *  Variety is the PRIMARY early lever: gaps are held at 3 through the runway
+ *  (see gapCountForBatch), so levels 1–4 grow harder only by widening the
+ *  shape pool rather than by adding board volume. New shapes are spaced so
+ *  they mostly avoid landing on the same level as a gap-count bump or the
+ *  orientation unlock; L5 (T joining) and L8 (orientation freeing) are the two
+ *  known exceptions where the plan-mandated gap-count table doubles up with
+ *  another lever (see the "moves at most one difficulty lever" test). Z (the
+ *  last shape) arrives AFTER orientation frees up (idx 8 > idx 7), so the
+ *  hardest pieces don't debut rotated. All 7 shapes are in by L9. */
 const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
   { from: 0, type: 'O' },
   { from: 0, type: 'I' },
@@ -83,45 +92,33 @@ export function lockedRotationsForBatch(batchIndex: number): Record<PieceType, R
 /** The difficulty rungs (one per level), indexed by batch index and clamped to
  *  the last rung for the endless tail. `gaps` is the recall load (N) — the only
  *  lever this table carries; shape variety and orientation are driven separately
- *  (SHAPE_SCHEDULE, ORIENTATION_FREE_FROM) so they never move on the same level
- *  as a gap-count bump.
+ *  (SHAPE_SCHEDULE, ORIENTATION_FREE_FROM). A single gentle ramp with runway:
+ *  hold at 3 for four levels, then climb one gap every three levels to the cap.
+ *  Longevity now comes from the select clock slowly tightening over time
+ *  (see selectDurationForBatch) rather than from a steeper gap-count curve.
  *
- *    L1–3   N3    on-ramp: held flat while variety grows (+L, +J)
- *    L4–5   N4    +gap, then +shape (T)
- *    L6–9   N5    +gap, +shape (S), orientation unlock, +shape (Z) — N held
- *    L10–13 N5→6  gap lever resumes once all 7 shapes and free orientation are in
- *    L14–20 N7→11 steady climb toward the cap
- *    L21+   N12   terminal rung: held at the cap for the endless tail */
+ *    L1–4   N3   runway: held flat while shape variety grows (+L, +J)
+ *    L5–7   N4
+ *    L8–10  N5   orientation unlocks (L8), last shape (Z) joins (L9)
+ *    L11–13 N6
+ *    L14–16 N7
+ *    L17–19 N8
+ *    L20–22 N9
+ *    L23–25 N10
+ *    L26–28 N11
+ *    L29+   N12  terminal rung: held at the cap for the endless tail */
 interface StaggerRung { gaps: number }
 const STAGGER_CURVE: StaggerRung[] = [
-  { gaps: 3 },  // L1
-  { gaps: 3 },  // L2
-  { gaps: 3 },  // L3 — last on-ramp level (on-ramp halved to 3 levels)
-  { gaps: 4 },  // L4
-  { gaps: 4 },  // L5
-  { gaps: 5 },  // L6
-  { gaps: 5 },  // L7
-  { gaps: 5 },  // L8 — orientation unlocks here
-  { gaps: 5 },  // L9 — last shape (Z) joins; all 7 in
-  { gaps: 5 },  // L10
-  { gaps: 5 },  // L11
-  { gaps: 6 },  // L12
-  { gaps: 6 },  // L13
-  { gaps: 7 },  // L14
-  { gaps: 8 },  // L15
-  { gaps: 8 },  // L16
-  { gaps: 9 },  // L17
-  { gaps: 10 }, // L18
-  { gaps: 10 }, // L19
-  { gaps: 11 }, // L20
-  { gaps: 12 }, // L21
-  { gaps: 12 }, // L22
-  { gaps: 12 }, // L23
-  { gaps: 12 }, // L24
-  { gaps: 12 }, // L25
-  { gaps: 12 }, // L26
-  { gaps: 12 }, // L27
-  { gaps: 12 }, // L28
+  { gaps: 3 }, { gaps: 3 }, { gaps: 3 }, { gaps: 3 },   // L1–4 on-ramp
+  { gaps: 4 }, { gaps: 4 }, { gaps: 4 },                 // L5–7 (orientation unlocks L8 — next block)
+  { gaps: 5 }, { gaps: 5 }, { gaps: 5 },                 // L8–10
+  { gaps: 6 }, { gaps: 6 }, { gaps: 6 },                 // L11–13
+  { gaps: 7 }, { gaps: 7 }, { gaps: 7 },                 // L14–16
+  { gaps: 8 }, { gaps: 8 }, { gaps: 8 },                 // L17–19
+  { gaps: 9 }, { gaps: 9 }, { gaps: 9 },                 // L20–22
+  { gaps: 10 }, { gaps: 10 }, { gaps: 10 },              // L23–25
+  { gaps: 11 }, { gaps: 11 }, { gaps: 11 },              // L26–28
+  { gaps: 12 },                                          // L29+ terminal; only time keeps tightening
 ]
 
 function rung(batchIndex: number): StaggerRung {
@@ -162,9 +159,16 @@ export function batchRevealMs(batchIndex: number): number {
   return (gapCountForBatch(batchIndex) - 1) * STAGGER.REVEAL_STEP_MS + STAGGER.REVEAL_BLOOM_MS
 }
 
-/** Select clock grows with the gap count so picking is never the bottleneck. */
+/** Select clock grows with the gap count so picking is never the bottleneck,
+ *  then slowly tightens over the length of the run — losing
+ *  SELECT_TIGHTEN_PER_BATCH per batch, floored at SELECT_MIN_FACTOR — so late-run
+ *  levels stay tense even after the gap count caps out. */
 export function selectDurationForBatch(batchIndex: number): number {
-  return STAGGER.SELECT_BASE + gapCountForBatch(batchIndex) * STAGGER.SELECT_PER_GAP
+  const factor = Math.max(
+    STAGGER.SELECT_MIN_FACTOR,
+    1 - batchIndex * STAGGER.SELECT_TIGHTEN_PER_BATCH,
+  )
+  return Math.round((STAGGER.SELECT_BASE + gapCountForBatch(batchIndex) * STAGGER.SELECT_PER_GAP) * factor)
 }
 
 /** Mirrors The Classic's complexity bands (simple ≤5 / medium ≤8 / complex). */
