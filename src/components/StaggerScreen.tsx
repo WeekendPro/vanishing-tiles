@@ -3,16 +3,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
-import { useStaggerStore, activeLevel, isSandboxRun, type StaggerGap } from '../store/staggerStore'
+import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
-import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
-import { resolveTiming, NO_OVERRIDES } from '../lib/staggerMechanic'
-import { STAGGER_LEVELS } from '../lib/staggerLevels'
-import { isSandboxEnv } from '../lib/env'
 import { PieceShape } from './PieceShape'
-import { StaggerSandboxPanel } from './StaggerSandboxPanel'
 import { NeonButton, ScanlineOverlay, LivesCounter } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
 
@@ -41,73 +36,32 @@ const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95
 
 /** Reveal-bloom flood color per piece type (hex of each piece's Tailwind class —
  *  I=cyan-400, O=yellow-400, T=purple-500, S=green-400, Z=red-500, J=blue-500,
- *  L=orange-400). On EASY, gaps bloom in their own piece color during reveal so
- *  the player can track shape AND color, easing the memory load. */
+ *  L=orange-400). On EASY and MEDIUM, gaps bloom in their own piece color during
+ *  reveal so the player can track shape AND color, easing the memory load. */
 const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
-/** The uniform branded pink the reveal floods on MEDIUM (the signature Afterglow
- *  magenta — shape only, no colour crutch). */
+/** The uniform branded pink the reveal floods on HARD (the signature Afterglow
+ *  magenta — shape only, no colour crutch). Also the monochrome tray color for
+ *  MEDIUM and HARD. */
 const REVEAL_MAGENTA = '#FF2D9B'
 
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
  *  together and then wink out in a wave. Each instance animates to completion
  *  CONCURRENTLY with later ones (the overlapping cascade). `color` floods the
- *  whole bloom (EASY/MEDIUM); `paint` swaps the bright color flood for HARD's
- *  self-colored graphite "impasto" surface (see .vt-paint), no color crutch. */
-interface Bloom { id: number; color: string; paint: boolean; cells: { key: string; holdMs: number; decayMs: number }[] }
+ *  whole bloom (EASY/MEDIUM in piece color, HARD in the branded magenta). */
+interface Bloom { id: number; color: string; cells: { key: string; holdMs: number; decayMs: number }[] }
 
 function bloomForGap(
-  id: number, gap: StaggerGap, color: string, paint: boolean, bloomMs: number, decayMs: number, waveMs: number,
+  id: number, gap: StaggerGap, color: string, bloomMs: number, decayMs: number, waveMs: number,
 ): Bloom {
   const cells = [...gap.cells]
     .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
     .map(([r, c], i) => ({ key: `${r},${c}`, holdMs: bloomMs, decayMs: decayMs + i * waveMs }))
-  return { id, color, paint, cells }
+  return { id, color, cells }
 }
-
-// ── Inverted reveal ───────────────────────────────────────────────────────────
-// A gap flagged `inverted` reveals back-loaded: a seed cell embers, neighbours
-// flow in dim one at a time (overlapping ramps → one continuous growth), the whole
-// shape snaps to full-bright COMPLETE for a held instant (the payload), then POOFS
-// out together as a magenta contract. Each cell carries its current sub-state; the
-// board renders the matching iv-* class.
-type InvSub = 'seed' | 'build' | 'complete' | 'poof'
-
-/** A live inverted instance: per-cell current sub-state, keyed by cell. */
-interface InvertedBloom { id: number; sub: Map<string, InvSub> }
-
-/** Order a gap's cells as an ADJACENCY WALK from a central seed, so the build grows
- *  like a connected organism rather than teleporting cells. The seed is the cell
- *  with the most orthogonal neighbours in the shape (the T-junction / L-elbow / an
- *  O corner); ties break toward the top-left. */
-function invertedCellOrder(cells: [number, number][]): string[] {
-  const keyOf = ([r, c]: [number, number]) => `${r},${c}`
-  const present = new Set(cells.map(keyOf))
-  const neighbours = ([r, c]: [number, number]): [number, number][] =>
-    ([[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]] as [number, number][])
-      .filter(n => present.has(keyOf(n)))
-  // Seed: max in-shape degree, tie-break top-left.
-  const seed = [...cells].sort(
-    (a, b) => neighbours(b).length - neighbours(a).length || a[0] - b[0] || a[1] - b[1],
-  )[0]
-  // BFS from the seed; queue neighbours top-left first for a stable, radiating walk.
-  const order: string[] = []
-  const seen = new Set<string>()
-  const queue: [number, number][] = [seed]
-  seen.add(keyOf(seed))
-  while (queue.length) {
-    const cur = queue.shift()!
-    order.push(keyOf(cur))
-    for (const n of neighbours(cur).sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
-      if (!seen.has(keyOf(n))) { seen.add(keyOf(n)); queue.push(n) }
-    }
-  }
-  return order
-}
-
 
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
  *  `durationMs` (so every banked pick — and the end-of-batch speed bonus — counts
@@ -139,19 +93,16 @@ function useCountUp(value: number, durationMs = 600): number {
 // The Vanishing Tiles board is the dark VOID throughout (.vt-dim) — gaps are concealed
 // within one uniform near-black field, never a readable hole. A gap is only ever
 // exposed by a live BLOOM: the whole tetromino's cells get .vt-bloom at the same
-// tick, flood the gap's PIECE COLOR (--bloom-color; an experiment to ease the
-// difficulty curve by carrying shape + color), then decay along a luminous ghost
-// tail back to the void — fading away in a WAVE (each cell sets its own duration +
-// delay). On HARD the bloom is .vt-paint instead: a self-colored graphite
-// "impasto" surface (no bright flood) that barely lifts off the void. Filled/
+// tick, flood a color (the gap's PIECE COLOR on EASY/MEDIUM, the branded magenta
+// on HARD via --bloom-color), then decay along a luminous ghost tail back to the
+// void — fading away in a WAVE (each cell sets its own duration + delay). Filled/
 // placed gaps keep their piece color (a correct pick lighting out of the dark),
 // ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomByCell, invertedByCell,
+  gaps, bloomByCell,
 }: {
   gaps: StaggerGap[]
-  bloomByCell: Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>
-  invertedByCell: Map<string, { id: number; sub: InvSub }>
+  bloomByCell: Map<string, { id: number; holdMs: number; decayMs: number; color: string }>
 }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
@@ -181,34 +132,21 @@ function StaggerBoard({
             />
           )
         }
-        // An inverted gap's cells carry a sub-state (seed/build/complete/poof) and
-        // render the matching iv-* class. Keyed by instance id + sub so a state
-        // change re-triggers the animation. Magenta is driven via --magenta.
-        const inv = invertedByCell.get(key)
-        if (inv) {
-          return (
-            <div
-              key={`${i}-iv-${inv.id}-${inv.sub}`}
-              className={`w-7 h-7 rounded-sm iv-${inv.sub}`}
-              style={{ ['--magenta']: REVEAL_MAGENTA } as CSSProperties}
-            />
-          )
-        }
         // Uniform dark void; a blooming gap's cells all flash at once then decay
         // back to the void in a wave (per-cell duration). Past blooms stay mounted
         // and keep decaying — keyed by their instance id — so they overlap.
         const bloom = bloomByCell.get(key)
         if (bloom) {
-          // HARD paints in graphite (.vt-paint, self-colored); EASY/MEDIUM flood
-          // the bright --bloom-color (.vt-bloom).
+          // Every tier floods --bloom-color (.vt-bloom) — piece color on
+          // EASY/MEDIUM, the branded magenta on HARD.
           return (
             <div
               key={`${i}-bloom-${bloom.id}`}
-              className={`w-7 h-7 rounded-sm ${bloom.paint ? 'vt-paint' : 'vt-bloom'}`}
+              className="w-7 h-7 rounded-sm vt-bloom"
               style={{
                 animationDuration: `${bloom.holdMs}ms, ${bloom.decayMs}ms`,
                 animationDelay: `0ms, ${bloom.holdMs}ms`,
-                ...(bloom.paint ? {} : { ['--bloom-color']: bloom.color }),
+                ['--bloom-color']: bloom.color,
               } as CSSProperties}
             />
           )
@@ -226,13 +164,12 @@ function StaggerBoard({
 // kept in lockstep with BEAT_MS.
 //
 // The countdown is anchored OVER the board/grid (not a full-screen void) so
-// the player sees the level's frame before the gaps reveal: the active level
-// NAME sits just above the 3·2·1. Fires at run start AND after each
-// levelComplete (proceedAfterLevelComplete sets phase back to 'countdown').
+// the player sees the mode's frame before the gaps reveal: the mode label
+// sits just above the 3·2·1. Fires at run start.
 const BEAT_MS = 850
 function StaggerCountdown({
-  levelName, modeLabel, modeColor, onDone,
-}: { levelName: string; modeLabel: string; modeColor: string; onDone: () => void }) {
+  modeLabel, modeColor, onDone,
+}: { modeLabel: string; modeColor: string; onDone: () => void }) {
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
@@ -244,7 +181,6 @@ function StaggerCountdown({
   }, [count, onDone])
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] pointer-events-none">
-      <div className="font-silk text-base text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.16em]">{levelName}</div>
       <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] mb-2 ${modeColor}`}>{modeLabel}</div>
       <div className="relative flex h-44 w-44 items-center justify-center">
         {count > 0 && (
@@ -261,7 +197,12 @@ function StaggerCountdown({
 }
 
 // ── Piece tray ────────────────────────────────────────────────────────────────
-function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disabled: boolean }) {
+// On MEDIUM and HARD the tray is monochrome (uniform branded pink, via
+// `colorClass` on PieceShape) — shape only, no color crutch. EASY keeps each
+// piece's own color (colorClass undefined → PieceShape's default).
+function PieceTray({
+  onPick, disabled, colorClass,
+}: { onPick: (t: PieceType) => void; disabled: boolean; colorClass?: string }) {
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
@@ -280,7 +221,7 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
               hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
               disabled:opacity-40 disabled:pointer-events-none"
           >
-            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={colorClass} />
           </button>
         ))}
       </div>
@@ -293,35 +234,30 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
   const {
-    phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
+    phase, mode, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
-    levelIndex, sandboxLevel, sandboxOverrides, completedLevelIndex,
     startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
-    pause, resume, exit, proceedAfterLevelComplete, rerollBatch,
+    pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
-    phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
+    phase: s.phase, mode: s.mode, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
     shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
-    levelIndex: s.levelIndex, sandboxLevel: s.sandboxLevel, sandboxOverrides: s.sandboxOverrides, completedLevelIndex: s.completedLevelIndex,
     startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
-    pause: s.pause, resume: s.resume, exit: s.exit, proceedAfterLevelComplete: s.proceedAfterLevelComplete,
-    rerollBatch: s.rerollBatch,
+    pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
-  const difficulty = useSettingsStore(s => s.settings.difficulty)
 
-  // Active level (sandbox-locked or score-derived) + sandbox flag, for the
-  // countdown name, the run-context label, and the sandbox banner.
-  const level = activeLevel({ levelIndex, sandboxLevel })
-  const sandboxed = isSandboxRun({ sandboxLevel })
-
-  // Effective reveal/decay timing for this run: the live sandbox overrides when
-  // sandboxing, else the STAGGER constants. Held in a ref so the reveal driver
-  // reads the LATEST values as each beat fires (a slider tweak shows on the next
-  // beat / next reveal) without re-arming the whole effect and flickering.
-  const timing = resolveTiming(sandboxed ? sandboxOverrides : NO_OVERRIDES)
+  // Reveal/decay timing for this run — the STAGGER constants. Held in a ref so
+  // the reveal driver reads the LATEST values as each beat fires without
+  // re-arming the whole effect and flickering.
+  const timing = {
+    stepMs: STAGGER.REVEAL_STEP_MS,
+    bloomMs: STAGGER.REVEAL_BLOOM_MS,
+    decayMs: STAGGER.REVEAL_DECAY_MS,
+    waveMs: STAGGER.REVEAL_WAVE_MS,
+  }
   const timingRef = useRef(timing)
   timingRef.current = timing
 
@@ -343,16 +279,7 @@ export function StaggerScreen() {
     }
   }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
-  const [sandboxPanelOpen, setSandboxPanelOpen] = useState(true)
-  // Which phase(s) the sandbox plays through: 'both' (normal flow), 'memorize'
-  // (loop the reveal animation forever, never enter selecting — for tuning reveal
-  // timing in isolation), or 'recall' (skip straight to selecting on every batch —
-  // for tuning select-clock/scoring without sitting through the reveal). A
-  // viewing preference, not a puzzle parameter, so it's local UI state rather
-  // than a persisted/preset-able SandboxOverrides field.
-  const [sandboxViewMode, setSandboxViewMode] = useState<'both' | 'memorize' | 'recall'>('both')
   const [blooms, setBlooms] = useState<Bloom[]>([])
-  const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
@@ -430,133 +357,60 @@ export function StaggerScreen() {
     }
   }, [phase])
 
-  // Reveal driver (shape-bloom): bloom each BEAT as a whole — every gap in the
-  // beat gets .vt-bloom at the same tick, floods magenta, then decays along a
-  // ghost tail back to the void (fading away in a per-cell wave). A beat holds one
-  // gap, or TWO/THREE (a pair/triple) that flash together — denser memory chunks
-  // late in the run. A beat whose (solo) gap is `inverted` BRANCHES to the inverted
-  // sub-timeline instead (seed → flow-in build → bright complete → magenta poof);
-  // because that beat runs longer than REVEAL_STEP_MS, the loop waits its full
-  // duration before advancing. Decays cascade (the next beat blooms before the last
-  // finishes dying), draining the bar one step per beat as a COUNT, then hand off to
-  // selecting. Because the reveals forwards-fill back to the void, past gaps leave
-  // no readable hole.
+  // Reveal driver (shape-bloom): bloom each gap in turn — the gap's cells all get
+  // .vt-bloom at the same tick, flood the piece color (EASY/MEDIUM) or magenta
+  // (HARD), then decay along a ghost tail back to the void (fading away in a
+  // per-cell wave).
+  // Decays cascade (the next gap blooms before the last finishes dying), draining
+  // the bar one step per gap as a COUNT, then hand off to selecting. Because the
+  // reveals forwards-fill back to the void, past gaps leave no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
-    // Sandbox "Recall only" view: skip the reveal animation entirely and jump
-    // straight to selecting on every batch (the puzzle is still generated as
-    // normal — only the timed playback is bypassed).
-    if (sandboxed && sandboxViewMode === 'recall') { beginSelecting(); return }
     let cancelled = false
     const timers: number[] = []
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
-    // The reveal plays as a sequence of beats; fall back to one-gap-per-beat if a
-    // batch somehow arrived without a plan (e.g. legacy state).
-    const beats = revealPlan.length ? revealPlan : gaps.map((_, i) => [i])
-    const n = beats.length
-    // Difficulty shapes the reveal: EASY floods each gap in its own piece colour;
-    // MEDIUM floods the uniform branded pink; HARD paints in graphite "impasto"
-    // (self-colored, no bright flood) so the murky low-contrast tiles are the
-    // whole challenge. All tiers play at the same (normal) reveal speed.
-    const paint = difficulty === 'hard'
+    // The reveal plays as a sequence of gaps, in revealPlan's shuffled order; fall
+    // back to index order if a batch somehow arrived without a plan (e.g. legacy state).
+    const order = revealPlan.length ? revealPlan : gaps.map((_, i) => i)
+    const n = order.length
+    // Difficulty shapes the reveal: EASY and MEDIUM flood each gap in its own
+    // piece colour; HARD floods the uniform branded pink (shape only, no colour
+    // crutch). All tiers play at the same (normal) reveal speed.
     const colorFor = (gap: StaggerGap) =>
-      difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Reveal/decay timing is read LIVE from timingRef per beat (see the standard-beat
-    // branch below), so a sandbox slider tweak takes effect on the next beat without
-    // re-arming this effect (no flicker). `step` (beat-to-beat spacing) outruns one
-    // bloom's lifetime, so the next beat flashes while the previous is still decaying.
-    // Memorize bar DRAINS: starts full and empties one step per beat as the
+      mode === 'hard' ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[gap.pieceType]
+    // Reveal/decay timing is read LIVE from timingRef per gap. `step` (gap-to-gap
+    // spacing) outruns one bloom's lifetime, so the next gap flashes while the
+    // previous is still decaying.
+    // Memorize bar DRAINS: starts full and empties one step per gap as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
-    setBlooms([]); setInvertedBlooms([])
+    setBlooms([])
     let id = 0
-
-    // Drive one inverted beat's sub-timeline (seed → build → equalize → complete →
-    // poof) over the cells of `gap`, then invoke `done()` when the beat is fully
-    // over. The accumulator `t` makes the beat's duration VARIABLE (longer than a
-    // standard REVEAL_STEP_MS beat), so the loop advances via `done()` rather than a
-    // fixed step.
-    const runInverted = (gap: StaggerGap, done: () => void): void => {
-      const myId = ++id
-      const order = invertedCellOrder(gap.cells as [number, number][])
-      const setSub = (key: string, sub: InvSub) =>
-        setInvertedBlooms(prev => prev.map(b => b.id === myId
-          ? { ...b, sub: new Map(b.sub).set(key, sub) } : b))
-      const setAll = (sub: InvSub) =>
-        setInvertedBlooms(prev => prev.map(b => b.id === myId
-          ? { ...b, sub: new Map([...b.sub.keys()].map(k => [k, sub])) } : b))
-
-      // Phase 0 · seed ember on the anchor cell. Build cells aren't in the map yet
-      // (they render as plain void until their tick adds them with iv-build, whose
-      // flowIn ramps from opacity 0 — so they fade in smoothly).
-      setInvertedBlooms(prev => [...prev, { id: myId, sub: new Map([[order[0], 'seed']]) }])
-
-      let t = STAGGER.INV_SEED_MS
-      // Phase 1 · build: neighbours flow in one at a time (overlapping ramps).
-      order.forEach((key, k) => {
-        if (k === 0) return
-        at(t, () => setSub(key, 'build'))
-        t += STAGGER.INV_BUILD_STEP_MS
-      })
-      // Phase 1b · seed equalizes: drop its ember, match the dim flow cells.
-      at(t, () => setSub(order[0], 'build'))
-      t += STAGGER.INV_EQUALIZE_MS
-      // Phase 2 · complete: every cell snaps to full bright magenta (the payload).
-      at(t, () => setAll('complete'))
-      t += STAGGER.INV_COMPLETE_HOLD_MS
-      // Phase 3 · poof: the whole shape contracts to the void together (no white).
-      at(t, () => setAll('poof'))
-      t += STAGGER.INV_POOF_MS
-      // Tear the instance down and hand back control once the poof has resolved.
-      at(t, () => { setInvertedBlooms(prev => prev.filter(b => b.id !== myId)); done() })
-    }
 
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
-        // Let the final beat finish its decay before recall lights-out. Sandbox
-        // "Memorize only" view: never hand off to selecting — reroll a fresh
-        // batch and loop the reveal forever instead.
+        // Let the final gap finish its decay before recall lights-out.
         const { stepMs, bloomMs, decayMs } = timingRef.current
-        const onDone = sandboxed && sandboxViewMode === 'memorize' ? rerollBatch : beginSelecting
-        at(Math.max(0, bloomMs + decayMs - stepMs), onDone)
+        at(Math.max(0, bloomMs + decayMs - stepMs), beginSelecting)
         return
       }
       setBarPct((1 - (idx + 1) / n) * 100)
-      const beat = beats[idx]
-      const invertedGap = beat.length === 1 && gaps[beat[0]].inverted ? gaps[beat[0]] : null
-
-      if (invertedGap) {
-        // Inverted beats own their full duration: advance only once the poof ends.
-        runInverted(invertedGap, () => show(idx + 1))
-        return
-      }
-
-      // Standard beat: the gaps sharing this beat (a pair/triple) bloom as ONE
-      // coupled pulse. A small per-gap onset offset (twinOffsetMs) staggers them a
-      // hair so a pair reads as a "da-dum" twin rather than two coincidences; they
-      // share flood color + decay wave so they still read as a single unit. Solo
-      // beats (length 1) get no offset. Timing is read live from timingRef.
-      const { stepMs, bloomMs, decayMs, waveMs, twinOffsetMs } = timingRef.current
+      const gi = order[idx]
+      const { stepMs, bloomMs, decayMs, waveMs } = timingRef.current
       const lifetime = bloomMs + decayMs + 3 * waveMs + 80
-      const beatIds: number[] = []
-      beat.forEach((gi, k) => {
-        const myId = ++id
-        beatIds.push(myId)
-        at(k * twinOffsetMs, () => {
-          if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, decayMs, waveMs)])
-        })
-      })
-      // Clear the beat's blooms once the LAST (latest-onset) one has fully decayed.
-      at((beat.length - 1) * twinOffsetMs + lifetime, () => {
-        if (!cancelled) setBlooms(prev => prev.filter(b => !beatIds.includes(b.id)))
+      const myId = ++id
+      if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), bloomMs, decayMs, waveMs)])
+      // Clear this gap's bloom once it has fully decayed.
+      at(lifetime, () => {
+        if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
       })
       at(stepMs, () => show(idx + 1))
     }
-    // A short breath before the first beat (also paces continuous next batches).
+    // A short breath before the first gap (also paces continuous next batches).
     at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty, sandboxed, sandboxViewMode, rerollBatch])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
@@ -669,18 +523,16 @@ export function StaggerScreen() {
   if (phase === 'idle') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center vt-vignette select-none">
-        <NeonButton variant="primary" onClick={() => startRun()}>Start Staggered Vanishing Tiles</NeonButton>
+        <NeonButton variant="primary" onClick={() => startRun(mode)}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
   }
 
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
-  const bloomByCell = new Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>()
-  const invertedByCell = new Map<string, { id: number; sub: InvSub }>()
+  const bloomByCell = new Map<string, { id: number; holdMs: number; decayMs: number; color: string }>()
   if (phase === 'reveal') {
-    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color, paint: b.paint })
-    for (const b of invertedBlooms) for (const [key, sub] of b.sub) invertedByCell.set(key, { id: b.id, sub })
+    for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color })
   }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
@@ -707,61 +559,19 @@ export function StaggerScreen() {
     'text-vt-dim'
 
   // Countdown subtitle: the selected tier on the heat arc (green/amber/red).
-  const modeLabel = `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)} Mode`
+  const modeLabel = `${mode.charAt(0).toUpperCase()}${mode.slice(1)} Mode`
   const modeColor =
-    difficulty === 'easy' ? 'text-vt-lime text-glow-vt-lime' :
-    difficulty === 'hard' ? 'text-vt-red text-glow-vt-red' :
+    mode === 'easy' ? 'text-vt-lime text-glow-vt-lime' :
+    mode === 'hard' ? 'text-vt-red text-glow-vt-red' :
     'text-vt-amber text-glow-vt-amber'
 
-  const panelVisible = sandboxed && isSandboxEnv()
-
   return (
-    <div
-      className={`min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none
-        ${panelVisible && sandboxPanelOpen ? 'sm:pr-96' : ''}`}
-    >
-      {/* Dev/preview-only live tuning workbench — fixed to the right edge. Its
-          width is mirrored as padding-right on this centered column (above the
-          mobile breakpoint only) so the game re-centers in the REMAINING width
-          while the panel is open, and returns to full-viewport centering when
-          it's closed or on mobile. Double-gated: sandbox run AND dev env. */}
-      {panelVisible && (
-        <StaggerSandboxPanel
-          open={sandboxPanelOpen}
-          onOpenChange={setSandboxPanelOpen}
-          viewMode={sandboxViewMode}
-          onViewModeChange={setSandboxViewMode}
-        />
-      )}
-
-      {/* Sandbox banner — the calibration sandbox is unlosable (store-enforced,
-          this just reflects it): no gameOver is reachable, so the only way out
-          is this explicit exit-to-Home control. */}
-      {sandboxed && (
-        <div className="w-full max-w-sm flex items-center justify-between mb-3 rounded-md border border-vt-amber/40 bg-vt-amber/10 px-3 py-1.5">
-          <span className="font-grotesk text-[10px] tracking-[0.16em] uppercase text-vt-amber text-glow-vt-amber">
-            Sandbox · {level.name}
-          </span>
-          <button
-            onClick={() => { exit(); goHome() }}
-            className="font-grotesk text-[10px] tracking-[0.1em] uppercase text-vt-text/70 hover:text-vt-amber transition pointer-events-auto"
-          >
-            Exit
-          </button>
-        </div>
-      )}
-
+    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
           <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
-            {/* The active level NAME sits ABOVE the score as the run-context
-                label (replaces the old "Phase N" framing); the score is the
-                loudest text on screen and stands on its own. */}
-            <div>
-              <div className="mb-0.5 font-grotesk text-[10px] tracking-[0.14em] uppercase text-vt-cyan">{level.name}</div>
-              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
-            </div>
+            <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             <div className="text-right">
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
               <div className="mt-1.5 font-grotesk font-semibold text-sm text-vt-text tabular-nums">
@@ -803,7 +613,7 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} invertedByCell={invertedByCell} />
+          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
         </div>
 
         {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
@@ -854,12 +664,11 @@ export function StaggerScreen() {
           ))}
         </AnimatePresence>
 
-        {/* Level-intro countdown — anchored OVER the board (not a full-screen
-            void): the board/grid is visible underneath, the level NAME sits
-            above the 3·2·1. Fires at run start and after every levelComplete
-            (proceedAfterLevelComplete routes back through this same phase). */}
+        {/* Run-intro countdown — anchored OVER the board (not a full-screen
+            void): the board/grid is visible underneath, the mode label sits
+            above the 3·2·1. Fires at run start. */}
         {phase === 'countdown' && (
-          <StaggerCountdown levelName={level.name} modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
+          <StaggerCountdown modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
         )}
 
         {/* Wrong pick: a red border flashes around the board (with the shake). */}
@@ -908,54 +717,28 @@ export function StaggerScreen() {
             )}
 
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
+              <NeonButton variant="primary" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>
           </div>
         )}
 
-        {/* Level-complete celebration — overlays the board only (not the HUD above
-            it, so score/lives stay visible), with a confetti burst. Tap anywhere
-            to proceed into the next level's intro countdown
-            (proceedAfterLevelComplete → phase 'countdown'). */}
-        {phase === 'levelComplete' && completedLevelIndex != null && (
-          <button
-            type="button"
-            onClick={() => proceedAfterLevelComplete()}
-            className="absolute inset-0 z-40 flex flex-col items-center justify-center
-              rounded-xl bg-vt-void/85 backdrop-blur-sm px-6 text-center pointer-events-auto cursor-pointer"
-          >
-            <ScanlineOverlay />
-            <ConfettiBurst />
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-lime text-glow-vt-lime mb-2">Level cleared</div>
-            <div className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.1em] mb-5">
-              {STAGGER_LEVELS[completedLevelIndex].name} COMPLETED
-            </div>
-            <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-faint vt-fade-away">Tap to continue</div>
-          </button>
-        )}
-
-        {/* Win celebration — crossing the final (crawlers) threshold at 500000.
-            Distinct from levelComplete: no "Next" CTA, just final score +
-            exit/replay via the same controls as gameOver. */}
-        {phase === 'won' && (
-          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-vt-void px-6 text-center">
-            <ScanlineOverlay />
-            <div className="font-silk text-4xl text-vt-lime text-glow-vt-lime uppercase tracking-[0.15em] mb-2">You Win</div>
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-magenta text-glow-vt-magenta mb-6 vt-fade-away">All Levels Cleared</div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Final score</div>
-            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-8 tabular-nums">{score}</div>
-            <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Tray */}
-      <div className="mt-4 min-h-[88px] w-full flex justify-center">
-        {phase === 'selecting' && <PieceTray onPick={onPick} disabled={cleared || paused} />}
+      {/* Tray — on HARD, an "IN ORDER" chip rides above it (matching the STREAK
+          chip's styling) as a reminder that recall must follow the reveal
+          sequence; no per-gap numbering — remembering the order IS the challenge. */}
+      <div className="mt-4 w-full flex flex-col items-center">
+        {phase === 'selecting' && mode === 'hard' && (
+          <div className="w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta">
+            IN ORDER
+          </div>
+        )}
+        <div className="min-h-[88px] w-full flex justify-center">
+          {phase === 'selecting' && (
+            <PieceTray onPick={onPick} disabled={cleared || paused} colorClass={mode === 'easy' ? undefined : 'bg-vt-magenta'} />
+          )}
+        </div>
       </div>
 
       {/* Pause — freeze the run (full width). (Replay-the-sequence was removed:
@@ -1019,37 +802,3 @@ export function StaggerScreen() {
   )
 }
 
-// The board (and this overlay) is a fixed square footprint: CELL_PITCH * 12
-// cols/rows, minus the one gap that doesn't exist past the last cell, plus
-// the padding on both sides. Confetti uses this to fall in PIXELS (matching
-// the proven streakBursts/lifeBursts pattern below) rather than percentages —
-// Framer/CSS resolve a transform percentage against the ELEMENT'S OWN box,
-// not the container, so at 6x10px a "fall 110%" only ever moved ~11px and
-// the piece just sat near the top, fading in and out without visibly falling.
-const CONFETTI_BOARD_PX = CELL_PITCH * 12 - 2 + 2 * BOARD_PAD
-const CONFETTI_COLORS = ['#22d3ee', '#facc15', '#ec4899', '#84cc16', '#f97316']
-const CONFETTI_PIECES = Array.from({ length: 18 }, (_, i) => ({
-  left: 10 + (i / 17) * (CONFETTI_BOARD_PX - 20),
-  delay: (i % 6) * 0.05,
-  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  rotate: i % 2 === 0 ? 1 : -1,
-}))
-
-// One-shot confetti burst for the level-complete overlay: pieces fall from
-// above the board and fade out, no looping/repeat (it plays once per mount).
-function ConfettiBurst() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {CONFETTI_PIECES.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute top-0 rounded-sm"
-          style={{ width: 6, height: 10, left: p.left, background: p.color }}
-          initial={{ y: -24, opacity: 0, rotate: 0 }}
-          animate={{ y: CONFETTI_BOARD_PX + 30, opacity: [0, 1, 1, 0], rotate: p.rotate * 360 }}
-          transition={{ duration: 1.6, delay: p.delay, ease: 'easeIn', times: [0, 0.1, 0.7, 1] }}
-        />
-      ))}
-    </div>
-  )
-}

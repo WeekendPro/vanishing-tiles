@@ -186,12 +186,12 @@
   }
 }
 /* Flash + HOLD bright (vtBloomHold), then a separate chained decay-to-void
-   (vtBloomDecay) — split into two animations so the sandbox can tune "Visible
-   duration" (hold) and "Decay duration" independently. Each cell sets its own
-   decay duration + start delay inline (the wave: STAGGER.REVEAL_WAVE_MS spreads
-   the decay only, so cells end at staggered times); these are the base/fallback
-   durations. The flood color is driven by --bloom-color (set per gap to its piece
-   color so the reveal carries shape AND color); it falls back to the signature
+   (vtBloomDecay) — split into two independently-timed animations (hold duration,
+   then decay duration). Each cell sets its own decay duration + start delay inline
+   (the wave: STAGGER.REVEAL_WAVE_MS spreads the decay only, so cells end at
+   staggered times); these are the base/fallback durations. The flood color is
+   driven by --bloom-color (set per gap to its piece color so the reveal carries
+   shape AND color); it falls back to the signature
    magenta. */
 .vt-bloom {
   animation-name: vtBloomHold, vtBloomDecay;
@@ -201,163 +201,8 @@
   animation-fill-mode: forwards, forwards;
 }
 
-/* HARD-mode "impasto" reveal (Severance glossy-black paint): instead of a bright
-   color flood, a gap paints in as a heavy graphite gloss — deep near-black with
-   ridge highlights and a wet sheen — that barely lifts off the void. Because the
-   surface is self-colored (no --bloom-color), "bright at first" reads as a
-   BRIGHTNESS pop at the flash (no outer glow), then it settles to the murky surface
-   and decays back to the void in the same per-cell wave as vtBloom. The low
-   contrast is Hard's whole challenge.
-
-   The decay fades the gradient's colours DIRECTLY to the empty-cell tone (#0c0c14)
-   rather than fading opacity — at opacity 0 the darker board background (#04040a)
-   would show through and the cell would dip to near-black before re-seating, an
-   awkward flash. So every keyframe keeps the SAME gradient structure (two radials +
-   a linear, identical stop positions) and only interpolates its colours: void →
-   impasto → void. The element stays fully opaque throughout, landing exactly on the
-   resting cell colour so the unmount is seamless. */
-@keyframes vtPaintHold {
-  0% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0), transparent 60%),
-      linear-gradient(150deg, #0c0c14, #0c0c14 55%, #0c0c14);
-    box-shadow: none;
-    filter: brightness(1);
-    transform: scale(1);
-  }
-  8% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
-      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
-    filter: brightness(1.9);
-    transform: scale(1.13);
-  }
-  100% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
-      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
-    filter: brightness(1);
-    transform: scale(1);
-  }
-}
-@keyframes vtPaintDecay {
-  0% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
-      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
-    filter: brightness(1);
-    transform: scale(1);
-  }
-  100% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0), transparent 60%),
-      linear-gradient(150deg, #0c0c14, #0c0c14 55%, #0c0c14);
-    box-shadow: none;
-    filter: brightness(1);
-    transform: scale(1);
-  }
-}
-.vt-paint {
-  animation-name: vtPaintHold, vtPaintDecay;
-  animation-duration: 1082ms, 998ms;
-  animation-delay: 0ms, 1082ms;
-  animation-timing-function: cubic-bezier(0.2, 0.75, 0.2, 1), cubic-bezier(0.3, 0, 0.1, 1);
-  animation-fill-mode: forwards, forwards;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .vt-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
-  .vt-paint {
-    animation: none;
-    background: linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
-  }
-}
-
-/* ── INVERTED REVEAL (Medium "back-loaded" build) ─────────────────────────────
-   The standard bloom front-loads the payload (flash bright, decay away). The
-   inverted reveal BACK-loads it: a seed ember appears, neighbours flow in dim one
-   at a time, the whole shape snaps to full-bright magenta for a held instant (the
-   only true memory payload), then the whole shape POOFS out together as an in-brand
-   magenta CONTRACT — pulling inward to the void, NEVER a white flash. Magenta-keyed
-   for Medium (mirrors the approved inverted-reveal.html mockup). The four sub-state
-   classes are applied per cell by the StaggerScreen reveal driver's inverted branch. */
-
-/* Phase 0 · SEED — a faint magenta ember with a slow breathing pulse. Clearly NOT
-   a normal bloom (no flood, no scale pop): it reads as "something will grow here". */
-.iv-seed {
-  background: #140810;
-  box-shadow: inset 0 0 0 1px rgba(255, 45, 155, 0.45), 0 0 8px rgba(255, 45, 155, 0.25);
-  animation: ivEmber 1.6s ease-in-out infinite;
-}
-@keyframes ivEmber {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 45, 155, 0.30), 0 0 6px rgba(255, 45, 155, 0.18); }
-  50%      { box-shadow: inset 0 0 0 1px rgba(255, 45, 155, 0.65), 0 0 12px rgba(255, 45, 155, 0.40); }
-}
-
-/* Phase 1 · BUILD — a cell flowing on from the seed. Dim magenta (present, not yet
-   the payload). Eases in over a LONG soft ramp (opacity + scale + glow) so that
-   consecutive cells — started much sooner than this ease completes — overlap and
-   read as one continuous flow spreading outward, not a steppy one-tile pop. The
-   element holds the dim state after the ease (forwards). */
-.iv-build {
-  background: var(--magenta, #FF2D9B);
-  filter: brightness(0.55) saturate(0.85);
-  animation: ivFlowIn 640ms cubic-bezier(0.25, 0.6, 0.2, 1) forwards;
-}
-@keyframes ivFlowIn {
-  0%   { opacity: 0; transform: scale(0.86); box-shadow: 0 0 0 rgba(255, 45, 155, 0); }
-  100% { opacity: 1; transform: scale(1);    box-shadow: 0 0 7px rgba(255, 45, 155, 0.42); }
-}
-
-/* Phase 2 · COMPLETE — every cell snaps to full bright magenta + strong glow on the
-   same tick. THIS is the memory payload (the only full-brightness moment). */
-.iv-complete {
-  background: var(--magenta, #FF2D9B);
-  filter: none;
-  box-shadow: 0 0 14px var(--magenta, #FF2D9B), 0 0 30px rgba(255, 45, 155, 0.55);
-  transform: scale(1.13);
-  animation: ivComplete 320ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
-}
-@keyframes ivComplete {
-  0%   { transform: scale(1); }
-  100% { transform: scale(1.13); }
-}
-
-/* Phase 3 · POOF — the whole shape vanishes TOGETHER as a magenta contract: a quick
-   brighter glow-swell, then it pulls inward (scales down) and snaps back to the
-   void. Fully in-brand — NO white flash. The inverse of the standard decay wave:
-   instant and together rather than a per-cell tail. */
-.iv-poof {
-  animation: ivPoof 320ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
-}
-@keyframes ivPoof {
-  0%   { background: var(--magenta, #FF2D9B); box-shadow: 0 0 14px var(--magenta, #FF2D9B), 0 0 30px rgba(255, 45, 155, 0.55); transform: scale(1.13); }
-  22%  { background: var(--magenta, #FF2D9B); box-shadow: 0 0 20px var(--magenta, #FF2D9B), 0 0 40px rgba(255, 45, 155, 0.70); transform: scale(1.18); }
-  100% { background: #0c0c14; box-shadow: 0 0 0 rgba(255, 45, 155, 0); transform: scale(0.55); opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* No motion: the seed reads as a static ember, build/complete as a steady dim/
-     bright magenta, poof as void — so the back-loaded payload is still legible. */
-  .iv-seed     { animation: none; background: #140810; box-shadow: inset 0 0 0 1px rgba(255, 45, 155, 0.5); }
-  .iv-build    { animation: none; opacity: 1; transform: none; }
-  .iv-complete { animation: none; }
-  .iv-poof     { animation: none; background: #0c0c14; box-shadow: none; opacity: 0; }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it

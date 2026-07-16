@@ -16,52 +16,33 @@ phosphor-inspired *visual* system is still called **Afterglow**; the runtime des
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. In Journey mode, tap a station on the transit map to enter a **level hub** (`LevelScreen`), solve the main puzzle, then tackle optional badge challenges. In Practice mode the legacy 4-round gauntlet is still active (Training rework is a separate future effort).
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. The shipped MVP is a single endless mode, **Infinite Stagger**; the earlier Journey (transit-map level hub) and Practice (4-round gauntlet) modes still exist in code but are hidden — see "Legacy modes" below.
 
-### Journey mode — level hub
+### Entry flow
 
-Tapping a station on the map opens `LevelScreen`. Each level has **five components**:
+`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`, session present → `HomeScreen`. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. From `HomeScreen`, **PLAY** starts a run of Infinite Stagger (`src/components/StaggerScreen.tsx`) at the difficulty selected via the Easy/Medium/Hard switch on that screen (`useSettingsStore`, persisted to localStorage). An "Experimental Modes" entry point (Training + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
 
-- **Main puzzle** — always playable from the start; must be solved to unlock the badges.
-- **Four opt-in badges** — True Colors, In Order, Don't Blink, and Riddle (a "Coming soon" placeholder) — locked until the main puzzle is solved, then playable in any order and freely replayable. (Internal component keys remain `colors` / `inSequence` / `flash` / `riddle`.)
+### Infinite Stagger
 
-Each component play (main or badge) has **3 lives** and runs one puzzle round end-to-end. Flow: `startComponent` → `countdown` → `beginViewing` → `viewing` → `selecting` → `resolving`.
+One continuous run: each **batch** reveals `N` gaps one at a time (a "bloom" flash-then-decay per gap, `src/store/staggerStore.ts` + `src/components/StaggerScreen.tsx`), then the player recalls them from a piece tray under a select clock. Clearing a batch immediately starts the next, slightly harder batch — there's no level/round framing, briefing, or "Done" button. The run ends when lives hit 0.
 
-### Round loop (shared by Journey and Practice)
+**Three player-selected modes** (`mode`, a `Difficulty` from `src/store/settingsStore.ts`, snapshotted into `staggerStore.mode` at `startRun(mode)` — that snapshot, not the live setting, drives all in-run visuals/ordering):
 
-Every round opens with a brief **countdown** (bold "Round N" with a 3-2-1 fade), a **pre-roll** (the view timer starts only when `viewing` begins, so the countdown never costs memorize time). Flow: `startGame` → `countdown` → `beginViewing` → `viewing`.
+- **Easy** — gaps reveal in their own piece color; tray pieces are shown in piece colors; recall in any order.
+- **Medium** — gaps reveal in piece colors; tray is monochrome neon pink (`#FF2D9B`); recall in any order.
+- **Hard** — gaps reveal monochrome neon pink; tray is monochrome; picks must match the **order the gaps were revealed in** (enforced in `pickPiece` against `revealPlan`), with an "IN ORDER" chip shown above the tray as a reminder.
 
-When `viewing` starts, a one-time **gap shimmer** plays *concurrently* with the memorization timer: a soft, cool-white glare band sweeps diagonally once, **masked to the gap shapes** (`GapShimmer.tsx`) so the light is only visible where it crosses a gap, never the filled board. It uses no piece colors and doesn't touch game state — purely a subtle visual crutch that draws the eye to the gap shapes. The gaps are visible from the start; the timer runs the whole time.
+**Difficulty ramp** (`src/lib/staggerCurve.ts`, `STAGGER_CURVE` + `SHAPE_SCHEDULE`) — a single infinite ramp, not per-level tables: gap count holds at 3 for levels 1–4, then climbs one gap every three levels up to a cap of 12 at level 29+ (terminal rung for the endless tail). The shape pool opens on O + I, then adds one shape at a time — L (L2), J (L3), T (L6), S (L7), Z (L10) — so all seven tetrominoes are in play by level 10. Gap rotation is locked to the tray's display rotation until orientation frees at level 9 (`ORIENTATION_FREE_FROM = 8`, 0-based). Exactly one of these levers (gap count / shape variety / orientation) moves per level. Reveal pacing (flash/hold/decay timing) is **constant** across the whole run — the ramp never speeds up the reveal itself. The select clock is `(6000 + gaps × 1400) × max(0.7, 1 − 0.005 × batchIndex)` ms — it grows with gap count but slowly tightens (floor 70% of nominal) as the run goes on, so late-run batches stay tense even after the gap count caps out.
 
-1. **Viewing** — Grid is shown with filled cells and empty gaps (tetromino-shaped). Timer counts down. Player can click **Ready →** to advance early.
-2. **Selecting** — Timed. Player picks pieces from a menu (each piece can be selected multiple times). **Done ✓** skips remaining time.
-3. **Resolution** — resolved by **strict assignment** (`themeResolution.ts`): a selected piece may only fill a gap of the **exact same shape** (and **color** in color-coded rounds); it never lands on mismatched cells or spans adjacent gaps. Sequential rounds match each pick against its **position** (the gap with `order == k`). A piece with no available matching gap is rejected.
-   - **Perfect** (every gap matched, no leftover picks): pieces fly in automatically, **ComponentScorePanel** shows the result, **Next →** CTA.
-   - **Failed attempt** (some gap unmatched or some pick rejected): player loses 1 life; matched pieces fly into their gaps, rejected pieces get a red ✕. Badge tiers by coverage — amber **So Close!** (≥66%), red **Tough Round** (33–66%), red **Yikes** (<33%). CTA is **Try Again ↺** (same puzzle, fresh clock). On the last life the CTA is **Back to Level →**.
+**Scoring** — streak is the only score multiplier: each correct pick is worth `100 × currentStreak` points, where `currentStreak` is the run of consecutive correct picks (broken by any miss). A miss both breaks the streak **and** costs a life. Clearing a batch banks a separate speed bonus (up to 500 points, ratio of select-clock time remaining) via `bankSpeedBonus`. The run starts with 5 lives (`STAGGER.START_LIVES`); one extra life is earned per 5000 cumulative points (`STAGGER.LIFE_EVERY`). Letting the select clock expire also costs a life and **replays the same batch** (same gaps, unfilled) rather than advancing. The run ends at 0 lives; otherwise it's endless.
 
-### Scoring
+### Legacy modes (hidden)
 
-#### Journey — per-component model (`src/lib/journeyScoring.ts`)
-
-- **Solved:** `completion + time`, `ceil`, capped at 100. **Completion** = `50 − 10 × livesLost` (giving 50 / 40 / 30). **Time** = `50 × (1 − consumed / allotted)` (e.g. 10% of the clock consumed → 45; 50% → 25). Unsolved (all 3 lives lost) = **0**.
-- `consumed` = time used; `allotted` = `viewDuration + selectDuration` for most components, `selectDuration` only for Don't Blink (flash reveal, no skippable view phase). Time bonus is measured on the **successful attempt** — retries each get a fresh clock.
-- The completed badge's **star fills from the bottom in proportion to the score** (a 70 → a star ~70% full).
-- **Level total** = sum of best-score-per-component (0–500 across 5 × 100).
-- **Stars**: 1★ when main is solved; then 2★ ≥ 150 / 3★ ≥ 250 / 4★ ≥ 350 / 5★ ≥ 450.
-- **Difficulty pips** 1–5 are derived from gap count.
-- **Persistence**: per-component best scores live client-side in `progressStore` (localStorage, key `gapcity:progress:v1`); the global record is mocked for now. The level catalog (station list, difficulty) still comes from `get_journey` / `get_level` (Supabase, unchanged).
-
-#### Practice — legacy 4-round gauntlet (`@shared/core/scoring`)
-
-Practice mode still runs 4 themed rounds with pooled lives and the old per-round `scoreRound` / `levelTotal` / `levelStars` scoring. This code is intentionally unchanged — a Training-mode rework is pending.
-
-- Per round on a perfect clear: **Speed bonus** (up to ~500 pts, ratio-based on time remaining) + **Efficiency bonus** (up to ~300 pts, piece count vs. minimum). A slow-but-successful round shows a turtle emoji instead of lightning when the speed bonus is in the bottom ~20%.
-- Failed rounds score 0 for that round; lives are pooled across all 4 rounds.
-- **Next Round** / **Try Again** / **Game Over** (at 0 lives; 3 lives total).
+Journey (tap a station on a transit/brain/git map to open a `LevelScreen` level hub: main puzzle + 4 opt-in badges) and Practice (the old 4-round gauntlet, `src/store/gameStore.ts`) are still fully present in the codebase — `src/components/JourneyScreen.tsx`, `LevelScreen.tsx`, `JourneyMap/`, `GameShell.tsx`, `ResolutionPhase/`, `SelectingPhase.tsx`, `ViewingPhase.tsx`, `CountdownPhase.tsx`, etc. — but are reachable only by flipping `SHOW_EXPERIMENTAL` to `true` in `HomeScreen.tsx`. This code was deliberately left untouched by the three-mode MVP work, so treat any pre-existing scoring/UI detail for Journey/Practice as unverified unless you re-check it against the current source — it has drifted from earlier docs (e.g. the "efficiency" scoring pillar described below is now retired). The mechanics removed entirely from the codebase during the MVP simplification (named levels SOLOS/TWINS/TRIPLETS/TRANSFORMERS/CRAWLERS, pairs/triples reveal chunking, inverted reveal, the calibration sandbox) survive only at the git tag `pre-mvp-simplification`. Background: `docs/superpowers/specs/2026-06-08-journey-rework-design.md`, `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`.
 
 ### Piece types
 
-`I, O, T, S, Z, J, L` (standard tetrominoes, 4 cells each) + `SINGLE` (1 cell, temptation/decoy piece).
+`I, O, T, S, Z, J, L` — the seven standard tetrominoes (4 cells each). The `SINGLE` (1-cell decoy) piece type has been removed from `PieceType`; the "efficiency" scoring pillar it existed to drive is retired (see Critical rules below).
 
 ---
 
@@ -69,45 +50,62 @@ Practice mode still runs 4 themed rounds with pooled lives and the old per-round
 
 ### File map
 
+Shared game engine + types live OUTSIDE `src/`, at `supabase/functions/_shared/` (so the Supabase Edge Functions can import the same code as the client); Vite/Vitest alias `@shared` → `supabase/functions/_shared` (see `vite.config.ts`).
+
 ```
-src/
-  types.ts              — PieceType, Rotation, Cell, Phase, GameState
-  store/
-    gameStore.ts        — Zustand store; all game state + actions (startComponent / retryComponent / replayComponent for Journey; startLevel for Practice)
-    progressStore.ts    — Zustand + localStorage store for per-component best scores and level progress (key: gapcity:progress:v1)
-  lib/
-    components.ts       — ComponentKey types, LEVEL_COMPONENTS, BADGE_COMPONENTS, COMPONENT_THEME, COMPONENT_LABEL, isPlayable helpers
-    journeyScoring.ts   — componentScore(), levelStarsFromTotal(), difficultyPips(), sumBests() — Journey scoring math
+supabase/functions/_shared/
+  types.ts             — PieceType (I/O/T/S/Z/J/L — no SINGLE), Rotation, Cell, Grid, Gap, DifficultyConfig
   engine/
-    pieces.ts           — PIECE_DEFINITIONS, getRotatedCells(), getPieceColor()
-    puzzleGenerator.ts  — generatePuzzle(difficulty) → { grid, gaps }
-    solver.ts           — solve(pieceCount, grid, gaps) backtracking solver
+    pieces.ts          — PIECE_DEFINITIONS, getRotatedCells(), getPieceColor()
+    puzzleGenerator.ts — generatePuzzle({ gapCount, complexity, allowedTypes, lockedRotations, ... }) → { grid, gaps }
+    solver.ts          — solve(pieceCount, grid, gaps) backtracking solver
+  core/
+    scoring.ts         — Legacy Journey/Practice scoring (scoreClear, scoreRound, levelTotal, levelStars); "efficiency" pillar is retired (hardcoded 0)
+    levelConfig.ts     — LEVEL_CONFIGS server-side difficulty table (legacy Journey/Practice only)
+
+src/
+  App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/journey/levelDetail/results/stagger/playing/practice)
+  store/
+    staggerStore.ts        — Infinite Stagger's Zustand store: phase/mode/batchIndex/gaps/score/lives/streak; startRun / pickPiece / advanceBatch / timeoutBatch
+    settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), map style, briefing opt-outs
+    navStore.ts            — appView routing state (auth/home/journey/levelDetail/playing/results/practice/stagger)
+    runHistoryStore.ts     — Recent Infinite Stagger run history (for the post-run graph)
+    gameStore.ts       (legacy) — Journey/Practice Zustand store; all game state + actions (startComponent / retryComponent / replayComponent for Journey; startLevel/startPractice for Practice); also owns the legacy DIFFICULTY_TABLE
+    progressStore.ts   (legacy) — localStorage store for per-component best scores and level progress (key: gapcity:progress:v1)
+  lib/
+    staggerCurve.ts        — Infinite Stagger's single difficulty/scoring ramp: STAGGER constants, gapCountForBatch(), selectDurationForBatch(), batchSpeedBonus(), etc.
+    auth.ts                — Supabase auth helpers: signInWithApple/Google, sign up/in with email, signInAsGuest (anonymous), signOut
+    components.ts      (legacy) — ComponentKey types, LEVEL_COMPONENTS, BADGE_COMPONENTS, COMPONENT_THEME, COMPONENT_LABEL, isPlayable helpers
+    journeyScoring.ts  (legacy) — componentScore(), levelStarsFromTotal(), difficultyPips(), sumBests() — Journey scoring math
   components/
-    GameShell.tsx       — Top bar (component label/score/lives), phase router, idle screen; TrickleBar shown while submitting
-    CountdownPhase.tsx  — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
-    GapShimmer.tsx      — One-time glare sweep masked to the gap shapes; overlaid on the viewing grid (no game-state change)
-    ViewingPhase.tsx    — Grid + GapShimmer overlay + Ready button (timer bar lives in GameShell)
-    SelectingPhase.tsx  — Piece menu + selection cart + Done button
-    ResolutionPhase/    — Auto-placement animation; perfect/failure badge; Try Again / Back to Level CTA (index.tsx + PartialBadge, CelebrationBadge, ScorePanel, ComponentScorePanel, NextRoundButton, FlyerOverlay, SelectionCart)
-      ComponentScorePanel.tsx — Journey resolution card: component score breakdown + running level total + stars
-    ScoringPhase.tsx    — Practice Game Over screen with Play Again button
-    LevelScreen.tsx     — Journey level hub: main puzzle + 4 badge tiles, level progress (stars/total), badge lock state
-    Grid.tsx            — 12×12 inline-grid, 28px cells; onCellClick / onCellHover props
-    PieceShape.tsx      — Renders a single piece at a given rotation + cell size
-    ProgressBar.tsx     — Animated countdown bar
-    JourneyScreen.tsx   — Journey "Map" screen: loads get_journey, owns loading/error, GAP CITY header; renders <TransitMap>
-    JourneyMap/         — The transit-map Journey: index.tsx (TransitMap = SVG neon lines + HTML station buttons) + layout.ts (hand-authored station coords, line paths, slug→color). Presentational only; tap a station → openLevel.
+    StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (own inline board, not Grid.tsx), piece tray, pause overlay, game-over summary
+    HomeScreen.tsx         — Landing screen after sign-in: PLAY (→ Infinite Stagger) + Easy/Medium/Hard switch; Experimental Modes pane hidden behind SHOW_EXPERIMENTAL
+    AuthScreen.tsx         — Email/password + Google OAuth + guest sign-in
+    PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by both StaggerScreen and legacy SelectingPhase)
+    Grid.tsx           (legacy) — 12×12 inline-grid, 28px cells; onCellClick / onCellHover props
+    ProgressBar.tsx    (legacy) — Animated countdown bar
+    GameShell.tsx      (legacy) — Top bar (component label/score/lives), phase router, idle screen; TrickleBar shown while submitting
+    CountdownPhase.tsx (legacy) — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
+    GapShimmer.tsx     (legacy) — One-time glare sweep masked to the gap shapes; overlaid on the viewing grid (no game-state change)
+    ViewingPhase.tsx   (legacy) — Grid + GapShimmer overlay + Ready button (timer bar lives in GameShell)
+    SelectingPhase.tsx (legacy) — Piece menu + selection cart + Done button
+    ResolutionPhase/   (legacy) — Auto-placement animation; perfect/failure badge; Try Again / Back to Level CTA
+    LevelScreen.tsx    (legacy) — Journey level hub: main puzzle + 4 badge tiles, level progress (stars/total), badge lock state
+    JourneyScreen.tsx  (legacy) — Journey "Map" screen: loads get_journey, owns loading/error; renders the selected map style
+    JourneyMap/        (legacy) — Map renderers: index.tsx (transit map), MentalMapBrain.tsx, GitMap.tsx + layout.ts (hand-authored coords/paths)
 ```
 
 ### Grid dimensions
 
-Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382px wide**. UI buttons that should match the grid width go inside an `inline-flex flex-col items-stretch` wrapper so `w-full` auto-sizes to the grid.
+Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382px wide** — this sizing is shared by the legacy `Grid.tsx` component and Infinite Stagger's own inline board in `StaggerScreen.tsx` (same `CELL`/`ROWS`/`COLS` constants, just not the same component). UI buttons that should match the board width go inside an `inline-flex flex-col items-stretch` wrapper (legacy) or use `w-full max-w-sm` (Infinite Stagger) so they auto-size to the grid.
 
-### Difficulty table
+### Difficulty tables
 
-`DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry). The view (memorize) timer **rises monotonically with `gapCount`** on a comfortable **~1.2–1.33s per gap** budget so every level stays solvable — the challenge is *how fast* you clear it, not *whether* you can. It runs **4000ms → 17000ms** across rounds 1–15, tapering toward ~1.06s/gap at the top tier where adjacent shapes chunk in memory. `selectDuration` also rises (10000 → 23000ms) and is always longer than the view window, so picking pieces is never the bottleneck. `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run. Speed scoring is **ratio-based** (`scoring.ts` uses `timeRemaining / duration`), so these absolute durations self-normalize and don't change the score ceiling — leaving more time on the clock (hitting **Ready →** early) banks more speed bonus.
+**Infinite Stagger** (the shipped game) has no per-level DB table or server config — its whole ramp is the hand-authored `STAGGER_CURVE` + `SHAPE_SCHEDULE` in `src/lib/staggerCurve.ts` (see "Infinite Stagger" above for the current curve). It's pure client-side math, keyed by `batchIndex`, with nothing to keep in sync across services.
 
-**Three sources must stay in sync:** the client fallback `DIFFICULTY_TABLE` (`gameStore.ts`), the server config `LEVEL_CONFIGS` (`supabase/functions/_shared/core/levelConfig.ts`), and the DB seed (`supabase/seed.sql`). When running against Supabase, the served durations come from the `levels` **DB table** — the seed uses `on conflict … do nothing`, so an existing DB must be re-seeded/migrated for new values to take effect. The three districts use the fictional slugs `the_hollows` / `the_stacks` / `the_grid` (renamed from the NYC slugs by migration `0009_gap_city_fictional_names.sql`); keep these in sync across `levelConfig.ts`, `seed.sql`, and the migrations.
+**Legacy Journey/Practice** still use the older per-round `DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry). The view (memorize) timer **rises monotonically with `gapCount`** on a comfortable **~1.2–1.33s per gap** budget so every level stays solvable — the challenge is *how fast* you clear it, not *whether* you can. It runs **4000ms → 17000ms** across rounds 1–15, tapering toward ~1.06s/gap at the top tier where adjacent shapes chunk in memory. `selectDuration` also rises (10000 → 23000ms) and is always longer than the view window, so picking pieces is never the bottleneck. `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run. Speed scoring is **ratio-based** (`scoring.ts` uses `timeRemaining / duration`), so these absolute durations self-normalize and don't change the score ceiling — leaving more time on the clock (hitting **Ready →** early) banks more speed bonus.
+
+**Three sources must stay in sync for legacy Journey/Practice:** the client fallback `DIFFICULTY_TABLE` (`gameStore.ts`), the server config `LEVEL_CONFIGS` (`supabase/functions/_shared/core/levelConfig.ts`), and the DB seed (`supabase/seed.sql`). When running against Supabase, the served durations come from the `levels` **DB table** — the seed uses `on conflict … do nothing`, so an existing DB must be re-seeded/migrated for new values to take effect. The three districts use the fictional slugs `the_hollows` / `the_stacks` / `the_grid` (renamed from the NYC slugs by migration `0009_gap_city_fictional_names.sql`); keep these in sync across `levelConfig.ts`, `seed.sql`, and the migrations.
 
 ---
 
@@ -133,9 +131,9 @@ Zustand 5 uses `useSyncExternalStore` internally. Inline object selectors return
 
 `solver.ts` uses backtracking. The outer piece-type loop must **not** `break` early — it must try all piece types for each empty cell, otherwise the solver is order-dependent and misses valid solutions.
 
-### Efficiency bonus guard
+### Efficiency scoring pillar is retired
 
-When `selectedPieces === 0`, the efficiency ratio must be 0 — not `minPieces / minPieces = 1.0`. Always check `selectedPieces === 0` before computing the ratio.
+`roundEfficiency()` / the `efficiency` field in `supabase/functions/_shared/core/scoring.ts` are hardcoded to `0` and kept only so the return shape and the DB's `efficiency` column stay stable — they were retired when the `SINGLE` decoy piece type was removed (every gap clear now always uses exactly `minPieces`, so the old piece-count-vs-minimum ratio flatlined to a constant). Its points were folded into the Speed pillar. Don't resurrect a live efficiency ratio without first re-adding a decoy piece type — and if you do, guard `selectedPieces === 0` so the ratio doesn't become `minPieces / minPieces = 1.0`.
 
 ### Tests
 
@@ -147,8 +145,9 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 - **Grid size:** 12 rows × 12 columns (square)
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
-- **Scoring philosophy:** Reward speed AND precision. Journey: per-component 0–100 score (completion 50 − 10·livesLost + time up to 50); unsolved = 0. Practice: per-round speed+efficiency bonuses; failed rounds score 0 for that round.
-- **Lives:** 3 hearts per component/level. In Journey, a failed attempt replays the same puzzle (fresh clock); in Practice, a failed round costs a life and retries the same board.
+- **Scoring philosophy (Infinite Stagger):** Streak is the only multiplier — `100 × currentStreak` per correct pick, plus a per-batch speed bonus (≤500) on clear. A miss breaks the streak and costs a life; a select-clock timeout costs a life and replays the same batch.
+- **Lives (Infinite Stagger):** 5 shared lives for the whole run, +1 per 5000 cumulative points; the run ends at 0.
+- **Legacy (Journey/Practice, hidden):** Journey scored per-component 0–100 (completion + time, unsolved = 0), 3 lives per component. Practice scored per-round speed+efficiency bonuses (efficiency now retired, see above), 3 lives pooled across 4 rounds.
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 
 ---
@@ -166,6 +165,9 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 ## Docs
 
-- **Design spec:** `docs/superpowers/specs/2026-05-26-puzzle-game-design.md`
-- **Implementation plan:** `docs/superpowers/plans/2026-05-26-puzzle-game-poc.md`
+- **Original design spec:** `docs/superpowers/specs/2026-05-26-puzzle-game-design.md`
+- **Original implementation plan:** `docs/superpowers/plans/2026-05-26-puzzle-game-poc.md`
 - **Gameplay polish (12×12 board, retry flow, failure penalty, turtle):** `docs/superpowers/specs/2026-05-28-gameplay-polish-design.md` + `docs/superpowers/plans/2026-05-28-gameplay-polish.md`
+- **Infinite Stagger, original design:** `docs/superpowers/specs/2026-06-16-infinite-stagger-design.md`
+- **Three-mode MVP simplification (current shipped shape — modes, single ramp, streak-only scoring, legacy removal):** `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`
+- **Journey rework (level hub + badges), now legacy/hidden:** `docs/superpowers/specs/2026-06-08-journey-rework-design.md`
