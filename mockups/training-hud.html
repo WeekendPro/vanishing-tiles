@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Training HUD layout study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --grid:#1C1C28; --edge:#3A3E4F;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --lime:#B6FF3C; --cyan:#28F0FF; --magenta:#FF2D9B;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:680px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:18px 0 4px; font-weight:600}
+  .caption:first-child{margin-top:0}
+  .caption .rec{color:var(--lime)}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:8px 4px 0}
+  .statelabel{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin:0 0 5px 4px}
+
+  /* phone-top frame: header + prompt + first rows of the board, to judge real estate */
+  .frame{
+    position:relative; width:320px; border-radius:20px 20px 0 0;
+    background:var(--void); border:1px solid #1a1a26; border-bottom:0;
+    box-shadow:0 0 0 2px #0b0b14;
+    overflow:hidden; padding:16px 18px 0;
+    margin-bottom:14px;
+  }
+  .frame::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+  .prompt{text-align:center; font-size:10px; letter-spacing:.22em; text-transform:uppercase;
+          color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.5); margin:10px 0}
+  .boardtop{
+    height:74px; border-radius:12px 12px 0 0; background:#04040a;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; padding:10px 10px 0;
+  }
+  .boardtop i{aspect-ratio:1; border-radius:2px; background:#0d0d15}
+
+  .label{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .num{font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+  .lime{color:var(--lime); text-shadow:0 0 6px #B6FF3C66, 0 0 22px rgba(182,255,60,.45)}
+  .limedim{color:rgba(182,255,60,.55)}
+  .cyan{color:var(--cyan); text-shadow:0 0 6px #28F0FF66, 0 0 22px rgba(40,240,255,.45)}
+
+  /* H1 — streak family left (best as sidecar), speed right */
+  .h1{display:flex; align-items:flex-end; justify-content:space-between}
+  .h1 .cluster{display:flex; align-items:baseline; gap:8px}
+  .h1 .big{font-size:30px}
+  .h1 .side{font-size:11px; font-weight:600; letter-spacing:.06em}
+  .h1 .side .label{color:var(--faint); letter-spacing:.14em; margin-right:4px}
+  .h1 .speed{text-align:right}
+  .h1 .speed .num{font-size:20px}
+
+  /* H2 — flat three-across */
+  .h2{display:flex; align-items:flex-end; justify-content:space-between}
+  .h2 .stat{display:flex; flex-direction:column; gap:3px}
+  .h2 .stat.mid{text-align:center; align-items:center}
+  .h2 .stat.right{text-align:right; align-items:flex-end}
+  .h2 .big{font-size:30px}
+  .h2 .lg{font-size:18px}
+
+  /* H3 — current/best ratio */
+  .h3{display:flex; align-items:flex-end; justify-content:space-between}
+  .h3 .ratio{display:flex; align-items:baseline; gap:4px}
+  .h3 .big{font-size:30px}
+  .h3 .den{font-size:14px; font-weight:600}
+  .h3 .speed{text-align:right}
+  .h3 .speed .num{font-size:20px}
+</style>
+</head>
+<body>
+<h1>Training HUD — header layout study</h1>
+<p class="sub">
+  Fixing the top strip: BEST is a streak stat, so it moves out of the speed column and into the
+  lime streak family. No more stacked values on the right. Each option shown twice — a fresh
+  session and a warm one — because the empty states ("—", best 0) shape the layout too.
+</p>
+
+<div class="grid">
+
+  <!-- H1 -->
+  <div class="col">
+    <p class="caption">H1 — Streak cluster + solo speed <span class="rec">★ recommended</span></p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="h1">
+        <div>
+          <div class="label">Streak</div>
+          <div class="cluster">
+            <span class="num big lime">3</span>
+            <span class="side limedim"><span class="label">Best</span>19</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session (best hidden until it exists)</p>
+    <div class="frame">
+      <div class="h1">
+        <div>
+          <div class="label">Streak</div>
+          <div class="cluster">
+            <span class="num big lime">0</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">Two corners, two color families: streaks live together in lime (BEST rides as
+      a small sidecar on the hero number), speed stands alone in cyan and gets a bigger size now
+      that it isn't sharing the corner. Mirrors the game HUD's two-corner shape.</p>
+  </div>
+
+  <!-- H2 -->
+  <div class="col">
+    <p class="caption">H2 — Flat three-across</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="h2">
+        <div class="stat">
+          <div class="label">Streak</div>
+          <div class="num big lime">3</div>
+        </div>
+        <div class="stat mid">
+          <div class="label">Best</div>
+          <div class="num lg limedim">19</div>
+        </div>
+        <div class="stat right">
+          <div class="label">Avg speed</div>
+          <div class="num lg cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session</p>
+    <div class="frame">
+      <div class="h2">
+        <div class="stat">
+          <div class="label">Streak</div>
+          <div class="num big lime">0</div>
+        </div>
+        <div class="stat mid">
+          <div class="label">Best</div>
+          <div class="num lg limedim">0</div>
+        </div>
+        <div class="stat right">
+          <div class="label">Avg speed</div>
+          <div class="num lg cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">Everything on one baseline, no stacking anywhere. BEST recolors lime and sits
+      beside STREAK, so the grouping reads left-to-right: your run → your record → your speed.
+      Costs a persistent center column even when best is 0.</p>
+  </div>
+
+  <!-- H3 -->
+  <div class="col">
+    <p class="caption">H3 — Current / best ratio</p>
+
+    <p class="statelabel">Warm session</p>
+    <div class="frame">
+      <div class="h3">
+        <div>
+          <div class="label">Streak · Best</div>
+          <div class="ratio">
+            <span class="num big lime">3</span>
+            <span class="num den limedim">/ 19</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num cyan">5.151s</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="statelabel">Fresh session</p>
+    <div class="frame">
+      <div class="h3">
+        <div>
+          <div class="label">Streak · Best</div>
+          <div class="ratio">
+            <span class="num big lime">0</span>
+            <span class="num den limedim">/ 0</span>
+          </div>
+        </div>
+        <div class="speed">
+          <div class="label">Avg speed</div>
+          <div class="num cyan">—</div>
+        </div>
+      </div>
+      <div class="prompt">Name the piece</div>
+      <div class="boardtop"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="note">The arcade "current / record" idiom — most compact of the three. Risk: "3 / 19"
+      can momentarily read as progress (3 of 19) rather than current-vs-best, and "0 / 0" is a
+      shabby opening frame.</p>
+  </div>
+
+</div>
+</body>
+</html>
