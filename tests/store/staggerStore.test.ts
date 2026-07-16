@@ -476,9 +476,19 @@ describe('hard mode: ordered recall', () => {
   })
 
   it('rejects a shape that exists on the board but is not next in order', () => {
-    const order = seedHardBatch()
-    const offOrder = order.find(t => t !== order[0])
-    if (!offOrder) return // degenerate all-same-shape roll; nothing to assert
+    // Retry up to 50 times to ensure we get a batch with at least 2 distinct shapes.
+    // At batch 0 with O/I pool, all-identical batches happen ~24% of the time;
+    // looping ensures the test is never vacuous.
+    let order: PieceType[] = []
+    let offOrder: PieceType | undefined
+    for (let attempt = 0; attempt < 50; attempt++) {
+      order = seedHardBatch()
+      offOrder = order.find(t => t !== order[0])
+      if (offOrder) break
+    }
+    if (!offOrder) {
+      expect.fail('Failed to generate a batch with at least 2 distinct shapes after 50 attempts; possible generator regression')
+    }
     const before = useStaggerStore.getState().lives
     const res = useStaggerStore.getState().pickPiece(offOrder)
     expect(res.ok).toBe(false)
