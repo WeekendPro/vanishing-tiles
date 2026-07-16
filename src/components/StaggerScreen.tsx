@@ -7,6 +7,7 @@ import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { submitStaggerRun } from '../lib/api'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
@@ -271,13 +272,18 @@ export function StaggerScreen() {
     if (phase === 'gameOver' && !recordedRef.current) {
       recordedRef.current = true
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
-      const run = recordRun({ score, recalled: shapesRecalled, combo: bestStreak, accuracy })
+      const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
+      // Server-side per-(user, mode) stats — fire-and-forget so a network
+      // failure never blocks the game-over screen (localStorage above is the
+      // source of truth for the graph).
+      submitStaggerRun({ mode, score, bestStreak, accuracy, gapsRecalled: shapesRecalled })
+        .catch((err) => console.warn('Failed to record stagger run server-side', err))
     } else if (phase !== 'gameOver') {
       recordedRef.current = false
       setCurrentRunId(null)
     }
-  }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
+  }, [phase, mode, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)

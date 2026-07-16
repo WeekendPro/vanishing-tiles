@@ -8,7 +8,6 @@ import {
   rankOf,
   seriesStats,
   recentRuns,
-  ladderRows,
 } from '../lib/runHistory'
 import { relativeTime } from '../lib/relativeTime'
 
@@ -366,90 +365,6 @@ function InspectCard({ pt, metric, svgWidth, svgHeight }: InspectCardProps) {
   )
 }
 
-// ── Ladder ────────────────────────────────────────────────────────────────────
-interface LadderProps {
-  records: RunRecord[]
-  metric: MetricDef
-  currentId: string
-}
-
-function Ladder({ records, metric, currentId }: LadderProps) {
-  const rows = ladderRows(records, metric.key, currentId, 5)
-  if (rows.length === 0) return null
-
-  const maxVal = Math.max(...rows.map(r => r.record[metric.key]))
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '16px' }}>
-      {rows.map((row) => {
-        const you = row.isCurrent
-        const barWidth = maxVal > 0 ? Math.round((row.record[metric.key] / maxVal) * 100) : 0
-        const barFill = you
-          ? 'linear-gradient(90deg, rgba(40,240,255,0.4), #28F0FF)'
-          : `linear-gradient(90deg, ${metric.hex}55, ${metric.hex})`
-        const barGlow = you ? '#28F0FF' : metric.hex
-        const when = relativeTime(new Date(row.record.playedAt).toISOString())
-
-        return (
-          <div
-            key={row.record.id}
-            data-testid="ladder-row"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '8px 11px',
-              borderRadius: '10px',
-              background: you
-                ? 'linear-gradient(90deg, rgba(40,240,255,0.09), rgba(40,240,255,0.02))'
-                : 'rgba(255,255,255,0.02)',
-              border: you ? '1px solid rgba(40,240,255,0.33)' : '1px solid rgba(255,255,255,0.04)',
-              boxShadow: you ? '0 0 20px rgba(40,240,255,0.11)' : 'none',
-            }}
-          >
-            {/* Rank */}
-            <div style={{
-              fontSize: '12px', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-              color: you ? '#28F0FF' : '#4A4A5C', width: '24px',
-              textShadow: you ? '0 0 8px #28F0FF' : 'none',
-            }}>
-              {row.rank}
-            </div>
-            {/* When label */}
-            <div style={{ fontSize: '9px', color: '#4A4A5C', width: '72px', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {when}
-            </div>
-            {/* Bar */}
-            <div style={{ flex: 1, height: '6px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-              <div style={{
-                display: 'block', height: '100%', borderRadius: '4px',
-                width: `${barWidth}%`,
-                background: barFill,
-                boxShadow: `0 0 8px ${barGlow}88`,
-                transition: 'width 0.4s cubic-bezier(0.7,0,0.3,1)',
-              }} />
-            </div>
-            {/* Value */}
-            <div style={{
-              fontSize: '12px', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-              color: you ? '#EAEAF2' : '#8A8AA0', width: '46px', textAlign: 'right',
-            }}>
-              {formatMetric(metric, row.record[metric.key])}
-            </div>
-            {/* You tag */}
-            <div style={{
-              fontSize: '7.5px', letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: '#28F0FF', width: '26px', textAlign: 'right',
-            }}>
-              {you ? 'You' : ''}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export function RunHistoryGraph({ records, currentId, recentCount = 14 }: RunHistoryGraphProps) {
   const [activeMetricKey, setActiveMetricKey] = useState<string>('score')
@@ -506,9 +421,6 @@ export function RunHistoryGraph({ records, currentId, recentCount = 14 }: RunHis
         selectedIdx={selectedIdx}
         onSelectIdx={setSelectedIdx}
       />
-
-      {/* Ladder */}
-      <Ladder records={records} metric={metric} currentId={currentId} />
     </div>
   )
 }

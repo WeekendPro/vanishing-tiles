@@ -7,7 +7,6 @@ import {
   rankOf,
   seriesStats,
   recentRuns,
-  ladderRows,
 } from '../../src/lib/runHistory'
 import type { RunRecord } from '../../src/store/runHistoryStore'
 
@@ -48,20 +47,13 @@ const R: RunRecord[] = [
 // ---------------------------------------------------------------------------
 
 describe('METRICS', () => {
-  it('has exactly 4 entries in order: score, recalled, combo, accuracy', () => {
-    expect(METRICS.map(m => m.key)).toEqual(['score', 'recalled', 'combo', 'accuracy'])
+  it('has exactly 3 entries in order: score, combo, accuracy', () => {
+    expect(METRICS.map(m => m.key)).toEqual(['score', 'combo', 'accuracy'])
   })
 
   it('score has correct hex and no prefix/suffix', () => {
     const m = METRICS.find(m => m.key === 'score')!
     expect(m.hex).toBe('#FFC23D')
-    expect(m.prefix).toBeUndefined()
-    expect(m.suffix).toBeUndefined()
-  })
-
-  it('recalled has correct hex and no prefix/suffix', () => {
-    const m = METRICS.find(m => m.key === 'recalled')!
-    expect(m.hex).toBe('#FF2D9B')
     expect(m.prefix).toBeUndefined()
     expect(m.suffix).toBeUndefined()
   })
@@ -124,11 +116,6 @@ describe('formatMetric', () => {
     const def = METRICS.find(m => m.key === 'accuracy')!
     expect(formatMetric(def, 91)).toBe('91%')
   })
-
-  it('recalled (no prefix/suffix) → plain number', () => {
-    const def = METRICS.find(m => m.key === 'recalled')!
-    expect(formatMetric(def, 38)).toBe('38')
-  })
 })
 
 // ---------------------------------------------------------------------------
@@ -164,10 +151,10 @@ describe('sortByMetric', () => {
     expect(R.map(r => r.id)).toEqual(original.map(r => r.id))
   })
 
-  it('orders descending by recalled', () => {
-    const sorted = sortByMetric(R, 'recalled')
-    expect(sorted[0].id).toBe('r06') // recalled = 60
-    const values = sorted.map(r => r.recalled)
+  it('orders descending by combo', () => {
+    const sorted = sortByMetric(R, 'combo')
+    expect(sorted[0].id).toBe('r06') // combo = 13
+    const values = sorted.map(r => r.combo)
     for (let i = 0; i < values.length - 1; i++) {
       expect(values[i]).toBeGreaterThanOrEqual(values[i + 1])
     }
@@ -244,91 +231,5 @@ describe('recentRuns', () => {
 
   it('returns [] for empty array', () => {
     expect(recentRuns([], 5)).toEqual([])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// ladderRows
-// ---------------------------------------------------------------------------
-
-describe('ladderRows', () => {
-  it('when current run is in top 5: returns exactly 5 rows with current flagged, ranks 1..5', () => {
-    // r06 is rank 1 on score; it's within top 5
-    const rows = ladderRows(R, 'score', 'r06')
-    expect(rows).toHaveLength(5)
-
-    // ranks should be 1..5
-    expect(rows.map(r => r.rank)).toEqual([1, 2, 3, 4, 5])
-
-    // r06 is marked isCurrent
-    const cur = rows.find(r => r.record.id === 'r06')
-    expect(cur).toBeDefined()
-    expect(cur!.isCurrent).toBe(true)
-
-    // all others are not current
-    rows.filter(r => r.record.id !== 'r06').forEach(r => {
-      expect(r.isCurrent).toBe(false)
-    })
-  })
-
-  it('when current run is rank 9 of 13: top 4 rows + current at rank 9', () => {
-    // Sorted score order:
-    //   1: r06 (6000)
-    //   2: r07 (5000, newer)
-    //   3: r05 (5000, older)
-    //   4: r08 (4500)
-    //   5: r04 (4000)
-    //   6: r09 (3500)
-    //   7: r03 (3000)
-    //   8: r10 (2500)
-    //   9: r02 (2000)  ← current (rank 9)
-    //  10: r11 (1500)
-    //  11: r01 (1000)
-    //  12: r12 (800)
-    //  13: r13 (500)
-    const rows = ladderRows(R, 'score', 'r02')
-    expect(rows).toHaveLength(5)
-
-    // First 4 rows are the true top 4
-    expect(rows[0].rank).toBe(1)
-    expect(rows[0].record.id).toBe('r06')
-    expect(rows[1].rank).toBe(2)
-    expect(rows[1].record.id).toBe('r07')
-    expect(rows[2].rank).toBe(3)
-    expect(rows[2].record.id).toBe('r05')
-    expect(rows[3].rank).toBe(4)
-    expect(rows[3].record.id).toBe('r08')
-
-    // Last row is the current run at its true rank 9
-    expect(rows[4].rank).toBe(9)
-    expect(rows[4].record.id).toBe('r02')
-    expect(rows[4].isCurrent).toBe(true)
-
-    // none of the top 4 is flagged isCurrent
-    rows.slice(0, 4).forEach(r => expect(r.isCurrent).toBe(false))
-  })
-
-  it('when fewer than n records exist: returns all as rows', () => {
-    const tiny = R.slice(0, 3)
-    const rows = ladderRows(tiny, 'score', tiny[0].id, 5)
-    expect(rows.length).toBeLessThanOrEqual(tiny.length)
-  })
-
-  it('unknown currentId: isCurrent is never true, top-n returned normally', () => {
-    const rows = ladderRows(R, 'score', 'nonexistent')
-    expect(rows).toHaveLength(5)
-    rows.forEach(r => expect(r.isCurrent).toBe(false))
-  })
-
-  it('respects custom n parameter', () => {
-    // top-3, current is r06 (rank 1)
-    const rows = ladderRows(R, 'score', 'r06', 3)
-    expect(rows).toHaveLength(3)
-    expect(rows.map(r => r.rank)).toEqual([1, 2, 3])
-  })
-
-  it('empty records → empty rows', () => {
-    const rows = ladderRows([], 'score', 'r01')
-    expect(rows).toEqual([])
   })
 })

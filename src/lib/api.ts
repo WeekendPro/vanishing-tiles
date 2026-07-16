@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import type { Difficulty } from '../store/settingsStore'
 
 // Journey now plays 4 themed rounds entirely client-side (mirroring Practice)
 // using the level's difficulty profile, then submits ONE aggregate level result.
@@ -17,6 +18,28 @@ export interface SubmitLevelInput {
 export async function submitLevelResult(a: SubmitLevelInput): Promise<unknown> {
   const { data, error } = await supabase.rpc('record_level_result', {
     p_level_id: a.levelId, p_total: a.total, p_stars: a.stars, p_cleared: a.cleared,
+  })
+  if (error) throw error
+  return data
+}
+
+export interface SubmitStaggerRunInput {
+  mode: Difficulty
+  score: number
+  bestStreak: number
+  accuracy: number     // integer 0..100
+  gapsRecalled: number
+}
+
+/** Records a finished Infinite Stagger run server-side (migration 0013):
+ *  appends a stagger_runs row and greatest()-upserts the caller's
+ *  per-(user, mode) stagger_stats aggregate. Works for guests too —
+ *  anonymous sign-ins are authenticated users, so their stats persist
+ *  under their anon uid (and carry over if they convert the account). */
+export async function submitStaggerRun(a: SubmitStaggerRunInput): Promise<unknown> {
+  const { data, error } = await supabase.rpc('record_stagger_run', {
+    p_mode: a.mode, p_score: a.score, p_best_streak: a.bestStreak,
+    p_accuracy: a.accuracy, p_gaps_recalled: a.gapsRecalled,
   })
   if (error) throw error
   return data

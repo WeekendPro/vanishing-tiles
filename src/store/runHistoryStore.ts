@@ -1,12 +1,16 @@
 import { create } from 'zustand'
+import type { Difficulty } from './settingsStore'
 
 export const RUN_HISTORY_STORAGE_KEY = 'gapcity:runhistory:v1'
 export const MAX_RUN_HISTORY = 100
 
-export type RunMetric = 'score' | 'recalled' | 'combo' | 'accuracy'
+// Chartable series only — 'recalled' is still recorded on RunRecord but no
+// longer surfaced as a graph metric.
+export type RunMetric = 'score' | 'combo' | 'accuracy'
 
 export interface RunRecord {
   id: string       // unique within the list
+  mode?: Difficulty // run's difficulty; absent on records persisted before modes were tracked
   score: number
   recalled: number // shapesRecalled
   combo: number    // bestCombo
@@ -14,7 +18,7 @@ export interface RunRecord {
   playedAt: number // epoch ms (Date.now())
 }
 
-export type RunStats = Pick<RunRecord, 'score' | 'recalled' | 'combo' | 'accuracy'>
+export type RunStats = Pick<RunRecord, 'score' | 'recalled' | 'combo' | 'accuracy'> & { mode: Difficulty }
 
 interface RunHistoryStore {
   records: RunRecord[]         // chronological (oldest first)
