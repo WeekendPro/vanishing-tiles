@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Leaderboard, stitched (C hero + B you-tag + B guest footer)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --bg:#030712; --panel:#0E0E16; --raised:#15151F; --grid:#1C1C28;
+    --filled:#2A2D3A; --edge:#3A3E4F; --aedge:#0e2b33; --apanel:#060d12;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --lime:#B6FF3C; --red:#FF3B47;
+    --ngreen:#39d98a; --nyellow:#facc15; --nred:#ff4d4d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:720px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 32px; justify-content:center; align-items:flex-start}
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:0 0 10px; font-weight:600}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:12px 4px 0}
+  .note b{color:var(--text); font-weight:600}
+
+  /* ── Phone frame ── */
+  .frame{
+    position:relative; width:320px; height:648px; border-radius:24px;
+    background:radial-gradient(120% 80% at 50% 0%, #0a1620 0%, #030712 55%);
+    border:1px solid #1a1a26; box-shadow:0 0 0 2px #0b0b14;
+    overflow:hidden; padding:16px 16px 14px; display:flex; flex-direction:column;
+  }
+  .frame::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; z-index:5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+
+  /* ── Screen chrome ── */
+  .back{color:var(--cyan); font-size:13px; font-weight:600; display:flex; align-items:center; gap:5px; margin-bottom:10px}
+  .back .chev{font-size:17px; line-height:1}
+  .screentitle{
+    text-align:center; font-weight:700; font-size:15px; letter-spacing:.15em; text-transform:uppercase;
+    color:#fff; text-shadow:0 0 10px rgba(40,240,255,.5);
+  }
+  .screensub{
+    text-align:center; font-size:9px; font-weight:500; letter-spacing:.24em; text-transform:uppercase;
+    color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.5); margin-top:5px;
+  }
+
+  /* ── Difficulty tabs (Home mode switch, three across) ── */
+  .tabs{
+    display:flex; border-radius:6px; border:2px solid var(--aedge); background:var(--apanel);
+    overflow:hidden; margin:16px 0 0;
+  }
+  .tab{
+    flex:1; padding:10px 2px; font-size:12px; font-weight:600; letter-spacing:.06em;
+    text-transform:uppercase; color:#6b7280; text-align:center; border-right:1px solid var(--aedge);
+    white-space:nowrap;
+  }
+  .tab:last-child{border-right:0}
+  .tab.on-e{background:var(--ngreen); color:var(--bg); box-shadow:inset 0 0 14px rgba(57,217,138,.5), 0 0 12px rgba(57,217,138,.35)}
+  .tab.on-m{background:var(--nyellow); color:var(--bg); box-shadow:inset 0 0 14px rgba(250,204,21,.5), 0 0 12px rgba(250,204,21,.35)}
+  .tab.on-h{background:var(--nred); color:var(--bg); box-shadow:inset 0 0 14px rgba(255,77,77,.5), 0 0 12px rgba(255,77,77,.35)}
+  /* Scrolled state: header has scrolled away; the tabs stay pinned with a
+     panel backdrop + hairline so the list slides beneath them. */
+  .tabs.pinned{margin-top:0}
+  .pinbar{
+    position:relative; margin:-16px -16px 0; padding:12px 16px 10px;
+    background:rgba(3,7,18,.92); border-bottom:1px solid var(--grid); z-index:2;
+  }
+
+  /* ── Shared list vocabulary ── */
+  .num{font-variant-numeric:tabular-nums}
+  .amber{color:var(--amber); text-shadow:0 0 10px rgba(255,194,61,.5)}
+  .lime{color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5)}
+  .cyantx{color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5)}
+
+  .cols, .row{
+    display:grid; grid-template-columns:24px 1fr 60px 38px 46px; gap:6px; align-items:baseline;
+  }
+  .cols{
+    font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint);
+    padding:14px 8px 6px; font-weight:600;
+  }
+  .cols .r, .row .r{text-align:right}
+  .row{padding:8px; border-radius:8px; font-size:12.5px; font-weight:600}
+  .row:nth-of-type(even){background:rgba(255,255,255,.025)}
+  .row .rank{color:var(--faint); font-weight:700; font-size:11px}
+  .row .name{color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500}
+  .row .score{font-weight:700}
+  /* The stitched YOU treatment: badge + cyan name ONLY — no outline, no glow
+     box (B's ring dropped per feedback). The row keeps its normal zebra stripe. */
+  .row.you .name{color:var(--cyan); font-weight:700}
+  .row.you .rank{color:var(--cyan)}
+  .youchip{
+    display:inline-block; margin-left:5px; padding:1px 4px 2px; border-radius:3px;
+    background:var(--cyan); color:var(--bg); font-size:8px; font-weight:700; letter-spacing:.1em;
+    vertical-align:1px;
+  }
+
+  /* ── You-hero card (from C) ── */
+  .hero{
+    background:var(--panel); border-radius:14px; padding:14px; margin-top:16px;
+    box-shadow:inset 0 0 0 1px rgba(40,240,255,.5), 0 0 18px rgba(40,240,255,.16);
+  }
+  .heroid{display:flex; align-items:center; gap:10px}
+  .avatar{
+    width:40px; height:40px; border-radius:50%; display:grid; place-items:center; flex:none;
+    background:linear-gradient(135deg, var(--cyan), var(--magenta));
+    color:#fff; font-weight:700; font-size:14px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.15);
+  }
+  .heroname{font-size:15px; font-weight:700; letter-spacing:.02em}
+  .herorank{font-size:9.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); margin-top:3px}
+  .herorank b{color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5); font-weight:700}
+  .tiles{display:flex; gap:8px; margin-top:13px}
+  .tile{
+    flex:1; background:var(--void); border-radius:9px; padding:9px 4px 8px; text-align:center;
+    box-shadow:inset 0 0 0 1px var(--grid);
+  }
+  .tile .tlabel{font-size:7.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); font-weight:600}
+  .tile .tval{font-size:17px; font-weight:700; margin-top:4px}
+  .tile .trank{font-size:9px; font-weight:600; color:var(--dim); margin-top:4px}
+  .sectionlabel{
+    font-size:8.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--faint);
+    font-weight:600; padding:16px 8px 0;
+  }
+
+  /* ── Guest footer (from B) ── */
+  .guest{
+    margin-top:auto; display:flex; align-items:center; gap:9px; padding:10px 12px;
+    border-radius:9px; border:1px dashed rgba(255,45,155,.4); background:rgba(255,45,155,.05);
+    font-size:11px; color:var(--dim); line-height:1.4;
+  }
+  .guest svg{flex:none; color:var(--magenta)}
+  .guest b{color:var(--magenta); font-weight:600}
+
+  .spacer{flex:1}
+  .scrollhint{
+    text-align:center; font-size:9px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--faint); padding-top:10px;
+  }
+</style>
+</head>
+<body>
+<h1>Leaderboard — stitched (B × C)</h1>
+<p class="sub">
+  C's you-hero card on top, one continuous table below it (top&nbsp;10 → everyone), and B's YOU
+  treatment inline — <b style="color:#EAEAF2">badge + cyan name only, no outline ring</b>. Frame 2
+  answers "what happens when I scroll to #23": the header scrolls away, the difficulty tabs stay
+  pinned, and your row sits in the flow wearing the tag. Frame 3 is the same screen for a guest:
+  no hero card (guests are unranked), B's dashed sign-up footer instead. Sorting stays
+  score-only for v1 (as agreed) — the column layout leaves room for tappable headers later.
+</p>
+
+<div class="grid">
+
+  <!-- ═══════════ 1 — SIGNED IN, TOP ═══════════ -->
+  <div class="col">
+    <p class="caption">1 — Signed in · top of screen</p>
+    <div class="frame">
+      <div class="back"><span class="chev">‹</span> Back</div>
+      <div class="screentitle">Leaderboard</div>
+      <div class="screensub">Global rankings</div>
+      <div class="tabs">
+        <div class="tab">Easy</div><div class="tab on-m">Medium</div><div class="tab">Hard</div>
+      </div>
+
+      <div class="hero">
+        <div class="heroid">
+          <div class="avatar">LA</div>
+          <div>
+            <div class="heroname">Luis</div>
+            <div class="herorank">Rank <b>#23</b> of 1,204 · top 2%</div>
+          </div>
+        </div>
+        <div class="tiles">
+          <div class="tile">
+            <div class="tlabel">Best score</div>
+            <div class="tval num amber">11,950</div>
+            <div class="trank num">#23</div>
+          </div>
+          <div class="tile">
+            <div class="tlabel">Best streak</div>
+            <div class="tval num lime">×15</div>
+            <div class="trank num">#9</div>
+          </div>
+          <div class="tile">
+            <div class="tlabel">Accuracy</div>
+            <div class="tval num cyantx">92%</div>
+            <div class="trank num">#17</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sectionlabel">Top players</div>
+      <div class="cols" style="padding-top:6px">
+        <span>#</span><span>Player</span><span class="r">Score</span><span class="r">Stk</span><span class="r">Acc</span>
+      </div>
+      <div class="row"><span class="rank num">1</span><span class="name">MNEMO</span><span class="r score num amber">18,300</span><span class="r num lime">×24</span><span class="r num cyantx">97%</span></div>
+      <div class="row"><span class="rank num">2</span><span class="name">Tetra</span><span class="r score num amber">16,450</span><span class="r num lime">×21</span><span class="r num cyantx">95%</span></div>
+      <div class="row"><span class="rank num">3</span><span class="name">Rin_09</span><span class="r score num amber">15,100</span><span class="r num lime">×18</span><span class="r num cyantx">93%</span></div>
+      <div class="row"><span class="rank num">4</span><span class="name">afterglow_max</span><span class="r score num amber">13,825</span><span class="r num lime">×19</span><span class="r num cyantx">90%</span></div>
+      <div class="row"><span class="rank num">5</span><span class="name">Kass</span><span class="r score num amber">12,600</span><span class="r num lime">×16</span><span class="r num cyantx">94%</span></div>
+      <div class="row"><span class="rank num">6</span><span class="name">Moira</span><span class="r score num amber">12,150</span><span class="r num lime">×13</span><span class="r num cyantx">88%</span></div>
+
+      <div class="scrollhint">⌄ scrolls to everyone</div>
+      <div class="spacer"></div>
+    </div>
+    <p class="note"><b>The stitch.</b> Hero card first — "where am I" answered before a single
+      scroll — then one continuous ranked list. Your streak/accuracy tiles carry their own global
+      ranks (#9, #17), so the card pays off even when the score rank stings.</p>
+  </div>
+
+  <!-- ═══════════ 2 — SCROLLED TO YOUR ROW ═══════════ -->
+  <div class="col">
+    <p class="caption">2 — Scrolled to your row (#23)</p>
+    <div class="frame">
+      <div class="pinbar">
+        <div class="tabs pinned">
+          <div class="tab">Easy</div><div class="tab on-m">Medium</div><div class="tab">Hard</div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <span>#</span><span>Player</span><span class="r">Score</span><span class="r">Stk</span><span class="r">Acc</span>
+      </div>
+      <div class="row"><span class="rank num">17</span><span class="name">held_bloom</span><span class="r score num amber">7,300</span><span class="r num lime">×12</span><span class="r num cyantx">86%</span></div>
+      <div class="row"><span class="rank num">18</span><span class="name">Priya</span><span class="r score num amber">7,150</span><span class="r num lime">×11</span><span class="r num cyantx">90%</span></div>
+      <div class="row"><span class="rank num">19</span><span class="name">gapfiller</span><span class="r score num amber">6,975</span><span class="r num lime">×12</span><span class="r num cyantx">91%</span></div>
+      <div class="row"><span class="rank num">20</span><span class="name">Nova-7</span><span class="r score num amber">6,850</span><span class="r num lime">×14</span><span class="r num cyantx">85%</span></div>
+      <div class="row"><span class="rank num">21</span><span class="name">voidwalker</span><span class="r score num amber">6,700</span><span class="r num lime">×10</span><span class="r num cyantx">89%</span></div>
+      <div class="row"><span class="rank num">22</span><span class="name">Sam_K</span><span class="r score num amber">6,525</span><span class="r num lime">×11</span><span class="r num cyantx">87%</span></div>
+      <div class="row you"><span class="rank num">23</span><span class="name">Luis<span class="youchip">YOU</span></span><span class="r score num amber">6,450</span><span class="r num lime">×11</span><span class="r num cyantx">88%</span></div>
+      <div class="row"><span class="rank num">24</span><span class="name">tilewitch</span><span class="r score num amber">6,300</span><span class="r num lime">×9</span><span class="r num cyantx">92%</span></div>
+      <div class="row"><span class="rank num">25</span><span class="name">Ossian</span><span class="r score num amber">6,175</span><span class="r num lime">×10</span><span class="r num cyantx">84%</span></div>
+      <div class="row"><span class="rank num">26</span><span class="name">Dee</span><span class="r score num amber">5,900</span><span class="r num lime">×8</span><span class="r num cyantx">90%</span></div>
+      <div class="row"><span class="rank num">27</span><span class="name">phos4</span><span class="r score num amber">5,825</span><span class="r num lime">×9</span><span class="r num cyantx">86%</span></div>
+      <div class="row"><span class="rank num">28</span><span class="name">Marta</span><span class="r score num amber">5,700</span><span class="r num lime">×10</span><span class="r num cyantx">83%</span></div>
+
+      <div class="spacer"></div>
+    </div>
+    <p class="note"><b>Yes — you appear in the flow.</b> Rank + name go cyan and the YOU tag rides
+      the name; the row keeps its normal stripe (no ring, per your call). The tabs stay pinned while
+      the list scrolls under them. If the badge alone proves hard to spot at flick-speed, a 4%-cyan
+      row wash is a one-line dial-up.</p>
+  </div>
+
+  <!-- ═══════════ 3 — GUEST VIEW ═══════════ -->
+  <div class="col">
+    <p class="caption">3 — Guest view</p>
+    <div class="frame">
+      <div class="back"><span class="chev">‹</span> Back</div>
+      <div class="screentitle">Leaderboard</div>
+      <div class="screensub">Global rankings</div>
+      <div class="tabs">
+        <div class="tab on-e">Easy</div><div class="tab">Medium</div><div class="tab">Hard</div>
+      </div>
+
+      <div class="cols">
+        <span>#</span><span>Player</span><span class="r">Score</span><span class="r">Stk</span><span class="r">Acc</span>
+      </div>
+      <div class="row"><span class="rank num">1</span><span class="name">MNEMO</span><span class="r score num amber">24,150</span><span class="r num lime">×27</span><span class="r num cyantx">98%</span></div>
+      <div class="row"><span class="rank num">2</span><span class="name">Tetra</span><span class="r score num amber">21,400</span><span class="r num lime">×22</span><span class="r num cyantx">96%</span></div>
+      <div class="row"><span class="rank num">3</span><span class="name">Rin_09</span><span class="r score num amber">19,875</span><span class="r num lime">×20</span><span class="r num cyantx">94%</span></div>
+      <div class="row"><span class="rank num">4</span><span class="name">Kass</span><span class="r score num amber">17,300</span><span class="r num lime">×19</span><span class="r num cyantx">94%</span></div>
+      <div class="row"><span class="rank num">5</span><span class="name">afterglow_max</span><span class="r score num amber">16,050</span><span class="r num lime">×22</span><span class="r num cyantx">91%</span></div>
+      <div class="row"><span class="rank num">6</span><span class="name">Moira</span><span class="r score num amber">14,900</span><span class="r num lime">×15</span><span class="r num cyantx">96%</span></div>
+      <div class="row"><span class="rank num">7</span><span class="name">gapfiller</span><span class="r score num amber">13,225</span><span class="r num lime">×14</span><span class="r num cyantx">89%</span></div>
+      <div class="row"><span class="rank num">8</span><span class="name">Nova-7</span><span class="r score num amber">12,700</span><span class="r num lime">×17</span><span class="r num cyantx">92%</span></div>
+      <div class="row"><span class="rank num">9</span><span class="name">voidwalker</span><span class="r score num amber">11,850</span><span class="r num lime">×13</span><span class="r num cyantx">88%</span></div>
+      <div class="row"><span class="rank num">10</span><span class="name">Sam_K</span><span class="r score num amber">11,200</span><span class="r num lime">×12</span><span class="r num cyantx">90%</span></div>
+
+      <div class="guest">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+          <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z"/>
+        </svg>
+        <span>Guests play unranked — <b>sign up</b> to claim your spot.</span>
+      </div>
+    </div>
+    <p class="note"><b>Guests get the board, not the mirror.</b> No hero card (nothing to rank —
+      the merged 0013 schema records their stats privately and excludes them from the global view),
+      and B's dashed magenta footer becomes the sign-up nudge, pinned at the bottom. If they
+      convert, their history carries over and the hero card appears.</p>
+  </div>
+
+</div>
+</body>
+</html>
