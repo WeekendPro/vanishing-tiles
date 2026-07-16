@@ -1,0 +1,43 @@
+<!-- @dsCard group="Foundations" name="Motion & glow — attack / decay" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion &amp; glow</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--red:#FF3B47;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--attack:cubic-bezier(.1,.9,.2,1);--decay:cubic-bezier(.3,0,.1,1);--mechanical:cubic-bezier(.7,0,.3,1)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 6px;font-weight:600}
+h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin:26px 0 12px;font-weight:600}
+.glow-recipe{display:flex;gap:30px;align-items:center;margin-top:14px}
+.orb{width:64px;height:64px;border-radius:14px}
+.code{font-family:'Departure Mono',ui-monospace,monospace;font-size:11px;color:var(--text-dim);line-height:1.7}
+.timeline{display:flex;align-items:center;gap:0;margin-top:8px}
+.cell{width:34px;height:34px;border-radius:5px;background:#0a0a12;margin-right:4px}
+.bloom{animation:bloom 2.6s var(--decay) infinite}
+.bloom:nth-child(2){animation-delay:.18s}.bloom:nth-child(3){animation-delay:.36s}.bloom:nth-child(4){animation-delay:.54s}
+@keyframes bloom{0%{opacity:0;transform:scale(.6)}8%{opacity:1;transform:scale(1.1);background:var(--magenta);box-shadow:0 0 10px var(--magenta),0 0 22px var(--magenta)}16%{transform:scale(1);background:var(--magenta);box-shadow:0 0 8px var(--magenta)}40%{opacity:1;background:var(--magenta);box-shadow:0 0 8px var(--magenta)}55%{opacity:.08;background:var(--magenta);box-shadow:none}62%,100%{opacity:0;background:#0a0a12;box-shadow:none}}
+.ease{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.eb{background:var(--panel-raised);border:1px solid #ffffff0d;border-radius:10px;padding:12px 14px;font-family:'Departure Mono',ui-monospace,monospace;font-size:11px;color:var(--text-dim)}
+.eb b{display:block;color:var(--cyan);font-family:'Space Grotesk';font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.note{font-size:12px;color:var(--text-faint);line-height:1.6;max-width:520px;margin-top:14px}
+</style></head><body>
+  <h2>Fast attack, slow decay — light arrives hard, leaves soft</h2>
+  <p class="note">One philosophy governs every animation: a struck pixel blooms instantly and fades on a long tail. The reveal cascade below is the signature — staggered gaps bloom, hold, then decay to <b>true zero</b> (the board must clear before recall).</p>
+
+  <h3>The reveal — bloom → hold → decay → inert (loops)</h3>
+  <div class="timeline">
+    <div class="cell bloom"></div><div class="cell bloom"></div><div class="cell bloom"></div><div class="cell bloom"></div>
+  </div>
+
+  <h3>Glow recipe — one technology lights everything</h3>
+  <div class="glow-recipe">
+    <div class="orb" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan),0 0 22px #28f0ff73"></div>
+    <div class="code">box-shadow:<br>&nbsp;&nbsp;0 0 6px  &lt;accent&gt;,&nbsp;&nbsp;/* tight core */<br>&nbsp;&nbsp;0 0 22px &lt;accent&gt;73; /* soft halo ~45% */</div>
+  </div>
+
+  <h3>Easing tokens</h3>
+  <div class="ease">
+    <div class="eb"><b>attack</b>cubic-bezier(.1,.9,.2,1)<br>lighting up · snap · press</div>
+    <div class="eb"><b>decay</b>cubic-bezier(.3,0,.1,1)<br>fade-out · ghost tail · cooldown</div>
+    <div class="eb"><b>mechanical</b>cubic-bezier(.7,0,.3,1)<br>bar fills/drains · UI moves</div>
+  </div>
+  <p class="note">Honor <b>prefers-reduced-motion</b>: keep state colors &amp; the count-up; drop shakes, particles, overshoot. Bloom becomes a plain opacity fade.</p>
+</body></html>

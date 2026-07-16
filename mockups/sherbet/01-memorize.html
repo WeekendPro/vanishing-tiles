@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherbet · Memorize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vt-bg:#FFF7F0; --vt-bg-board:#FBEFE6; --vt-surface:#FFFFFF; --vt-surface-2:#FFF1E8;
+  --vt-hairline:#F0E0D4; --vt-ink:#46383B; --vt-ink-soft:#9B8B8E; --vt-ink-faint:#CDBFC1;
+  --vt-strawberry:#FF6B6B; --vt-tangerine:#FF9E45; --vt-lemon:#FFCE3A; --vt-lime:#5BC16E;
+  --vt-teal:#1FC7B6; --vt-sky:#46AEF7; --vt-grape:#9B8CFF; --vt-bubblegum:#FF8FCF;
+  --vt-life:#FF6B81; --vt-star:#FFCE3A; --vt-timer-calm:#46C7B6; --vt-timer-warn:#FFB13C;
+  --vt-shadow-2:0 6px 14px rgba(217,150,120,.22); --vt-shadow-3:0 14px 30px rgba(214,140,110,.26);
+  --vt-inset-top:inset 0 2px 0 rgba(255,255,255,.6);
+  --vt-r-tile:22px; --vt-r-card:28px; --vt-spring:cubic-bezier(.18,1.3,.4,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#EFE4DA;font-family:'Nunito',sans-serif;color:var(--vt-ink);
+  min-height:100vh;display:grid;place-items:center;padding:20px}
+.phone{width:390px;max-width:100%;background:var(--vt-bg);border-radius:42px;
+  box-shadow:var(--vt-shadow-3);padding:18px 16px 26px;position:relative;overflow:hidden}
+
+/* ---------- HUD ---------- */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 4px 14px}
+.score{font-family:'Fredoka';font-weight:600;font-size:22px;font-variant-numeric:tabular-nums;
+  display:flex;align-items:baseline;gap:6px}
+.score small{font-family:'Nunito';font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--vt-ink-soft)}
+.lvl-pill{font-family:'Fredoka';font-weight:600;font-size:14px;background:var(--vt-surface);
+  padding:6px 14px;border-radius:999px;box-shadow:var(--vt-shadow-2),var(--vt-inset-top)}
+.lives{display:flex;gap:5px}
+.heart{width:20px;height:20px;color:var(--vt-life);filter:drop-shadow(0 2px 2px rgba(255,107,129,.4))}
+.heart.lost{color:var(--vt-ink-faint);filter:none;transform:scale(.82)}
+
+/* ---------- memorize banner + timer ---------- */
+.banner{text-align:center;font-family:'Fredoka';font-weight:600;font-size:15px;color:var(--vt-ink);
+  margin:2px 0 10px;letter-spacing:.01em}
+.banner b{color:var(--vt-tangerine)}
+.timer{height:10px;border-radius:999px;background:var(--vt-surface-2);overflow:hidden;
+  margin:0 6px 16px;box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
+.timer i{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--vt-timer-calm),var(--vt-timer-warn));
+  width:62%;animation:drain 6.2s linear infinite}
+@keyframes drain{from{width:100%}to{width:6%}}
+
+/* ---------- board ---------- */
+.board{background:var(--vt-bg-board);border-radius:26px;padding:14px;
+  box-shadow:inset 0 2px 8px rgba(180,120,90,.14);
+  display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.slot{aspect-ratio:1;border-radius:var(--vt-r-tile);background:var(--vt-surface-2);
+  border:1px solid var(--vt-hairline);position:relative}
+
+/* the universal tile */
+.tile{position:absolute;inset:0;border-radius:var(--vt-r-tile);display:grid;place-items:center;
+  box-shadow:var(--vt-shadow-2),var(--vt-inset-top);font-size:30px;line-height:1;
+  background:#FFFDFB;opacity:0;transform:scale(.4)}
+.tile.shape{font-size:0}
+.tile.shape .glyph{width:56%;height:56%;border-radius:8px}
+.tile.swatch{background:var(--c)}
+.tile.swatch::after{content:"";position:absolute;inset:7px;border-radius:14px;
+  border:3px solid var(--rim);opacity:.85}
+.pop{position:absolute;inset:-6px;border-radius:30px;border:3px solid #fff;opacity:0;pointer-events:none}
+
+/* bloom → linger → melt, looped */
+.tile.on{animation:bloom .45s var(--vt-spring) both, breathe 2.6s ease-in-out 1.1s infinite,
+  melt .45s cubic-bezier(.4,0,.5,1) var(--vd) infinite}
+.tile.on .pop{animation:popring .5s ease-out var(--vb) both}
+@keyframes bloom{0%{opacity:0;transform:scale(.4) rotate(-3deg)}
+  60%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
+@keyframes popring{0%{opacity:.7;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
+/* the sherbet melt: held, then squash-lift, then poof up into blur */
+@keyframes melt{
+  0%,72%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}
+  80%{opacity:1;transform:scale(1.08) translateY(-4px)}
+  100%{opacity:0;transform:scale(.7) translateY(-10px);filter:blur(4px)}
+}
+.sparkle{position:absolute;width:7px;height:7px;border-radius:999px;opacity:0;pointer-events:none}
+.tile.on .sparkle{animation:spark .45s ease-out var(--vs) infinite}
+@keyframes spark{0%,72%{opacity:0;transform:translate(0,0) scale(.4)}
+  82%{opacity:.95}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1)}}
+
+.foot{display:flex;justify-content:center;margin-top:18px}
+.btn{font-family:'Fredoka';font-weight:600;font-size:17px;color:#fff;border:none;
+  background:linear-gradient(180deg,#5BC9DE,#46AEF7);padding:14px 0;width:230px;border-radius:999px;
+  box-shadow:var(--vt-shadow-2),var(--vt-inset-top);cursor:pointer}
+.btn:active{transform:scale(.96)}
+.cap{text-align:center;color:var(--vt-ink-faint);font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="hud">
+    <div class="score">1,240<small>pts</small></div>
+    <div class="lvl-pill">Level 7</div>
+    <div class="lives">
+      <svg class="heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.3-9C1 8.5 2.6 5 6 5c2 0 3.2 1.2 4 2.3C10.8 6.2 12 5 14 5c3.4 0 5 3.5 3.3 7C19 16.4 12 21 12 21z"/></svg>
+      <svg class="heart" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.3-9C1 8.5 2.6 5 6 5c2 0 3.2 1.2 4 2.3C10.8 6.2 12 5 14 5c3.4 0 5 3.5 3.3 7C19 16.4 12 21 12 21z"/></svg>
+      <svg class="heart lost" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.6-9.3-9C1 8.5 2.6 5 6 5c2 0 3.2 1.2 4 2.3C10.8 6.2 12 5 14 5c3.4 0 5 3.5 3.3 7C19 16.4 12 21 12 21z"/></svg>
+    </div>
+  </div>
+
+  <div class="banner">Memorize the tiles — <b>they melt away soon!</b></div>
+  <div class="timer"><i></i></div>
+
+  <div class="board" id="board"></div>
+
+  <div class="cap">mid-memorize · tiles bloom, linger, then melt</div>
+</div>
+
+<script>
+// up to 8 tiles on a 6×6 lattice. mix of emoji / shape / swatch.
+const COLORS = {
+  strawberry:['#FF6B6B','#E84F58'], tangerine:['#FF9E45','#E8842F'], lemon:['#FFCE3A','#EDB31F'],
+  lime:['#5BC16E','#45A857'], teal:['#1FC7B6','#15A99A'], sky:['#46AEF7','#2E92DD'],
+  grape:['#9B8CFF','#7E6DF0'], bubblegum:['#FF8FCF','#ED74BC']
+};
+const tiles = [
+  {i:2,  kind:'emoji', c:'🍓'},
+  {i:5,  kind:'swatch',col:'sky'},
+  {i:8,  kind:'emoji', c:'🌸'},
+  {i:13, kind:'shape', col:'grape', sh:'50%'},
+  {i:16, kind:'emoji', c:'🍋'},
+  {i:21, kind:'swatch',col:'lime'},
+  {i:27, kind:'emoji', c:'🐳'},
+  {i:32, kind:'shape', col:'tangerine', sh:'4px'},
+];
+const board = document.getElementById('board');
+for(let s=0;s<36;s++){
+  const slot=document.createElement('div'); slot.className='slot';
+  const t=tiles.find(x=>x.i===s);
+  if(t){
+    const order=tiles.indexOf(t);
+    const el=document.createElement('div'); el.className='tile on';
+    el.style.setProperty('--vb', (order*0.07)+'s');           // bloom stagger
+    el.style.setProperty('--vd', (2.4 + order*0.07)+'s');     // melt delay (diagonal-ish wave)
+    el.style.setProperty('--vs', (2.4 + order*0.07)+'s');
+    el.style.animationIterationCount='1, infinite, infinite';
+    if(t.kind==='emoji'){ el.textContent=t.c; }
+    if(t.kind==='shape'){ el.classList.add('shape');
+      const g=document.createElement('div'); g.className='glyph';
+      g.style.background=COLORS[t.col][0]; g.style.borderRadius=t.sh; el.appendChild(g); }
+    if(t.kind==='swatch'){ el.classList.add('swatch');
+      el.style.setProperty('--c',COLORS[t.col][0]); el.style.setProperty('--rim',COLORS[t.col][1]); }
+    // pop ring + sparkles
+    const pr=document.createElement('div'); pr.className='pop';
+    pr.style.borderColor = t.kind==='swatch'?COLORS[t.col][1]:'#FFE2C9'; el.appendChild(pr);
+    const hue = t.kind==='emoji' ? '#FFC24D' : COLORS[t.col][0];
+    for(let k=0;k<6;k++){
+      const sp=document.createElement('div'); sp.className='sparkle';
+      const a=k/6*6.28; sp.style.background=hue;
+      sp.style.left='calc(50% - 3px)'; sp.style.top='calc(50% - 3px)';
+      sp.style.setProperty('--dx',(Math.cos(a)*30)+'px');
+      sp.style.setProperty('--dy',(Math.sin(a)*30 - 8)+'px');
+      sp.style.setProperty('--vs',(2.4+order*0.07)+'s'); el.appendChild(sp);
+    }
+    slot.appendChild(el);
+  }
+  board.appendChild(slot);
+}
+</script>
+</body>
+</html>

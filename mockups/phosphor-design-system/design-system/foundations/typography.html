@@ -1,0 +1,27 @@
+<!-- @dsCard group="Foundations" name="Typography — scoreboard + voice" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Typography</title><style>
+:root{--void:#06060B;--panel-raised:#15151F;--magenta:#FF2D9B;--cyan:#28F0FF;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 22px;font-weight:600}
+.spec{display:flex;align-items:baseline;gap:18px;padding:14px 0;border-top:1px solid #ffffff0d}
+.tag{width:140px;flex:0 0 140px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.tag b{display:block;color:var(--text-dim);font-size:11px;letter-spacing:.04em;text-transform:none;margin-top:3px}
+.pixel{font-family:'Silkscreen','Press Start 2P',monospace;letter-spacing:.06em}
+.seg{font-family:'Departure Mono',ui-monospace,monospace;letter-spacing:.08em}
+.mono{font-family:'Departure Mono',ui-monospace,monospace}
+.glow{text-shadow:0 0 10px #28f0ff55}
+</style></head><body>
+  <h2>Two faces of hardware + one human voice</h2>
+
+  <div class="spec"><div class="tag">display-xl<b>Silkscreen / pixel</b></div><div class="pixel glow" style="font-size:40px">017030</div></div>
+  <div class="spec"><div class="tag">display-l<b>Silkscreen / pixel</b></div><div class="pixel" style="font-size:26px;color:var(--cyan);text-shadow:0 0 10px var(--cyan)">BATCH 07&nbsp;&nbsp;×4</div></div>
+  <div class="spec"><div class="tag">clock<b>7-segment / mono</b></div><div class="seg" style="font-size:28px;color:var(--amber,#FFC23D)">0:08</div></div>
+  <div class="spec"><div class="tag">title<b>Space Grotesk</b></div><div style="font-size:20px;letter-spacing:.04em">MEMORIZE · RECALL · CLEAR</div></div>
+  <div class="spec"><div class="tag">body<b>Space Grotesk</b></div><div style="font-size:16px;line-height:1.4;color:var(--text-dim);max-width:420px">Memorize the gaps as they flash, then rebuild them from memory before the clock drains.</div></div>
+  <div class="spec"><div class="tag">label<b>Space Grotesk · caps</b></div><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)">Replay &nbsp;·&nbsp; Pause &nbsp;·&nbsp; Ready</div></div>
+  <div class="spec"><div class="tag">micro<b>Departure Mono · tabular</b></div><div class="mono" style="font-size:11px;color:var(--text-dim)">×3 &nbsp; −50 &nbsp; 00:08 &nbsp; 016</div></div>
+
+  <p style="margin-top:22px;font-size:12px;color:var(--text-faint);line-height:1.6;max-width:460px">Rule: pixel &amp; 7-seg faces only at large sizes (they smear small) and always with ≥0.04em tracking. Glow on numerals and shapes — <b style="color:var(--text-dim)">never on body text</b>.</p>
+</body></html>

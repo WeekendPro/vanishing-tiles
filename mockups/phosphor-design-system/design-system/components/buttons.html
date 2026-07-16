@@ -1,0 +1,33 @@
+<!-- @dsCard group="Components" name="Buttons — lit hardware" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buttons</title><style>
+:root{--void:#06060B;--panel-raised:#15151F;--cyan:#28F0FF;--amber:#FFC23D;--red:#FF3B47;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C}
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;padding:30px}
+h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);margin:0 0 22px;font-weight:600}
+.grid{display:flex;flex-direction:column;gap:18px;max-width:340px}
+.btn{height:50px;border-radius:12px;background:var(--panel-raised);border:2px solid;font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:inset 0 1px 0 #ffffff12;cursor:pointer;transition:transform .08s var(--attack,ease),box-shadow .2s}
+.btn:active{transform:translateY(2px)}
+.primary{border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 14px #28f0ff3a}
+.primary:hover{box-shadow:inset 0 1px 0 #ffffff12,0 0 20px #28f0ff66}
+.cost{border-color:var(--amber);color:var(--amber);box-shadow:inset 0 1px 0 #ffffff12,0 0 14px #ffc23d3a}
+.danger{border-color:var(--red);color:var(--red);box-shadow:inset 0 1px 0 #ffffff12,0 0 14px #ff3b473a}
+.disabled{border-color:var(--text-faint);color:var(--text-faint);box-shadow:none;cursor:not-allowed}
+.chip{font-family:'Departure Mono',ui-monospace,monospace;font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid #ffc23d77;color:var(--amber)}
+.lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin-bottom:-8px}
+</style></head><body>
+  <h2>Buttons — outlined, glowing, with a satisfying press</h2>
+  <div class="grid">
+    <div class="lab">Primary · cyan</div>
+    <button class="btn primary">Ready →</button>
+    <div class="lab">Cost / panic · amber</div>
+    <button class="btn cost">↻ Replay <span class="chip">−50</span></button>
+    <div class="lab">Active control · cyan</div>
+    <button class="btn primary">Done ✓</button>
+    <div class="lab">Destructive · red</div>
+    <button class="btn danger">End Run</button>
+    <div class="lab">Disabled · no glow</div>
+    <button class="btn disabled">Locked</button>
+  </div>
+  <p style="margin-top:24px;font-size:12px;color:var(--text-faint);max-width:380px;line-height:1.6">Dark fill, 2px accent border + glow, inner top sheen. Press depresses 2px and brightens the halo. Disabled drops the glow and sheen entirely — darkness reads as "off".</p>
+</body></html>

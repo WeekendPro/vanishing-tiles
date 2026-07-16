@@ -1,0 +1,97 @@
+<!-- @dsCard group="Screens" name="Infinite Stagger" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infinite Stagger</title><style>
+:root{--void:#06060B;--panel:#0E0E16;--panel-raised:#15151F;--grid-line:#1C1C28;--filled:#2A2D3A;--filled-edge:#3A3E4F;--magenta:#FF2D9B;--cyan:#28F0FF;--amber:#FFC23D;--red:#FF3B47;--lime:#B6FF3C;--text:#EAEAF2;--text-dim:#8A8AA0;--text-faint:#4A4A5C;--attack:cubic-bezier(.1,.9,.2,1);--decay:cubic-bezier(.3,0,.1,1);--mechanical:cubic-bezier(.7,0,.3,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:radial-gradient(120% 90% at 50% 40%,transparent 55%,#000 130%),var(--void);color:var(--text);font-family:'Space Grotesk','Inter',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
+.phone{width:390px;max-width:94vw;aspect-ratio:390/780;background:var(--panel);border-radius:34px;border:1px solid #1a1a26;box-shadow:0 40px 90px #000a,inset 0 1px 0 #ffffff0d,inset 0 -1px 0 #0008;padding:16px 14px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:34px;background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);opacity:.5;mix-blend-mode:overlay}
+.hud{display:flex;align-items:center;justify-content:space-between;padding:4px 6px}
+.hearts{display:flex;gap:5px;font-size:17px}.heart{color:var(--red);filter:drop-shadow(0 0 5px var(--red))}.heart.lost{color:var(--text-faint);filter:none}
+.score{font-family:'Silkscreen','Press Start 2P',monospace;font-size:21px;letter-spacing:.06em;text-shadow:0 0 8px #eaeaf24d}
+.batch{font-family:'Silkscreen',monospace;font-size:12px;letter-spacing:.08em;color:var(--cyan);text-shadow:0 0 8px var(--cyan);padding:3px 7px;border:1px solid #28f0ff44;border-radius:5px}
+.timerwrap{display:flex;align-items:center;gap:8px;padding:0 2px}
+.timer{flex:1;height:12px;border-radius:7px;background:#000;position:relative;overflow:hidden;box-shadow:inset 0 1px 2px #000,inset 0 0 0 1px #ffffff0a}
+.timer .fill{position:absolute;inset:0;width:62%;border-radius:7px;transition:width .25s linear,background .4s,box-shadow .4s}
+.clock{font-family:'Departure Mono',ui-monospace,monospace;font-size:13px;color:var(--text-dim);width:34px;text-align:right;letter-spacing:.05em}
+.reveal .fill{background:linear-gradient(90deg,#ff2d9b88,var(--magenta));box-shadow:0 0 10px var(--magenta),0 0 22px #ff2d9b66}
+.recall .fill{background:linear-gradient(90deg,#ffc23d88,var(--amber));box-shadow:0 0 10px var(--amber),0 0 22px #ffc23d55}
+.recall.low .fill{background:linear-gradient(90deg,#ff3b4788,var(--red));box-shadow:0 0 12px var(--red),0 0 24px #ff3b4766;animation:redpulse .5s var(--mechanical) infinite}
+.clear .fill{background:linear-gradient(90deg,var(--amber),var(--lime));box-shadow:0 0 12px var(--lime),0 0 26px #b6ff3c66}
+@keyframes redpulse{50%{opacity:.6}}
+.phaseLabel{text-align:center;font-size:11px;letter-spacing:.22em;text-transform:uppercase;height:13px;transition:color .3s}
+.reveal .phaseLabel{color:var(--magenta)}.recall .phaseLabel{color:var(--amber)}.clear .phaseLabel{color:var(--lime)}
+.bezel{margin:2px 4px;padding:10px;border-radius:14px;background:#04040a;box-shadow:inset 0 2px 6px #000,inset 0 0 0 1px #ffffff08,0 1px 0 #ffffff0a;position:relative}
+.board{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;aspect-ratio:1;position:relative}
+.cell{border-radius:2px;background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:inset 0 1px 0 #ffffff10,inset 0 -1px 0 #00000055}
+.cell.filled{background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:inset 0 1px 0 #ffffff10,inset 0 -1px 0 #00000055}
+.cell.dim{background:#0c0c14;box-shadow:none;transition:background .45s var(--mechanical),box-shadow .45s}
+.cell.bloom{animation:bloom 1.3s var(--decay) forwards}
+@keyframes bloom{0%{background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:none;transform:scale(1)}10%{background:var(--magenta);box-shadow:0 0 10px var(--magenta),0 0 22px var(--magenta);transform:scale(1.1)}24%{background:var(--magenta);box-shadow:0 0 8px var(--magenta);transform:scale(1)}55%{background:var(--magenta);box-shadow:0 0 8px var(--magenta)}82%{background:#2c1c2a;box-shadow:0 0 4px #ff2d9b55}100%{background:linear-gradient(160deg,var(--filled-edge),var(--filled));box-shadow:inset 0 1px 0 #ffffff10,inset 0 -1px 0 #00000055;transform:scale(1)}}
+.cell.placed{background:var(--lime);box-shadow:0 0 6px var(--lime),0 0 16px #b6ff3c99,inset 0 0 4px #fff8;animation:snap .12s var(--attack)}
+@keyframes snap{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+.cell.wrong{background:var(--red);box-shadow:0 0 8px var(--red),0 0 18px #ff3b4799}
+.combo{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);font-family:'Silkscreen',monospace;font-size:30px;color:var(--lime);text-shadow:0 0 10px var(--lime),0 0 26px #b6ff3c88;opacity:0;pointer-events:none}
+.combo.show{animation:combopop 1.1s var(--attack)}
+@keyframes combopop{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}25%{opacity:1;transform:translate(-50%,-55%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+.miss{position:absolute;inset:0;border-radius:14px;pointer-events:none;box-shadow:inset 0 0 0 2px var(--red),0 0 24px #ff3b4744;opacity:0}
+.shake{animation:shake .18s var(--attack)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}50%{transform:translateX(6px)}80%{transform:translateX(-3px)}}
+.tray{display:flex;gap:7px;justify-content:center;padding:2px}
+.tile{width:48px;height:48px;border-radius:9px;background:var(--panel-raised);border:1px solid #28f0ff2e;position:relative;display:grid;place-items:center;box-shadow:inset 0 1px 0 #ffffff0c;transition:.2s}
+.reveal .tile{filter:saturate(.2) brightness(.7);border-color:#ffffff10}
+.recall .tile,.clear .tile{box-shadow:inset 0 1px 0 #ffffff0c,0 0 0 1px #28f0ff33,0 0 10px #28f0ff22}
+.mg{display:grid;gap:1.5px}.pc{width:7px;height:7px;border-radius:1.5px;background:var(--cyan);box-shadow:0 0 4px #28f0ff99}
+.count{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--cyan);color:#04121a;font-family:'Departure Mono',ui-monospace,monospace;font-size:10px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 8px var(--cyan)}
+.actions{display:flex;gap:10px;margin-top:auto}
+.btn{flex:1;height:48px;border-radius:11px;background:var(--panel-raised);border:2px solid;font:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:inset 0 1px 0 #ffffff12}
+.btn.replay{border-color:#ffc23d;color:var(--amber);box-shadow:inset 0 1px 0 #ffffff12,0 0 12px #ffc23d33}
+.btn.pause{border-color:#28f0ff;color:var(--cyan);box-shadow:inset 0 1px 0 #ffffff12,0 0 12px #28f0ff33}
+.chip{font-family:'Departure Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:6px;border:1px solid #ffc23d77;color:var(--amber)}
+</style></head><body>
+  <div class="phone reveal" id="phone">
+    <div class="hud">
+      <div class="hearts"><span class="heart">♥</span><span class="heart">♥</span><span class="heart lost">♥</span></div>
+      <div class="score" id="score">012400</div>
+      <div class="batch">BATCH 07</div>
+    </div>
+    <div class="timerwrap"><div class="timer"><div class="fill" id="fill"></div></div><div class="clock" id="clock">0:08</div></div>
+    <div class="phaseLabel" id="plabel">MEMORIZE</div>
+    <div class="bezel"><div class="board" id="board"></div><div class="combo" id="combo">×4</div><div class="miss" id="missfx"></div></div>
+    <div class="tray" id="tray"></div>
+    <div class="actions"><button class="btn replay">↻ Replay <span class="chip">−50</span></button><button class="btn pause">⏸ Pause</button></div>
+  </div>
+<script>
+const N=12,board=document.getElementById('board');
+const gaps=[[2,3],[2,4],[3,3],[3,4],[4,8],[5,8],[6,8],[7,8],[8,2],[8,3],[8,4],[9,3],[6,5],[6,6],[7,6],[7,7],[10,7],[10,8],[10,9],[9,9]];
+const gapKey=new Set(gaps.map(([r,c])=>r+'-'+c));const cells=[];
+for(let r=0;r<N;r++)for(let c=0;c<N;c++){const d=document.createElement('div');const g=gapKey.has(r+'-'+c);d.className='cell filled';d.dataset.gap=g?'1':'0';board.appendChild(d);cells.push(d);}
+const gapCells=cells.filter(c=>c.dataset.gap==='1');
+const pieces={O:[[0,0],[0,1],[1,0],[1,1]],I:[[0,0],[1,0],[2,0],[3,0]],T:[[0,0],[0,1],[0,2],[1,1]],S:[[0,1],[0,2],[1,0],[1,1]],J:[[0,1],[1,1],[2,0],[2,1]],L:[[0,0],[1,0],[2,0],[2,1]]};
+const counts={O:1,I:1,T:1,S:1,J:1,L:0};const tray=document.getElementById('tray');
+Object.entries(pieces).forEach(([k,arr])=>{const t=document.createElement('div');t.className='tile';const rows=Math.max(...arr.map(p=>p[0]))+1,cols=Math.max(...arr.map(p=>p[1]))+1;const g=document.createElement('div');g.className='mg';g.style.gridTemplateColumns=`repeat(${cols},7px)`;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const cell=document.createElement('div');cell.style.width='7px';cell.style.height='7px';if(arr.some(p=>p[0]===r&&p[1]===c))cell.className='pc';g.appendChild(cell);}t.appendChild(g);const b=document.createElement('div');b.className='count';b.textContent=counts[k];t.appendChild(b);tray.appendChild(t);});
+const phone=document.getElementById('phone'),fill=document.getElementById('fill'),clock=document.getElementById('clock'),plabel=document.getElementById('plabel'),combo=document.getElementById('combo'),score=document.getElementById('score'),missfx=document.getElementById('missfx'),bezel=document.querySelector('.bezel');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function setPhase(p){phone.className='phone '+p;}
+async function loop(){while(true){
+  setPhase('reveal');plabel.textContent='MEMORIZE';fill.style.width='100%';cells.forEach(c=>c.className='cell filled');
+  let t=8;for(let i=0;i<gapCells.length;i++){gapCells[i].classList.add('bloom');if(i%4===3){t--;clock.textContent='0:0'+t;fill.style.width=(t/8*100)+'%';}await sleep(360);}
+  await sleep(500);
+  setPhase('recall');plabel.textContent='RECALL';cells.forEach(c=>c.className='cell dim');
+  let rt=8,placed=0,sc=12400,mult=1;
+  for(let i=0;i<gapCells.length;i++){
+    if(i===11){gapCells[i].className='cell wrong';bezel.classList.add('shake');missfx.style.opacity='1';mult=1;combo.classList.remove('show');await sleep(220);bezel.classList.remove('shake');missfx.style.opacity='0';gapCells[i].className='cell dim';await sleep(180);}
+    gapCells[i].className='cell placed';placed++;sc+=120+mult*15;score.textContent=String(sc).padStart(6,'0');
+    if(placed>=3){mult++;combo.textContent='×'+mult;combo.classList.remove('show');void combo.offsetWidth;combo.classList.add('show');}
+    rt=Math.max(0,8-Math.floor(i/3));clock.textContent='0:0'+rt;fill.style.width=(rt/8*100)+'%';phone.classList.toggle('low',rt<=2);
+    await sleep(300);
+  }
+  phone.classList.remove('low');
+  setPhase('clear');plabel.textContent='CLEAR!';fill.style.transition='width .9s var(--mechanical),background .4s';fill.style.width='0%';clock.textContent='0:00';
+  let target=sc+850;for(let s=sc;s<=target;s+=50){score.textContent=String(s).padStart(6,'0');await sleep(48);}
+  score.textContent=String(target).padStart(6,'0');await sleep(900);
+  fill.style.transition='width .25s linear,background .4s';await sleep(700);
+}}
+loop();
+</script>
+</body></html>

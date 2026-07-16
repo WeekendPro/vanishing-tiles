@@ -1,0 +1,135 @@
+/* =====================================================================
+   SHERBET — the Vanishing Tiles design system
+   Token sheet (CSS variables). Tailwind config snippet at the bottom.
+   Light, warm, tactile. The opposite of Afterglow.
+   ===================================================================== */
+
+:root {
+  /* ---- Backgrounds: light & airy, all warm-white, never grey -------- */
+  --vt-bg:            #FFF7F0; /* page / app background  (warm cream)   */
+  --vt-bg-board:      #FBEFE6; /* the board "well", a touch deeper      */
+  --vt-surface:       #FFFFFF; /* cards, trays, sheets                  */
+  --vt-surface-2:     #FFF1E8; /* sunken inputs, slot wells            */
+  --vt-hairline:      #F0E0D4; /* 1px separators, slot borders         */
+
+  /* ---- Ink: warm charcoal, never pure black ------------------------ */
+  --vt-ink:           #46383B; /* primary text                         */
+  --vt-ink-soft:      #9B8B8E; /* secondary text, captions             */
+  --vt-ink-faint:     #CDBFC1; /* disabled, placeholder                */
+  --vt-on-color:      #FFFFFF; /* text on saturated fills              */
+
+  /* ---- Candy tile palette (8 hues, lightness-spread for CVD) -------- */
+  --vt-strawberry:    #FF6B6B;
+  --vt-tangerine:     #FF9E45;
+  --vt-lemon:         #FFCE3A;
+  --vt-lime:          #5BC16E;
+  --vt-teal:          #1FC7B6;
+  --vt-sky:           #46AEF7;
+  --vt-grape:         #9B8CFF;
+  --vt-bubblegum:     #FF8FCF;
+
+  /* paired "deep" rims for swatch tiles (same hue, ~14% darker) ------- */
+  --vt-strawberry-rim:#E84F58;
+  --vt-tangerine-rim: #E8842F;
+  --vt-lemon-rim:     #EDB31F;
+  --vt-lime-rim:      #45A857;
+  --vt-teal-rim:      #15A99A;
+  --vt-sky-rim:       #2E92DD;
+  --vt-grape-rim:     #7E6DF0;
+  --vt-bubblegum-rim: #ED74BC;
+
+  /* ---- Semantic ---------------------------------------------------- */
+  --vt-success:       #2FD09B; /* correct pick, perfect clear (mint)   */
+  --vt-combo-a:       #FF6B6B; /* streak gradient start                */
+  --vt-combo-b:       #FFA94D; /* streak gradient end                  */
+  --vt-star:          #FFCE3A; /* score stars, milestones              */
+  --vt-life:          #FF6B81; /* hearts                               */
+
+  /* timer that warns WITHOUT punishing — eases cool→amber→coral ------ */
+  --vt-timer-calm:    #46C7B6; /* >50% left                            */
+  --vt-timer-warn:    #FFB13C; /* 20–50% left                          */
+  --vt-timer-hot:     #FF8A5B; /* <20% left (friendly coral, not red)  */
+
+  /* ---- Elevation: soft, warm-tinted, never grey/black -------------- */
+  --vt-shadow-1:  0 2px 6px  rgba(217,150,120,.18);
+  --vt-shadow-2:  0 6px 14px rgba(217,150,120,.22);
+  --vt-shadow-3:  0 14px 30px rgba(214,140,110,.26);
+  --vt-glow-success: 0 0 0 4px rgba(47,208,155,.28);
+  --vt-inset-top: inset 0 2px 0 rgba(255,255,255,.55); /* candy gloss   */
+
+  /* ---- Radius: squircle-soft -------------------------------------- */
+  --vt-r-tile: 26px;  /* on a ~64–72px tile ≈ squircle                 */
+  --vt-r-card: 28px;
+  --vt-r-pill: 999px;
+  --vt-r-slot: 18px;
+
+  /* ---- Type -------------------------------------------------------- */
+  --vt-font-display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --vt-font-ui:      'Nunito',  ui-rounded, system-ui, sans-serif;
+
+  --vt-text-hero:   44px; /* score on game-over           700 */
+  --vt-text-title:  30px; /* "Perfect!", screen titles     600 */
+  --vt-text-score:  22px; /* HUD score                     600 */
+  --vt-text-body:   16px; /* UI                            500 */
+  --vt-text-label:  13px; /* captions / pills        700 caps  */
+
+  /* ---- Motion ------------------------------------------------------ */
+  --vt-spring:   linear(0,.18 7%,.62 18%,1.04 30%,1.11 38%,1.0 55%,.99 75%,1); /* overshoot */
+  --vt-ease-out: cubic-bezier(.22,.9,.32,1);
+  --vt-bloom-ms:   420ms;
+  --vt-vanish-ms:  360ms;
+  --vt-stagger-ms:  70ms;
+}
+
+/* ---- Optional soft dark mode (warm plum, never neon) --------------- */
+@media (prefers-color-scheme: dark) {
+  :root.vt-auto-dark, :root[data-theme="dark"] {
+    --vt-bg:        #211A24;
+    --vt-bg-board:  #2A2230;
+    --vt-surface:   #322836;
+    --vt-surface-2: #271F2C;
+    --vt-hairline:  #3D3242;
+    --vt-ink:       #FBEFE6;
+    --vt-ink-soft:  #B6A7AE;
+    --vt-ink-faint: #6E6070;
+    --vt-shadow-1:  0 2px 6px  rgba(0,0,0,.35);
+    --vt-shadow-2:  0 6px 16px rgba(0,0,0,.40);
+    --vt-shadow-3:  0 16px 34px rgba(0,0,0,.48);
+    /* tiles keep their hue but drop ~8% saturation in dark (set per-tile) */
+  }
+}
+
+/* ---- Reduced motion: calm cross-fades, no blur/confetti ----------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --vt-spring: var(--vt-ease-out);
+    --vt-bloom-ms:  200ms;
+    --vt-vanish-ms: 200ms;
+    --vt-stagger-ms: 30ms;
+  }
+}
+
+/* =====================================================================
+   Tailwind config snippet (drop into tailwind.config.js theme.extend)
+   — also valid for React Native via the same hex values.
+   ---------------------------------------------------------------------
+   colors: {
+     bg:      { DEFAULT:'#FFF7F0', board:'#FBEFE6' },
+     surface: { DEFAULT:'#FFFFFF', sunken:'#FFF1E8' },
+     ink:     { DEFAULT:'#46383B', soft:'#9B8B8E', faint:'#CDBFC1' },
+     tile: {
+       strawberry:'#FF6B6B', tangerine:'#FF9E45', lemon:'#FFCE3A',
+       lime:'#5BC16E', teal:'#1FC7B6', sky:'#46AEF7',
+       grape:'#9B8CFF', bubblegum:'#FF8FCF',
+     },
+     success:'#2FD09B', star:'#FFCE3A', life:'#FF6B81',
+     timer:{ calm:'#46C7B6', warn:'#FFB13C', hot:'#FF8A5B' },
+   },
+   borderRadius: { tile:'26px', card:'28px', slot:'18px', pill:'999px' },
+   fontFamily: { display:['Fredoka','ui-rounded','sans-serif'],
+                 ui:['Nunito','ui-rounded','sans-serif'] },
+   boxShadow: {
+     'tile':'0 6px 14px rgba(217,150,120,.22)',
+     'pop':'0 14px 30px rgba(214,140,110,.26)',
+   },
+   ===================================================================== */
