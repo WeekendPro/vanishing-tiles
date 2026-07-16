@@ -29,9 +29,11 @@ const STREAK_FADE_MS = 900
 const LIFT_BEAT_MS = 260
 const LIFT_MS = 1300
 
-// Hard-mode out-of-order hint: how long the "IN ORDER" chip's two-pulse
-// white↔magenta flash runs. Must match .vt-order-flash in index.css.
-const ORDER_FLASH_MS = 700
+// Hard-mode out-of-order hint: on a right-shape-wrong-order miss the PHASE LABEL
+// (the central MEMORIZE/RECALL/CLEAR! line above the grid) swaps to "IN ORDER",
+// runs the two-pulse white↔magenta blink (700ms, .vt-order-flash in index.css),
+// then holds magenta for the rest of this window before reverting to RECALL.
+const ORDER_HINT_MS = 1500
 
 // Floating white labels (the per-pick "+points" and the "+N" in the earned-life
 // heart) sit over bright piece/heart color. Contrast comes from a soft DOWNWARD
@@ -297,10 +299,10 @@ export function StaggerScreen() {
   const [clockMs, setClockMs] = useState(0)
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
-  // Out-of-order hint (hard mode): a counter so back-to-back flashes restart the
-  // chip's animation (the counter keys the chip element → remount → replay).
-  const [orderFlash, setOrderFlash] = useState(0)
-  const orderFlashTimer = useRef<number | undefined>(undefined)
+  // Out-of-order hint (hard mode): a counter so back-to-back hints restart the
+  // label's animation (the counter keys the label element → remount → replay).
+  const [orderHint, setOrderHint] = useState(0)
+  const orderHintTimer = useRef<number | undefined>(undefined)
   const boardRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
   const scoreRef = useRef<HTMLDivElement>(null)
@@ -481,14 +483,18 @@ export function StaggerScreen() {
     if (cleared || paused) return
     const res = pickPiece(type)
     if (res.gameOver) return
+    // Any resolved pick ends a live "IN ORDER" hint; a right-shape-wrong-order
+    // miss (re)starts it — the phase label swaps to the hint for ORDER_HINT_MS
+    // as a central cue for WHY the pick missed, on top of the standard miss
+    // feedback below.
+    window.clearTimeout(orderHintTimer.current)
+    if (res.outOfOrder) {
+      setOrderHint(n => n + 1)
+      orderHintTimer.current = window.setTimeout(() => setOrderHint(0), ORDER_HINT_MS)
+    } else {
+      setOrderHint(0)
+    }
     if (!res.ok) {
-      // Right shape, wrong order (hard mode): flash the "IN ORDER" chip as a hint
-      // about WHY the pick missed — on top of the standard miss feedback below.
-      if (res.outOfOrder) {
-        setOrderFlash(n => n + 1)
-        window.clearTimeout(orderFlashTimer.current)
-        orderFlashTimer.current = window.setTimeout(() => setOrderFlash(0), ORDER_FLASH_MS)
-      }
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -556,9 +562,11 @@ export function StaggerScreen() {
   if (phase === 'reveal') {
     for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color })
   }
+  // Out-of-order hint takes over the phase label mid-recall (never over CLEAR!).
+  const orderHintActive = orderHint > 0 && phase === 'selecting' && !cleared
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
-    phase === 'selecting' ? (cleared ? 'CLEAR!' : 'RECALL') : ''
+    phase === 'selecting' ? (cleared ? 'CLEAR!' : orderHintActive ? 'IN ORDER' : 'RECALL') : ''
 
   // Timer-bar phase color (the §1 temperature arc): magenta filling on reveal,
   // amber draining on recall, red pulse under 25% as the clock heats up, lime on
@@ -573,9 +581,12 @@ export function StaggerScreen() {
     'bg-vt-amber shadow-vt-amber'
 
   // Phase label color tracks the bar's temperature (magenta → amber → red → lime).
+  // The out-of-order hint is magenta: the blink animation plays over it, then
+  // this base color is what the label holds until the hint expires.
   const phaseLabelClass =
     phase === 'reveal' ? 'text-vt-magenta text-glow-vt-magenta' :
     cleared ? 'text-vt-lime text-glow-vt-lime' :
+    orderHintActive ? 'text-vt-magenta text-glow-vt-magenta' :
     barLow ? 'text-vt-red text-glow-vt-red' :
     phase === 'selecting' ? 'text-vt-amber text-glow-vt-amber' :
     'text-vt-dim'
@@ -618,7 +629,12 @@ export function StaggerScreen() {
               style (see streakChip lifecycle above). ("Streak" is player-facing
               copy only — the underlying store field is still `currentCombo`.) */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
-            <div className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}`}>{phaseLabel}</div>
+            <div
+              key={orderHintActive ? `order-${orderHint}` : 'phase'}
+              className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}${orderHintActive ? ' vt-order-flash' : ''}`}
+            >
+              {phaseLabel}
+            </div>
             {streakChip && (
               <span
                 key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
@@ -752,10 +768,7 @@ export function StaggerScreen() {
           sequence; no per-gap numbering — remembering the order IS the challenge. */}
       <div className="mt-4 w-full flex flex-col items-center">
         {phase === 'selecting' && mode === 'hard' && (
-          <div
-            key={orderFlash}
-            className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${orderFlash > 0 ? ' vt-order-flash' : ''}`}
-          >
+          <div className="w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta">
             IN ORDER
           </div>
         )}

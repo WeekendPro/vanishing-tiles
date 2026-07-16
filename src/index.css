@@ -315,10 +315,11 @@
 }
 
 /* Hard-mode order hint: when a pick matched a remaining gap but broke the reveal
-   order, the "IN ORDER" chip blinks twice — white → magenta → white → magenta
-   (paired-percentage holds = crisp blinks, not crossfades). Two pulses over
-   700ms ≈ 2.9Hz (≤3Hz — flash-hazard safe). Duration must match ORDER_FLASH_MS
-   in StaggerScreen. */
+   order, the central phase label swaps to "IN ORDER" and blinks twice — white →
+   magenta → white → magenta (paired-percentage holds = crisp blinks, not
+   crossfades). Two pulses over 700ms ≈ 2.9Hz (≤3Hz — flash-hazard safe); the
+   label then holds its magenta base color until ORDER_HINT_MS (StaggerScreen)
+   expires and RECALL returns. */
 @keyframes vtOrderFlash {
   0%, 24%   { color: #fff;     text-shadow: 0 0 10px rgba(255, 255, 255, 0.75); }
   25%, 49%  { color: #FF2D9B;  text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
