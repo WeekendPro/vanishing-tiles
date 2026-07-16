@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Training placement on Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F; --grid:#1C1C28;
+    --edge:#3A3E4F; --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --green:#39d98a; --amber:#FFC23D; --red:#FF3B47; --cyan:#28F0FF; --magenta:#FF2D9B;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:680px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:0 0 4px; font-weight:600}
+  .caption .rec{color:var(--green)}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:8px 4px 0}
+
+  /* phone frame */
+  .phone{
+    position:relative; width:320px; height:470px; border-radius:26px;
+    background:var(--void); border:1px solid #1a1a26;
+    box-shadow:0 0 0 2px #0b0b14, 0 24px 60px rgba(0,0,0,.6);
+    overflow:hidden; padding:18px 22px 22px;
+    display:flex; flex-direction:column;
+  }
+  .phone::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+  .topfill{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px}
+  .mark{font-weight:700; text-transform:uppercase; letter-spacing:.05em; line-height:1.1; text-align:center;
+        font-size:26px; color:#fff; text-shadow:0 0 10px rgba(40,240,255,.45)}
+  .tag{font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.5)}
+
+  .bottom{display:flex; flex-direction:column; gap:14px}
+  .grouplabel{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); text-align:center; margin-bottom:7px}
+
+  /* CTA — morphs green PLAY ↔ cyan TRAIN */
+  .cta{
+    width:100%; border:2px solid var(--green); color:var(--green); background:rgba(57,217,138,.04);
+    border-radius:8px; padding:15px; font-family:inherit; font-weight:600; text-transform:uppercase; letter-spacing:.1em;
+    font-size:16px; text-align:center; cursor:pointer; text-shadow:0 0 10px rgba(57,217,138,.4);
+    box-shadow:0 0 16px rgba(57,217,138,.18), inset 0 0 18px rgba(57,217,138,.06);
+    transition:all .2s;
+  }
+  .cta.train{
+    border-color:var(--cyan); color:var(--cyan); background:rgba(40,240,255,.04);
+    text-shadow:0 0 10px rgba(40,240,255,.4);
+    box-shadow:0 0 16px rgba(40,240,255,.18), inset 0 0 18px rgba(40,240,255,.06);
+  }
+
+  /* secondary Training button (option A) */
+  .trainbtn{
+    width:100%; border:2px solid var(--cyan); color:var(--cyan); background:rgba(40,240,255,.03);
+    border-radius:8px; padding:10px; font-family:inherit; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+    font-size:12px; text-align:center; cursor:pointer;
+  }
+  .trainbtn small{display:block; text-transform:none; letter-spacing:0; font-weight:400; font-size:10px; color:rgba(40,240,255,.6); margin-top:3px}
+
+  /* quiet link (option D) */
+  .trainlink{
+    text-align:center; font-size:12px; color:var(--cyan); cursor:pointer; letter-spacing:.04em; opacity:.85;
+  }
+  .trainlink span{color:var(--faint); font-size:11px}
+
+  /* segmented switch */
+  .seg{display:flex; border:1px solid #23232f; border-radius:9px; background:var(--panel); overflow:hidden}
+  .seg button{
+    flex:1; appearance:none; background:transparent; border:0; border-right:1px solid #1a1a24;
+    color:var(--faint); font-family:inherit; font-weight:600; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; padding:11px 2px; cursor:pointer; transition:all .15s;
+  }
+  .seg button:last-child{border-right:0}
+  .seg button[data-on="1"]{ color:#0a0a10; }
+  .seg button[data-lvl="train"][data-on="1"]{ background:var(--cyan);  box-shadow:0 0 14px rgba(40,240,255,.5) inset, 0 0 12px rgba(40,240,255,.35); }
+  .seg button[data-lvl="easy"][data-on="1"]{ background:var(--green);  box-shadow:0 0 14px rgba(57,217,138,.5) inset, 0 0 12px rgba(57,217,138,.35); }
+  .seg button[data-lvl="med"][data-on="1"]{  background:var(--amber);  box-shadow:0 0 14px rgba(255,194,61,.5) inset, 0 0 12px rgba(255,194,61,.35); }
+  .seg button[data-lvl="hard"][data-on="1"]{ background:var(--red);    box-shadow:0 0 14px rgba(255,59,71,.5) inset, 0 0 12px rgba(255,59,71,.35); }
+  .seghint{font-size:11px; color:var(--dim); text-align:center; min-height:14px; margin-top:8px}
+
+  /* detached train square (option C) */
+  .modrow{display:flex; gap:8px}
+  .modrow .seg{flex:1}
+  .trainseg{
+    flex:0 0 auto; width:64px; border:1px solid #23232f; border-radius:9px; background:var(--panel);
+    color:var(--faint); font-family:inherit; font-weight:600; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; cursor:pointer; transition:all .15s;
+  }
+  .trainseg[data-on="1"]{
+    background:var(--cyan); color:#0a0a10;
+    box-shadow:0 0 14px rgba(40,240,255,.5) inset, 0 0 12px rgba(40,240,255,.35);
+    border-color:transparent;
+  }
+</style>
+</head>
+<body>
+<h1>Training placement on the Home screen</h1>
+<p class="sub">
+  Where does TRAINING live? A = your reorder (difficulty → play → train, three stacked elements).
+  B = training becomes "mode zero" inside one selector, single CTA that morphs.
+  C = same idea, but Train sits detached beside the heat arc.
+  D = training demoted to a quiet text link. B and C are clickable — try selecting Train.
+</p>
+
+<div class="grid">
+
+  <!-- A: reorder only -->
+  <div class="col">
+    <p class="caption">A — Reorder (diff / play / train)</p>
+    <div class="phone">
+      <div class="topfill">
+        <div class="mark">Vanishing<br/>Tiles</div>
+        <div class="tag">A memory game</div>
+      </div>
+      <div class="bottom">
+        <div>
+          <div class="grouplabel">Difficulty</div>
+          <div class="seg" data-static="1">
+            <button data-lvl="easy" data-on="1">Easy</button>
+            <button data-lvl="med">Medium</button>
+            <button data-lvl="hard">Hard</button>
+          </div>
+          <div class="seghint">Full color. Recall in any order.</div>
+        </div>
+        <button class="cta">Play</button>
+        <button class="trainbtn">Training<small>Learn the piece names</small></button>
+      </div>
+    </div>
+    <p class="note">Your proposed order. Logical top-down flow, but still three stacked things —
+      two buttons compete, and TRAINING (not PLAY) ends up deepest in the thumb arc.</p>
+  </div>
+
+  <!-- B: mode zero, one switch -->
+  <div class="col">
+    <p class="caption">B — Mode zero <span class="rec">★ recommended</span></p>
+    <div class="phone">
+      <div class="topfill">
+        <div class="mark">Vanishing<br/>Tiles</div>
+        <div class="tag">A memory game</div>
+      </div>
+      <div class="bottom">
+        <div>
+          <div class="grouplabel">Mode</div>
+          <div class="seg" id="segB">
+            <button data-lvl="train">Train</button>
+            <button data-lvl="easy" data-on="1">Easy</button>
+            <button data-lvl="med">Medium</button>
+            <button data-lvl="hard">Hard</button>
+          </div>
+          <div class="seghint" id="hintB">Full color. Recall in any order.</div>
+        </div>
+        <button class="cta" id="ctaB">Play</button>
+      </div>
+    </div>
+    <p class="note">One decision, one action. The heat arc extends left: cyan (cool, zero stakes) →
+      green → amber → red. CTA morphs to a cyan TRAIN so you always know what launches.</p>
+  </div>
+
+  <!-- C: mode zero, detached train -->
+  <div class="col">
+    <p class="caption">C — Mode zero, detached</p>
+    <div class="phone">
+      <div class="topfill">
+        <div class="mark">Vanishing<br/>Tiles</div>
+        <div class="tag">A memory game</div>
+      </div>
+      <div class="bottom">
+        <div>
+          <div class="grouplabel">Mode</div>
+          <div class="modrow" id="rowC">
+            <button class="trainseg" data-lvl="train">Train</button>
+            <div class="seg">
+              <button data-lvl="easy" data-on="1">Easy</button>
+              <button data-lvl="med">Medium</button>
+              <button data-lvl="hard">Hard</button>
+            </div>
+          </div>
+          <div class="seghint" id="hintC">Full color. Recall in any order.</div>
+        </div>
+        <button class="cta" id="ctaC">Play</button>
+      </div>
+    </div>
+    <p class="note">Same single-decision model, but Train visibly isn't a difficulty — it sits apart
+      from the heat arc. Costs each difficulty segment some width.</p>
+  </div>
+
+  <!-- D: quiet link -->
+  <div class="col">
+    <p class="caption">D — Quiet link</p>
+    <div class="phone">
+      <div class="topfill">
+        <div class="mark">Vanishing<br/>Tiles</div>
+        <div class="tag">A memory game</div>
+      </div>
+      <div class="bottom">
+        <div>
+          <div class="grouplabel">Difficulty</div>
+          <div class="seg" data-static="1">
+            <button data-lvl="easy" data-on="1">Easy</button>
+            <button data-lvl="med">Medium</button>
+            <button data-lvl="hard">Hard</button>
+          </div>
+          <div class="seghint">Full color. Recall in any order.</div>
+        </div>
+        <button class="cta">Play</button>
+        <div class="trainlink">Training <span>— learn the piece names ›</span></div>
+      </div>
+    </div>
+    <p class="note">Play stays the single hero; training is a modest text affordance under it.
+      Honest hierarchy, but training is easy to miss — closer to the hamburger problem.</p>
+  </div>
+
+</div>
+
+<script>
+  const HINTS = {
+    train: 'Name the pieces. No clock, no lives.',
+    easy:  'Full color. Recall in any order.',
+    med:   'Monochrome reveal. Recall in any order.',
+    hard:  'Monochrome reveal. Recall in the order shown.',
+  }
+  function wire(container, hintEl, ctaEl){
+    const buttons = container.querySelectorAll('button[data-lvl]')
+    buttons.forEach(b => b.addEventListener('click', () => {
+      buttons.forEach(x => x.removeAttribute('data-on'))
+      b.setAttribute('data-on','1')
+      const lvl = b.dataset.lvl
+      hintEl.textContent = HINTS[lvl]
+      if (lvl === 'train'){ ctaEl.textContent = 'Train'; ctaEl.classList.add('train') }
+      else { ctaEl.textContent = 'Play'; ctaEl.classList.remove('train') }
+    }))
+  }
+  wire(document.getElementById('segB'), document.getElementById('hintB'), document.getElementById('ctaB'))
+  wire(document.getElementById('rowC'), document.getElementById('hintC'), document.getElementById('ctaC'))
+</script>
+</body>
+</html>
