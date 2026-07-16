@@ -23,23 +23,46 @@ describe('HomeScreen', () => {
   it('Play drops into Infinite Stagger', async () => {
     const user = userEvent.setup()
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: /Play/i }))
+    await user.click(screen.getByRole('button', { name: 'Play' }))
     expect(useNavStore.getState().appView).toBe('stagger')
     expect(useStaggerStore.getState().phase).toBe('countdown')
   })
 
-  it('Training drops into the piece-naming trainer', async () => {
+  it('Training is mode zero: select it, then Play drops into the piece-naming trainer', async () => {
     const user = userEvent.setup()
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: /Training/i }))
+    await user.click(screen.getByRole('button', { name: 'Training' }))
+    await user.click(screen.getByRole('button', { name: 'Play' }))
     expect(useNavStore.getState().appView).toBe('training')
     expect(useTrainingStore.getState().active).toBe(true)
     expect(useTrainingStore.getState().piece).not.toBeNull()
+    expect(useStaggerStore.getState().phase).toBe('idle')
   })
 
-  it('Training rides above PLAY (exposed up front, but styled secondary)', () => {
+  it('selecting Training never overwrites the persisted difficulty', async () => {
+    const user = userEvent.setup()
+    useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'hard' } })
     render(<HomeScreen />)
-    const training = screen.getByRole('button', { name: /Training/i })
+    await user.click(screen.getByRole('button', { name: 'Training' }))
+    expect(screen.getByRole('button', { name: 'Training', pressed: true })).toBeTruthy()
+    expect(useSettingsStore.getState().settings.difficulty).toBe('hard')
+  })
+
+  it('picking a difficulty deselects Training, and Play goes back to Stagger', async () => {
+    const user = userEvent.setup()
+    render(<HomeScreen />)
+    await user.click(screen.getByRole('button', { name: 'Training' }))
+    await user.click(screen.getByRole('button', { name: 'Medium' }))
+    expect(screen.getByRole('button', { name: 'Training', pressed: false })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Play' }))
+    expect(useNavStore.getState().appView).toBe('stagger')
+    expect(useStaggerStore.getState().mode).toBe('medium')
+    expect(useTrainingStore.getState().active).toBe(false)
+  })
+
+  it('the mode switch sits above Play (single CTA pinned to the thumb arc)', () => {
+    render(<HomeScreen />)
+    const training = screen.getByRole('button', { name: 'Training' })
     const play = screen.getByRole('button', { name: 'Play' })
     expect(training.compareDocumentPosition(play) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

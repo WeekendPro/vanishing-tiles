@@ -24,13 +24,14 @@ beforeEach(() => {
 })
 
 describe('GlobalMenu', () => {
-  it('is simplified to Training / Logout (no Settings or Reset Journey, no modes or maps)', async () => {
+  it('is simplified to just Logout (no Training — that lives on Home; no Settings, modes, or maps)', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(screen.getByRole('button', { name: 'Training' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument()
+    // Training moved to the Home mode switch — one home, not two paths.
+    expect(screen.queryByRole('button', { name: 'Training' })).not.toBeInTheDocument()
     // Settings returns when there's something behind it; Reset Journey is gone.
     expect(screen.queryByRole('button', { name: /Settings/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Reset Journey/i })).not.toBeInTheDocument()
@@ -39,16 +40,6 @@ describe('GlobalMenu', () => {
     expect(screen.queryByRole('button', { name: /Subway Map/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Git Map/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Resume/i })).not.toBeInTheDocument()
-  })
-
-  it('Training starts the naming drill and navigates there', async () => {
-    useNavStore.setState({ appView: 'home' })
-    const user = userEvent.setup()
-    render(<GlobalMenu />)
-    await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: 'Training' }))
-    expect(useNavStore.getState().appView).toBe('training')
-    expect(useTrainingStore.getState().active).toBe(true)
   })
 
   it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
-import { useTrainingStore } from '../store/trainingStore'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
 
@@ -66,13 +65,11 @@ export function GlobalMenu() {
     goHome: s.goHome,
     reset: s.reset,
   })))
-  const goTraining = useNavStore(s => s.goTraining)
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
   })))
-  const startTraining = useTrainingStore(s => s.start)
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
   // Journey/Practice round shells.
@@ -109,15 +106,6 @@ export function GlobalMenu() {
 
   const quitToHome = () => { setOpen(false); resetGame(); goHome() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
-  // Training is exposed here too (besides the Home button) so it's reachable
-  // from anywhere the menu shows. Leaving a live Journey/Practice round for it
-  // tears that round down first.
-  const openTraining = () => {
-    setOpen(false)
-    if (inGame) resetGame()
-    startTraining()
-    goTraining()
-  }
 
   return (
     <>
@@ -170,9 +158,10 @@ export function GlobalMenu() {
           )}
 
           {/* Settings is deliberately absent — there's nothing behind it yet;
-              it returns when there are real settings to expose. */}
+              it returns when there are real settings to expose. Training left
+              the menu when it became "mode zero" on the Home switch — one home,
+              not two paths to the same door. */}
           <div className="mt-auto">
-            <Action label="Training" onClick={openTraining} />
             <Action label="Logout" tone="danger" onClick={handleSignOut} />
           </div>
         </div>
