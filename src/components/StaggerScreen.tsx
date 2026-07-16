@@ -7,6 +7,7 @@ import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { submitStaggerRun } from '../lib/api'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
@@ -159,10 +160,11 @@ function StaggerBoard({
 }
 
 // ── Countdown ───────────────────────────────────────────────────────────────
-// Each number burns bright the instant it appears, then dissipates (Afterglow
-// Smear: blurs + swells + fades to nothing) over the beat, just as the next
-// number takes its place. The CSS animation length (.vt-num-decay, 850ms) is
-// kept in lockstep with BEAT_MS.
+// Each number burns bright the instant it appears, holds at full strength for
+// ~72% of its beat, then dissipates (Afterglow Smear: blurs + swells + fades
+// to nothing) in the final stretch, just as the next number takes its place.
+// The CSS animation length (.vt-num-decay, 850ms) is kept in lockstep with
+// BEAT_MS.
 //
 // The countdown is anchored OVER the board/grid (not a full-screen void) so
 // the player sees the mode's frame before the gaps reveal: the mode label
@@ -271,13 +273,18 @@ export function StaggerScreen() {
     if (phase === 'gameOver' && !recordedRef.current) {
       recordedRef.current = true
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
-      const run = recordRun({ score, recalled: shapesRecalled, combo: bestStreak, accuracy })
+      const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
+      // Server-side per-(user, mode) stats — fire-and-forget so a network
+      // failure never blocks the game-over screen (localStorage above is the
+      // source of truth for the graph).
+      submitStaggerRun({ mode, score, bestStreak, accuracy, gapsRecalled: shapesRecalled })
+        .catch((err) => console.warn('Failed to record stagger run server-side', err))
     } else if (phase !== 'gameOver') {
       recordedRef.current = false
       setCurrentRunId(null)
     }
-  }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
+  }, [phase, mode, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)

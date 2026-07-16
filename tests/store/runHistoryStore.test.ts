@@ -8,6 +8,7 @@ import {
 } from '../../src/store/runHistoryStore'
 
 const sampleStats: RunStats = {
+  mode: 'medium',
   score: 42,
   recalled: 7,
   combo: 3,
@@ -28,6 +29,7 @@ describe('runHistoryStore', () => {
     const { recordRun } = useRunHistoryStore.getState()
     const rec = recordRun(sampleStats)
 
+    expect(rec.mode).toBe('medium')
     expect(rec.score).toBe(42)
     expect(rec.recalled).toBe(7)
     expect(rec.combo).toBe(3)
@@ -64,9 +66,9 @@ describe('runHistoryStore', () => {
     const { recordRun } = useRunHistoryStore.getState()
 
     // Record MAX_RUN_HISTORY + 1 runs; first has distinct score 999
-    recordRun({ score: 999, recalled: 0, combo: 0, accuracy: 0 })
+    recordRun({ mode: 'easy', score: 999, recalled: 0, combo: 0, accuracy: 0 })
     for (let i = 0; i < MAX_RUN_HISTORY; i++) {
-      recordRun({ score: i, recalled: 0, combo: 0, accuracy: 0 })
+      recordRun({ mode: 'easy', score: i, recalled: 0, combo: 0, accuracy: 0 })
     }
 
     const records = useRunHistoryStore.getState().records

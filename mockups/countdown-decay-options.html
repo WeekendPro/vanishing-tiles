@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vanishing Tiles — Countdown Decay Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --slow: 1; --cyan: #28F0FF; --pink: #FF2D9B; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: #06060B;
+    color: #cfd2dc;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    padding: 28px 24px 64px;
+  }
+  h1 { color: var(--cyan); font-size: 18px; letter-spacing: 0.18em; text-transform: uppercase;
+       text-shadow: 0 0 6px #28F0FF, 0 0 22px rgba(40,240,255,0.45); }
+  .sub { color: #8a8fa3; font-size: 13px; margin-top: 6px; max-width: 720px; line-height: 1.5; }
+  .controls { margin: 18px 0 26px; display: flex; gap: 10px; align-items: center; }
+  button {
+    font-family: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: #101019; color: var(--cyan); border: 1px solid rgba(40,240,255,0.35);
+    border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  }
+  button:hover { background: #16162a; }
+  button.active { background: rgba(40,240,255,0.14); box-shadow: 0 0 12px rgba(40,240,255,0.25); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1700px; }
+  .card {
+    background: #0a0a12; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card.reco { border-color: rgba(40,240,255,0.4); box-shadow: 0 0 18px rgba(40,240,255,0.08); }
+  .card h2 { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: #e8eaf2; }
+  .card h2 .tag { color: var(--cyan); font-size: 10px; letter-spacing: 0.1em; margin-left: 8px; }
+  .card p { font-size: 12px; color: #8a8fa3; line-height: 1.5; min-height: 54px; }
+  .card .curve { font-size: 10.5px; color: #5c6075; letter-spacing: 0.04em; }
+
+  /* The stage mimics the in-game countdown overlay: dark void over the board */
+  .stage {
+    position: relative; height: 230px; border-radius: 12px;
+    background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.04);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .modechip { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--pink); margin-bottom: 8px; }
+  .numbox { position: relative; width: 150px; height: 130px; display: flex; align-items: center; justify-content: center; }
+  .num {
+    position: absolute; font-weight: 700; font-size: 6rem; line-height: 1; color: var(--cyan);
+    will-change: opacity, transform, filter;
+  }
+
+  /* Beat bar: fills over exactly one beat so you can SEE where in the beat the number dies */
+  .beatbar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .beatbar .fill { height: 100%; width: 0; background: rgba(40,240,255,0.55); }
+  .beatbar .fill.run { animation: barfill calc(850ms * var(--slow)) linear forwards; }
+  @keyframes barfill { to { width: 100%; } }
+
+  /* ── A. CURRENT (shipped) — verbatim vtNumDecay from src/index.css ─────────
+     Peak at 9%, then 91% of the beat spent decaying with a front-loaded
+     ease-out → the glyph is a ghost by mid-beat. */
+  @keyframes numCurrent {
+    0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40,240,255,0); }
+    9%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    100% { opacity: 0; transform: scale(1.22); filter: blur(7px); text-shadow: 0 0 50px rgba(40,240,255,0.4); }
+  }
+  .v-current { animation: numCurrent calc(850ms * var(--slow)) cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+
+  /* ── B. LATE SMEAR — hold full strength to 72%, smear out in the last 28% ── */
+  @keyframes numLateSmear {
+    0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40,240,255,0); }
+    8%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    72%  { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    100% { opacity: 0; transform: scale(1.18); filter: blur(7px); text-shadow: 0 0 50px rgba(40,240,255,0.4); }
+  }
+  .v-latesmear { animation: numLateSmear calc(850ms * var(--slow)) cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+
+  /* ── C. SLOW BURN — decays the whole beat, but weighted to stay strong past
+         the midpoint (still ~90% at half-beat), then accelerates out ───────── */
+  @keyframes numSlowBurn {
+    0%   { opacity: 0;    transform: scale(0.5);   filter: blur(0);     text-shadow: 0 0 0 rgba(40,240,255,0); }
+    9%   { opacity: 1;    transform: scale(1);     filter: blur(0);     text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    50%  { opacity: 0.9;  transform: scale(1.03);  filter: blur(0.5px); text-shadow: 0 0 26px rgba(40,240,255,0.7), 0 0 55px rgba(40,240,255,0.45); }
+    75%  { opacity: 0.6;  transform: scale(1.09);  filter: blur(2px);   text-shadow: 0 0 40px rgba(40,240,255,0.5); }
+    100% { opacity: 0;    transform: scale(1.22);  filter: blur(7px);   text-shadow: 0 0 50px rgba(40,240,255,0.4); }
+  }
+  .v-slowburn { animation: numSlowBurn calc(850ms * var(--slow)) ease-in-out forwards; }
+
+  /* ── D. SNAP — hold to 88%, then a fast 100ms smear; punchy/arcade ───────── */
+  @keyframes numSnap {
+    0%   { opacity: 0; transform: scale(0.5);  filter: blur(0); text-shadow: 0 0 0 rgba(40,240,255,0); }
+    8%   { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    88%  { opacity: 1; transform: scale(1);    filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    100% { opacity: 0; transform: scale(1.12); filter: blur(5px); text-shadow: 0 0 50px rgba(40,240,255,0.4); }
+  }
+  .v-snap { animation: numSnap calc(850ms * var(--slow)) cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+
+  /* ── E. HANDOFF — each number holds its FULL beat; it only smears out as the
+         next number flashes in over it (260ms overlap cross-fade) ──────────── */
+  @keyframes numHold {
+    0%   { opacity: 0; transform: scale(0.5); filter: blur(0); text-shadow: 0 0 0 rgba(40,240,255,0); }
+    9%   { opacity: 1; transform: scale(1);   filter: blur(0); text-shadow: 0 0 28px rgba(40,240,255,0.8), 0 0 60px rgba(40,240,255,0.5); }
+    100% { opacity: 1; transform: scale(1);   filter: blur(0); text-shadow: 0 0 24px rgba(40,240,255,0.7), 0 0 52px rgba(40,240,255,0.42); }
+  }
+  @keyframes numOut {
+    0%   { opacity: 1; transform: scale(1);    filter: blur(0); }
+    100% { opacity: 0; transform: scale(1.18); filter: blur(7px); text-shadow: 0 0 50px rgba(40,240,255,0.4); }
+  }
+  .v-handoff { animation: numHold calc(850ms * var(--slow)) cubic-bezier(0.25, 0.6, 0.2, 1) forwards; }
+  .num.out { animation: numOut calc(260ms * var(--slow)) cubic-bezier(0.3, 0, 0.1, 1) forwards; }
+</style>
+</head>
+<body>
+  <h1>Countdown Decay Options</h1>
+  <p class="sub">
+    The 3·2·1 before an Infinite Stagger run. Beat = 850ms per number (same as the game), 350ms pause after "1",
+    then the loop restarts. The thin cyan bar under each stage fills over exactly one beat — watch where in the
+    bar the number has already died. All variants keep the Afterglow Smear exit (blur + swell + fade).
+  </p>
+  <div class="controls">
+    <button id="btn-restart">⟲ Restart all (sync)</button>
+    <button id="btn-speed">🐢 Slow motion: off</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script>
+  const VARIANTS = [
+    { key: 'current', cls: 'v-current', title: 'A · Current (shipped)', tag: '',
+      desc: 'What Luis flagged: peak brightness at 9% of the beat, then 91% of it spent decaying with a front-loaded ease-out. The number is a ghost by mid-beat.',
+      curve: 'peak 9% → ghost by ~45% → gone 100%' },
+    { key: 'latesmear', cls: 'v-latesmear', title: 'B · Late Smear', tag: '★ recommended', reco: true,
+      desc: 'Flash in the same way, then HOLD at full strength for ~72% of the beat. The Afterglow Smear only happens in the final ~240ms, exactly as the next number arrives.',
+      curve: 'peak 8% → hold to 72% → smear 72–100%' },
+    { key: 'slowburn', cls: 'v-slowburn', title: 'C · Slow Burn', tag: '',
+      desc: 'Keeps the "always dissipating" phosphor feel, but re-weighted: still ~90% strength at half-beat, then the decay accelerates out. The gentlest change from current.',
+      curve: 'peak 9% → 90% @ half-beat → 60% @ 75% → gone' },
+    { key: 'snap', cls: 'v-snap', title: 'D · Snap', tag: '',
+      desc: 'Hold at full strength for ~88% of the beat, then a fast ~100ms smear. Punchy and arcade-metronomic — the number basically IS the beat.',
+      curve: 'peak 8% → hold to 88% → fast smear out' },
+    { key: 'handoff', cls: 'v-handoff', title: 'E · Handoff (cross-fade)', tag: '',
+      desc: 'Each number holds its FULL beat and only smears out as the next number flashes in over it — a 260ms overlap. Zero dead air; the last "1" smears into the reveal.',
+      curve: 'hold 100% of beat → 260ms cross-fade overlap' },
+  ]
+
+  const BEAT = 850, POST = 350, LOOP_GAP = 700
+  let slow = false
+  const speed = () => slow ? 3 : 1
+
+  const grid = document.getElementById('grid')
+  const panels = VARIANTS.map(v => {
+    const card = document.createElement('div')
+    card.className = 'card' + (v.reco ? ' reco' : '')
+    card.innerHTML = `
+      <h2>${v.title}<span class="tag">${v.tag}</span></h2>
+      <div class="stage">
+        <div class="modechip">Medium</div>
+        <div class="numbox"></div>
+      </div>
+      <div class="beatbar"><div class="fill"></div></div>
+      <p>${v.desc}</p>
+      <div class="curve">${v.curve}</div>`
+    grid.appendChild(card)
+    return { v, card, numbox: card.querySelector('.numbox'), bar: card.querySelector('.beatbar'), timer: null }
+  })
+
+  function restartBar(p) {
+    const old = p.bar.querySelector('.fill')
+    const fresh = document.createElement('div')
+    fresh.className = 'fill run'
+    old.replaceWith(fresh)
+  }
+  function clearBar(p) {
+    const old = p.bar.querySelector('.fill')
+    const fresh = document.createElement('div')
+    fresh.className = 'fill'
+    old.replaceWith(fresh)
+  }
+
+  function runPanel(p) {
+    let count = 3
+    const beat = () => {
+      if (p.v.key === 'handoff') {
+        // previous number smears out UNDER the incoming one
+        p.numbox.querySelectorAll('.num:not(.out)').forEach(n => {
+          n.classList.add('out')
+          setTimeout(() => n.remove(), 400 * speed())
+        })
+      } else {
+        p.numbox.querySelectorAll('.num').forEach(n => n.remove())
+      }
+      if (count > 0) {
+        const span = document.createElement('span')
+        span.className = 'num ' + p.v.cls
+        span.textContent = count
+        p.numbox.appendChild(span)
+        restartBar(p)
+        count--
+        p.timer = setTimeout(beat, BEAT * speed())
+      } else {
+        clearBar(p)
+        count = 3
+        p.timer = setTimeout(beat, (POST + LOOP_GAP) * speed())
+      }
+    }
+    beat()
+  }
+
+  function restartAll() {
+    panels.forEach(p => {
+      clearTimeout(p.timer)
+      p.numbox.innerHTML = ''
+      clearBar(p)
+      runPanel(p)
+    })
+  }
+
+  document.getElementById('btn-restart').addEventListener('click', restartAll)
+  document.getElementById('btn-speed').addEventListener('click', e => {
+    slow = !slow
+    document.documentElement.style.setProperty('--slow', speed())
+    e.target.textContent = '🐢 Slow motion: ' + (slow ? 'ON (3×)' : 'off')
+    e.target.classList.toggle('active', slow)
+    restartAll()
+  })
+
+  restartAll()
+</script>
+</body>
+</html>

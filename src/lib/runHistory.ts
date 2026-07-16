@@ -12,7 +12,6 @@ export interface MetricDef {
 // internal/persisted field name; the player-facing label is "Streak".)
 export const METRICS: MetricDef[] = [
   { key: 'score',    label: 'Score',    hex: '#FFC23D' },
-  { key: 'recalled', label: 'Recalled', hex: '#FF2D9B' },
   { key: 'combo',    label: 'Streak',   hex: '#B6FF3C', prefix: '×' },
   { key: 'accuracy', label: 'Accuracy', hex: '#28F0FF', suffix: '%' },
 ]
@@ -63,43 +62,4 @@ export function recentRuns(records: RunRecord[], n: number): RunRecord[] {
   if (n <= 0) return []
   // records are chronological (oldest first); take last n
   return records.slice(-n)
-}
-
-export interface LadderRow {
-  rank: number
-  record: RunRecord
-  isCurrent: boolean
-}
-
-export function ladderRows(
-  records: RunRecord[],
-  metric: RunMetric,
-  currentId: string,
-  n = 5,
-): LadderRow[] {
-  if (records.length === 0) return []
-
-  const sorted = sortByMetric(records, metric)
-  const topN = sorted.slice(0, n)
-
-  const currentRank = rankOf(records, metric, currentId)
-  const currentInTopN = topN.some(r => r.id === currentId)
-
-  const rows: LadderRow[] = topN.map((record, i) => ({
-    rank: i + 1,
-    record,
-    isCurrent: record.id === currentId,
-  }))
-
-  if (!currentInTopN && currentRank > 0) {
-    // Replace the last row with the current run at its true rank
-    const currentRecord = sorted[currentRank - 1]
-    rows[rows.length - 1] = {
-      rank: currentRank,
-      record: currentRecord,
-      isCurrent: true,
-    }
-  }
-
-  return rows
 }

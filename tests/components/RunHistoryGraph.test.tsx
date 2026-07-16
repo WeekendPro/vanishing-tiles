@@ -30,30 +30,23 @@ function makeSampleRecords(): RunRecord[] {
 }
 
 describe('RunHistoryGraph', () => {
-  it('renders 4 series tabs with the metric labels', () => {
+  it('renders 3 series tabs with the metric labels', () => {
     const records = makeSampleRecords()
     render(<RunHistoryGraph records={records} currentId="r7" />)
 
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /recall/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /streak/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /accuracy/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: /recall/i })).not.toBeInTheDocument()
   })
 
-  it('renders one ladder row per ladderRows result, and current run shows "You"', () => {
+  it('does not render the ladder (top-5 ranked bar list was removed)', () => {
     const records = makeSampleRecords()
     render(<RunHistoryGraph records={records} currentId="r7" />)
 
-    // "You" tag appears once (on the current run's row)
-    const youTags = screen.getAllByText('You')
-    expect(youTags).toHaveLength(1)
-
-    // The ladder should have 5 rows (or fewer if records < 5)
-    // We check that rank numbers 1-5 (or however many) appear
-    // Use data-testid for robustness
-    const rows = screen.getAllByTestId('ladder-row')
-    expect(rows.length).toBeGreaterThanOrEqual(1)
-    expect(rows.length).toBeLessThanOrEqual(5)
+    expect(screen.queryAllByTestId('ladder-row')).toHaveLength(0)
+    expect(screen.queryByText('You')).not.toBeInTheDocument()
   })
 
   it('clicking a non-active tab switches the active series', () => {
@@ -78,8 +71,6 @@ describe('RunHistoryGraph', () => {
 
     // Should still render tabs
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
-    // Should render a ladder row
-    expect(screen.getAllByTestId('ladder-row')).toHaveLength(1)
   })
 
   it('renders without throwing when currentId is not found in records', () => {
@@ -88,7 +79,7 @@ describe('RunHistoryGraph', () => {
       render(<RunHistoryGraph records={records} currentId="nonexistent-id" />)
     }).not.toThrow()
 
-    // Should still render tabs and ladder
+    // Should still render tabs
     expect(screen.getByRole('button', { name: /score/i })).toBeInTheDocument()
   })
 
