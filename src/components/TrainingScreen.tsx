@@ -173,7 +173,9 @@ export function TrainingScreen() {
 
   // Running average selection speed across the session's correct picks — the
   // stat to beat: accuracy AND speed is the whole game.
-  const avgLabel = correctPicks > 0 ? `${(totalCorrectMs / correctPicks / 1000).toFixed(1)}s` : '—'
+  // Millisecond precision on the HUD average (2.184s, not 2.2s) — the running
+  // stat rewards shaving; the per-pick float keeps its coarse one-decimal label.
+  const avgLabel = correctPicks > 0 ? `${(totalCorrectMs / correctPicks / 1000).toFixed(3)}s` : '—'
 
   if (!active) return null
 

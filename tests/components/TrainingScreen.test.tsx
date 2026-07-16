@@ -47,9 +47,11 @@ describe('TrainingScreen', () => {
     useTrainingStore.setState({ shownAt: Date.now() - 3681 })
     const answer = useTrainingStore.getState().piece!.type
     await user.click(document.querySelector(`[data-letter-option="${answer}"]`)!)
-    // 3681ms → "3.7s" (a beat of test overhead may nudge the decimal), shown
-    // both as the floating burst and as the HUD average.
+    // 3681ms (a beat of test overhead may nudge the digits): the floating
+    // burst keeps its coarse one-decimal label ("3.7s"), while the HUD average
+    // shows millisecond precision ("3.681s").
     expect(screen.getAllByText(/^3\.\ds$/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/^3\.\d{3}s$/)).toBeInTheDocument()
     expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(useTrainingStore.getState().totalCorrectMs).toBeGreaterThanOrEqual(3681)
   })
