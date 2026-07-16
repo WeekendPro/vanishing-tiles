@@ -5,6 +5,7 @@ import { useStaggerStore } from '../store/staggerStore'
 import { useTrainingStore } from '../store/trainingStore'
 import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
+import { sfx } from '../lib/sfx'
 import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
@@ -86,6 +87,11 @@ export function HomeScreen() {
   // Training drill on mode zero, otherwise an Infinite Stagger run at the
   // persisted difficulty.
   const play = () => {
+    // The PLAY tap is the audio UNLOCK gesture: browsers won't start sound
+    // without one, and the run's first sounds (countdown, blooms) fire from
+    // timers — so the context must already be running by then.
+    sfx.unlock()
+    sfx.uiTap()
     if (trainSelected) { startTraining(); goTraining() }
     else { startStagger(difficulty); goStagger() }
   }
@@ -93,6 +99,8 @@ export function HomeScreen() {
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
   const selectMode = (value: Difficulty | 'training') => {
+    sfx.unlock()
+    sfx.uiTap()
     if (value === 'training') setTrainSelected(true)
     else { setTrainSelected(false); setDifficulty(value) }
   }

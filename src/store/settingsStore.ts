@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { PlayableComponent } from '../lib/components'
+import { sfx } from '../lib/sfx'
 
 export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
 
@@ -36,10 +37,12 @@ export interface UserSettings {
   mapStyle: MapStyle
   /** Selected Stagger reveal difficulty. Defaults to the gentlest (easy). */
   difficulty: Difficulty
+  /** Master sound toggle (the synthesized SFX layer, `src/lib/sfx.ts`). */
+  soundEnabled: boolean
 }
 
 function emptySettings(): UserSettings {
-  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' }
+  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true }
 }
 
 function load(): UserSettings {
@@ -65,6 +68,7 @@ interface SettingsStore {
   setBriefingHidden: (component: PlayableComponent, hidden: boolean) => void
   setMapStyle: (style: MapStyle) => void
   setDifficulty: (difficulty: Difficulty) => void
+  setSoundEnabled: (on: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -98,4 +102,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       return { settings: next }
     })
   },
+
+  setSoundEnabled: (on) => {
+    sfx.setEnabled(on)
+    set((state) => {
+      const next: UserSettings = { ...state.settings, soundEnabled: on }
+      save(next)
+      return { settings: next }
+    })
+  },
 }))
+
+// Sync the engine's mute with the persisted setting at boot (the store is the
+// source of truth; sfx just mirrors it).
+sfx.setEnabled(useSettingsStore.getState().settings.soundEnabled)

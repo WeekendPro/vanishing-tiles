@@ -32,7 +32,7 @@ function makeBoard(overrides: Partial<StaggerLeaderboard> = {}): StaggerLeaderbo
 beforeEach(() => {
   useNavStore.getState().reset()
   useNavStore.setState({ appView: 'leaderboard' })
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'medium' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'medium', soundEnabled: true } })
   vi.clearAllMocks()
   fetchBoard.mockResolvedValue(makeBoard())
 })

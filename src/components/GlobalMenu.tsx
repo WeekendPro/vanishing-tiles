@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useSettingsStore } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
+import { sfx } from '../lib/sfx'
 import { ScanlineOverlay } from './ui'
 
 interface MenuUser {
@@ -70,6 +72,10 @@ export function GlobalMenu() {
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
+  })))
+  const { soundEnabled, setSoundEnabled } = useSettingsStore(useShallow(s => ({
+    soundEnabled: s.settings.soundEnabled,
+    setSoundEnabled: s.setSoundEnabled,
   })))
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
@@ -165,8 +171,20 @@ export function GlobalMenu() {
               only RANKING needs a named account). */}
           <Action label="Leaderboard" onClick={openLeaderboard} />
 
-          {/* Settings is deliberately absent — there's nothing behind it yet;
-              it returns when there are real settings to expose. Training left
+          {/* Master sound toggle (the synthesized SFX layer). Re-enabling
+              plays the tiny UI tick as instant confirmation — the tap that
+              flips it also satisfies the browser's audio-unlock gesture. */}
+          <Action
+            label={soundEnabled ? 'Sound: On' : 'Sound: Off'}
+            onClick={() => {
+              const next = !soundEnabled
+              setSoundEnabled(next)
+              if (next) { sfx.unlock(); sfx.uiTap() }
+            }}
+          />
+
+          {/* A full Settings screen is deliberately absent — the lone sound
+              toggle above rides inline until there's more to expose. Training left
               the menu when it became "mode zero" on the Home switch — one home,
               not two paths to the same door.
 
