@@ -4,19 +4,15 @@ import { generatePuzzle } from '@shared/engine/puzzleGenerator'
 import {
   STAGGER, difficultyForBatch, batchSpeedBonus,
   allowedTypesForBatch, lockedRotationsForBatch,
-  pairsForBatch, triplesForBatch, invertedForBatch, buildRevealPlan,
+  revealOrderForGaps,
   selectDurationForBatch,
 } from '../lib/staggerCurve'
 
 export type StaggerPhase = 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
 
-/** A batch gap plus whether the player has correctly recalled (filled) it, and
- *  whether it reveals with the back-loaded INVERTED build (seed → flow-in →
- *  bright complete → magenta poof). Inverted gaps always take a SOLO reveal beat;
- *  recall/resolution is unchanged (the player still picks the matching shape). */
+/** A batch gap plus whether the player has correctly recalled (filled) it. */
 export interface StaggerGap extends Gap {
   filled: boolean
-  inverted?: boolean
 }
 
 /** What a pick resolved to — drives the per-pick animation (snap vs ✕), the
@@ -35,7 +31,7 @@ interface StaggerState {
   phase: StaggerPhase
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
-  revealPlan: number[][]      // reveal beats: each beat is 1, 2, or 3 indices into `gaps`
+  revealPlan: number[]        // reveal order: a shuffled sequence of indices into `gaps`, one gap per beat
   score: number               // cumulative across the whole run
   lives: number               // shared pool; run ends at 0
   selectStartTime: number     // Date.now() when selecting began (for speed scoring)
@@ -63,68 +59,31 @@ interface StaggerState {
   exit: () => void            // tear down back to idle
 }
 
-/** Flag `count` random gaps as inverted, biased toward gaps whose shape is the
- *  LEAST useful for forming distinct chunks (most-common shapes first) so the
- *  remaining pool stays rich enough to satisfy the requested pairs/triples. */
-function chooseInverted(gaps: Gap[], count: number): boolean[] {
-  const inverted = gaps.map(() => false)
-  if (count <= 0) return inverted
-  // Count shapes; prefer to invert duplicates of the commonest shapes so the
-  // distinct-shape variety left for chunking is maximised.
-  const freq = new Map<PieceType, number>()
-  gaps.forEach(g => freq.set(g.pieceType, (freq.get(g.pieceType) ?? 0) + 1))
-  const byCommonness = gaps
-    .map((_g, i) => i)
-    .sort((a, b) => (freq.get(gaps[b].pieceType)! - freq.get(gaps[a].pieceType)!))
-  for (let k = 0; k < count && k < byCommonness.length; k++) inverted[byCommonness[k]] = true
-  return inverted
-}
-
 /** Generate a fresh batch of gaps + reveal plan for `batchIndex`, driven
- *  entirely by the difficulty CURVE. */
-function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number[][] } {
+ *  entirely by the difficulty CURVE. Every gap reveals as its own solo beat. */
+function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number[] } {
   const diff = difficultyForBatch(batchIndex)
   const gapCount = diff.gapCount
   const complexity = diff.complexity
   const allowedTypes = allowedTypesForBatch(batchIndex)
   const lockedRotations = lockedRotationsForBatch(batchIndex)
-  const pairCount = pairsForBatch(batchIndex)
-  const tripleCount = triplesForBatch(batchIndex)
-  const invertedCount = invertedForBatch(batchIndex)
 
-  // Re-roll until the drawn shapes can supply the requested DISTINCT-shape pairs
-  // AND triples (each pair is two different pieces; each triple ≥2 distinct), with
-  // the inverted gaps held out as solo beats. With the wide late-game pool this
-  // practically always succeeds on the first try; the loop just guarantees it,
-  // falling back to the best board found if a degenerate roll persists.
-  let best: { gaps: Gap[]; inverted: boolean[]; plan: number[][] } | null = null
-  for (let attempt = 0; attempt < 60; attempt++) {
-    const { gaps } = generatePuzzle({
-      gapCount,
-      complexity,
-      allowedTypes,
-      lockedRotations,
-      // Once the pool widens past 2 shapes, variety is the run's main early lever —
-      // force ≥2 distinct shapes per board so the added pieces actually appear
-      // instead of being lost to an all-identical roll.
-      requireVariety: allowedTypes.length > 2,
-      // Gaps may touch (unchanged from the original curve-driven behavior).
-      minGapDistance: 0,
-    })
-    const inverted = chooseInverted(gaps, invertedCount)
-    const plan = buildRevealPlan(gaps.map(g => g.pieceType), pairCount, tripleCount, inverted)
-    const achievedTriples = plan.filter(beat => beat.length === 3).length
-    const achievedPairs = plan.filter(beat => beat.length === 2).length
-    if (achievedTriples >= tripleCount && achievedPairs >= pairCount) {
-      best = { gaps, inverted, plan }; break
-    }
-    if (!best) best = { gaps, inverted, plan }
-  }
+  const { gaps } = generatePuzzle({
+    gapCount,
+    complexity,
+    allowedTypes,
+    lockedRotations,
+    // Once the pool widens past 2 shapes, variety is the run's main early lever —
+    // force ≥2 distinct shapes per board so the added pieces actually appear
+    // instead of being lost to an all-identical roll.
+    requireVariety: allowedTypes.length > 2,
+    // Gaps may touch (unchanged from the original curve-driven behavior).
+    minGapDistance: 0,
+  })
 
-  const { gaps, inverted, plan } = best!
   return {
-    gaps: gaps.map((g, i) => ({ ...g, filled: false, inverted: inverted[i] })),
-    revealPlan: plan,
+    gaps: gaps.map((g: Gap) => ({ ...g, filled: false })),
+    revealPlan: revealOrderForGaps(gaps.length),
   }
 }
 
@@ -132,7 +91,7 @@ const IDLE = {
   phase: 'idle' as StaggerPhase,
   batchIndex: 0,
   gaps: [] as StaggerGap[],
-  revealPlan: [] as number[][],
+  revealPlan: [] as number[],
   score: 0,
   lives: STAGGER.START_LIVES,
   selectStartTime: 0,

@@ -64,47 +64,6 @@ function bloomForGap(
   return { id, color, paint, cells }
 }
 
-// ── Inverted reveal ───────────────────────────────────────────────────────────
-// A gap flagged `inverted` reveals back-loaded: a seed cell embers, neighbours
-// flow in dim one at a time (overlapping ramps → one continuous growth), the whole
-// shape snaps to full-bright COMPLETE for a held instant (the payload), then POOFS
-// out together as a magenta contract. Each cell carries its current sub-state; the
-// board renders the matching iv-* class.
-type InvSub = 'seed' | 'build' | 'complete' | 'poof'
-
-/** A live inverted instance: per-cell current sub-state, keyed by cell. */
-interface InvertedBloom { id: number; sub: Map<string, InvSub> }
-
-/** Order a gap's cells as an ADJACENCY WALK from a central seed, so the build grows
- *  like a connected organism rather than teleporting cells. The seed is the cell
- *  with the most orthogonal neighbours in the shape (the T-junction / L-elbow / an
- *  O corner); ties break toward the top-left. */
-function invertedCellOrder(cells: [number, number][]): string[] {
-  const keyOf = ([r, c]: [number, number]) => `${r},${c}`
-  const present = new Set(cells.map(keyOf))
-  const neighbours = ([r, c]: [number, number]): [number, number][] =>
-    ([[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]] as [number, number][])
-      .filter(n => present.has(keyOf(n)))
-  // Seed: max in-shape degree, tie-break top-left.
-  const seed = [...cells].sort(
-    (a, b) => neighbours(b).length - neighbours(a).length || a[0] - b[0] || a[1] - b[1],
-  )[0]
-  // BFS from the seed; queue neighbours top-left first for a stable, radiating walk.
-  const order: string[] = []
-  const seen = new Set<string>()
-  const queue: [number, number][] = [seed]
-  seen.add(keyOf(seed))
-  while (queue.length) {
-    const cur = queue.shift()!
-    order.push(keyOf(cur))
-    for (const n of neighbours(cur).sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
-      if (!seen.has(keyOf(n))) { seen.add(keyOf(n)); queue.push(n) }
-    }
-  }
-  return order
-}
-
-
 /** Smoothly tween a displayed number toward `value`. Increases ease up over
  *  `durationMs` (so every banked pick — and the end-of-batch speed bonus — counts
  *  up with a little joy); a decrease (e.g. a fresh run resetting to 0) snaps. */
@@ -143,11 +102,10 @@ function useCountUp(value: number, durationMs = 600): number {
 // placed gaps keep their piece color (a correct pick lighting out of the dark),
 // ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomByCell, invertedByCell,
+  gaps, bloomByCell,
 }: {
   gaps: StaggerGap[]
   bloomByCell: Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>
-  invertedByCell: Map<string, { id: number; sub: InvSub }>
 }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
@@ -174,19 +132,6 @@ function StaggerBoard({
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className={`w-7 h-7 rounded-sm ${getPieceColor(piece)} ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
-            />
-          )
-        }
-        // An inverted gap's cells carry a sub-state (seed/build/complete/poof) and
-        // render the matching iv-* class. Keyed by instance id + sub so a state
-        // change re-triggers the animation. Magenta is driven via --magenta.
-        const inv = invertedByCell.get(key)
-        if (inv) {
-          return (
-            <div
-              key={`${i}-iv-${inv.id}-${inv.sub}`}
-              className={`w-7 h-7 rounded-sm iv-${inv.sub}`}
-              style={{ ['--magenta']: REVEAL_MAGENTA } as CSSProperties}
             />
           )
         }
@@ -311,7 +256,6 @@ export function StaggerScreen() {
     bloomMs: STAGGER.REVEAL_BLOOM_MS,
     decayMs: STAGGER.REVEAL_DECAY_MS,
     waveMs: STAGGER.REVEAL_WAVE_MS,
-    twinOffsetMs: STAGGER.REVEAL_TWIN_OFFSET_MS,
   }
   const timingRef = useRef(timing)
   timingRef.current = timing
@@ -335,7 +279,6 @@ export function StaggerScreen() {
   }, [phase, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
-  const [invertedBlooms, setInvertedBlooms] = useState<InvertedBloom[]>([])
   const [barPct, setBarPct] = useState(0)
   const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
   const [barTransition, setBarTransition] = useState('width 180ms ease-out')
@@ -413,26 +356,21 @@ export function StaggerScreen() {
     }
   }, [phase])
 
-  // Reveal driver (shape-bloom): bloom each BEAT as a whole — every gap in the
-  // beat gets .vt-bloom at the same tick, floods magenta, then decays along a
-  // ghost tail back to the void (fading away in a per-cell wave). A beat holds one
-  // gap, or TWO/THREE (a pair/triple) that flash together — denser memory chunks
-  // late in the run. A beat whose (solo) gap is `inverted` BRANCHES to the inverted
-  // sub-timeline instead (seed → flow-in build → bright complete → magenta poof);
-  // because that beat runs longer than REVEAL_STEP_MS, the loop waits its full
-  // duration before advancing. Decays cascade (the next beat blooms before the last
-  // finishes dying), draining the bar one step per beat as a COUNT, then hand off to
-  // selecting. Because the reveals forwards-fill back to the void, past gaps leave
-  // no readable hole.
+  // Reveal driver (shape-bloom): bloom each gap in turn — the gap's cells all get
+  // .vt-bloom at the same tick, flood magenta (or the piece color on EASY), then
+  // decay along a ghost tail back to the void (fading away in a per-cell wave).
+  // Decays cascade (the next gap blooms before the last finishes dying), draining
+  // the bar one step per gap as a COUNT, then hand off to selecting. Because the
+  // reveals forwards-fill back to the void, past gaps leave no readable hole.
   useEffect(() => {
     if (phase !== 'reveal' || gaps.length === 0) return
     let cancelled = false
     const timers: number[] = []
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
-    // The reveal plays as a sequence of beats; fall back to one-gap-per-beat if a
-    // batch somehow arrived without a plan (e.g. legacy state).
-    const beats = revealPlan.length ? revealPlan : gaps.map((_, i) => [i])
-    const n = beats.length
+    // The reveal plays as a sequence of gaps, in revealPlan's shuffled order; fall
+    // back to index order if a batch somehow arrived without a plan (e.g. legacy state).
+    const order = revealPlan.length ? revealPlan : gaps.map((_, i) => i)
+    const n = order.length
     // Difficulty shapes the reveal: EASY floods each gap in its own piece colour;
     // MEDIUM floods the uniform branded pink; HARD paints in graphite "impasto"
     // (self-colored, no bright flood) so the murky low-contrast tiles are the
@@ -440,95 +378,36 @@ export function StaggerScreen() {
     const paint = difficulty === 'hard'
     const colorFor = (gap: StaggerGap) =>
       difficulty === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Reveal/decay timing is read LIVE from timingRef per beat (see the standard-beat
-    // branch below). `step` (beat-to-beat spacing) outruns one bloom's lifetime, so
-    // the next beat flashes while the previous is still decaying.
-    // Memorize bar DRAINS: starts full and empties one step per beat as the
+    // Reveal/decay timing is read LIVE from timingRef per gap. `step` (gap-to-gap
+    // spacing) outruns one bloom's lifetime, so the next gap flashes while the
+    // previous is still decaying.
+    // Memorize bar DRAINS: starts full and empties one step per gap as the
     // sequence plays out (a visual count of memorize time spent).
     setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
-    setBlooms([]); setInvertedBlooms([])
+    setBlooms([])
     let id = 0
-
-    // Drive one inverted beat's sub-timeline (seed → build → equalize → complete →
-    // poof) over the cells of `gap`, then invoke `done()` when the beat is fully
-    // over. The accumulator `t` makes the beat's duration VARIABLE (longer than a
-    // standard REVEAL_STEP_MS beat), so the loop advances via `done()` rather than a
-    // fixed step.
-    const runInverted = (gap: StaggerGap, done: () => void): void => {
-      const myId = ++id
-      const order = invertedCellOrder(gap.cells as [number, number][])
-      const setSub = (key: string, sub: InvSub) =>
-        setInvertedBlooms(prev => prev.map(b => b.id === myId
-          ? { ...b, sub: new Map(b.sub).set(key, sub) } : b))
-      const setAll = (sub: InvSub) =>
-        setInvertedBlooms(prev => prev.map(b => b.id === myId
-          ? { ...b, sub: new Map([...b.sub.keys()].map(k => [k, sub])) } : b))
-
-      // Phase 0 · seed ember on the anchor cell. Build cells aren't in the map yet
-      // (they render as plain void until their tick adds them with iv-build, whose
-      // flowIn ramps from opacity 0 — so they fade in smoothly).
-      setInvertedBlooms(prev => [...prev, { id: myId, sub: new Map([[order[0], 'seed']]) }])
-
-      let t = STAGGER.INV_SEED_MS
-      // Phase 1 · build: neighbours flow in one at a time (overlapping ramps).
-      order.forEach((key, k) => {
-        if (k === 0) return
-        at(t, () => setSub(key, 'build'))
-        t += STAGGER.INV_BUILD_STEP_MS
-      })
-      // Phase 1b · seed equalizes: drop its ember, match the dim flow cells.
-      at(t, () => setSub(order[0], 'build'))
-      t += STAGGER.INV_EQUALIZE_MS
-      // Phase 2 · complete: every cell snaps to full bright magenta (the payload).
-      at(t, () => setAll('complete'))
-      t += STAGGER.INV_COMPLETE_HOLD_MS
-      // Phase 3 · poof: the whole shape contracts to the void together (no white).
-      at(t, () => setAll('poof'))
-      t += STAGGER.INV_POOF_MS
-      // Tear the instance down and hand back control once the poof has resolved.
-      at(t, () => { setInvertedBlooms(prev => prev.filter(b => b.id !== myId)); done() })
-    }
 
     const show = (idx: number) => {
       if (cancelled) return
       if (idx >= n) {
-        // Let the final beat finish its decay before recall lights-out.
+        // Let the final gap finish its decay before recall lights-out.
         const { stepMs, bloomMs, decayMs } = timingRef.current
         at(Math.max(0, bloomMs + decayMs - stepMs), beginSelecting)
         return
       }
       setBarPct((1 - (idx + 1) / n) * 100)
-      const beat = beats[idx]
-      const invertedGap = beat.length === 1 && gaps[beat[0]].inverted ? gaps[beat[0]] : null
-
-      if (invertedGap) {
-        // Inverted beats own their full duration: advance only once the poof ends.
-        runInverted(invertedGap, () => show(idx + 1))
-        return
-      }
-
-      // Standard beat: the gaps sharing this beat (a pair/triple) bloom as ONE
-      // coupled pulse. A small per-gap onset offset (twinOffsetMs) staggers them a
-      // hair so a pair reads as a "da-dum" twin rather than two coincidences; they
-      // share flood color + decay wave so they still read as a single unit. Solo
-      // beats (length 1) get no offset. Timing is read live from timingRef.
-      const { stepMs, bloomMs, decayMs, waveMs, twinOffsetMs } = timingRef.current
+      const gi = order[idx]
+      const { stepMs, bloomMs, decayMs, waveMs } = timingRef.current
       const lifetime = bloomMs + decayMs + 3 * waveMs + 80
-      const beatIds: number[] = []
-      beat.forEach((gi, k) => {
-        const myId = ++id
-        beatIds.push(myId)
-        at(k * twinOffsetMs, () => {
-          if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, decayMs, waveMs)])
-        })
-      })
-      // Clear the beat's blooms once the LAST (latest-onset) one has fully decayed.
-      at((beat.length - 1) * twinOffsetMs + lifetime, () => {
-        if (!cancelled) setBlooms(prev => prev.filter(b => !beatIds.includes(b.id)))
+      const myId = ++id
+      if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), paint, bloomMs, decayMs, waveMs)])
+      // Clear this gap's bloom once it has fully decayed.
+      at(lifetime, () => {
+        if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
       })
       at(stepMs, () => show(idx + 1))
     }
-    // A short breath before the first beat (also paces continuous next batches).
+    // A short breath before the first gap (also paces continuous next batches).
     at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
   }, [phase, batchIndex, gaps, revealPlan, beginSelecting, difficulty])
@@ -652,10 +531,8 @@ export function StaggerScreen() {
   // All currently-animating bloom cells (every active instance, so past pieces
   // keep decaying while new ones flash). Empty outside reveal → board stays dark.
   const bloomByCell = new Map<string, { id: number; holdMs: number; decayMs: number; color: string; paint: boolean }>()
-  const invertedByCell = new Map<string, { id: number; sub: InvSub }>()
   if (phase === 'reveal') {
     for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color, paint: b.paint })
-    for (const b of invertedBlooms) for (const [key, sub] of b.sub) invertedByCell.set(key, { id: b.id, sub })
   }
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
@@ -736,7 +613,7 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} invertedByCell={invertedByCell} />
+          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
         </div>
 
         {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
