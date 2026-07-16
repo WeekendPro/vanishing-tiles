@@ -29,6 +29,10 @@ const STREAK_FADE_MS = 900
 const LIFT_BEAT_MS = 260
 const LIFT_MS = 1300
 
+// Hard-mode out-of-order hint: how long the "IN ORDER" chip's two-pulse
+// white↔magenta flash runs. Must match .vt-order-flash in index.css.
+const ORDER_FLASH_MS = 700
+
 // Floating white labels (the per-pick "+points" and the "+N" in the earned-life
 // heart) sit over bright piece/heart color. Contrast comes from a soft DOWNWARD
 // drop shadow — never a hard stroke/outline (§9: shadow for legibility, and glow
@@ -293,6 +297,10 @@ export function StaggerScreen() {
   const [clockMs, setClockMs] = useState(0)
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
+  // Out-of-order hint (hard mode): a counter so back-to-back flashes restart the
+  // chip's animation (the counter keys the chip element → remount → replay).
+  const [orderFlash, setOrderFlash] = useState(0)
+  const orderFlashTimer = useRef<number | undefined>(undefined)
   const boardRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
   const scoreRef = useRef<HTMLDivElement>(null)
@@ -474,6 +482,13 @@ export function StaggerScreen() {
     const res = pickPiece(type)
     if (res.gameOver) return
     if (!res.ok) {
+      // Right shape, wrong order (hard mode): flash the "IN ORDER" chip as a hint
+      // about WHY the pick missed — on top of the standard miss feedback below.
+      if (res.outOfOrder) {
+        setOrderFlash(n => n + 1)
+        window.clearTimeout(orderFlashTimer.current)
+        orderFlashTimer.current = window.setTimeout(() => setOrderFlash(0), ORDER_FLASH_MS)
+      }
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -737,7 +752,10 @@ export function StaggerScreen() {
           sequence; no per-gap numbering — remembering the order IS the challenge. */}
       <div className="mt-4 w-full flex flex-col items-center">
         {phase === 'selecting' && mode === 'hard' && (
-          <div className="w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta">
+          <div
+            key={orderFlash}
+            className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${orderFlash > 0 ? ' vt-order-flash' : ''}`}
+          >
             IN ORDER
           </div>
         )}

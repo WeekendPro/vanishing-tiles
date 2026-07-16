@@ -504,3 +504,59 @@ describe('hard mode: ordered recall', () => {
     expect(useStaggerStore.getState().pickPiece(last).ok).toBe(true)
   })
 })
+
+describe('hard mode: out-of-order hint flag', () => {
+  /** Deterministic two-gap hard batch: reveal order is O then I. */
+  function seedTwoGapHardBatch(mode: 'easy' | 'medium' | 'hard' = 'hard') {
+    useStaggerStore.getState().startRun(mode)
+    useStaggerStore.setState({
+      phase: 'selecting',
+      gaps: [
+        { cells: [[0, 0]], pieceType: 'O', rotation: 0, filled: false },
+        { cells: [[5, 5]], pieceType: 'I', rotation: 0, filled: false },
+      ] as never,
+      revealPlan: [0, 1],
+      selectStartTime: Date.now(),
+      selectDuration: 10000,
+    })
+  }
+
+  it('flags a pick that matches a remaining gap but is not next in order', () => {
+    seedTwoGapHardBatch()
+    const res = useStaggerStore.getState().pickPiece('I') // on the board, but O is next
+    expect(res.ok).toBe(false)
+    expect(res.outOfOrder).toBe(true)
+    // Consequences are unchanged: still a full miss (life + streak).
+    expect(useStaggerStore.getState().lives).toBe(STAGGER.START_LIVES - 1)
+    expect(useStaggerStore.getState().currentCombo).toBe(0)
+  })
+
+  it('does not flag a pick that matches no remaining gap at all', () => {
+    seedTwoGapHardBatch()
+    const res = useStaggerStore.getState().pickPiece('T') // not on the board
+    expect(res.ok).toBe(false)
+    expect(res.outOfOrder).toBe(false)
+  })
+
+  it('does not flag a pick whose only matching gap is already filled', () => {
+    seedTwoGapHardBatch()
+    expect(useStaggerStore.getState().pickPiece('O').ok).toBe(true) // fills the only O
+    const res = useStaggerStore.getState().pickPiece('O')           // O remains only as a FILLED gap
+    expect(res.ok).toBe(false)
+    expect(res.outOfOrder).toBe(false)
+  })
+
+  it('never flags on easy/medium (order is not enforced there)', () => {
+    seedTwoGapHardBatch('medium')
+    const res = useStaggerStore.getState().pickPiece('T')
+    expect(res.ok).toBe(false)
+    expect(res.outOfOrder).toBe(false)
+  })
+
+  it('correct picks report outOfOrder false', () => {
+    seedTwoGapHardBatch()
+    const res = useStaggerStore.getState().pickPiece('O')
+    expect(res.ok).toBe(true)
+    expect(res.outOfOrder).toBe(false)
+  })
+})

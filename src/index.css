@@ -313,3 +313,24 @@
   /* Hold the clusters lit (static) so the brand shape still reads, without motion. */
   .vt-vanish { animation: none; background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B; }
 }
+
+/* Hard-mode order hint: when a pick matched a remaining gap but broke the reveal
+   order, the "IN ORDER" chip blinks twice — white → magenta → white → magenta
+   (paired-percentage holds = crisp blinks, not crossfades). Two pulses over
+   700ms ≈ 2.9Hz (≤3Hz — flash-hazard safe). Duration must match ORDER_FLASH_MS
+   in StaggerScreen. */
+@keyframes vtOrderFlash {
+  0%, 24%   { color: #fff;     text-shadow: 0 0 10px rgba(255, 255, 255, 0.75); }
+  25%, 49%  { color: #FF2D9B;  text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
+  50%, 74%  { color: #fff;     text-shadow: 0 0 10px rgba(255, 255, 255, 0.75); }
+  75%, 100% { color: #FF2D9B;  text-shadow: 0 0 10px rgba(255, 45, 155, 0.55); }
+}
+.vt-order-flash { animation: vtOrderFlash 700ms linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* No blinking: hold the chip solid white for the same beat so the hint still reads. */
+  .vt-order-flash { animation: vtOrderFlashStill 700ms linear; }
+}
+@keyframes vtOrderFlashStill {
+  0%, 100% { color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.75); }
+}

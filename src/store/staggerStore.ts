@@ -26,6 +26,7 @@ export interface PickResult {
   combo: number   // streak length AFTER this pick (0 on a miss)
   gained: number  // points this pick earned (base × streak; 0 on a miss)
   speedBonus: number  // leftover-time bonus to bank during the clear payoff (0 unless this pick cleared the batch)
+  outOfOrder: boolean // hard-mode miss where the piece DOES match a remaining gap, just not the next one in reveal order (drives the "IN ORDER" hint flash)
 }
 
 interface StaggerState {
@@ -135,7 +136,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       phase, mode, gaps, revealPlan, lives, score, selectStartTime, selectDuration,
       totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
     } = get()
-    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
+    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder: false }
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
     // Tetromino types are shape-unique, so piece-type equality IS the shape match.
@@ -149,15 +150,19 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       : gaps.find(g => !g.filled && g.pieceType === type)
 
     if (!target) {
+      // On hard, distinguish "right shape, wrong order" (the shape still sits in an
+      // unfilled gap — only the order rule rejected it) from a flat-out wrong piece,
+      // so the UI can hint at WHY the pick missed. Consequences are identical.
+      const outOfOrder = mode === 'hard' && gaps.some(g => !g.filled && g.pieceType === type)
       // A miss: counts toward accuracy and breaks the running combo, and costs a life.
       const nextLives = lives - 1
       const baseStats = { totalPicks: totalPicks + 1, currentCombo: 0 }
       if (nextLives <= 0) {
         set({ lives: 0, phase: 'gameOver', ...baseStats })
-        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0, speedBonus: 0 }
+        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0, speedBonus: 0, outOfOrder }
       }
       set({ lives: nextLives, ...baseStats })
-      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
+      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder }
     }
 
     // A correct recall: extend the streak. The per-pick reward scales LINEARLY
@@ -187,7 +192,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       currentCombo: nextCombo,
       bestCombo: Math.max(bestCombo, nextCombo),
     })
-    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus }
+    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus, outOfOrder: false }
   },
 
   bankSpeedBonus: (amount) => {
