@@ -459,3 +459,38 @@ describe('Infinite Stagger replay + pause', () => {
     expect(Math.abs(remaining - saved)).toBeLessThan(50)
   })
 })
+
+describe('hard mode: ordered recall', () => {
+  function seedHardBatch() {
+    useStaggerStore.getState().startRun('hard')
+    useStaggerStore.getState().beginReveal()
+    useStaggerStore.getState().beginSelecting()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    return revealPlan.map(i => gaps[i].pieceType)
+  }
+
+  it('accepts picks in reveal order', () => {
+    const order = seedHardBatch()
+    order.forEach(type => expect(useStaggerStore.getState().pickPiece(type).ok).toBe(true))
+    expect(useStaggerStore.getState().gaps.every(g => g.filled)).toBe(true)
+  })
+
+  it('rejects a shape that exists on the board but is not next in order', () => {
+    const order = seedHardBatch()
+    const offOrder = order.find(t => t !== order[0])
+    if (!offOrder) return // degenerate all-same-shape roll; nothing to assert
+    const before = useStaggerStore.getState().lives
+    const res = useStaggerStore.getState().pickPiece(offOrder)
+    expect(res.ok).toBe(false)
+    expect(useStaggerStore.getState().lives).toBe(before - 1) // same miss path as easy/medium
+  })
+
+  it('easy and medium accept any order', () => {
+    useStaggerStore.getState().startRun('medium')
+    useStaggerStore.getState().beginReveal()
+    useStaggerStore.getState().beginSelecting()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    const last = gaps[revealPlan[revealPlan.length - 1]].pieceType
+    expect(useStaggerStore.getState().pickPiece(last).ok).toBe(true)
+  })
+})

@@ -7,6 +7,7 @@ import {
   revealOrderForGaps,
   selectDurationForBatch,
 } from '../lib/staggerCurve'
+import type { Difficulty } from './settingsStore'
 
 export type StaggerPhase = 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
 
@@ -29,6 +30,7 @@ export interface PickResult {
 
 interface StaggerState {
   phase: StaggerPhase
+  mode: Difficulty            // snapshotted at startRun; drives 'hard' ordered-recall enforcement in pickPiece
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
   revealPlan: number[]        // reveal order: a shuffled sequence of indices into `gaps`, one gap per beat
@@ -46,7 +48,7 @@ interface StaggerState {
   totalPicks: number          // correct + wrong picks
   correctPicks: number        // correct picks (accuracy numerator)
 
-  startRun: () => void
+  startRun: (mode?: Difficulty) => void
   beginReveal: () => void     // countdown → reveal (generates the current batch)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
@@ -89,6 +91,7 @@ function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number
 
 const IDLE = {
   phase: 'idle' as StaggerPhase,
+  mode: 'easy' as Difficulty,
   batchIndex: 0,
   gaps: [] as StaggerGap[],
   revealPlan: [] as number[],
@@ -108,7 +111,7 @@ const IDLE = {
 export const useStaggerStore = create<StaggerState>((set, get) => ({
   ...IDLE,
 
-  startRun: () => set({ ...IDLE, phase: 'countdown' }),
+  startRun: (mode = 'easy') => set({ ...IDLE, phase: 'countdown', mode }),
 
   beginReveal: () => set({ phase: 'reveal', ...makeBatch(get().batchIndex) }),
 
@@ -129,14 +132,21 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   pickPiece: (type) => {
     const {
-      phase, gaps, lives, score, selectStartTime, selectDuration,
+      phase, mode, gaps, revealPlan, lives, score, selectStartTime, selectDuration,
       totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
     } = get()
     if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0 }
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
     // Tetromino types are shape-unique, so piece-type equality IS the shape match.
-    const target = gaps.find(g => !g.filled && g.pieceType === type)
+    // In hard mode, recall must additionally match the REVEAL order: only the
+    // earliest still-unfilled gap in `revealPlan` order may be picked next.
+    const target = mode === 'hard'
+      ? (() => {
+          const nextIdx = revealPlan.find(i => !gaps[i].filled)
+          return nextIdx !== undefined && gaps[nextIdx].pieceType === type ? gaps[nextIdx] : undefined
+        })()
+      : gaps.find(g => !g.filled && g.pieceType === type)
 
     if (!target) {
       // A miss: counts toward accuracy and breaks the running combo, and costs a life.

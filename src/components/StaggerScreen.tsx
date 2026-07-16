@@ -232,12 +232,12 @@ function PieceTray({ onPick, disabled }: { onPick: (t: PieceType) => void; disab
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
   const {
-    phase, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
+    phase, mode, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
     startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
     pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
-    phase: s.phase, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
+    phase: s.phase, mode: s.mode, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
     shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
@@ -523,7 +523,7 @@ export function StaggerScreen() {
   if (phase === 'idle') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center vt-vignette select-none">
-        <NeonButton variant="primary" onClick={() => startRun()}>Start Staggered Vanishing Tiles</NeonButton>
+        <NeonButton variant="primary" onClick={() => startRun(mode)}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
   }
@@ -717,7 +717,7 @@ export function StaggerScreen() {
             )}
 
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => startRun()}>Play again</NeonButton>
+              <NeonButton variant="primary" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>
           </div>

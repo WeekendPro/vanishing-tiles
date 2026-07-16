@@ -60,7 +60,7 @@ export function HomeScreen() {
     setDifficulty: s.setDifficulty,
   })))
 
-  const play = () => { startStagger(); goStagger() }
+  const play = () => { startStagger(difficulty); goStagger() }
   const training = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
