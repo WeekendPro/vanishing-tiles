@@ -75,9 +75,9 @@ const SHAPE_SCHEDULE: { from: number; type: PieceType }[] = [
 /** From this batch on, gaps may appear in any rotation; before it, every gap is
  *  locked to its tray orientation so the player maps shapes 1:1 with the cart.
  *  Orientation freedom is the single most disorienting lever (it multiplies the
- *  effective shape vocabulary), so it lands ALONE on L9 (idx 8) — the gap count
- *  is held at 5 across L8–10 and no shape joins there, so nothing else moves
- *  the level it unlocks. */
+ *  effective shape vocabulary), so it lands ALONE on L9 (idx 8) — no shape joins
+ *  at L9 itself (Z, the last shape, arrives the following level, L10), so
+ *  nothing else moves the level orientation unlocks. */
 export const ORIENTATION_FREE_FROM = 8
 
 /** The piece types that may appear as gaps in a given batch. */
