@@ -19,24 +19,26 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 const SHOW_EXPERIMENTAL: boolean = false
 
 /** The three reveal difficulties, rendered as a segmented neon switch. Each tier
- *  owns a colour on the heat arc (green → amber → red) and a one-line vibe. */
+ *  owns a colour on the heat arc (green → amber → red) and a one-line description
+ *  of that mode's reveal/tray visuals + recall ordering (shown under the switch
+ *  for whichever tier is selected). */
 const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: string }[] = [
   {
     value: 'easy',
     label: 'Easy',
-    hint: 'Colours light the way',
+    hint: 'Full color. Recall in any order.',
     active: 'bg-neon-green text-arcade-bg shadow-[inset_0_0_14px_rgba(57,217,138,0.5),0_0_12px_rgba(57,217,138,0.35)]',
   },
   {
     value: 'medium',
     label: 'Medium',
-    hint: 'A fleeting glance',
+    hint: 'Monochrome tray. Recall in any order.',
     active: 'bg-neon-yellow text-arcade-bg shadow-[inset_0_0_14px_rgba(250,204,21,0.5),0_0_12px_rgba(250,204,21,0.35)]',
   },
   {
     value: 'hard',
     label: 'Hard',
-    hint: 'Trust your memory alone',
+    hint: 'Monochrome. Recall in the order shown.',
     active: 'bg-neon-red text-arcade-bg shadow-[inset_0_0_14px_rgba(255,77,77,0.5),0_0_12px_rgba(255,77,77,0.35)]',
   },
 ]

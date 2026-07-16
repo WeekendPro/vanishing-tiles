@@ -16,11 +16,14 @@ export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
 export type MapStyle = 'transit' | 'mentalBrain' | 'git'
 
 /**
- * Stagger reveal difficulty (set from the home screen). Differences live entirely
- * in the reveal phase:
- *  - `easy`   — gaps bloom in their own PIECE colour (track shape + colour).
- *  - `medium` — gaps bloom in the uniform branded pink (shape only).
- *  - `hard`   — pink reveal, but the sequence plays noticeably faster.
+ * Stagger reveal difficulty (set from the home screen; snapshotted into
+ * `staggerStore.mode` at `startRun` — that snapshot, not this setting, drives
+ * all in-run visuals and ordering). Each tier layers on the last:
+ *  - `easy`   — reveal in piece colours; tray in piece colours; recall in any order.
+ *  - `medium` — reveal in piece colours; tray monochrome branded pink; recall in any order.
+ *  - `hard`   — reveal monochrome branded pink; tray monochrome branded pink;
+ *               recall must follow the reveal order (ordered-recall enforced in
+ *               `pickPiece`, surfaced as an "IN ORDER" chip during selecting).
  */
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
