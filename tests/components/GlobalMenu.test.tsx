@@ -80,6 +80,21 @@ describe('GlobalMenu', () => {
     expect(screen.queryByText('GU')).not.toBeInTheDocument()
   })
 
+  it('a guest gets "Sign up" instead of "Logout" — same teardown, back to the auth screen', async () => {
+    vi.mocked(auth.getUser).mockResolvedValueOnce({
+      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
+    } as never)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    const signUp = await screen.findByRole('button', { name: /Sign up/i })
+    expect(screen.queryByRole('button', { name: /Logout/i })).not.toBeInTheDocument()
+    await user.click(signUp)
+    expect(auth.signOut).toHaveBeenCalledTimes(1)
+    expect(useNavStore.getState().appView).toBe('auth')
+  })
+
   it('Logout calls signOut and resets navigation', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()

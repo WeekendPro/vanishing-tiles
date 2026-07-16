@@ -160,9 +160,16 @@ export function GlobalMenu() {
           {/* Settings is deliberately absent — there's nothing behind it yet;
               it returns when there are real settings to expose. Training left
               the menu when it became "mode zero" on the Home switch — one home,
-              not two paths to the same door. */}
+              not two paths to the same door.
+
+              Guests never logged in, so "Logout" is the wrong ask — their exit
+              ramp is SIGN UP: terminate the anonymous session and land on
+              AuthScreen, where they can create the account (or sign in). Same
+              teardown either way; only the framing differs. */}
           <div className="mt-auto">
-            <Action label="Logout" tone="danger" onClick={handleSignOut} />
+            {user?.isGuest
+              ? <Action label="Sign up" onClick={handleSignOut} />
+              : <Action label="Logout" tone="danger" onClick={handleSignOut} />}
           </div>
         </div>
       )}
