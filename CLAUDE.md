@@ -20,7 +20,7 @@ Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tet
 
 ### Entry flow
 
-`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`, session present → `HomeScreen`. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. From `HomeScreen`, **PLAY** starts a run of Infinite Stagger (`src/components/StaggerScreen.tsx`) at the difficulty selected via the Easy/Medium/Hard switch on that screen (`useSettingsStore`, persisted to localStorage). A secondary **TRAINING** button under the difficulty selector opens Training mode (see below). An "Experimental Modes" entry point (Practice, the legacy gauntlet + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
+`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`, session present → `HomeScreen`. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. From `HomeScreen`, **PLAY** starts a run of Infinite Stagger (`src/components/StaggerScreen.tsx`) at the difficulty selected via the Easy/Medium/Hard switch on that screen (`useSettingsStore`, persisted to localStorage). A secondary **TRAINING** button directly above PLAY opens Training mode (see below); Training is also reachable from the global hamburger menu (`GlobalMenu.tsx`), which is otherwise just the profile header + Training + Logout (Settings and Reset Journey were removed; guests get a generic person-icon avatar instead of initials). An "Experimental Modes" entry point (Practice, the legacy gauntlet + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
 
 ### Infinite Stagger
 
@@ -40,7 +40,7 @@ The recall tray always shows pieces in their own piece colors, in every mode —
 
 ### Training (learn the piece names)
 
-A consequence-free naming drill (`src/store/trainingStore.ts` + `src/components/TrainingScreen.tsx`): one tetromino at a time blooms onto the same 12×12 void board in its own piece color (the game's exact reveal flash-in, but HELD lit — CSS `.vt-bloom-hold`), and the player taps the letter that names it from a 7-letter tray (white uppercase I/O/T/S/Z/J/L). A correct pick gives the in-game clear feedback (✓ burst + "GOOD JOB!") and fades the piece out with the reveal's ghost-tail decay (`.vt-bloom-decay`), then the next piece (always a different type, always at the tray's `DISPLAY_ROTATION`, random board position) blooms in. A wrong pick gives the in-game miss feedback (red border flash + board shake) and breaks the streak. **No score, no timer, no lives** — only the current/best streak is tracked (HUD top corners). An "Exit Training" button below the tray leaves at any moment. Nothing persists.
+A consequence-free naming drill (`src/store/trainingStore.ts` + `src/components/TrainingScreen.tsx`): one tetromino at a time blooms onto the same 12×12 void board in its own piece color (the game's exact reveal flash-in, but HELD lit — CSS `.vt-bloom-hold`), and the player taps the letter that names it from a 7-letter tray (white uppercase I/O/T/S/Z/J/L). A correct pick flips the prompt to a lime "CORRECT", floats the **selection time** (appearance → correct pick, e.g. "3.7s") off the piece in the game's bubbly "+points" style, and fades the piece out with the reveal's ghost-tail decay (`.vt-bloom-decay`) at a much brisker clip than in-game (420ms + 90ms wave — training has no clock, so inter-piece downtime is kept short), then the next piece (always a different type, always at the tray's `DISPLAY_ROTATION`, random board position) blooms in. A wrong pick gives the in-game miss feedback (red border flash + board shake) and breaks the streak — and the speed clock keeps running, so fumbles surface in the eventual correct pick's time. **No score, no select clock, no lives** — the HUD tracks the current streak (left) plus the running **average selection speed** and best streak (right). An "Exit Training" button below the tray leaves at any moment. Nothing persists.
 
 ### Legacy modes (hidden)
 
@@ -73,7 +73,7 @@ src/
   App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/journey/levelDetail/results/stagger/playing/practice)
   store/
     staggerStore.ts        — Infinite Stagger's Zustand store: phase/mode/batchIndex/gaps/score/lives/streak; startRun / pickPiece / advanceBatch / timeoutBatch
-    trainingStore.ts       — Training mode's Zustand store: current piece / round / streak; start / guess / nextPiece / exit
+    trainingStore.ts       — Training mode's Zustand store: current piece / round / streak / selection-speed clock; start / guess / nextPiece / exit
     settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), map style, briefing opt-outs
     navStore.ts            — appView routing state (auth/home/journey/levelDetail/playing/results/practice/stagger/training)
     runHistoryStore.ts     — Recent Infinite Stagger run history (for the post-run graph)
@@ -86,7 +86,7 @@ src/
     journeyScoring.ts  (legacy) — componentScore(), levelStarsFromTotal(), difficultyPips(), sumBests() — Journey scoring math
   components/
     StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (own inline board, not Grid.tsx), piece tray, pause overlay, game-over summary
-    TrainingScreen.tsx     — Training mode's screen: streak HUD, single held-bloom piece board, letter-name tray, exit button
+    TrainingScreen.tsx     — Training mode's screen: streak/avg-speed HUD, single held-bloom piece board, letter-name tray, exit button
     HomeScreen.tsx         — Landing screen after sign-in: PLAY (→ Infinite Stagger) + Easy/Medium/Hard switch; Experimental Modes pane hidden behind SHOW_EXPERIMENTAL
     AuthScreen.tsx         — Email/password + Google OAuth + guest sign-in
     PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by both StaggerScreen and legacy SelectingPhase)

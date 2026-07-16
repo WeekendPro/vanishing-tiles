@@ -46,17 +46,20 @@ export interface TrainingGuess {
   ok: boolean
   piece: TrainingPiece | null
   streak: number // streak AFTER this guess (0 on a miss)
+  elapsedMs: number // appearance → correct pick, the selection speed (0 on a miss)
 }
 
 interface TrainingState {
   active: boolean
   piece: TrainingPiece | null
   round: number // 1-based; bumps per fresh piece (keys the bloom animation)
+  shownAt: number // Date.now() when the current piece appeared — the speed clock
 
   currentStreak: number
   bestStreak: number
   totalPicks: number
   correctPicks: number
+  totalCorrectMs: number // summed selection times of correct picks (avg = / correctPicks)
 
   start: () => void
   /** Roll the next piece (called by the screen once the fade-out finishes). */
@@ -71,39 +74,46 @@ const IDLE = {
   active: false,
   piece: null as TrainingPiece | null,
   round: 0,
+  shownAt: 0,
   currentStreak: 0,
   bestStreak: 0,
   totalPicks: 0,
   correctPicks: 0,
+  totalCorrectMs: 0,
 }
 
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   ...IDLE,
 
-  start: () => set({ ...IDLE, active: true, round: 1, piece: randomTrainingPiece() }),
+  start: () => set({ ...IDLE, active: true, round: 1, piece: randomTrainingPiece(), shownAt: Date.now() }),
 
   nextPiece: () => {
     const { active, piece, round } = get()
     if (!active) return
-    set({ piece: randomTrainingPiece(piece?.type ?? null), round: round + 1 })
+    set({ piece: randomTrainingPiece(piece?.type ?? null), round: round + 1, shownAt: Date.now() })
   },
 
   guess: (type) => {
-    const { active, piece, currentStreak, bestStreak, totalPicks, correctPicks } = get()
-    if (!active || !piece) return { ok: false, piece: null, streak: 0 }
+    const { active, piece, shownAt, currentStreak, bestStreak, totalPicks, correctPicks, totalCorrectMs } = get()
+    if (!active || !piece) return { ok: false, piece: null, streak: 0, elapsedMs: 0 }
     if (type !== piece.type) {
       // A miss: breaks the streak (no lives here — training is consequence-free).
+      // The speed clock keeps running: fumbling costs time on the eventual
+      // correct pick, so the average honestly reflects accuracy too.
       set({ totalPicks: totalPicks + 1, currentStreak: 0 })
-      return { ok: false, piece, streak: 0 }
+      return { ok: false, piece, streak: 0, elapsedMs: 0 }
     }
+    // Selection speed: appearance → this correct pick.
+    const elapsedMs = Math.max(0, Date.now() - shownAt)
     const streak = currentStreak + 1
     set({
       totalPicks: totalPicks + 1,
       correctPicks: correctPicks + 1,
+      totalCorrectMs: totalCorrectMs + elapsedMs,
       currentStreak: streak,
       bestStreak: Math.max(bestStreak, streak),
     })
-    return { ok: true, piece, streak }
+    return { ok: true, piece, streak, elapsedMs }
   },
 
   exit: () => set({ ...IDLE }),

@@ -13,29 +13,42 @@ import { GlobalMenu } from '../../src/components/GlobalMenu'
 import { useNavStore } from '../../src/store/navStore'
 import { useGameStore } from '../../src/store/gameStore'
 import { useSettingsStore } from '../../src/store/settingsStore'
+import { useTrainingStore } from '../../src/store/trainingStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
   useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
+  useTrainingStore.getState().exit()
   vi.clearAllMocks()
 })
 
 describe('GlobalMenu', () => {
-  it('is simplified to Settings / Reset Journey / Logout (no modes or maps)', async () => {
+  it('is simplified to Training / Logout (no Settings or Reset Journey, no modes or maps)', async () => {
     useNavStore.setState({ appView: 'journey' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(screen.getByRole('button', { name: /Settings/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Reset Journey/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Training' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument()
-    // Game modes and map styles now live on the Home landing page, not the menu.
-    expect(screen.queryByRole('button', { name: /Training Mode/i })).not.toBeInTheDocument()
+    // Settings returns when there's something behind it; Reset Journey is gone.
+    expect(screen.queryByRole('button', { name: /Settings/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Reset Journey/i })).not.toBeInTheDocument()
+    // Game modes and map styles live on the Home landing page, not the menu.
     expect(screen.queryByRole('button', { name: /Infinite Stagger/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Subway Map/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Git Map/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Resume/i })).not.toBeInTheDocument()
+  })
+
+  it('Training starts the naming drill and navigates there', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: 'Training' }))
+    expect(useNavStore.getState().appView).toBe('training')
+    expect(useTrainingStore.getState().active).toBe(true)
   })
 
   it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {
@@ -47,7 +60,7 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(useGameStore.getState().paused).toBe(true)
     expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Exit Training Mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Exit Practice/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Resume/i }))
     expect(useGameStore.getState().paused).toBe(false)
@@ -59,9 +72,21 @@ describe('GlobalMenu', () => {
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: /Exit Training Mode/i }))
+    await user.click(screen.getByRole('button', { name: /Exit Practice/i }))
     expect(useNavStore.getState().appView).toBe('home')
     expect(useGameStore.getState().paused).toBe(false)
+  })
+
+  it('a guest gets the generic person icon, not "GU" initials', async () => {
+    vi.mocked(auth.getUser).mockResolvedValueOnce({
+      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
+    } as never)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByRole('img', { name: /guest avatar/i })).toBeInTheDocument()
+    expect(screen.queryByText('GU')).not.toBeInTheDocument()
   })
 
   it('Logout calls signOut and resets navigation', async () => {

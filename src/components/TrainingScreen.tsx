@@ -4,18 +4,18 @@ import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
 import { useNavStore } from '../store/navStore'
-import { STAGGER } from '../lib/staggerCurve'
 import { NeonButton } from './ui'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
 const BOARD_PAD = 12          // p-3 around the board
 
-// A correct pick fades the piece out with the game's exact decay (ghost tail +
-// per-cell wave), then the next piece blooms in. Same constants as the reveal.
-const DECAY_MS = STAGGER.REVEAL_DECAY_MS
-const WAVE_MS = STAGGER.REVEAL_WAVE_MS
-const FADE_OUT_TOTAL_MS = DECAY_MS + 3 * WAVE_MS + 120
+// A correct pick fades the piece out with the same ghost-tail wave as the
+// game's reveal, but much brisker — training has no clock, so the gap between
+// pieces is pure downtime. (The in-game decay is ~1s + 3×220ms of wave.)
+const DECAY_MS = 420
+const WAVE_MS = 90
+const FADE_OUT_TOTAL_MS = DECAY_MS + 3 * WAVE_MS + 100
 
 // Same bloom flood colors as the game's EASY reveal — training keeps the color
 // crutch on: shape + color + NAME all bind together while learning.
@@ -108,11 +108,12 @@ function LetterTray({
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function TrainingScreen() {
   const {
-    active, piece, round, currentStreak, bestStreak,
+    active, piece, round, currentStreak, bestStreak, correctPicks, totalCorrectMs,
     start, nextPiece, guess, exit,
   } = useTrainingStore(useShallow(s => ({
     active: s.active, piece: s.piece, round: s.round,
     currentStreak: s.currentStreak, bestStreak: s.bestStreak,
+    correctPicks: s.correctPicks, totalCorrectMs: s.totalCorrectMs,
     start: s.start, nextPiece: s.nextPiece, guess: s.guess, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
@@ -120,7 +121,7 @@ export function TrainingScreen() {
   // A correct pick's fade-out in flight: tray disabled, piece decaying.
   const [leaving, setLeaving] = useState(false)
   const [xMark, setXMark] = useState(false)
-  const [burst, setBurst] = useState<{ id: number; x: number; y: number } | null>(null)
+  const [burst, setBurst] = useState<{ id: number; x: number; y: number; label: string } | null>(null)
   const burstId = useRef(0)
   const boardRef = useRef<HTMLDivElement>(null)
   const timersRef = useRef<number[]>([])
@@ -147,8 +148,9 @@ export function TrainingScreen() {
       timersRef.current.push(window.setTimeout(() => setXMark(false), 440))
       return
     }
-    // Correct: float a ✓ over the named piece while it fades back to the void,
-    // then bring on the next one.
+    // Correct: float the SELECTION TIME off the named piece (the game's bubbly
+    // "+points" flourish, repurposed — speed is training's score) while it
+    // fades back to the void, then bring on the next one.
     const cells = piece.cells
     const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
     const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
@@ -157,6 +159,7 @@ export function TrainingScreen() {
       id,
       x: BOARD_PAD + avgC * CELL_PITCH + CELL / 2,
       y: BOARD_PAD + avgR * CELL_PITCH + CELL / 2,
+      label: `${(res.elapsedMs / 1000).toFixed(1)}s`,
     })
     timersRef.current.push(window.setTimeout(() => setBurst(b => (b?.id === id ? null : b)), 700))
     setLeaving(true)
@@ -167,6 +170,10 @@ export function TrainingScreen() {
   }
 
   const exitTraining = () => { exit(); goHome() }
+
+  // Running average selection speed across the session's correct picks — the
+  // stat to beat: accuracy AND speed is the whole game.
+  const avgLabel = correctPicks > 0 ? `${(totalCorrectMs / correctPicks / 1000).toFixed(1)}s` : '—'
 
   if (!active) return null
 
@@ -180,21 +187,30 @@ export function TrainingScreen() {
             {currentStreak}
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
-          <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-            {bestStreak}
+        <div className="text-right flex flex-col gap-2">
+          <div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Avg speed</div>
+            <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+              {avgLabel}
+            </div>
+          </div>
+          <div>
+            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
+            <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+              {bestStreak}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Prompt line — flips to the lime GOOD JOB! beat while the piece fades. */}
+      {/* Prompt line — flips to the lime CORRECT beat while the piece fades
+          (mirroring the game's CLEAR! phase label, matter-of-fact over cheerleading). */}
       <div className="w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
         <div
           className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors
             ${leaving ? 'text-vt-lime text-glow-vt-lime' : 'text-vt-magenta text-glow-vt-magenta'}`}
         >
-          {leaving ? 'GOOD JOB!' : 'NAME THE PIECE'}
+          {leaving ? 'CORRECT' : 'NAME THE PIECE'}
         </div>
       </div>
 
@@ -204,8 +220,8 @@ export function TrainingScreen() {
           <TrainingBoard piece={piece} round={round} leaving={leaving} />
         </div>
 
-        {/* Correct pick — a ✓ floats up off the named piece (the game's
-            "+points" flourish, minus the points). */}
+        {/* Correct pick — the SELECTION TIME bubbles up off the named piece and
+            evaporates (the game's "+points" flourish, with seconds as the prize). */}
         <AnimatePresence>
           {burst && (
             <motion.div
@@ -215,10 +231,10 @@ export function TrainingScreen() {
               exit={{ opacity: 0, scale: 1.5, y: -46 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
               className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
-                font-silk font-bold text-lg whitespace-nowrap text-white"
+                font-silk font-bold text-sm whitespace-nowrap text-white tabular-nums"
               style={{ left: burst.x, top: burst.y, textShadow: FLOAT_TEXT_SHADOW }}
             >
-              ✓
+              {burst.label}
             </motion.div>
           )}
         </AnimatePresence>

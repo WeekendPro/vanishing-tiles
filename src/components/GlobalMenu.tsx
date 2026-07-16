@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
-import { useProgressStore } from '../store/progressStore'
+import { useTrainingStore } from '../store/trainingStore'
 import { useShallow } from 'zustand/shallow'
 import { ScanlineOverlay } from './ui'
 
@@ -23,6 +23,22 @@ function initials(name: string): string {
 function Avatar({ user }: { user: MenuUser }) {
   if (user.avatarUrl) {
     return <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-full object-cover ring-1 ring-white/15" />
+  }
+  if (user.isGuest) {
+    // Guests get a generic person icon — "GU" initials read as a weird
+    // pseudo-name, and the familiar silhouette says "anonymous" at a glance.
+    return (
+      <div
+        role="img"
+        aria-label="Guest avatar"
+        className="w-12 h-12 rounded-full grid place-items-center text-white
+          bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7" aria-hidden="true">
+          <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z" />
+        </svg>
+      </div>
+    )
   }
   return (
     <div className="w-12 h-12 rounded-full grid place-items-center font-black text-lg text-white
@@ -50,12 +66,13 @@ export function GlobalMenu() {
     goHome: s.goHome,
     reset: s.reset,
   })))
+  const goTraining = useNavStore(s => s.goTraining)
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
   })))
-  const resetProgress = useProgressStore(s => s.resetProgress)
+  const startTraining = useTrainingStore(s => s.start)
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
   // Journey/Practice round shells.
@@ -92,13 +109,14 @@ export function GlobalMenu() {
 
   const quitToHome = () => { setOpen(false); resetGame(); goHome() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
-  // Admin/dev: wipe all saved scores so the journey starts fresh at level 1.
-  const resetJourney = () => {
-    if (!window.confirm('Reset Journey? This permanently wipes all level progress and scores.')) return
+  // Training is exposed here too (besides the Home button) so it's reachable
+  // from anywhere the menu shows. Leaving a live Journey/Practice round for it
+  // tears that round down first.
+  const openTraining = () => {
     setOpen(false)
-    resetProgress()
-    resetGame()
-    goHome()
+    if (inGame) resetGame()
+    startTraining()
+    goTraining()
   }
 
   return (
@@ -145,15 +163,16 @@ export function GlobalMenu() {
             <>
               <Action label="Resume" onClick={close} />
               <Action
-                label={appView === 'practice' ? 'Exit Training Mode' : 'Exit to Home'}
+                label={appView === 'practice' ? 'Exit Practice' : 'Exit to Home'}
                 onClick={quitToHome}
               />
             </>
           )}
 
+          {/* Settings is deliberately absent — there's nothing behind it yet;
+              it returns when there are real settings to expose. */}
           <div className="mt-auto">
-            <Action label="Settings" tone="muted" onClick={() => setOpen(false)} />
-            <Action label="Reset Journey" tone="danger" onClick={resetJourney} />
+            <Action label="Training" onClick={openTraining} />
             <Action label="Logout" tone="danger" onClick={handleSignOut} />
           </div>
         </div>

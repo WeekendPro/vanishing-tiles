@@ -19,7 +19,8 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
  * bring them back in one line.
  *
  * TRAINING (learn the piece names) is a shipped secondary mode: a quieter
- * cyan button under the difficulty selector, → TrainingScreen.
+ * cyan button riding above PLAY (also reachable from the global menu),
+ * → TrainingScreen.
  */
 const SHOW_EXPERIMENTAL: boolean = false
 
@@ -101,8 +102,23 @@ export function HomeScreen() {
             </p>
           </div>
 
-          {/* Bottom-pinned cluster: PLAY + difficulty. */}
+          {/* Bottom-pinned cluster: Training + PLAY + difficulty. */}
           <div className="w-full max-w-sm flex flex-col gap-4">
+            {/* Training → learn the piece names. Same neon-outline recipe as
+                PLAY, but cyan and quieter — a secondary option riding above the
+                hero, exposed without digging. */}
+            <button
+              onClick={training}
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                transition active:translate-y-px py-3 px-5 text-xs flex flex-col items-center justify-center gap-1
+                border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
+            >
+              <span>Training</span>
+              <span className="normal-case tracking-normal font-display text-[10px] text-neon-cyan/60">
+                Learn the piece names
+              </span>
+            </button>
+
             {/* PLAY → Infinite Stagger — same neon-outline recipe as NeonButton. */}
             <button
               onClick={play}
@@ -153,20 +169,6 @@ export function HomeScreen() {
                 {activeHint}
               </p>
             </div>
-
-            {/* Training → learn the piece names. Same neon-outline recipe as
-                PLAY, but cyan and quieter — a secondary option, not the hero. */}
-            <button
-              onClick={training}
-              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                transition active:translate-y-px py-3 px-5 text-xs flex flex-col items-center justify-center gap-1
-                border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
-            >
-              <span>Training</span>
-              <span className="normal-case tracking-normal font-display text-[10px] text-neon-cyan/60">
-                Learn the piece names
-              </span>
-            </button>
           </div>
         </section>
 

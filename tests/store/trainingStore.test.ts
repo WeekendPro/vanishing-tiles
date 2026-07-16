@@ -61,6 +61,7 @@ describe('trainingStore', () => {
     const res = useTrainingStore.getState().guess(answer)
     expect(res.ok).toBe(true)
     expect(res.streak).toBe(1)
+    expect(res.elapsedMs).toBeGreaterThanOrEqual(0)
     const s = useTrainingStore.getState()
     expect(s.currentStreak).toBe(1)
     expect(s.bestStreak).toBe(1)
@@ -93,6 +94,44 @@ describe('trainingStore', () => {
       expect(s.piece!.type).not.toBe(before)
       expect(s.round).toBe(i + 2)
     }
+  })
+
+  it('measures selection speed from appearance to the correct pick, summed for the average', () => {
+    useTrainingStore.getState().start()
+    // Backdate the appearance timestamps for deterministic elapsed times.
+    useTrainingStore.setState({ shownAt: Date.now() - 3681 })
+    const res1 = useTrainingStore.getState().guess(useTrainingStore.getState().piece!.type)
+    expect(res1.elapsedMs).toBeGreaterThanOrEqual(3681)
+    expect(res1.elapsedMs).toBeLessThan(3681 + 250)
+
+    useTrainingStore.getState().nextPiece()
+    useTrainingStore.setState({ shownAt: Date.now() - 1200 })
+    const res2 = useTrainingStore.getState().guess(useTrainingStore.getState().piece!.type)
+    expect(res2.elapsedMs).toBeGreaterThanOrEqual(1200)
+
+    const s = useTrainingStore.getState()
+    expect(s.totalCorrectMs).toBe(res1.elapsedMs + res2.elapsedMs)
+    // The running average is derivable: totalCorrectMs / correctPicks.
+    expect(s.correctPicks).toBe(2)
+  })
+
+  it('a wrong guess does not stop or credit the speed clock', () => {
+    useTrainingStore.getState().start()
+    useTrainingStore.setState({ shownAt: Date.now() - 500 })
+    const res = useTrainingStore.getState().guess(wrongType())
+    expect(res.elapsedMs).toBe(0)
+    const s = useTrainingStore.getState()
+    expect(s.totalCorrectMs).toBe(0)
+    // The clock keeps running from the piece's appearance — the eventual
+    // correct pick pays for the fumble.
+    expect(s.shownAt).toBeLessThanOrEqual(Date.now() - 500)
+  })
+
+  it('nextPiece restamps the speed clock', () => {
+    useTrainingStore.getState().start()
+    useTrainingStore.setState({ shownAt: Date.now() - 9999 })
+    useTrainingStore.getState().nextPiece()
+    expect(Date.now() - useTrainingStore.getState().shownAt).toBeLessThan(250)
   })
 
   it('guess is a no-op while idle', () => {

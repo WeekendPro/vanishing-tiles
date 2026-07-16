@@ -37,6 +37,13 @@ describe('HomeScreen', () => {
     expect(useTrainingStore.getState().piece).not.toBeNull()
   })
 
+  it('Training rides above PLAY (exposed up front, but styled secondary)', () => {
+    render(<HomeScreen />)
+    const training = screen.getByRole('button', { name: /Training/i })
+    const play = screen.getByRole('button', { name: 'Play' })
+    expect(training.compareDocumentPosition(play) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('hides the Experimental Modes entry (and its modes) for now', () => {
     render(<HomeScreen />)
     expect(screen.queryByRole('button', { name: 'Experimental Modes' })).toBeNull()

@@ -26,15 +26,32 @@ describe('TrainingScreen', () => {
     expect(screen.getByText('NAME THE PIECE')).toBeInTheDocument()
   })
 
-  it('a correct letter celebrates and fades the piece out (tray disabled meanwhile)', async () => {
+  it('a correct letter shows CORRECT and fades the piece out (tray disabled meanwhile)', async () => {
     const user = userEvent.setup()
     render(<TrainingScreen />)
     const answer = useTrainingStore.getState().piece!.type
     await user.click(document.querySelector(`[data-letter-option="${answer}"]`)!)
     expect(useTrainingStore.getState().currentStreak).toBe(1)
-    expect(screen.getByText('GOOD JOB!')).toBeInTheDocument()
+    expect(screen.getByText('CORRECT')).toBeInTheDocument()
     // While the named piece decays, the letters can't be mashed.
     expect(document.querySelector(`[data-letter-option="${answer}"]`)).toBeDisabled()
+  })
+
+  it('floats the selection time off the piece and tracks the running average', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    // Fresh session: no correct picks yet → the avg stat shows a placeholder.
+    expect(screen.getByText('Avg speed')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    // Backdate the piece's appearance so the measured speed is deterministic.
+    useTrainingStore.setState({ shownAt: Date.now() - 3681 })
+    const answer = useTrainingStore.getState().piece!.type
+    await user.click(document.querySelector(`[data-letter-option="${answer}"]`)!)
+    // 3681ms → "3.7s" (a beat of test overhead may nudge the decimal), shown
+    // both as the floating burst and as the HUD average.
+    expect(screen.getAllByText(/^3\.\ds$/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
+    expect(useTrainingStore.getState().totalCorrectMs).toBeGreaterThanOrEqual(3681)
   })
 
   it('a wrong letter breaks the streak and does not advance the piece', async () => {
@@ -51,7 +68,7 @@ describe('TrainingScreen', () => {
     expect(document.querySelector(`[data-letter-option="${before!.type}"]`)).toBeEnabled()
   })
 
-  it('shows the streak and best in the HUD, with no score, lives, or timer', async () => {
+  it('shows the streak, best, and avg speed in the HUD, with no score, lives, or timer', async () => {
     const user = userEvent.setup()
     render(<TrainingScreen />)
     expect(screen.getByText('Streak')).toBeInTheDocument()
