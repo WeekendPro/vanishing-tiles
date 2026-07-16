@@ -9,11 +9,13 @@ import { HomeScreen } from '../../src/components/HomeScreen'
 import { useNavStore } from '../../src/store/navStore'
 import { useSettingsStore } from '../../src/store/settingsStore'
 import { useStaggerStore } from '../../src/store/staggerStore'
+import { useTrainingStore } from '../../src/store/trainingStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
   useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
   useStaggerStore.getState().exit()
+  useTrainingStore.getState().exit()
   vi.clearAllMocks()
 })
 
@@ -26,10 +28,19 @@ describe('HomeScreen', () => {
     expect(useStaggerStore.getState().phase).toBe('countdown')
   })
 
+  it('Training drops into the piece-naming trainer', async () => {
+    const user = userEvent.setup()
+    render(<HomeScreen />)
+    await user.click(screen.getByRole('button', { name: /Training/i }))
+    expect(useNavStore.getState().appView).toBe('training')
+    expect(useTrainingStore.getState().active).toBe(true)
+    expect(useTrainingStore.getState().piece).not.toBeNull()
+  })
+
   it('hides the Experimental Modes entry (and its modes) for now', () => {
     render(<HomeScreen />)
     expect(screen.queryByRole('button', { name: 'Experimental Modes' })).toBeNull()
-    expect(screen.queryByRole('button', { name: /Training/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Practice/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /Subway Map/i })).toBeNull()
   })
 

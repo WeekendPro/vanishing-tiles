@@ -41,6 +41,11 @@ describe('navStore', () => {
     useNavStore.getState().goAuth()
     expect(useNavStore.getState().appView).toBe('auth')
   })
+
+  it('goTraining enters the training view', () => {
+    useNavStore.getState().goTraining()
+    expect(useNavStore.getState().appView).toBe('training')
+  })
 })
 
 describe('level order + next level', () => {

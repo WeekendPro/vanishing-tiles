@@ -205,6 +205,29 @@
   .vt-bloom { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
 }
 
+/* Training-mode bloom split: the same flash-in as the game's reveal, but HELD
+   lit indefinitely (no chained decay) while the player names the piece —
+   vt-bloom-hold — then, on a correct pick, the same ghost-tail decay fades it
+   back to the void — vt-bloom-decay (each cell sets its own duration + delay
+   inline for the wave, exactly like the in-game reveal). */
+.vt-bloom-hold {
+  animation-name: vtBloomHold;
+  animation-duration: 1082ms;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+.vt-bloom-decay {
+  animation-name: vtBloomDecay;
+  animation-duration: 998ms;
+  animation-timing-function: cubic-bezier(0.3, 0, 0.1, 1);
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-bloom-hold { animation: none; background: var(--bloom-color, #ff2d9b); box-shadow: 0 0 8px var(--bloom-color, #ff2d9b); }
+  .vt-bloom-decay { animation: none; background: #0c0c14; box-shadow: none; }
+}
+
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
    appears, then the light dissipates — blurring and swelling outward as it fades
    to full-zero visibility, just before the next number takes its place. Duration

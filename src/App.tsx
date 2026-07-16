@@ -9,6 +9,7 @@ import { LevelScreen } from './components/LevelScreen'
 import { ResultsScreen } from './components/ResultsScreen'
 import { GameShell } from './components/GameShell'
 import { StaggerScreen } from './components/StaggerScreen'
+import { TrainingScreen } from './components/TrainingScreen'
 import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
 import { GlobalMenu } from './components/GlobalMenu'
 
@@ -39,6 +40,7 @@ export default function App() {
       case 'levelDetail': return <LevelScreen />
       case 'results': return <ResultsScreen />
       case 'stagger': return <StaggerScreen />
+      case 'training': return <TrainingScreen />
       case 'playing':
       case 'practice':
         return <GameShell />
@@ -46,9 +48,9 @@ export default function App() {
     }
   })()
 
-  // The Infinite Stagger layout owns its own Pause/Exit controls, so the global
-  // menu is suppressed there (and on the auth screen).
-  const showMenu = appView !== 'auth' && appView !== 'stagger'
+  // The Infinite Stagger and Training layouts own their own Pause/Exit
+  // controls, so the global menu is suppressed there (and on the auth screen).
+  const showMenu = appView !== 'auth' && appView !== 'stagger' && appView !== 'training'
 
   return (
     <>

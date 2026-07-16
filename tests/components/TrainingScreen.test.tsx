@@ -1,0 +1,71 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { TrainingScreen } from '../../src/components/TrainingScreen'
+import { useTrainingStore, TRAINING_TYPES } from '../../src/store/trainingStore'
+import { useNavStore } from '../../src/store/navStore'
+import type { PieceType } from '@shared/types'
+
+function wrongType(): PieceType {
+  const answer = useTrainingStore.getState().piece!.type
+  return TRAINING_TYPES.find(t => t !== answer)!
+}
+
+beforeEach(() => {
+  useNavStore.getState().reset()
+  useTrainingStore.getState().exit()
+})
+
+describe('TrainingScreen', () => {
+  it('starts a session on mount and offers all seven letter names', () => {
+    render(<TrainingScreen />)
+    expect(useTrainingStore.getState().active).toBe(true)
+    for (const t of TRAINING_TYPES) {
+      expect(document.querySelector(`[data-letter-option="${t}"]`)).toBeInTheDocument()
+    }
+    expect(screen.getByText('NAME THE PIECE')).toBeInTheDocument()
+  })
+
+  it('a correct letter celebrates and fades the piece out (tray disabled meanwhile)', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    const answer = useTrainingStore.getState().piece!.type
+    await user.click(document.querySelector(`[data-letter-option="${answer}"]`)!)
+    expect(useTrainingStore.getState().currentStreak).toBe(1)
+    expect(screen.getByText('GOOD JOB!')).toBeInTheDocument()
+    // While the named piece decays, the letters can't be mashed.
+    expect(document.querySelector(`[data-letter-option="${answer}"]`)).toBeDisabled()
+  })
+
+  it('a wrong letter breaks the streak and does not advance the piece', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    const before = useTrainingStore.getState().piece
+    await user.click(document.querySelector(`[data-letter-option="${wrongType()}"]`)!)
+    const s = useTrainingStore.getState()
+    expect(s.currentStreak).toBe(0)
+    expect(s.totalPicks).toBe(1)
+    expect(s.piece).toBe(before)
+    expect(s.round).toBe(1)
+    // Tray stays live — try again immediately.
+    expect(document.querySelector(`[data-letter-option="${before!.type}"]`)).toBeEnabled()
+  })
+
+  it('shows the streak and best in the HUD, with no score, lives, or timer', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    expect(screen.getByText('Streak')).toBeInTheDocument()
+    expect(screen.getByText('Best')).toBeInTheDocument()
+    await user.click(document.querySelector(`[data-letter-option="${useTrainingStore.getState().piece!.type}"]`)!)
+    expect(useTrainingStore.getState().bestStreak).toBe(1)
+    expect(screen.queryByText(/score/i)).toBeNull()
+  })
+
+  it('Exit tears the session down and returns home at any moment', async () => {
+    const user = userEvent.setup()
+    render(<TrainingScreen />)
+    await user.click(screen.getByRole('button', { name: /Exit Training/i }))
+    expect(useNavStore.getState().appView).toBe('home')
+    expect(useTrainingStore.getState().active).toBe(false)
+  })
+})

@@ -1,0 +1,253 @@
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useShallow } from 'zustand/shallow'
+import { ROWS, COLS, type PieceType } from '@shared/types'
+import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
+import { useNavStore } from '../store/navStore'
+import { STAGGER } from '../lib/staggerCurve'
+import { NeonButton } from './ui'
+
+const CELL = 28
+const CELL_PITCH = CELL + 2   // cell + 2px grid gap
+const BOARD_PAD = 12          // p-3 around the board
+
+// A correct pick fades the piece out with the game's exact decay (ghost tail +
+// per-cell wave), then the next piece blooms in. Same constants as the reveal.
+const DECAY_MS = STAGGER.REVEAL_DECAY_MS
+const WAVE_MS = STAGGER.REVEAL_WAVE_MS
+const FADE_OUT_TOTAL_MS = DECAY_MS + 3 * WAVE_MS + 120
+
+// Same bloom flood colors as the game's EASY reveal — training keeps the color
+// crutch on: shape + color + NAME all bind together while learning.
+const PIECE_BLOOM_HEX: Record<PieceType, string> = {
+  I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
+}
+
+// Floating white feedback text over bright piece color — same soft downward
+// drop shadow the game uses (never a hard stroke).
+const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95)'
+
+// ── Board ─────────────────────────────────────────────────────────────────────
+// The same dark-void board as the game, but with a single piece at a time: it
+// blooms in (vt-bloom-hold — the reveal's flash-in, held lit) and stays up
+// until named correctly, then decays back to the void in the reveal's per-cell
+// wave (vt-bloom-decay).
+function TrainingBoard({
+  piece, round, leaving,
+}: { piece: TrainingPiece | null; round: number; leaving: boolean }) {
+  const pieceCells = new Map<string, number>() // cell key → wave index
+  if (piece) {
+    ;[...piece.cells]
+      .sort((a, b) => a[0] + a[1] - (b[0] + b[1]) || a[1] - b[1])
+      .forEach(([r, c], i) => pieceCells.set(`${r},${c}`, i))
+  }
+  const color = piece ? PIECE_BLOOM_HEX[piece.type] : undefined
+
+  return (
+    <div
+      className="inline-grid gap-[2px] p-3 bg-[#04040a] rounded-xl shadow-[inset_0_2px_6px_#000,inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+      style={{ gridTemplateColumns: `repeat(${COLS}, ${CELL}px)` }}
+    >
+      {Array.from({ length: ROWS * COLS }, (_, i) => {
+        const r = Math.floor(i / COLS)
+        const c = i % COLS
+        const wave = pieceCells.get(`${r},${c}`)
+        if (wave !== undefined) {
+          // Keyed by round + phase so the hold animation re-fires per fresh
+          // piece and the decay starts clean from the held-bright state.
+          return (
+            <div
+              key={`${i}-${round}-${leaving ? 'decay' : 'hold'}`}
+              className={`w-7 h-7 rounded-sm ${leaving ? 'vt-bloom-decay' : 'vt-bloom-hold'}`}
+              style={{
+                ...(leaving ? { animationDuration: `${DECAY_MS + wave * WAVE_MS}ms` } : {}),
+                ['--bloom-color']: color,
+              } as CSSProperties}
+            />
+          )
+        }
+        return <div key={i} className="w-7 h-7 rounded-sm vt-dim" />
+      })}
+    </div>
+  )
+}
+
+// ── Letter tray ───────────────────────────────────────────────────────────────
+// The training counterpart of the game's piece tray: the same panel and button
+// chrome, but each option is the piece's NAME — a plain white uppercase letter.
+function LetterTray({
+  onPick, disabled,
+}: { onPick: (t: PieceType) => void; disabled: boolean }) {
+  return (
+    <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
+        <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Names</span>
+        <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap the letter that names it</span>
+      </div>
+      <div className="grid grid-cols-7 gap-1.5">
+        {TRAINING_TYPES.map(type => (
+          <button
+            key={type}
+            data-letter-option={type}
+            disabled={disabled}
+            onClick={() => onPick(type)}
+            className="flex items-center justify-center h-12 rounded-md border bg-vt-raised
+              border-vt-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
+              hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
+              disabled:opacity-40 disabled:pointer-events-none
+              font-silk font-bold text-xl text-white"
+          >
+            {type}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+export function TrainingScreen() {
+  const {
+    active, piece, round, currentStreak, bestStreak,
+    start, nextPiece, guess, exit,
+  } = useTrainingStore(useShallow(s => ({
+    active: s.active, piece: s.piece, round: s.round,
+    currentStreak: s.currentStreak, bestStreak: s.bestStreak,
+    start: s.start, nextPiece: s.nextPiece, guess: s.guess, exit: s.exit,
+  })))
+  const goHome = useNavStore(s => s.goHome)
+
+  // A correct pick's fade-out in flight: tray disabled, piece decaying.
+  const [leaving, setLeaving] = useState(false)
+  const [xMark, setXMark] = useState(false)
+  const [burst, setBurst] = useState<{ id: number; x: number; y: number } | null>(null)
+  const burstId = useRef(0)
+  const boardRef = useRef<HTMLDivElement>(null)
+  const timersRef = useRef<number[]>([])
+
+  // Safety net: entering the screen cold (e.g. a hot-reload or deep link)
+  // starts a session. Timers are torn down on unmount.
+  useEffect(() => {
+    if (!useTrainingStore.getState().active) start()
+    const timers = timersRef.current
+    return () => { timers.forEach(clearTimeout) }
+  }, [start])
+
+  const onPick = (type: PieceType) => {
+    if (leaving || !piece) return
+    const res = guess(type)
+    if (!res.ok) {
+      // The game's miss feedback: red border flash + board shake.
+      setXMark(true)
+      boardRef.current?.animate?.(
+        [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
+         { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }],
+        { duration: 240 },
+      )
+      timersRef.current.push(window.setTimeout(() => setXMark(false), 440))
+      return
+    }
+    // Correct: float a ✓ over the named piece while it fades back to the void,
+    // then bring on the next one.
+    const cells = piece.cells
+    const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
+    const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
+    const id = (burstId.current += 1)
+    setBurst({
+      id,
+      x: BOARD_PAD + avgC * CELL_PITCH + CELL / 2,
+      y: BOARD_PAD + avgR * CELL_PITCH + CELL / 2,
+    })
+    timersRef.current.push(window.setTimeout(() => setBurst(b => (b?.id === id ? null : b)), 700))
+    setLeaving(true)
+    timersRef.current.push(window.setTimeout(() => {
+      setLeaving(false)
+      nextPiece()
+    }, FADE_OUT_TOTAL_MS))
+  }
+
+  const exitTraining = () => { exit(); goHome() }
+
+  if (!active) return null
+
+  return (
+    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+      {/* HUD — no score, no lives, no clock: only the streak survives here. */}
+      <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
+        <div>
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
+          <div className="font-silk font-bold text-3xl text-vt-lime text-glow-vt-lime leading-none tabular-nums">
+            {currentStreak}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Best</div>
+          <div className="font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
+            {bestStreak}
+          </div>
+        </div>
+      </div>
+
+      {/* Prompt line — flips to the lime GOOD JOB! beat while the piece fades. */}
+      <div className="w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
+        <div
+          className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors
+            ${leaving ? 'text-vt-lime text-glow-vt-lime' : 'text-vt-magenta text-glow-vt-magenta'}`}
+        >
+          {leaving ? 'GOOD JOB!' : 'NAME THE PIECE'}
+        </div>
+      </div>
+
+      {/* Board + overlays */}
+      <div className="relative">
+        <div ref={boardRef}>
+          <TrainingBoard piece={piece} round={round} leaving={leaving} />
+        </div>
+
+        {/* Correct pick — a ✓ floats up off the named piece (the game's
+            "+points" flourish, minus the points). */}
+        <AnimatePresence>
+          {burst && (
+            <motion.div
+              key={burst.id}
+              initial={{ opacity: 0, scale: 0.4, y: 6 }}
+              animate={{ opacity: 1, scale: 1, y: -22 }}
+              exit={{ opacity: 0, scale: 1.5, y: -46 }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
+                font-silk font-bold text-lg whitespace-nowrap text-white"
+              style={{ left: burst.x, top: burst.y, textShadow: FLOAT_TEXT_SHADOW }}
+            >
+              ✓
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Wrong pick: the game's red border flash (with the shake above). */}
+        <AnimatePresence>
+          {xMark && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="absolute inset-0 rounded-xl pointer-events-none shadow-[inset_0_0_0_2px_#FF3B47,0_0_24px_rgba(255,59,71,0.28)]"
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Letter tray — always up; briefly disabled while a named piece fades. */}
+      <div className="mt-4 w-full flex justify-center">
+        <LetterTray onPick={onPick} disabled={leaving} />
+      </div>
+
+      {/* Exit — always available; training can be left at any moment. */}
+      <div className="mt-3 w-full max-w-sm">
+        <NeonButton variant="ghost" fullWidth onClick={exitTraining}>
+          ‹ Exit Training
+        </NeonButton>
+      </div>
+    </div>
+  )
+}

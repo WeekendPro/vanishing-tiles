@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useStaggerStore } from '../store/staggerStore'
+import { useTrainingStore } from '../store/trainingStore'
 import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
@@ -12,9 +13,13 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
  * with the Difficulty selector directly beneath it. Logout is intentionally
  * absent here — it lives in the global menu.
  *
- * The "Experimental Modes" entry (Training + the three Journey map styles) is
- * HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and its machinery are kept
- * intact behind the flag — not deleted — so we can bring them back in one line.
+ * The "Experimental Modes" entry (Practice, the legacy gauntlet + the three
+ * Journey map styles) is HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and
+ * its machinery are kept intact behind the flag — not deleted — so we can
+ * bring them back in one line.
+ *
+ * TRAINING (learn the piece names) is a shipped secondary mode: a quieter
+ * cyan button under the difficulty selector, → TrainingScreen.
  */
 const SHOW_EXPERIMENTAL: boolean = false
 
@@ -47,12 +52,14 @@ const DIFFICULTIES: { value: Difficulty; label: string; hint: string; active: st
 export function HomeScreen() {
   const [pane, setPane] = useState<'home' | 'experimental'>('home')
 
-  const { goStagger, goJourney, goPractice } = useNavStore(useShallow(s => ({
+  const { goStagger, goJourney, goPractice, goTraining } = useNavStore(useShallow(s => ({
     goStagger: s.goStagger,
     goJourney: s.goJourney,
     goPractice: s.goPractice,
+    goTraining: s.goTraining,
   })))
   const startStagger = useStaggerStore(s => s.startRun)
+  const startTraining = useTrainingStore(s => s.start)
   const { startPractice, resetGame } = useGameStore(useShallow(s => ({
     startPractice: s.startPractice,
     resetGame: s.resetGame,
@@ -64,7 +71,8 @@ export function HomeScreen() {
   })))
 
   const play = () => { startStagger(difficulty); goStagger() }
-  const training = () => { startPractice(); goPractice() }
+  const training = () => { startTraining(); goTraining() }
+  const practice = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
   const activeHint = DIFFICULTIES.find(d => d.value === difficulty)?.hint
@@ -145,6 +153,20 @@ export function HomeScreen() {
                 {activeHint}
               </p>
             </div>
+
+            {/* Training → learn the piece names. Same neon-outline recipe as
+                PLAY, but cyan and quieter — a secondary option, not the hero. */}
+            <button
+              onClick={training}
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+                transition active:translate-y-px py-3 px-5 text-xs flex flex-col items-center justify-center gap-1
+                border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
+            >
+              <span>Training</span>
+              <span className="normal-case tracking-normal font-display text-[10px] text-neon-cyan/60">
+                Learn the piece names
+              </span>
+            </button>
           </div>
         </section>
 
@@ -171,7 +193,7 @@ export function HomeScreen() {
             </div>
 
             <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
-              <ModeButton label="Training" hint="The classic gauntlet" onClick={training} />
+              <ModeButton label="Practice" hint="The classic gauntlet" onClick={practice} />
               <ModeButton label="Subway Map" hint="Ride the transit lines" onClick={() => openMap('transit')} />
               <ModeButton label="Mind Map" hint="Light up the neurons" onClick={() => openMap('mentalBrain')} />
               <ModeButton label="Git Map" hint="Branch through the graph" onClick={() => openMap('git')} />
