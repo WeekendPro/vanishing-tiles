@@ -262,16 +262,14 @@
   .streak-pop { animation: none; }
 }
 
-/* Recall handoff: the tray pieces fade up into their (already-present) sockets
-   instead of snapping in the instant the memorize phase ends. Each socket sets
-   a small per-index animation-delay inline — a left-to-right stagger, echoing
-   the game's staggered reveals. `both` keeps delayed pieces invisible until
-   their turn. */
+/* Recall handoff: the tray pieces fade into their (already-present) sockets
+   instead of snapping in the instant the memorize phase ends — one simultaneous
+   opacity ease across the whole tray, no stagger. */
 @keyframes vtPieceIn {
-  0%   { opacity: 0; transform: scale(0.8); }
-  100% { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
-.vt-piece-in { animation: vtPieceIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.vt-piece-in { animation: vtPieceIn 320ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   .vt-piece-in { animation: none; }

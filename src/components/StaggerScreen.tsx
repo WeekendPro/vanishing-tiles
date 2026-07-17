@@ -242,7 +242,7 @@ function PieceTray({
             handoff (concealed flips), so the mount-time vt-piece-in fade plays
             precisely then — and NOT on mid-recall re-renders (pause/resume,
             picks, demo guidance), which reconcile in place. */}
-        {PIECE_DEFINITIONS.map((def, i) => {
+        {PIECE_DEFINITIONS.map(def => {
           if (concealed) {
             return (
               <div
@@ -275,7 +275,7 @@ function PieceTray({
               )}
               {/* flex, not inline: an inline span would seat the piece on the
                   text baseline and sink it below the button's center. */}
-              <span className="vt-piece-in flex" style={{ animationDelay: `${i * 35}ms` }}>
+              <span className="vt-piece-in flex">
                 <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
               </span>
             </button>
