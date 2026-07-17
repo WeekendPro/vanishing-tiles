@@ -23,10 +23,10 @@ const BOARD_PAD = 12          // p-3 around the board
 const STREAK_HOLD_MS = 2000
 const STREAK_FADE_MS = 900
 
-// Tray piece fade at the phase handoffs (how long the recall → memorize ghost
-// pieces stay mounted) — keep in lockstep with the 320ms vt-piece-in/out
-// animations in index.css, with a small buffer so the fade finishes on screen.
-const PIECE_FADE_MS = 340
+// How long the recall → memorize ghost pieces stay mounted — the 420ms
+// vt-tray-decay ghost tail (index.css) plus a small buffer so the last frame
+// (sealed into the socket surface) lands before the unmount.
+const PIECE_FADE_MS = 460
 
 // Time → score "Lift" payoff (the cleared-batch animation): after a short
 // anticipation BEAT the timer bar rushes to empty over LIFT_MS while a single
@@ -240,11 +240,12 @@ function PieceTray({
   demoTarget?: PieceType | null
   demoWrong?: PieceType | null
 }) {
-  // The recall → memorize handoff mirrors the fade-in: for one beat after
+  // The recall → memorize handoff mirrors the bloom-in: for one beat after
   // `concealed` flips on, the sockets keep GHOST pieces (inert, inside the
-  // already-dormant socket divs) that fade out, instead of vanishing on the
-  // spot. A tray that first mounts already concealed (fresh reveal after a
-  // non-tray phase, the demo) starts empty — nothing was showing to fade.
+  // already-dormant socket divs) that play the game's ghost-tail decay,
+  // instead of vanishing on the spot. A tray that first mounts already
+  // concealed (fresh reveal after a non-tray phase, the demo) starts empty —
+  // nothing was showing to decay.
   const [leaving, setLeaving] = useState(false)
   const prevConcealed = useRef(concealed)
   useEffect(() => {
@@ -269,7 +270,7 @@ function PieceTray({
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {/* The armed branch mounts fresh exactly at the memorize → recall
-            handoff (concealed flips), so the mount-time vt-piece-in fade plays
+            handoff (concealed flips), so the mount-time bloom-in plays
             precisely then — and NOT on mid-recall re-renders (pause/resume,
             picks, demo guidance), which reconcile in place. */}
         {PIECE_DEFINITIONS.map(def => {
@@ -280,8 +281,11 @@ function PieceTray({
                 className="flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised border-vt-cyan/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
               >
                 {ghosts && (
-                  <span className="vt-piece-out flex">
-                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} />
+                  /* The decay floods the same color the piece rested in:
+                     branded magenta on the monochrome (MEDIUM/HARD) tray,
+                     the piece's own color on EASY. */
+                  <span className="flex" style={{ ['--bloom-color']: monochrome ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[def.type as PieceType] } as CSSProperties}>
+                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} cellClassName="vt-tray-decay" />
                   </span>
                 )}
               </div>
@@ -311,8 +315,8 @@ function PieceTray({
               )}
               {/* flex, not inline: an inline span would seat the piece on the
                   text baseline and sink it below the button's center. */}
-              <span className="vt-piece-in flex">
-                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} />
+              <span className="flex" style={{ ['--bloom-color']: monochrome ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[def.type as PieceType] } as CSSProperties}>
+                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} cellClassName="vt-tray-bloom-in" />
               </span>
             </button>
           )

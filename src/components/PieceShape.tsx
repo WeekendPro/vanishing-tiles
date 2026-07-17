@@ -7,9 +7,10 @@ interface Props {
   cellSize?: number  // px
   dim?: boolean
   colorClass?: string  // override the piece-type color (e.g. color-coded palette)
+  cellClassName?: string  // extra classes on occupied cells (e.g. the tray's bloom/decay animations)
 }
 
-export function PieceShape({ pieceType, rotation = 0, cellSize = 14, dim = false, colorClass }: Props) {
+export function PieceShape({ pieceType, rotation = 0, cellSize = 14, dim = false, colorClass, cellClassName }: Props) {
   const cells = getRotatedCells(pieceType, rotation)
   const maxRow = Math.max(...cells.map(([r]) => r))
   const maxCol = Math.max(...cells.map(([, c]) => c))
@@ -32,7 +33,7 @@ export function PieceShape({ pieceType, rotation = 0, cellSize = 14, dim = false
         return (
           <div
             key={i}
-            className={occupied.has(`${r},${c}`) ? `${color} rounded-sm` : ''}
+            className={occupied.has(`${r},${c}`) ? `${color} rounded-sm${cellClassName ? ` ${cellClassName}` : ''}` : ''}
             style={{ width: cellSize, height: cellSize }}
           />
         )

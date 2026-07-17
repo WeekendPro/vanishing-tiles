@@ -262,9 +262,8 @@
   .streak-pop { animation: none; }
 }
 
-/* Recall handoffs: the tray pieces fade into their (already-present) sockets
-   when recall begins, and fade back out when the next memorize begins — one
-   simultaneous opacity ease across the whole tray each way, no stagger. */
+/* Recall handoffs, tray text: the header hint fades in/out with the pieces —
+   a plain opacity ease (text doesn't bloom; only cells do). */
 @keyframes vtPieceIn {
   0%   { opacity: 0; }
   100% { opacity: 1; }
@@ -276,9 +275,53 @@
 }
 .vt-piece-out { animation: vtPieceOut 320ms ease-out forwards; }
 
+/* Recall handoffs, tray pieces: the game's own bloom grammar on the tray's
+   mini cells. Entry is the reveal's flash-in — the cell floods --bloom-color
+   with a quick over-bright burn (glow radii scaled to the 8px cell), then
+   settles to the piece's resting tray color (implicit final keyframe: no held
+   glow). Exit is the ghost-tail decay — color-mix dims the cell down to the
+   socket's raised surface (#15151F, the same "re-seal into the surface" the
+   brand motif uses), with a soft luminous tail on the way out; ending exactly
+   at the socket color makes the ghost's unmount invisible. */
+@keyframes vtTrayBloomIn {
+  0% {
+    background-color: #15151f;
+    box-shadow: none;
+    transform: scale(1);
+  }
+  8% {
+    background-color: var(--bloom-color, #ff2d9b);
+    box-shadow: 0 0 5px var(--bloom-color, #ff2d9b), 0 0 11px var(--bloom-color, #ff2d9b);
+    transform: scale(1.13);
+  }
+  /* no 100% frame: settles to the cell's own resting style */
+}
+.vt-tray-bloom-in { animation: vtTrayBloomIn 700ms cubic-bezier(0.2, 0.75, 0.2, 1); }
+@keyframes vtTrayDecay {
+  0% {
+    background-color: var(--bloom-color, #ff2d9b);
+    box-shadow: none;
+  }
+  35% {
+    background-color: color-mix(in srgb, var(--bloom-color, #ff2d9b) 62%, #15151f);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--bloom-color, #ff2d9b) 45%, transparent);
+  }
+  75% {
+    background-color: color-mix(in srgb, var(--bloom-color, #ff2d9b) 22%, #15151f);
+    box-shadow: 0 0 3px color-mix(in srgb, var(--bloom-color, #ff2d9b) 18%, transparent);
+  }
+  100% {
+    background-color: #15151f;
+    box-shadow: none;
+  }
+}
+.vt-tray-decay { animation: vtTrayDecay 420ms cubic-bezier(0.3, 0, 0.1, 1) forwards; }
+
 @media (prefers-reduced-motion: reduce) {
   .vt-piece-in { animation: none; }
   .vt-piece-out { animation: none; opacity: 0; }
+  .vt-tray-bloom-in { animation: none; }
+  .vt-tray-decay { animation: none; background-color: #15151f; box-shadow: none; }
 }
 
 /* Auth-motif flicker: a soft, graceful bloom that rests dim most of the cycle,
