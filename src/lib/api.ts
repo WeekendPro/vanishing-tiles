@@ -103,6 +103,41 @@ export async function getStaggerLeaderboard(mode: Difficulty): Promise<StaggerLe
   }
 }
 
+/** The caller's own profiles row. RLS ("own profile", migration 0003) scopes
+ *  the select to auth.uid(), so no explicit id filter is needed. Null when
+ *  no row is visible (no session, or the trigger somehow skipped —
+ *  set_display_name self-heals the latter). */
+export interface OwnProfile {
+  displayName: string | null
+  isGuest: boolean
+}
+
+export async function getOwnProfile(): Promise<OwnProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('display_name,is_guest')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return { displayName: data.display_name, isGuest: data.is_guest }
+}
+
+/** Claims/edits the caller's display name via the 0015 RPC. Validation and
+ *  uniqueness are decided server-side; `taken`/`invalid`/`guest` come back
+ *  as typed results (not thrown) so forms can render inline errors. */
+export type SetDisplayNameResult =
+  | { ok: true; displayName: string }
+  | { ok: false; reason: 'invalid' | 'taken' | 'guest' }
+
+export async function setDisplayName(name: string): Promise<SetDisplayNameResult> {
+  const { data, error } = await supabase.rpc('set_display_name', { p_name: name })
+  if (error) throw error
+  const raw = data as { ok: boolean; display_name?: string; reason?: 'invalid' | 'taken' | 'guest' }
+  return raw.ok
+    ? { ok: true, displayName: raw.display_name as string }
+    : { ok: false, reason: raw.reason as 'invalid' | 'taken' | 'guest' }
+}
+
 export async function getJourney() {
   const { data, error } = await supabase.rpc('get_journey')
   if (error) throw error
