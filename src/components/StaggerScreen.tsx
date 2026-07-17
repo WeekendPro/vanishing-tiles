@@ -261,6 +261,7 @@ export function StaggerScreen() {
     pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
+  const goLeaderboard = useNavStore(s => s.goLeaderboard)
 
   // Reveal/decay timing for this run — the STAGGER constants. Held in a ref so
   // the reveal driver reads the LATEST values as each beat fires without
@@ -779,6 +780,11 @@ export function StaggerScreen() {
 
             <div className="flex flex-col gap-3 w-44 pointer-events-auto">
               <NeonButton variant="primary" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
+              {/* The itch the summary creates — "where did that rank?" — gets
+                  its own door. Lands on this run's mode tab: the board opens
+                  on the persisted difficulty, which is what the run started
+                  with. */}
+              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goLeaderboard() }}>Leaderboard</NeonButton>
               <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
             </div>
           </div>
@@ -815,11 +821,11 @@ export function StaggerScreen() {
               border-vt-cyan text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
               transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
-            <span className="flex gap-[3px]">
-              <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
-              <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+            {/* Icon-only: the two-bar glyph is universal — the word was noise. */}
+            <span className="flex gap-[4px]">
+              <span className="block w-[5px] h-4 rounded-sm bg-current" />
+              <span className="block w-[5px] h-4 rounded-sm bg-current" />
             </span>
-            Pause
           </button>
         </div>
       )}

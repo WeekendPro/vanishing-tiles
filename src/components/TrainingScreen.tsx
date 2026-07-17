@@ -302,11 +302,11 @@ export function TrainingScreen() {
             border-vt-cyan text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
             transition active:translate-y-px"
         >
-          <span className="flex gap-[3px]">
-            <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
-            <span className="block w-[3px] h-3.5 rounded-sm bg-current" />
+          {/* Icon-only: the two-bar glyph is universal — the word was noise. */}
+          <span className="flex gap-[4px]">
+            <span className="block w-[5px] h-4 rounded-sm bg-current" />
+            <span className="block w-[5px] h-4 rounded-sm bg-current" />
           </span>
-          Pause
         </button>
       </div>
 
