@@ -170,13 +170,13 @@ describe('sfx engine', () => {
     expect(ctx().oscillators.length - plain).toBe(plain) // same layer count, no extra run
   })
 
-  it('bloom melody rises with the reveal step; its shing layer sweeps (active in this bank)', async () => {
+  it('bloom melody rises with the reveal step; its muted shing layer plays NOTHING', async () => {
     const sfx = await freshSfx()
     sfx.bloom(0)
     const first = ctx().oscillators[0].frequency.values[0]
-    // The full-palette bank UN-mutes the noise layer (gain > 0): it must play,
-    // sweeping its bandpass — the audible "shing" of the reveal.
-    expect(ctx().bufferSources.length).toBe(1)
+    // The designer muted the noise layer (gain 0): it must be silent-skipped,
+    // not an exponential-ramp-to-zero crash, and create no source at all.
+    expect(ctx().bufferSources.length).toBe(0)
     const beforeOsc = ctx().oscillators.length
     sfx.bloom(3)
     const later = ctx().oscillators[beforeOsc].frequency.values[0]
@@ -214,43 +214,36 @@ describe('sfx engine', () => {
     expect(ctx().oscillators[0].frequency.values[0]).toBe(505)
     sfx.resetPatch('pickWrong')
     sfx.pickWrong()
-    expect(ctx().oscillators.length).toBe(1 + 2) // default buzz is two tone layers (+ a noise transient)
+    expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
   })
 
-  it('ships the full-palette bonusLift default (sawtooth riser + triangle climb, 2026-07-17)', async () => {
+  it('ships the lab-tuned bonusLift default (designer chime stack, 2026-07-17)', async () => {
     const sfx = await freshSfx()
     sfx.bonusLift()
-    const [riser, climbA, climbB, sparkle, tail] = ctx().oscillators
-    expect(riser.type).toBe('sawtooth')
-    expect(riser.frequency.values[0]).toBe(196)
-    expect(riser.frequency.values[1]).toBe(392) // glides up an octave
-    expect(climbA.type).toBe('triangle')
-    expect(climbA.frequency.values[0]).toBe(784)
-    expect(climbB.type).toBe('triangle')
-    expect(climbB.frequency.values[0]).toBe(988)
-    expect(sparkle.type).toBe('sine')
-    expect(sparkle.frequency.values[0]).toBe(2350)
-    expect(tail.frequency.values[0]).toBe(3136)
-    // The riser's noise sparkle is a buffer source, not an oscillator.
-    expect(ctx().bufferSources.length).toBe(1)
+    const [lead, sparkle, body, glint, shimmer] = ctx().oscillators
+    expect(lead.type).toBe('sine')
+    expect(lead.frequency.values[0]).toBe(2199)
+    expect(sparkle.type).toBe('triangle')
+    expect(sparkle.frequency.values[0]).toBe(2251)
+    expect(body.type).toBe('sine')
+    expect(body.frequency.values[0]).toBe(1120)
+    expect(glint.frequency.values[0]).toBe(1509)
+    expect(shimmer.type).toBe('triangle')
+    expect(shimmer.frequency.values[0]).toBe(2189)
   })
 
-  it('ships the full-palette countdown tick (gliding triangle blip)', async () => {
+  it('ships the lab-tuned high countdown tick', async () => {
     const sfx = await freshSfx()
     sfx.count()
-    const [blip] = ctx().oscillators
-    expect(blip.type).toBe('triangle')
-    expect(blip.frequency.values[0]).toBe(1480)
-    expect(blip.frequency.values[1]).toBe(1780) // glides up
+    expect(ctx().oscillators[0].frequency.values[0]).toBe(2976)
   })
 
-  it('ships the full-palette timeout default (square womp gliding into the sub-bass)', async () => {
+  it('ships the lab-tuned timeout default (square womp, deeper + longer)', async () => {
     const sfx = await freshSfx()
     sfx.timeout()
     const [womp] = ctx().oscillators
     expect(womp.type).toBe('square')
-    expect(womp.frequency.values[0]).toBe(392)
-    expect(womp.frequency.values[1]).toBe(62) // collapses far below the root
+    expect(womp.frequency.values[1]).toBe(76.38) // falls below the old 110 Hz floor
   })
 
   it('urgentTick pitches up with heat, capped at a fifth above the patch root', async () => {
@@ -263,7 +256,7 @@ describe('sfx engine', () => {
     const cold = rootOf(() => sfx.urgentTick(0))
     const warm = rootOf(() => sfx.urgentTick(0.5))
     const expiring = rootOf(() => sfx.urgentTick(1))
-    expect(cold).toBe(2200) // the shipped patch's high-click root, untransposed
+    expect(cold).toBe(1760) // the shipped patch's high-click root, untransposed
     expect(warm).toBeGreaterThan(cold)
     expect(expiring).toBeGreaterThan(warm)
     expect(expiring).toBeCloseTo(cold * 2 ** (7 / 12), 6) // a perfect fifth up
