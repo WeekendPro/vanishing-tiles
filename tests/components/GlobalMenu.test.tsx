@@ -23,7 +23,7 @@ import { useProfileStore } from '../../src/store/profileStore'
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useTrainingStore.getState().exit()
   useProfileStore.getState().clear()
   vi.clearAllMocks()

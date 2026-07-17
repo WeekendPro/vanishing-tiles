@@ -13,19 +13,29 @@ import { useTrainingStore } from '../../src/store/trainingStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useStaggerStore.getState().exit()
   useTrainingStore.getState().exit()
   vi.clearAllMocks()
 })
 
 describe('HomeScreen', () => {
-  it('Play drops into Infinite Stagger', async () => {
+  it('Play drops into Infinite Stagger, leading with the first-run demo', async () => {
     const user = userEvent.setup()
     render(<HomeScreen />)
     await user.click(screen.getByRole('button', { name: 'Play' }))
     expect(useNavStore.getState().appView).toBe('stagger')
+    expect(useStaggerStore.getState().phase).toBe('demoIntro')
+    expect(useStaggerStore.getState().demo).toBe(true)
+  })
+
+  it('Play skips the demo straight to the countdown once opted out', async () => {
+    useSettingsStore.setState(s => ({ settings: { ...s.settings, hideDemo: true } }))
+    const user = userEvent.setup()
+    render(<HomeScreen />)
+    await user.click(screen.getByRole('button', { name: 'Play' }))
     expect(useStaggerStore.getState().phase).toBe('countdown')
+    expect(useStaggerStore.getState().demo).toBe(false)
   })
 
   it('has no Training segment — the drill lives in the global menu now', () => {

@@ -314,6 +314,44 @@
   .vt-vanish { animation: none; background: #FF2D9B; box-shadow: 0 0 8px #FF2D9B; }
 }
 
+/* ── First-run demo guidance (T3: spotlight veil + glow ring + TAP cue) ──────
+   Only ever rendered during the pre-countdown demo; none of these appear in a
+   real run. The spot ring breathes calmly (1.4s); the TAP cue bobs above the
+   target tray button; a wrong tap gets a soft "no" headshake (no red, no board
+   shake); the intro's "Tap to continue" breathes. */
+@keyframes vtDemoSpot {
+  0%, 100% { box-shadow: 0 0 6px rgba(40, 240, 255, 0.55), 0 0 18px rgba(40, 240, 255, 0.3); }
+  50%      { box-shadow: 0 0 10px rgba(40, 240, 255, 0.95), 0 0 30px rgba(40, 240, 255, 0.55); }
+}
+.vt-demo-spot { animation: vtDemoSpot 1.4s ease-in-out infinite; }
+
+@keyframes vtDemoTapBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(-4px); }
+}
+.vt-demo-tapcue { animation: vtDemoTapBob 1.1s ease-in-out infinite; }
+
+@keyframes vtDemoShake {
+  0%, 40%, 100% { transform: translateX(0); }
+  8%  { transform: translateX(-3px); }
+  16% { transform: translateX(3px); }
+  24% { transform: translateX(-2px); }
+  32% { transform: translateX(0); }
+}
+.vt-demo-shake { animation: vtDemoShake 0.6s ease-in-out; }
+
+@keyframes vtDemoContinue {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.vt-demo-continue { animation: vtDemoContinue 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-demo-spot { animation: none; box-shadow: 0 0 10px rgba(40, 240, 255, 0.95), 0 0 30px rgba(40, 240, 255, 0.55); }
+  .vt-demo-tapcue, .vt-demo-shake { animation: none; }
+  .vt-demo-continue { animation: none; opacity: 1; }
+}
+
 /* Hard-mode order hint: when a pick matched a remaining gap but broke the reveal
    order, the central phase label swaps to "IN ORDER" and blinks twice — white →
    magenta → white → magenta (paired-percentage holds = crisp blinks, not

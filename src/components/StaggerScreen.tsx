@@ -5,6 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
+import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, CLOCK_URGENT, gapCountForBatch, urgentHeat, urgentTickIntervalMs, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
@@ -214,29 +215,50 @@ function StaggerCountdown({
 // The recall tray always shows each piece's own color, in every mode
 // (PieceShape's default) — the monochrome-pink tray treatment is reveal-only.
 function PieceTray({
-  onPick, disabled,
-}: { onPick: (t: PieceType) => void; disabled: boolean }) {
+  onPick, disabled, demoTarget, demoWrong,
+}: {
+  onPick: (t: PieceType) => void
+  disabled: boolean
+  /** Demo guidance (T3): while set, the target button wears the spotlight ring +
+   *  TAP cue and every other button drops behind the "veil" (dimmed, still
+   *  tappable — a wrong tap gets the gentle correction, not a disable). */
+  demoTarget?: PieceType | null
+  demoWrong?: PieceType | null
+}) {
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-      <div className="flex justify-between items-center mb-2 pointer-events-none select-none">
+      <div className={`flex justify-between items-center mb-2 pointer-events-none select-none${demoTarget ? ' opacity-40' : ''}`}>
         <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Pieces</span>
         <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>
       </div>
       <div className="grid grid-cols-7 gap-1.5">
-        {PIECE_DEFINITIONS.map(def => (
-          <button
-            key={def.type}
-            data-piece-option={def.type}
-            disabled={disabled}
-            onClick={() => onPick(def.type as PieceType)}
-            className="flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised
-              border-vt-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
-              hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
-              disabled:opacity-40 disabled:pointer-events-none"
-          >
-            <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
-          </button>
-        ))}
+        {PIECE_DEFINITIONS.map(def => {
+          const isTarget = demoTarget === def.type
+          const demoClass = !demoTarget ? ''
+            : isTarget ? ' vt-demo-spot border-vt-cyan relative z-30'
+            : demoWrong === def.type ? ' vt-demo-shake'
+            : ' opacity-25 saturate-50'
+          return (
+            <button
+              key={def.type}
+              data-piece-option={def.type}
+              disabled={disabled}
+              onClick={() => onPick(def.type as PieceType)}
+              className={`relative flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised
+                border-vt-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
+                hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
+                disabled:opacity-40 disabled:pointer-events-none${demoClass}`}
+            >
+              {isTarget && (
+                <span className="vt-demo-tapcue absolute left-1/2 bottom-[calc(100%-10px)] z-40 flex flex-col items-center pointer-events-none">
+                  <span className="font-silk text-[8px] tracking-[0.1em] text-white" style={{ textShadow: FLOAT_TEXT_SHADOW }}>TAP</span>
+                  <span className="mt-px w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]" />
+                </span>
+              )}
+              <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -247,21 +269,28 @@ function PieceTray({
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
   const {
-    phase, mode, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
+    phase, demo, mode, batchIndex, gaps, revealPlan, score, lives, selectDuration, selectStartTime, paused,
     shapesRecalled, currentStreak, bestStreak, totalPicks, correctPicks,
-    startRun, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
+    startRun, beginRunFromDemo, beginReveal, beginSelecting, pickPiece, bankSpeedBonus, advanceBatch, timeoutBatch,
     pause, resume, exit,
   } = useStaggerStore(useShallow(s => ({
-    phase: s.phase, mode: s.mode, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
+    phase: s.phase, demo: s.demo, mode: s.mode, batchIndex: s.batchIndex, gaps: s.gaps, revealPlan: s.revealPlan, score: s.score,
     lives: s.lives, selectDuration: s.selectDuration, selectStartTime: s.selectStartTime, paused: s.paused,
     // "Streak" is player-facing copy only — the underlying store fields are still `currentCombo`/`bestCombo`.
     shapesRecalled: s.shapesRecalled, currentStreak: s.currentCombo, bestStreak: s.bestCombo, totalPicks: s.totalPicks, correctPicks: s.correctPicks,
-    startRun: s.startRun, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
+    startRun: s.startRun, beginRunFromDemo: s.beginRunFromDemo, beginReveal: s.beginReveal, beginSelecting: s.beginSelecting,
     pickPiece: s.pickPiece, bankSpeedBonus: s.bankSpeedBonus, advanceBatch: s.advanceBatch, timeoutBatch: s.timeoutBatch,
     pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
   const goLeaderboard = useNavStore(s => s.goLeaderboard)
+  const { hideDemo, setHideDemo } = useSettingsStore(useShallow(s => ({ hideDemo: s.settings.hideDemo, setHideDemo: s.setHideDemo })))
+
+  // Demo-only UI state: the gentle-correction piece (soft headshake + coach
+  // line, no red/shake/life) and the end beat ("You're ready" + opt-out).
+  const [demoWrong, setDemoWrong] = useState<PieceType | null>(null)
+  const [demoDone, setDemoDone] = useState(false)
+  const demoWrongTimer = useRef<number | undefined>(undefined)
 
   // Reveal/decay timing for this run — the STAGGER constants. Held in a ref so
   // the reveal driver reads the LATEST values as each beat fires without
@@ -333,7 +362,7 @@ export function StaggerScreen() {
   // Streak: a run of correct recalls (tracked in the store). Each correct pick
   // floats the "+points" it earned over the just-filled gap; the running ×N
   // multiplier shows as a chip above the board.
-  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
+  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number; demo?: boolean }[]>([])
   const streakBurstId = useRef(0)
 
   // Streak chip lifecycle: a fresh streak step pops the chip in and holds it for
@@ -381,6 +410,8 @@ export function StaggerScreen() {
       setStreakChip(null)
       setLiftFlyer(null)
       setScoreCountMs(600)
+      setDemoWrong(null)
+      setDemoDone(false)
     }
   }, [phase])
 
@@ -409,8 +440,9 @@ export function StaggerScreen() {
     // spacing) outruns one bloom's lifetime, so the next gap flashes while the
     // previous is still decaying.
     // Memorize bar DRAINS: starts full and empties one step per gap as the
-    // sequence plays out (a visual count of memorize time spent).
-    setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100)
+    // sequence plays out (a visual count of memorize time spent). The demo's
+    // bar stays inert/empty — its whole point is that no clock exists yet.
+    if (demo) { setBarPct(0) } else { setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100) }
     setBlooms([])
     let id = 0
 
@@ -422,7 +454,7 @@ export function StaggerScreen() {
         at(Math.max(0, bloomMs + decayMs - stepMs), beginSelecting)
         return
       }
-      setBarPct((1 - (idx + 1) / n) * 100)
+      if (!demo) setBarPct((1 - (idx + 1) / n) * 100)
       const gi = order[idx]
       const { stepMs, bloomMs, decayMs, waveMs } = timingRef.current
       const lifetime = bloomMs + decayMs + 3 * waveMs + 80
@@ -442,13 +474,13 @@ export function StaggerScreen() {
     // A short breath before the first gap (also paces continuous next batches).
     at(350, () => show(0))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode, demo])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
   // `resume` re-dates selectStartTime.
   useEffect(() => {
-    if (phase !== 'selecting' || paused) return
+    if (phase !== 'selecting' || paused || demo) return
     let cancelled = false
     setCleared(false)
     const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
@@ -462,14 +494,14 @@ export function StaggerScreen() {
       }
     }, remaining)
     return () => { cancelled = true; clearTimeout(expiry) }
-  }, [phase, paused, batchIndex, selectStartTime, selectDuration, timeoutBatch])
+  }, [phase, paused, demo, batchIndex, selectStartTime, selectDuration, timeoutBatch])
 
   // Recall clock + bar drain: tick the remaining time every 100ms, draining the
   // amber bar and feeding the in-bar seconds off the SAME live clock (so the bar
   // and the temperature arc track real time, not a fragile CSS-only transition).
   // Bails while cleared so onPick's lime payoff drain isn't overwritten.
   useEffect(() => {
-    if (phase !== 'selecting' || paused || cleared) return
+    if (phase !== 'selecting' || paused || cleared || demo) return
     setBarColor('amber'); setBarTransition('width 120ms linear')
     const tick = () => {
       const rem = Math.max(0, selectStartTime + selectDuration - Date.now())
@@ -479,7 +511,7 @@ export function StaggerScreen() {
     tick()
     const id = window.setInterval(tick, 100)
     return () => clearInterval(id)
-  }, [phase, paused, cleared, selectStartTime, selectDuration])
+  }, [phase, paused, cleared, demo, selectStartTime, selectDuration])
 
   // Urgency ticker: the moment the recall clock enters its red zone (the same
   // CLOCK_URGENT.FRACTION that flips the bar red), a clock tick starts and
@@ -489,7 +521,7 @@ export function StaggerScreen() {
   // Pause / clear / timeout / game over all tear the chain down via the deps
   // (paused freezes the clock — resume re-dates selectStartTime and re-arms).
   useEffect(() => {
-    if (phase !== 'selecting' || paused || cleared || selectDuration <= 0) return
+    if (phase !== 'selecting' || paused || cleared || demo || selectDuration <= 0) return
     let timer: number
     const schedule = () => {
       const rem = selectStartTime + selectDuration - Date.now()
@@ -505,7 +537,7 @@ export function StaggerScreen() {
     }
     schedule()
     return () => clearTimeout(timer)
-  }, [phase, paused, cleared, selectStartTime, selectDuration])
+  }, [phase, paused, cleared, demo, selectStartTime, selectDuration])
 
   // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
   // bar up to the score readout. Skipped under reduced motion — the score still
@@ -523,9 +555,52 @@ export function StaggerScreen() {
     })
   }
 
+  // Any exit from the demo (skip, or the end beat's Start-the-run) resets the
+  // demo's score/stats in the store and fires the real countdown.
+  const leaveDemo = () => {
+    window.clearTimeout(demoWrongTimer.current)
+    setDemoWrong(null)
+    setDemoDone(false)
+    setCleared(false)
+    beginRunFromDemo()
+  }
+
   const onPick = (type: PieceType) => {
     if (cleared || paused) return
     const res = pickPiece(type)
+
+    if (demo) {
+      window.clearTimeout(demoWrongTimer.current)
+      if (!res.ok) {
+        // Gentle correction: soft headshake on the tapped piece + coach line —
+        // no red flash, no board shake, no sfx sting, nothing lost.
+        setDemoWrong(type)
+        demoWrongTimer.current = window.setTimeout(() => setDemoWrong(null), 1400)
+        return
+      }
+      setDemoWrong(null)
+      sfx.pickCorrect(res.combo)
+      if (res.gap) {
+        const cells = res.gap.cells
+        const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
+        const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
+        const id = (streakBurstId.current += 1)
+        setStreakBursts(prev => [...prev, {
+          id, pts: res.gained, demo: true,
+          x: BOARD_PAD + avgC * CELL_PITCH + CELL / 2,
+          y: BOARD_PAD + avgR * CELL_PITCH + CELL / 2,
+        }])
+        window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 1100)
+      }
+      if (res.batchCleared) {
+        // No lift payoff (no clock → no bonus): a short beat for the snap-in +
+        // burst to land, then the end overlay takes over.
+        setCleared(true)
+        sfx.batchClear()
+        window.setTimeout(() => setDemoDone(true), 700)
+      }
+      return
+    }
     // gameOver only ever rides a miss: give the final pick its miss buzz too
     // (the gameOver farewell itself fires from the phase effect above).
     if (res.gameOver) { sfx.pickWrong(); return }
@@ -612,14 +687,29 @@ export function StaggerScreen() {
   if (phase === 'reveal') {
     for (const b of blooms) for (const cell of b.cells) bloomByCell.set(cell.key, { id: b.id, holdMs: cell.holdMs, decayMs: cell.decayMs, color: b.color })
   }
+  // Demo guidance: the next gap to recall, in reveal order (every mode — which
+  // quietly pre-teaches Hard's IN ORDER rule before it's ever enforced).
+  const demoTarget = demo && phase === 'selecting' && !cleared && !demoDone
+    ? (() => { const next = revealPlan.find(i => !gaps[i].filled); return next !== undefined ? gaps[next].pieceType : null })()
+    : null
+  // Demo coach copy owns the central line (the transient-cue slot) while the
+  // demo is in flight; the normal phase words return with the real run.
+  const demoCoach =
+    !demo ? null :
+    phase === 'reveal' ? 'WATCH THE SHAPES' :
+    phase === 'selecting' && !cleared
+      ? (demoWrong ? 'NOT THAT ONE — TRY THE GLOWING PIECE'
+        : gaps.some(g => g.filled) ? 'NICE — ONE MORE' : 'TAP THE FIRST SHAPE YOU SAW')
+      : null
+
   // Out-of-order hint takes over the phase label mid-recall (never over CLEAR!).
   const orderHintActive = orderHint > 0 && phase === 'selecting' && !cleared
   // Streak takeover of the central line: only mid-recall, and outranked by both
   // the IN ORDER hint and the CLEAR! beat.
   const streakTakeover = streakChip !== null && phase === 'selecting' && !cleared && !orderHintActive
-  const phaseLabel =
+  const phaseLabel = demoCoach ?? (
     phase === 'reveal' ? 'MEMORIZE' :
-    phase === 'selecting' ? (cleared ? 'CLEAR!' : orderHintActive ? 'IN ORDER' : 'RECALL') : ''
+    phase === 'selecting' ? (cleared ? 'CLEAR!' : orderHintActive ? 'IN ORDER' : 'RECALL') : '')
 
   // Timer-bar phase color (the §1 temperature arc): magenta filling on reveal,
   // amber draining on recall, red pulse under 25% as the clock heats up, lime on
@@ -638,6 +728,7 @@ export function StaggerScreen() {
   // The out-of-order hint is magenta: the blink animation plays over it, then
   // this base color is what the label holds until the hint expires.
   const phaseLabelClass =
+    demo && demoWrong && phase === 'selecting' && !cleared ? 'text-white' :
     phase === 'reveal' ? 'text-vt-magenta text-glow-vt-magenta' :
     cleared ? 'text-vt-lime text-glow-vt-lime' :
     orderHintActive ? 'text-vt-magenta text-glow-vt-magenta' :
@@ -731,6 +822,57 @@ export function StaggerScreen() {
           <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
         </div>
 
+        {/* Demo spotlight veil: during a guided pick the board goes quiet so the
+            tray's lit target is the only bright thing on screen. */}
+        {demoTarget && (
+          <div className="absolute inset-0 z-10 rounded-xl bg-black/55 pointer-events-none" />
+        )}
+
+        {/* Demo intro — the countdown's overlay grammar (board visible under a
+            veil), plain type: the two-step how-to, tap anywhere to begin. */}
+        {phase === 'demoIntro' && (
+          <button
+            type="button"
+            onClick={() => beginReveal()}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] cursor-pointer text-left"
+          >
+            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-cyan text-glow-vt-cyan mb-5">How it works</div>
+            <div className="flex flex-col gap-3.5 mb-7">
+              <div className="flex items-baseline gap-2.5">
+                <span className="font-grotesk font-bold text-[13px] text-vt-cyan text-glow-vt-cyan tabular-nums">1</span>
+                <span className="font-grotesk text-sm font-medium text-vt-text">Memorize the pieces.</span>
+              </div>
+              <div className="flex items-baseline gap-2.5">
+                <span className="font-grotesk font-bold text-[13px] text-vt-cyan text-glow-vt-cyan tabular-nums">2</span>
+                <span className="font-grotesk text-sm font-medium text-vt-text">Tap to recall what you saw.</span>
+              </div>
+            </div>
+            <div className="vt-demo-continue font-grotesk text-[10px] uppercase tracking-[0.2em] text-vt-dim">Tap to continue</div>
+          </button>
+        )}
+
+        {/* Demo end beat — both pieces placed behind the veil as proof; the
+            opt-out checkbox lives here, at the moment the player can judge it. */}
+        {demoDone && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/75 backdrop-blur-[2px] px-6 text-center">
+            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-lime text-glow-vt-lime mb-2">That's the loop</div>
+            <div className="font-grotesk font-bold text-xl text-vt-lime text-glow-vt-lime mb-2">You're ready</div>
+            <div className="font-grotesk text-xs text-vt-dim leading-relaxed max-w-[230px] mb-5">
+              Same game from here — but the clock is real and misses cost lives.
+            </div>
+            <NeonButton variant="primary" onClick={leaveDemo}>Start the run</NeonButton>
+            <label className="mt-4 flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim">
+              <input
+                type="checkbox"
+                checked={hideDemo}
+                onChange={e => setHideDemo(e.target.checked)}
+                className="accent-[#28F0FF]"
+              />
+              Don't show this again
+            </label>
+          </div>
+        )}
+
         {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
         <AnimatePresence>
           {streakBursts.map(cb => (
@@ -750,7 +892,15 @@ export function StaggerScreen() {
                 textShadow: FLOAT_TEXT_SHADOW,
               }}
             >
-              +{cb.pts}
+              {cb.demo ? (
+                // Demo flourish: the same burst, with a 👍 NICE! riding the
+                // real "+points" — warm feedback AND the real scoring grammar.
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-[17px]">👍</span>
+                  <span className="font-grotesk font-bold text-xs tracking-[0.08em]">NICE!</span>
+                  <span>+{cb.pts}</span>
+                </span>
+              ) : <>+{cb.pts}</>}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -861,15 +1011,28 @@ export function StaggerScreen() {
         )}
         <div className="min-h-[88px] w-full flex justify-center">
           {phase === 'selecting' && (
-            <PieceTray onPick={onPick} disabled={cleared || paused} />
+            <PieceTray onPick={onPick} disabled={cleared || paused} demoTarget={demoTarget} demoWrong={demoWrong} />
           )}
         </div>
       </div>
 
+      {/* Skip demo — rides where the pause button lives in the real run. Does
+          NOT set the opt-out; only the end beat's checkbox does. */}
+      {demo && !demoDone && (
+        <div className="mt-3 w-full max-w-sm text-right">
+          <button
+            onClick={leaveDemo}
+            className="font-grotesk text-[10px] uppercase tracking-[0.18em] text-vt-faint hover:text-vt-dim transition-colors"
+          >
+            skip demo ›
+          </button>
+        </div>
+      )}
+
       {/* Pause — freeze the run (full width). (Replay-the-sequence was removed:
           replaying after picks left correct pieces on the board, a confusing
           experience to be redesigned later.) */}
-      {phase === 'selecting' && (
+      {phase === 'selecting' && !demo && (
         <div className="mt-3 w-full max-w-sm">
           <button
             aria-label="Pause"

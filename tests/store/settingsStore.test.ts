@@ -4,7 +4,7 @@ import { sfx } from '../../src/lib/sfx'
 
 beforeEach(() => {
   localStorage.clear()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   sfx.setEnabled(true)
 })
 

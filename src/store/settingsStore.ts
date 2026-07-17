@@ -43,10 +43,12 @@ export interface UserSettings {
   soundEnabled: boolean
   /** Sound-effects volume, 0–1. */
   sfxVolume: number
+  /** First-run demo opt-out ("Don't show this again") — global across all difficulties. */
+  hideDemo: boolean
 }
 
 function emptySettings(): UserSettings {
-  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 }
+  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false }
 }
 
 function load(): UserSettings {
@@ -74,6 +76,7 @@ interface SettingsStore {
   setDifficulty: (difficulty: Difficulty) => void
   setSoundEnabled: (on: boolean) => void
   setSfxVolume: (v: number) => void
+  setHideDemo: (hidden: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -112,6 +115,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     sfx.setEnabled(on)
     set((state) => {
       const next: UserSettings = { ...state.settings, soundEnabled: on }
+      save(next)
+      return { settings: next }
+    })
+  },
+
+  setHideDemo: (hidden) => {
+    set((state) => {
+      const next: UserSettings = { ...state.settings, hideDemo: hidden }
       save(next)
       return { settings: next }
     })

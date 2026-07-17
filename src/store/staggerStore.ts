@@ -9,7 +9,7 @@ import {
 } from '../lib/staggerCurve'
 import type { Difficulty } from './settingsStore'
 
-export type StaggerPhase = 'idle' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
+export type StaggerPhase = 'idle' | 'demoIntro' | 'countdown' | 'reveal' | 'selecting' | 'gameOver'
 
 /** A batch gap plus whether the player has correctly recalled (filled) it. */
 export interface StaggerGap extends Gap {
@@ -31,6 +31,7 @@ export interface PickResult {
 
 interface StaggerState {
   phase: StaggerPhase
+  demo: boolean               // first-run guided demo in flight: scripted 2-gap batch, no clock, misses cost nothing; score runs for real and resets at beginRunFromDemo
   mode: Difficulty            // snapshotted at startRun; drives 'hard' ordered-recall enforcement in pickPiece
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
@@ -49,8 +50,9 @@ interface StaggerState {
   totalPicks: number          // correct + wrong picks
   correctPicks: number        // correct picks (accuracy numerator)
 
-  startRun: (mode?: Difficulty) => void
-  beginReveal: () => void     // countdown → reveal (generates the current batch)
+  startRun: (mode?: Difficulty, opts?: { demo?: boolean }) => void
+  beginRunFromDemo: () => void // demo (any beat) → real run: reset score/stats, fire the countdown
+  beginReveal: () => void     // countdown → reveal (generates the current batch); demo intro → reveal (scripted batch kept)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
   bankSpeedBonus: (amount: number) => void  // fold the deferred leftover-time bonus into the score (drives the time→score payoff)
@@ -90,8 +92,21 @@ function makeBatch(batchIndex: number): { gaps: StaggerGap[]; revealPlan: number
   }
 }
 
+/** The demo's scripted two-gap batch (O then I, board-center) — the exact shape
+ *  pool the real level-1 batch draws from. Fresh copies per run. */
+function demoBatch(): { gaps: StaggerGap[]; revealPlan: number[] } {
+  return {
+    gaps: [
+      { pieceType: 'O', rotation: 0, anchorRow: 3, anchorCol: 4, cells: [[3, 4], [3, 5], [4, 4], [4, 5]], filled: false },
+      { pieceType: 'I', rotation: 0, anchorRow: 7, anchorCol: 4, cells: [[7, 4], [7, 5], [7, 6], [7, 7]], filled: false },
+    ],
+    revealPlan: [0, 1],
+  }
+}
+
 const IDLE = {
   phase: 'idle' as StaggerPhase,
+  demo: false,
   mode: 'easy' as Difficulty,
   batchIndex: 0,
   gaps: [] as StaggerGap[],
@@ -112,11 +127,26 @@ const IDLE = {
 export const useStaggerStore = create<StaggerState>((set, get) => ({
   ...IDLE,
 
-  startRun: (mode = 'easy') => set({ ...IDLE, phase: 'countdown', mode }),
+  startRun: (mode = 'easy', opts) =>
+    set(opts?.demo
+      ? { ...IDLE, phase: 'demoIntro', demo: true, mode, ...demoBatch() }
+      : { ...IDLE, phase: 'countdown', mode }),
 
-  beginReveal: () => set({ phase: 'reveal', ...makeBatch(get().batchIndex) }),
+  // The demo hands off to the real run: score/stats earned in the demo reset to
+  // zero (no life-farming, no leaderboard contamination) and the countdown fires.
+  beginRunFromDemo: () => set({ ...IDLE, phase: 'countdown', mode: get().mode }),
+
+  beginReveal: () => set(get().demo
+    ? { phase: 'reveal' }  // the scripted demo batch is already in place
+    : { phase: 'reveal', ...makeBatch(get().batchIndex) }),
 
   beginSelecting: () => {
+    // Demo recall is timeless: no clock at all (the screen also skips its
+    // expiry/tick/urgency effects while `demo` is set).
+    if (get().demo) {
+      set({ phase: 'selecting', selectStartTime: Date.now(), selectDuration: 0, resumeRemaining: null, paused: false })
+      return
+    }
     const duration = selectDurationForBatch(get().batchIndex)
     const resume = get().resumeRemaining
     // Coming back from a replay: resume the clock where it was paused (backdate
@@ -150,6 +180,9 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       : gaps.find(g => !g.filled && g.pieceType === type)
 
     if (!target) {
+      // Demo miss: consequence-free — no life loss, no stat pollution; the
+      // screen supplies its own gentle correction.
+      if (get().demo) return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder: false }
       // On hard, distinguish "right shape, wrong order" (the shape still sits in an
       // unfilled gap — only the order rule rejected it) from a flat-out wrong piece,
       // so the UI can hint at WHY the pick missed. Consequences are identical.
@@ -175,7 +208,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     // On a clear the leftover-time bonus is NOT folded in here — it's returned and
     // banked separately (via bankSpeedBonus) so the UI can pour it into the score
     // as the timer bar drains: the "time → points" payoff.
-    const speedBonus = cleared
+    const speedBonus = cleared && !get().demo
       ? batchSpeedBonus(Math.max(0, selectStartTime + selectDuration - Date.now()), selectDuration)
       : 0
     // Earn-a-life: every LIFE_EVERY cumulative points awards a life. The deferred

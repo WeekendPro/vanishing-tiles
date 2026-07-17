@@ -74,7 +74,9 @@ export function HomeScreen() {
     // timers — so the context must already be running by then.
     sfx.unlock()
     sfx.uiTap()
-    startStagger(difficulty)
+    // First-run demo: PLAY leads with the guided two-piece round until the
+    // player opts out ("Don't show this again" — global across difficulties).
+    startStagger(difficulty, { demo: !useSettingsStore.getState().settings.hideDemo })
     goStagger()
   }
   const practice = () => { startPractice(); goPractice() }
