@@ -7,14 +7,12 @@
  * frequencies, envelopes, filters) played back by two synth primitives. The
  * defaults below are the shipped palette; the Sound Design screen
  * (`SoundDesignScreen.tsx` + `soundLabStore.ts`) can override any patch live
- * via `setPatch`/`setBedPatch`, which is how the soundscape gets tuned by ear
- * instead of by prose.
+ * via `setPatch`, which is how the soundscape gets tuned by ear instead of by
+ * prose. (`bonusLift` is the first knob-tuned default, promoted 2026-07-17.)
  *
- * Two independent channels, each with its own toggle + volume (settings):
- *  - SFX   — the per-gesture one-shots.
- *  - MUSIC — the ambient BED: a zen meditation hum (slow-beating detuned
- *    drones + filtered ocean-swell noise) that fades in for the length of a
- *    run and fades out on exit. Started/stopped by the game screens.
+ * SFX only for now: the ambient music bed was tried (synth zen hum) and cut —
+ * music returns as a produced audio file when the designer's Logic Pro bed
+ * lands. The SFX channel has a toggle + volume in settings.
  *
  * Everything is SYNTHESIZED on a Web Audio graph at trigger time — there are
  * no audio files, nothing to host, nothing to preload, zero bytes of assets.
@@ -68,23 +66,6 @@ export type SoundLayer = ToneLayer | NoiseLayer
 
 /** A one-shot sound: layers played together (each offset by its `at`). */
 export interface SoundPatch { layers: SoundLayer[] }
-
-/** The ambient bed's voicing — named musical levers instead of raw layers. */
-export interface BedPatch {
-  baseFreq: number    // the hum's root (Hz)
-  beatHz: number      // detune between the paired drones → the slow throb
-  droneLevel: number  // level of EACH of the two beating drones
-  octaveLevel: number // the octave shimmer above the root
-  fifthLevel: number  // the soft fifth for warmth
-  oceanLevel: number  // the noise swell's base level
-  oceanCutoff: number // lowpass center for the ocean noise (Hz)
-  tideRateHz: number  // how fast the cutoff drifts open/closed
-  tideDepth: number   // how far the cutoff drifts (±Hz)
-  swellRateHz: number // how fast the ocean level rises and falls
-  swellDepth: number  // how far the level swings (±gain)
-  fadeInS: number
-  fadeOutS: number
-}
 
 export const ONE_SHOT_IDS = [
   'uiTap', 'count', 'go', 'bloom', 'pickCorrect', 'streakMilestone',
@@ -154,8 +135,13 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
     { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
   ] },
+  // Knob-tuned in the Sound Design lab (designer config, 2026-07-17): a
+  // softened square riser gliding nearly two octaves under a high triangle
+  // sparkle that enters a beat later. Plays as authored — the ~1.3s Lift
+  // animation ends under its 2.5s tail, which is the designed effect.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 260, endFreq: 1040, type: 'sawtooth', dur: 0.98, attack: 0.1, gain: 0.07, lowpass: 1200 },
+    { kind: 'tone', freq: 396, endFreq: 1817, type: 'square', dur: 2.5, attack: 0.1, gain: 0.0963, lowpass: 1756 },
+    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.115, dur: 2.5, attack: 0.00363, gain: 0.0515 },
   ] },
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
@@ -172,22 +158,6 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   ] },
 }
 
-export const DEFAULT_BED: BedPatch = {
-  baseFreq: 110,
-  beatHz: 0.34,
-  droneLevel: 0.4,
-  octaveLevel: 0.12,
-  fifthLevel: 0.09,
-  oceanLevel: 0.16,
-  oceanCutoff: 520,
-  tideRateHz: 0.06,
-  tideDepth: 320,
-  swellRateHz: 0.045,
-  swellDepth: 0.09,
-  fadeInS: 2.5,
-  fadeOutS: 1.2,
-}
-
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
 // ── Engine state ─────────────────────────────────────────────────────────────
@@ -196,22 +166,13 @@ const MASTER_GAIN = 0.5
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
-let sfxBus: GainNode | null = null   // one-shots; gain = sfxVolume
-let musicBus: GainNode | null = null // the bed; gain = musicVolume
+let sfxBus: GainNode | null = null // one-shots; gain = sfxVolume
 
 let sfxOn = true
 let sfxVolume = 1
-let musicOn = true
-let musicVolume = 0.6
 
 // The live (possibly lab-overridden) palette.
 const patches: Record<OneShotId, SoundPatch> = clone(DEFAULT_PATCHES)
-let bedPatch: BedPatch = { ...DEFAULT_BED }
-
-// The ambient bed's live nodes (null when silent) + whether a game screen
-// currently WANTS the bed (survives the music toggle flipping off and on).
-let bed: { out: GainNode; sources: { stop: () => void }[] } | null = null
-let bedWanted = false
 
 let noiseBuffer: AudioBuffer | null = null
 
@@ -231,9 +192,6 @@ function context(): AudioContext | null {
     sfxBus = ctx.createGain()
     sfxBus.gain.value = sfxVolume
     sfxBus.connect(master)
-    musicBus = ctx.createGain()
-    musicBus.gain.value = musicVolume
-    musicBus.connect(master)
   }
   // Autoplay policy: a suspended context resumes silently on the next
   // gesture-driven trigger. Fire-and-forget — failure just means silence.
@@ -241,8 +199,7 @@ function context(): AudioContext | null {
   return ctx
 }
 
-/** One second of cached white noise — raw material for noise layers and the
- *  bed's ocean swells. */
+/** One second of cached white noise — raw material for noise layers. */
 function sharedNoise(ac: AudioContext): AudioBuffer {
   if (!noiseBuffer) {
     noiseBuffer = ac.createBuffer(1, ac.sampleRate, ac.sampleRate)
@@ -311,20 +268,18 @@ function noiseSweep(spec: Omit<NoiseLayer, 'kind'>): void {
 }
 
 /** Play a patch's layers. `freqScale` transposes TONE layers only (noise
- *  keeps its designed band); `at` offsets the whole phrase; `durOverride`
- *  stretches every layer to a caller-driven window (the Lift). */
+ *  keeps its designed band); `at` offsets the whole phrase. */
 function playPatch(
   patch: SoundPatch,
-  opts: { freqScale?: number; at?: number; durOverride?: number } = {},
+  opts: { freqScale?: number; at?: number } = {},
 ): void {
   const fs = opts.freqScale ?? 1
   for (const layer of patch.layers) {
     const at = (layer.at ?? 0) + (opts.at ?? 0)
-    const dur = opts.durOverride ?? layer.dur
     if (layer.kind === 'tone') {
-      tone({ ...layer, at, dur, freq: layer.freq * fs, endFreq: layer.endFreq ? layer.endFreq * fs : undefined })
+      tone({ ...layer, at, freq: layer.freq * fs, endFreq: layer.endFreq ? layer.endFreq * fs : undefined })
     } else {
-      noiseSweep({ ...layer, at, dur })
+      noiseSweep({ ...layer, at })
     }
   }
 }
@@ -347,85 +302,6 @@ function coinScale(streak: number): number {
   return 2 ** ((MAJOR[step % MAJOR.length] + 12 * Math.floor(step / MAJOR.length)) / 12)
 }
 
-// ── The ambient bed ──────────────────────────────────────────────────────────
-// Zen meditation hum, voiced by the live BedPatch: two barely-detuned drones
-// whose interference beats at `beatHz` (the binaural-style throb), a quiet
-// octave + fifth for warmth, and lowpassed noise whose cutoff and level drift
-// on sub-0.1 Hz LFOs — hollow, slow ocean swells.
-
-function startBedNodes(): void {
-  if (bed || !musicOn) return
-  const ac = context()
-  if (!ac || !musicBus) return
-  const t0 = ac.currentTime
-  const p = bedPatch
-
-  const out = ac.createGain()
-  out.gain.setValueAtTime(0.0001, t0)
-  out.gain.linearRampToValueAtTime(1, t0 + p.fadeInS)
-  out.connect(musicBus)
-
-  const sources: { stop: () => void }[] = []
-  const drone = (freq: number, level: number) => {
-    if (level <= 0) return
-    const osc = ac.createOscillator()
-    osc.frequency.setValueAtTime(freq, t0)
-    const g = ac.createGain()
-    g.gain.value = level
-    osc.connect(g)
-    g.connect(out)
-    osc.start(t0)
-    sources.push(osc)
-  }
-  drone(p.baseFreq, p.droneLevel)
-  drone(p.baseFreq + p.beatHz, p.droneLevel)         // …beats against the root
-  drone(p.baseFreq * 2 + p.beatHz, p.octaveLevel)    // octave shimmer, itself beating
-  drone(p.baseFreq * 1.5, p.fifthLevel)              // soft fifth for warmth
-
-  if (p.oceanLevel > 0) {
-    const src = ac.createBufferSource()
-    src.buffer = sharedNoise(ac)
-    src.loop = true
-    const lp = ac.createBiquadFilter()
-    lp.type = 'lowpass'
-    lp.frequency.value = p.oceanCutoff
-    const swell = ac.createGain()
-    swell.gain.value = p.oceanLevel
-    src.connect(lp)
-    lp.connect(swell)
-    swell.connect(out)
-
-    const lfo = (hz: number, depth: number, target: AudioParam) => {
-      if (hz <= 0 || depth <= 0) return
-      const osc = ac.createOscillator()
-      osc.frequency.value = hz
-      const g = ac.createGain()
-      g.gain.value = depth
-      osc.connect(g)
-      g.connect(target)
-      osc.start(t0)
-      sources.push(osc)
-    }
-    lfo(p.tideRateHz, p.tideDepth, lp.frequency)  // the tide: cutoff drifts
-    lfo(p.swellRateHz, p.swellDepth, swell.gain)  // the swell: level breathes
-
-    src.start(t0)
-    sources.push(src)
-  }
-  bed = { out, sources }
-}
-
-function stopBedNodes(): void {
-  if (!bed || !ctx) return
-  const dying = bed
-  bed = null
-  const fadeOut = bedPatch.fadeOutS
-  dying.out.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fadeOut)
-  window.setTimeout(() => {
-    dying.sources.forEach(s => { try { s.stop() } catch { /* already stopped */ } })
-  }, fadeOut * 1000 + 200)
-}
-
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
 export const sfx = {
@@ -437,36 +313,17 @@ export const sfx = {
     sfxVolume = clamp01(v)
     if (ctx && sfxBus) sfxBus.gain.setValueAtTime(sfxVolume, ctx.currentTime)
   },
-  /** Music on/off. Off fades the bed out; back on rejoins a run in progress. */
-  setMusicEnabled(on: boolean): void {
-    musicOn = on
-    if (!on) stopBedNodes()
-    else if (bedWanted) startBedNodes()
-  },
-  setMusicVolume(v: number): void {
-    musicVolume = clamp01(v)
-    if (ctx && musicBus) musicBus.gain.setValueAtTime(musicVolume, ctx.currentTime)
-  },
 
   /** Create/resume the audio context from a USER GESTURE (autoplay policy).
    *  The Home screen's PLAY tap calls this so the run's timer-driven sounds
-   *  (blooms, timeout, the bed) are already unlocked when they fire. */
-  unlock(): void { if (sfxOn || musicOn) context() },
+   *  (blooms, timeout) are already unlocked when they fire. */
+  unlock(): void { if (sfxOn) context() },
 
   // ── Patch access (the Sound Design lab drives these) ───────────────────────
   getPatch(id: OneShotId): SoundPatch { return clone(patches[id]) },
   getDefaultPatch(id: OneShotId): SoundPatch { return clone(DEFAULT_PATCHES[id]) },
   setPatch(id: OneShotId, patch: SoundPatch): void { patches[id] = clone(patch) },
   resetPatch(id: OneShotId): void { patches[id] = clone(DEFAULT_PATCHES[id]) },
-  getBedPatch(): BedPatch { return { ...bedPatch } },
-  getDefaultBed(): BedPatch { return { ...DEFAULT_BED } },
-  /** Re-voices a RUNNING bed live (fade-out/in crossover). */
-  setBedPatch(p: BedPatch): void {
-    bedPatch = { ...p }
-    if (bed) { stopBedNodes(); startBedNodes() }
-  },
-  resetBed(): void { this.setBedPatch({ ...DEFAULT_BED }) },
-  isBedRunning(): boolean { return bed != null },
 
   /** Lab replay of any one-shot, with the gameplay context that shapes it
    *  (streak for the coin's scale climb, reveal step for the bloom's). */
@@ -475,10 +332,6 @@ export const sfx = {
     else if (id === 'bloom') playPatch(patches.bloom, { freqScale: bloomScale(ctxOpts.step ?? 0) })
     else playPatch(patches[id])
   },
-
-  // ── The ambient bed (game screens call these on mount/unmount) ─────────────
-  startBed(): void { bedWanted = true; startBedNodes() },
-  stopBed(): void { bedWanted = false; stopBedNodes() },
 
   // ── Gestures ───────────────────────────────────────────────────────────────
   /** Any small UI tap (PLAY, mode switch) — a barely-there tick. */
@@ -522,11 +375,10 @@ export const sfx = {
    *  sparkle tail: the run's core "you did it" resolution. */
   batchClear(): void { playPatch(patches.batchClear) },
 
-  /** The time → score "Lift" payoff — a gentle filtered riser under the bar
-   *  draining into the score, stretched to the animation window (ms). */
-  bonusLift(ms: number): void {
-    playPatch(patches.bonusLift, { durOverride: Math.max(0.3, (ms / 1000) * 0.75) })
-  },
+  /** The time → score "Lift" payoff — the riser under the bar draining into
+   *  the score. Plays as authored (no stretching to the animation window):
+   *  the patch was tuned by ear in the lab, tail included. */
+  bonusLift(): void { playPatch(patches.bonusLift) },
 
   /** An extra life earned (every 5000 pts) — a warm two-note rise (E5 → A5)
    *  under the heart burst. */
@@ -537,7 +389,6 @@ export const sfx = {
   timeout(): void { playPatch(patches.timeout) },
 
   /** Run over — a slow descending A-minor-flavored farewell (A4 E4 A3),
-   *  long releases; elegiac, not punishing. Matches "Memory Fades" — and
-   *  reads as designed against the bed's hum, which keeps humming under it. */
+   *  long releases; elegiac, not punishing. Matches "Memory Fades". */
   gameOver(): void { playPatch(patches.gameOver) },
 }

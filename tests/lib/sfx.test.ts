@@ -111,7 +111,6 @@ describe('sfx engine', () => {
   it('plays no SFX while the channel is disabled', async () => {
     const sfx = await freshSfx()
     sfx.setEnabled(false)
-    sfx.setMusicEnabled(false)
     sfx.unlock()
     sfx.pickCorrect(3)
     sfx.pickWrong()
@@ -133,20 +132,17 @@ describe('sfx engine', () => {
     })
   })
 
-  it('channel volumes land on the channel buses', async () => {
+  it('SFX volume lands on the bus, clamped to 0..1', async () => {
     const sfx = await freshSfx()
     sfx.unlock()
-    // Bus creation order in context(): master, sfxBus, musicBus.
-    const [, sfxBus, musicBus] = ctx().gains
+    // Bus creation order in context(): master, then sfxBus.
+    const [, sfxBus] = ctx().gains
     sfx.setSfxVolume(0.25)
     expect(sfxBus.gain.value).toBe(0.25)
-    sfx.setMusicVolume(0.8)
-    expect(musicBus.gain.value).toBe(0.8)
-    // Clamped to 0..1.
     sfx.setSfxVolume(7)
     expect(sfxBus.gain.value).toBe(1)
-    sfx.setMusicVolume(-2)
-    expect(musicBus.gain.value).toBe(0)
+    sfx.setSfxVolume(-2)
+    expect(sfxBus.gain.value).toBe(0)
   })
 
   it('pickCorrect pitch climbs with the streak and resets with it', async () => {
@@ -194,39 +190,6 @@ describe('sfx engine', () => {
     expect(deep).toBeLessThanOrEqual(first * 4)
   })
 
-  it('the ambient bed starts drones + looped noise, and stops on stopBed', async () => {
-    vi.useFakeTimers()
-    const sfx = await freshSfx()
-    sfx.startBed()
-    const loops = ctx().bufferSources.filter(s => s.loop)
-    expect(loops).toHaveLength(1)
-    expect(loops[0].started).toBe(true)
-    expect(ctx().oscillators.filter(o => o.started && !o.stopped).length).toBeGreaterThan(0)
-    sfx.stopBed()
-    vi.runAllTimers() // the fade-out grace period before sources stop
-    expect(loops[0].stopped).toBe(true)
-    ctx().oscillators.forEach(o => expect(o.stopped).toBe(true))
-  })
-
-  it('the bed respects the music toggle, and rejoins a run when re-enabled', async () => {
-    const sfx = await freshSfx()
-    sfx.setMusicEnabled(false)
-    sfx.startBed()
-    expect(FakeAudioContext.instances).toHaveLength(0) // nothing built while off
-    sfx.setMusicEnabled(true) // bed was WANTED (run in progress) → starts now
-    expect(ctx().bufferSources.filter(s => s.loop && s.started)).toHaveLength(1)
-  })
-
-  it('music and SFX channels are independent', async () => {
-    const sfx = await freshSfx()
-    sfx.setEnabled(false) // SFX off…
-    sfx.startBed()        // …must not silence the bed
-    expect(ctx().bufferSources.filter(s => s.loop && s.started)).toHaveLength(1)
-    const oscBefore = ctx().oscillators.length
-    sfx.pickCorrect(2) // SFX still gated off
-    expect(ctx().oscillators.length).toBe(oscBefore)
-  })
-
   it('setPatch overrides what a gesture plays; resetPatch restores the default', async () => {
     const sfx = await freshSfx()
     sfx.setPatch('pickWrong', { layers: [{ kind: 'tone', freq: 505, dur: 0.1, gain: 0.1 }] })
@@ -236,6 +199,17 @@ describe('sfx engine', () => {
     sfx.resetPatch('pickWrong')
     sfx.pickWrong()
     expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
+  })
+
+  it('ships the lab-tuned bonusLift default (designer config, 2026-07-17)', async () => {
+    const sfx = await freshSfx()
+    sfx.bonusLift()
+    const [riser, sparkle] = ctx().oscillators
+    expect(riser.type).toBe('square')
+    expect(riser.frequency.values[0]).toBe(396)
+    expect(riser.frequency.values[1]).toBe(1817) // the glide target
+    expect(sparkle.type).toBe('triangle')
+    expect(sparkle.frequency.values[0]).toBe(2251)
   })
 
   it('previewOneShot honors gameplay context (streak transposes the coin)', async () => {
@@ -255,8 +229,7 @@ describe('sfx engine', () => {
       sfx.unlock()
       sfx.pickCorrect(2)
       sfx.go()
-      sfx.startBed()
-      sfx.stopBed()
+      sfx.bonusLift()
       sfx.timeout()
     }).not.toThrow()
   })

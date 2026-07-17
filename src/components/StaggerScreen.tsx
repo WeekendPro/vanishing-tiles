@@ -276,14 +276,6 @@ export function StaggerScreen() {
 
   const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
 
-  // The ambient zen bed hums for as long as the run screen is up (through
-  // game over — the farewell is designed to ring against it) and fades out
-  // when the player leaves.
-  useEffect(() => {
-    sfx.startBed()
-    return () => sfx.stopBed()
-  }, [])
-
   // Once-per-game-over run recording (guard ref prevents double-fire under StrictMode).
   const recordedRef = useRef(false)
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
@@ -565,7 +557,7 @@ export function StaggerScreen() {
         setBarTransition(`width ${LIFT_MS}ms cubic-bezier(0.33,1,0.68,1)`)
         setBarPct(0)
         if (bonus > 0) {
-          sfx.bonusLift(LIFT_MS)
+          sfx.bonusLift()
           spawnLiftFlyer(bonus, barRect)
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(bonus)

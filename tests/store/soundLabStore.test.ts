@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSoundLabStore, SOUNDLAB_STORAGE_KEY } from '../../src/store/soundLabStore'
-import { sfx, DEFAULT_PATCHES, DEFAULT_BED, type SoundPatch } from '../../src/lib/sfx'
+import { sfx, DEFAULT_PATCHES, type SoundPatch } from '../../src/lib/sfx'
 
 // jsdom has no AudioContext, so the engine's playback side no-ops — but its
 // patch registry is plain data and fully testable. The lab store's contract:
@@ -11,7 +11,7 @@ const TWEAK: SoundPatch = { layers: [{ kind: 'tone', freq: 777, dur: 0.3, gain: 
 
 beforeEach(() => {
   localStorage.clear()
-  useSoundLabStore.setState({ overrides: {}, bedOverride: null, presets: [] })
+  useSoundLabStore.setState({ overrides: {}, presets: [] })
   useSoundLabStore.getState().resetAll()
 })
 
@@ -28,14 +28,6 @@ describe('soundLabStore', () => {
     useSoundLabStore.getState().resetSound('batchClear')
     expect(sfx.getPatch('batchClear')).toEqual(DEFAULT_PATCHES.batchClear)
     expect(useSoundLabStore.getState().overrides.batchClear).toBeUndefined()
-  })
-
-  it('bed override applies and resets the same way', () => {
-    const zen = { ...DEFAULT_BED, baseFreq: 82, beatHz: 0.5 }
-    useSoundLabStore.getState().setBed(zen)
-    expect(sfx.getBedPatch()).toEqual(zen)
-    useSoundLabStore.getState().resetSound('bed')
-    expect(sfx.getBedPatch()).toEqual(DEFAULT_BED)
   })
 
   it('savePreset snapshots current knobs (default when untweaked) with a label', () => {

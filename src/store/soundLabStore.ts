@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   sfx, ONE_SHOT_IDS,
-  type OneShotId, type SoundPatch, type BedPatch,
+  type OneShotId, type SoundPatch,
 } from '../lib/sfx'
 
 /**
@@ -16,25 +16,26 @@ import {
  *    softer shing"). The design conversation currency: the designer saves
  *    and labels candidates here, then EXPORTS the whole bank as JSON to
  *    paste into a chat/issue so the tuned values can be promoted into
- *    `DEFAULT_PATCHES` in code.
+ *    `DEFAULT_PATCHES` in code (bonusLift was the first).
+ *
+ * (The ambient bed's overrides/presets were cut with the synth bed; stale
+ * 'bed' entries in an existing localStorage bank are dropped at load.)
  */
 
 export const SOUNDLAB_STORAGE_KEY = 'vt:soundlab:v1'
 
-/** Everything tweakable: the one-shot gestures plus the ambient bed. */
-export type LabSoundId = OneShotId | 'bed'
+export type LabSoundId = OneShotId
 
 export interface SoundPreset {
   id: string
   label: string
   soundId: LabSoundId
-  data: SoundPatch | BedPatch
+  data: SoundPatch
   savedAt: string // ISO — so an exported bank reads chronologically
 }
 
 interface Persisted {
   overrides: Partial<Record<OneShotId, SoundPatch>>
-  bedOverride: BedPatch | null
   presets: SoundPreset[]
 }
 
@@ -42,9 +43,13 @@ function load(): Persisted {
   try {
     const raw = localStorage.getItem(SOUNDLAB_STORAGE_KEY)
     const parsed = raw ? (JSON.parse(raw) as Partial<Persisted>) : {}
-    return { overrides: parsed.overrides ?? {}, bedOverride: parsed.bedOverride ?? null, presets: parsed.presets ?? [] }
+    const known = new Set<string>(ONE_SHOT_IDS)
+    return {
+      overrides: parsed.overrides ?? {},
+      presets: (parsed.presets ?? []).filter(p => known.has(p.soundId)),
+    }
   } catch {
-    return { overrides: {}, bedOverride: null, presets: [] }
+    return { overrides: {}, presets: [] }
   }
 }
 
@@ -61,13 +66,11 @@ const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).sli
 interface SoundLabStore extends Persisted {
   /** Commit a one-shot's knobs: live in the engine + persisted. */
   setPatch: (id: OneShotId, patch: SoundPatch) => void
-  /** Commit the bed's knobs: live (re-voices a running bed) + persisted. */
-  setBed: (patch: BedPatch) => void
   /** Drop a sound's override — engine back to the shipped default. */
-  resetSound: (id: LabSoundId) => void
+  resetSound: (id: OneShotId) => void
   resetAll: () => void
   /** Snapshot the sound's CURRENT knobs under a label. */
-  savePreset: (soundId: LabSoundId, label: string) => void
+  savePreset: (soundId: OneShotId, label: string) => void
   /** Load a preset back into the active knobs (and the engine). */
   applyPreset: (presetId: string) => void
   deletePreset: (presetId: string) => void
@@ -81,33 +84,18 @@ export const useSoundLabStore = create<SoundLabStore>((set, get) => ({
   setPatch: (id, patch) => {
     sfx.setPatch(id, patch)
     set((s) => {
-      const next: Persisted = { overrides: { ...s.overrides, [id]: patch }, bedOverride: s.bedOverride, presets: s.presets }
-      save(next)
-      return next
-    })
-  },
-
-  setBed: (patch) => {
-    sfx.setBedPatch(patch)
-    set((s) => {
-      const next: Persisted = { overrides: s.overrides, bedOverride: patch, presets: s.presets }
+      const next: Persisted = { overrides: { ...s.overrides, [id]: patch }, presets: s.presets }
       save(next)
       return next
     })
   },
 
   resetSound: (id) => {
+    sfx.resetPatch(id)
     set((s) => {
-      let next: Persisted
-      if (id === 'bed') {
-        sfx.resetBed()
-        next = { overrides: s.overrides, bedOverride: null, presets: s.presets }
-      } else {
-        sfx.resetPatch(id)
-        const overrides = { ...s.overrides }
-        delete overrides[id]
-        next = { overrides, bedOverride: s.bedOverride, presets: s.presets }
-      }
+      const overrides = { ...s.overrides }
+      delete overrides[id]
+      const next: Persisted = { overrides, presets: s.presets }
       save(next)
       return next
     })
@@ -115,9 +103,8 @@ export const useSoundLabStore = create<SoundLabStore>((set, get) => ({
 
   resetAll: () => {
     ONE_SHOT_IDS.forEach(id => sfx.resetPatch(id))
-    sfx.resetBed()
     set((s) => {
-      const next: Persisted = { overrides: {}, bedOverride: null, presets: s.presets }
+      const next: Persisted = { overrides: {}, presets: s.presets }
       save(next)
       return next
     })
@@ -127,12 +114,10 @@ export const useSoundLabStore = create<SoundLabStore>((set, get) => ({
     const trimmed = label.trim()
     if (!trimmed) return
     const s = get()
-    const data: SoundPatch | BedPatch = soundId === 'bed'
-      ? (s.bedOverride ?? sfx.getBedPatch())
-      : (s.overrides[soundId] ?? sfx.getPatch(soundId))
+    const data: SoundPatch = s.overrides[soundId] ?? sfx.getPatch(soundId)
     const preset: SoundPreset = { id: newId(), label: trimmed, soundId, data: JSON.parse(JSON.stringify(data)), savedAt: new Date().toISOString() }
     set((state) => {
-      const next: Persisted = { overrides: state.overrides, bedOverride: state.bedOverride, presets: [...state.presets, preset] }
+      const next: Persisted = { overrides: state.overrides, presets: [...state.presets, preset] }
       save(next)
       return next
     })
@@ -141,21 +126,20 @@ export const useSoundLabStore = create<SoundLabStore>((set, get) => ({
   applyPreset: (presetId) => {
     const preset = get().presets.find(p => p.id === presetId)
     if (!preset) return
-    if (preset.soundId === 'bed') get().setBed(preset.data as BedPatch)
-    else get().setPatch(preset.soundId, preset.data as SoundPatch)
+    get().setPatch(preset.soundId, preset.data)
   },
 
   deletePreset: (presetId) => {
     set((s) => {
-      const next: Persisted = { overrides: s.overrides, bedOverride: s.bedOverride, presets: s.presets.filter(p => p.id !== presetId) }
+      const next: Persisted = { overrides: s.overrides, presets: s.presets.filter(p => p.id !== presetId) }
       save(next)
       return next
     })
   },
 
   exportJson: () => {
-    const { overrides, bedOverride, presets } = get()
-    return JSON.stringify({ overrides, bedOverride, presets }, null, 2)
+    const { overrides, presets } = get()
+    return JSON.stringify({ overrides, presets }, null, 2)
   },
 }))
 
@@ -168,5 +152,4 @@ export const useSoundLabStore = create<SoundLabStore>((set, get) => ({
     const patch = s.overrides[id]
     if (patch) sfx.setPatch(id, patch)
   }
-  if (s.bedOverride) sfx.setBedPatch(s.bedOverride)
 }

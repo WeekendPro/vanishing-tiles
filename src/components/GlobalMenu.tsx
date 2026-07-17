@@ -109,18 +109,11 @@ export function GlobalMenu() {
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
   })))
-  const {
-    soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume,
-    musicEnabled, setMusicEnabled, musicVolume, setMusicVolume,
-  } = useSettingsStore(useShallow(s => ({
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
     soundEnabled: s.settings.soundEnabled,
     setSoundEnabled: s.setSoundEnabled,
     sfxVolume: s.settings.sfxVolume,
     setSfxVolume: s.setSfxVolume,
-    musicEnabled: s.settings.musicEnabled,
-    setMusicEnabled: s.setMusicEnabled,
-    musicVolume: s.settings.musicVolume,
-    setMusicVolume: s.setMusicVolume,
   })))
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
@@ -217,11 +210,10 @@ export function GlobalMenu() {
               only RANKING needs a named account). */}
           <Action label="Leaderboard" onClick={openLeaderboard} />
 
-          {/* Audio channels — SFX and the ambient music bed are independent:
-              each gets its own toggle + volume slider. Re-enabling SFX (or
-              releasing its slider) plays the tiny UI tick as instant
-              confirmation — those taps also satisfy the browser's
-              audio-unlock gesture. */}
+          {/* Sound FX: toggle + volume. Re-enabling (or releasing the slider)
+              plays the tiny UI tick as instant confirmation — those taps also
+              satisfy the browser's audio-unlock gesture. (Music left with the
+              synth bed; its channel returns with the produced audio bed.) */}
           <ChannelControl
             label="Sound FX"
             enabled={soundEnabled}
@@ -233,16 +225,6 @@ export function GlobalMenu() {
             }}
             onVolume={setSfxVolume}
             onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
-          />
-          <ChannelControl
-            label="Music"
-            enabled={musicEnabled}
-            volume={musicVolume}
-            onToggle={() => {
-              setMusicEnabled(!musicEnabled)
-              if (!musicEnabled) sfx.unlock()
-            }}
-            onVolume={setMusicVolume}
           />
 
           {/* The calibration lab: every game sound as knobs + replay + saved

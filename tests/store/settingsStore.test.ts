@@ -4,7 +4,7 @@ import { sfx } from '../../src/lib/sfx'
 
 beforeEach(() => {
   localStorage.clear()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, musicEnabled: true, musicVolume: 0.6 } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
   sfx.setEnabled(true)
 })
 
@@ -53,24 +53,11 @@ describe('settingsStore', () => {
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!).soundEnabled).toBe(true)
   })
 
-  it('audio channel defaults: SFX full, music on at 0.6', () => {
-    const s = useSettingsStore.getState().settings
-    expect(s.sfxVolume).toBe(1)
-    expect(s.musicEnabled).toBe(true)
-    expect(s.musicVolume).toBe(0.6)
-  })
-
-  it('volume and music setters persist to localStorage', () => {
+  it('SFX volume defaults to full and persists via its setter', () => {
+    expect(useSettingsStore.getState().settings.sfxVolume).toBe(1)
     useSettingsStore.getState().setSfxVolume(0.4)
-    useSettingsStore.getState().setMusicEnabled(false)
-    useSettingsStore.getState().setMusicVolume(0.9)
-    const s = useSettingsStore.getState().settings
-    expect(s.sfxVolume).toBe(0.4)
-    expect(s.musicEnabled).toBe(false)
-    expect(s.musicVolume).toBe(0.9)
+    expect(useSettingsStore.getState().settings.sfxVolume).toBe(0.4)
     const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!)
     expect(stored.sfxVolume).toBe(0.4)
-    expect(stored.musicEnabled).toBe(false)
-    expect(stored.musicVolume).toBe(0.9)
   })
 })

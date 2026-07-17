@@ -37,21 +37,16 @@ export interface UserSettings {
   mapStyle: MapStyle
   /** Selected Stagger reveal difficulty. Defaults to the gentlest (easy). */
   difficulty: Difficulty
-  /** Sound-effects channel toggle (the per-gesture one-shots, `src/lib/sfx.ts`). */
+  /** Sound-effects toggle (the per-gesture one-shots, `src/lib/sfx.ts`).
+   *  (Music was cut with the synth bed — a produced audio bed returns later,
+   *  and its channel settings come back with it.) */
   soundEnabled: boolean
-  /** Sound-effects channel volume, 0–1. */
+  /** Sound-effects volume, 0–1. */
   sfxVolume: number
-  /** Music channel toggle (the ambient zen bed that hums under a run). */
-  musicEnabled: boolean
-  /** Music channel volume, 0–1. */
-  musicVolume: number
 }
 
 function emptySettings(): UserSettings {
-  return {
-    hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy',
-    soundEnabled: true, sfxVolume: 1, musicEnabled: true, musicVolume: 0.6,
-  }
+  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 }
 }
 
 function load(): UserSettings {
@@ -79,8 +74,6 @@ interface SettingsStore {
   setDifficulty: (difficulty: Difficulty) => void
   setSoundEnabled: (on: boolean) => void
   setSfxVolume: (v: number) => void
-  setMusicEnabled: (on: boolean) => void
-  setMusicVolume: (v: number) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -132,24 +125,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       return { settings: next }
     })
   },
-
-  setMusicEnabled: (on) => {
-    sfx.setMusicEnabled(on)
-    set((state) => {
-      const next: UserSettings = { ...state.settings, musicEnabled: on }
-      save(next)
-      return { settings: next }
-    })
-  },
-
-  setMusicVolume: (v) => {
-    sfx.setMusicVolume(v)
-    set((state) => {
-      const next: UserSettings = { ...state.settings, musicVolume: v }
-      save(next)
-      return { settings: next }
-    })
-  },
 }))
 
 // Sync the engine's channel state with the persisted settings at boot (the
@@ -158,6 +133,4 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   const s = useSettingsStore.getState().settings
   sfx.setEnabled(s.soundEnabled)
   sfx.setSfxVolume(s.sfxVolume)
-  sfx.setMusicEnabled(s.musicEnabled)
-  sfx.setMusicVolume(s.musicVolume)
 }

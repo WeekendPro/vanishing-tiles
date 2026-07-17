@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/shallow'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
@@ -6,7 +6,7 @@ import { useSoundLabStore, type LabSoundId } from '../store/soundLabStore'
 import {
   sfx, ONE_SHOT_IDS, SOUND_LABELS,
   type OneShotId, type SoundPatch, type SoundLayer, type ToneLayer, type NoiseLayer,
-  type BedPatch, type OscType,
+  type OscType,
 } from '../lib/sfx'
 import { ChannelControl } from './GlobalMenu'
 import { ScanlineOverlay } from './ui'
@@ -15,8 +15,9 @@ import { ScanlineOverlay } from './ui'
  * SOUND DESIGN — the calibration lab (menu → "Sound Design").
  *
  * Every game sound is a PATCH of tone/noise layers; this screen exposes every
- * layer parameter as a knob, replays the sound on demand (with gameplay
- * context — streak / reveal step — where that shapes the sound), and lets the
+ * layer parameter as a knob, replays the sound on demand — once (▶) or on a
+ * LOOP (⟳, hands-free auditioning while dragging knobs) — with gameplay
+ * context (streak / reveal step) where that shapes the sound, and lets the
  * designer save labeled presets per sound. Knob commits apply LIVE to the
  * real game (via soundLabStore → sfx), so tune → play a run → tune again.
  * The Export card dumps the whole bank as JSON to paste into a design
@@ -198,10 +199,35 @@ function SoundCard({ id }: { id: OneShotId }) {
   })))
   const patch: SoundPatch = override ?? sfx.getDefaultPatch(id)
   const [open, setOpen] = useState(false)
+  const [looping, setLooping] = useState(false)
   const meta = PREVIEW_CTX[id]
   const [ctxVal, setCtxVal] = useState(meta?.def ?? 0)
 
   const play = () => { sfx.unlock(); sfx.previewOneShot(id, meta?.toCtx(ctxVal) ?? {}) }
+
+  // Loop mode: hands stay on the knobs, the sound replays itself. Each cycle
+  // reads the LATEST patch + preview context through refs, and paces itself
+  // to the sound's current full length (longest layer incl. onset) + a beat
+  // of air — so stretching a sound never makes the loop clip it.
+  const patchRef = useRef(patch)
+  patchRef.current = patch
+  const ctxRef = useRef(ctxVal)
+  ctxRef.current = ctxVal
+  useEffect(() => {
+    if (!looping) return
+    let timer: number
+    const cycle = () => {
+      sfx.previewOneShot(id, meta?.toCtx(ctxRef.current) ?? {})
+      const len = Math.max(0.25, ...patchRef.current.layers.map(l => (l.at ?? 0) + l.dur))
+      timer = window.setTimeout(cycle, (len + 0.4) * 1000)
+    }
+    sfx.unlock()
+    cycle()
+    return () => window.clearTimeout(timer)
+    // meta is a per-id constant lookup, safe to omit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [looping, id])
+
   const setLayer = (i: number, layer: SoundLayer) =>
     setPatch(id, { layers: patch.layers.map((l, j) => (j === i ? layer : l)) })
   const removeLayer = (i: number) =>
@@ -221,6 +247,17 @@ function SoundCard({ id }: { id: OneShotId }) {
           className="w-9 h-9 grid place-items-center rounded-md border border-vt-cyan/40 text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan transition"
         >
           ▶
+        </button>
+        <button
+          onClick={() => setLooping(l => !l)}
+          aria-label={`Loop ${SOUND_LABELS[id]}`}
+          aria-pressed={looping}
+          className={`w-9 h-9 grid place-items-center rounded-md border transition
+            ${looping
+              ? 'border-vt-lime text-vt-lime bg-vt-lime/10 shadow-vt-lime'
+              : 'border-white/10 text-vt-dim hover:text-vt-cyan hover:border-vt-cyan/40'}`}
+        >
+          ⟳
         </button>
         <button
           onClick={() => setOpen(o => !o)}
@@ -284,88 +321,6 @@ function SoundCard({ id }: { id: OneShotId }) {
   )
 }
 
-// ── Ambient bed card ─────────────────────────────────────────────────────────
-
-const BED_KNOBS: { key: keyof BedPatch; label: string; min: number; max: number; log?: boolean }[] = [
-  { key: 'baseFreq', label: 'Root pitch (Hz)', min: 40, max: 330, log: true },
-  { key: 'beatHz', label: 'Throb rate (Hz)', min: 0, max: 2 },
-  { key: 'droneLevel', label: 'Hum level', min: 0, max: 1 },
-  { key: 'octaveLevel', label: 'Octave shimmer', min: 0, max: 1 },
-  { key: 'fifthLevel', label: 'Fifth warmth', min: 0, max: 1 },
-  { key: 'oceanLevel', label: 'Ocean level', min: 0, max: 0.6 },
-  { key: 'oceanCutoff', label: 'Ocean depth (Hz)', min: 100, max: 2400, log: true },
-  { key: 'tideRateHz', label: 'Tide rate (Hz)', min: 0, max: 0.5 },
-  { key: 'tideDepth', label: 'Tide reach (Hz)', min: 0, max: 900 },
-  { key: 'swellRateHz', label: 'Swell rate (Hz)', min: 0, max: 0.5 },
-  { key: 'swellDepth', label: 'Swell reach', min: 0, max: 0.3 },
-  { key: 'fadeInS', label: 'Fade in (s)', min: 0, max: 6 },
-  { key: 'fadeOutS', label: 'Fade out (s)', min: 0, max: 4 },
-]
-
-function BedCard() {
-  const { bedOverride, setBed, resetSound } = useSoundLabStore(useShallow(s => ({
-    bedOverride: s.bedOverride, setBed: s.setBed, resetSound: s.resetSound,
-  })))
-  // Draft knobs move freely while dragging; commit (pointer-up) re-voices the
-  // running bed — restarting the drone graph per drag-tick would stutter.
-  const [draft, setDraft] = useState<BedPatch | null>(null)
-  const [playing, setPlaying] = useState(false)
-  const current: BedPatch = draft ?? bedOverride ?? sfx.getDefaultBed()
-
-  const toggle = () => {
-    sfx.unlock()
-    if (playing) { sfx.stopBed(); setPlaying(false) }
-    else { sfx.setBedPatch(current); sfx.startBed(); setPlaying(true) }
-  }
-  const commit = () => { if (draft) { setBed(draft); setDraft(null) } }
-
-  return (
-    <section className="rounded-xl bg-vt-panel border border-vt-magenta/20 p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="flex-1 min-w-0">
-          <span className="font-silk text-[11px] tracking-[0.12em] uppercase text-vt-text">Ambient bed (music)</span>
-          {bedOverride && <span className="ml-2 align-middle text-[9px] font-grotesk uppercase tracking-[0.1em] text-vt-amber">tweaked</span>}
-        </div>
-        <button
-          onClick={toggle}
-          className={`px-3 h-9 rounded-md border font-grotesk text-[10px] uppercase tracking-[0.08em] transition
-            ${playing
-              ? 'border-vt-magenta text-vt-magenta hover:bg-vt-magenta/10'
-              : 'border-vt-cyan/40 text-vt-cyan hover:bg-vt-cyan/10'}`}
-        >
-          {playing ? '■ Stop' : '▶ Start'}
-        </button>
-      </div>
-      <p className="font-grotesk text-[10px] text-vt-dim mb-3">
-        Knobs apply on release — the bed re-voices live while it plays.
-      </p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-        {BED_KNOBS.map(k => (
-          <Knob
-            key={k.key}
-            label={k.label}
-            value={current[k.key]}
-            min={k.min}
-            max={k.max}
-            log={k.log}
-            onChange={v => setDraft({ ...current, [k.key]: v })}
-            onCommit={commit}
-          />
-        ))}
-      </div>
-      {bedOverride && (
-        <button
-          onClick={() => { setDraft(null); resetSound('bed') }}
-          className="mt-3 w-full py-1.5 rounded border border-vt-amber/40 text-vt-amber hover:bg-vt-amber/10 font-grotesk text-[10px] uppercase tracking-[0.08em]"
-        >
-          Reset to default
-        </button>
-      )}
-      <PresetRow soundId="bed" />
-    </section>
-  )
-}
-
 // ── Export card ──────────────────────────────────────────────────────────────
 
 function ExportCard() {
@@ -413,18 +368,11 @@ function ExportCard() {
 
 export function SoundDesignScreen() {
   const goHome = useNavStore(s => s.goHome)
-  const {
-    soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume,
-    musicEnabled, setMusicEnabled, musicVolume, setMusicVolume,
-  } = useSettingsStore(useShallow(s => ({
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
     soundEnabled: s.settings.soundEnabled,
     setSoundEnabled: s.setSoundEnabled,
     sfxVolume: s.settings.sfxVolume,
     setSfxVolume: s.setSfxVolume,
-    musicEnabled: s.settings.musicEnabled,
-    setMusicEnabled: s.setMusicEnabled,
-    musicVolume: s.settings.musicVolume,
-    setMusicVolume: s.setMusicVolume,
   })))
   const resetAll = useSoundLabStore(s => s.resetAll)
 
@@ -437,7 +385,7 @@ export function SoundDesignScreen() {
       <div className="mx-auto w-full max-w-5xl flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => { sfx.stopBed(); goHome() }}
+            onClick={goHome}
             className="font-grotesk text-sm text-vt-magenta hover:text-glow-vt-magenta transition-transform active:translate-y-px"
           >
             ← Home
@@ -451,10 +399,10 @@ export function SoundDesignScreen() {
         </div>
         <h1 className="font-silk text-base uppercase tracking-[0.15em] text-vt-cyan text-glow-vt-cyan">Sound Design</h1>
         <p className="font-grotesk text-[11px] text-vt-dim -mt-1.5 mb-1">
-          Tweak · ▶ replay · save labeled versions. Changes apply to the real game immediately.
+          Tweak · ▶ replay (⟳ loops it) · save labeled versions. Changes apply to the real game immediately.
         </p>
 
-        {/* The same two channels as the menu — the lab's master section. */}
+        {/* The master channel — same control as the menu. */}
         <section className="rounded-xl bg-vt-panel border border-white/5 px-3 py-1">
           <ChannelControl
             label="Sound FX"
@@ -468,19 +416,8 @@ export function SoundDesignScreen() {
             onVolume={setSfxVolume}
             onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
           />
-          <ChannelControl
-            label="Music"
-            enabled={musicEnabled}
-            volume={musicVolume}
-            onToggle={() => {
-              setMusicEnabled(!musicEnabled)
-              if (!musicEnabled) sfx.unlock()
-            }}
-            onVolume={setMusicVolume}
-          />
         </section>
 
-        <BedCard />
         {ONE_SHOT_IDS.map(id => <SoundCard key={id} id={id} />)}
         <ExportCard />
       </div>

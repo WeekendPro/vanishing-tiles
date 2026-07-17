@@ -39,19 +39,16 @@ few lines of reviewable code. If a future sound genuinely needs production
 polish (e.g. a licensed music bed), path 1 slots in beside the synth palette
 without changing the gesture API.
 
-## Two channels
+## Channels
 
-- **SFX** — the per-gesture one-shots below. Toggle + volume (`sfxVolume`).
-- **Music** — the **ambient bed**: a zen meditation hum that fades in for the
-  length of a run (Stagger + Training, through game over) and fades out on
-  exit. Synthesized like everything else: two barely-detuned A2 drones whose
-  interference beats at ~0.34 Hz (the binaural-style throb), a soft octave +
-  fifth, and lowpassed noise whose cutoff/level drift on sub-0.1 Hz LFOs —
-  hollow ocean swells. Toggle + volume (`musicVolume`, default 0.6).
-
-Each channel has an independent on/off and volume slider in the global menu
-(`ChannelControl` rows). Screens request the bed with `sfx.startBed()` /
-`sfx.stopBed()`; the music toggle can silence and re-join a run in progress.
+- **SFX** — the per-gesture one-shots below. Toggle + volume (`sfxVolume`)
+  in the global menu and atop the Sound Design lab.
+- **Music** — CUT (2026-07-17). A synthesized "zen bed" (detuned beating
+  drones + ocean-swell noise) shipped briefly and didn't land in playtests;
+  it was removed rather than iterated. Music returns as a **produced audio
+  file** (the designer scores it in Logic Pro; playback will be Web Audio
+  `decodeAudioData` → gapless loop on a music bus, so channel controls come
+  back with it).
 
 ## The musical system
 
@@ -84,7 +81,7 @@ Two load-bearing pitch rules (not just polish):
 | Correct recall | `pickPiece` ok (also Training) | chiptune coin blip (square base + perfect fourth), climbing the A major scale one degree per streak (cap +2 octaves), root reset on a break; every 5th streak step adds a six-note 1-Up-style rising run |
 | Miss / wrong pick | `pickPiece` miss (also Training) | saw glide 150→95 Hz + 82 Hz thud, under the red flash + shake |
 | Batch CLEAR! | batch cleared | rising A-major arpeggio (A5–C#6–E6) + sparkle tail |
-| Speed-bonus Lift | lift payoff (bonus > 0) | filtered saw riser sized to the 1.3 s drain window |
+| Speed-bonus Lift | lift payoff (bonus > 0) | **lab-tuned by the designer (2026-07-17, first knob-tuned default):** softened square riser 396→1817 Hz over 2.5 s under a high triangle sparkle (2251 Hz, +115 ms); plays as authored — the tail deliberately outlasts the 1.3 s drain animation |
 | Extra life earned | life delta > 0 while selecting | warm two-note rise E5→A5 under the heart burst |
 | Select clock timeout | expiry before `timeoutBatch` | falling "womp" 330→110 Hz — life lost, batch replays |
 | Game over | once-per-run guard | slow descending farewell A4–E4–A3; elegiac ("Memory Fades"), not punishing |
@@ -116,11 +113,11 @@ synth primitives — and the lab exposes every parameter:
 
 - per-layer knobs (pitch, length, loudness, attack, onset delay, pitch glide,
   lowpass; noise sweep from/to, focus/Q), wave-type picker, add/remove layers;
-- ▶ replay per sound, with gameplay-context sliders where pitch depends on
-  play (preview streak for the coin, preview reveal # for the bloom);
-- the bed as named voicing knobs (root pitch, throb rate, hum/octave/fifth
-  levels, ocean level/depth, tide + swell rate/reach, fades) with live
-  re-voicing while it plays;
+- ▶ replay per sound plus a ⟳ **loop toggle** (the sound re-fires itself,
+  paced to its current length, reading the live knob values each cycle —
+  hands-free auditioning while dragging), with gameplay-context sliders where
+  pitch depends on play (preview streak for the coin, preview reveal # for
+  the bloom);
 - **labeled presets per sound** + active overrides, persisted in localStorage
   (`vt:soundlab:v1`, `soundLabStore.ts`) and applied into the engine at boot —
   the real game plays the tweaked palette immediately;
