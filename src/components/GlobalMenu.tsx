@@ -50,8 +50,9 @@ function Avatar({ user }: { user: MenuUser }) {
 }
 
 /** One audio channel's row: a toggle (styled like the menu's Actions) plus a
- *  volume slider that dims/disables while the channel is off. */
-function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
+ *  volume slider that dims/disables while the channel is off. Shared with the
+ *  Sound Design lab, which shows the same two channels above its knobs. */
+export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
   label: string
   enabled: boolean
   volume: number
@@ -97,9 +98,10 @@ function Action({ label, onClick, tone = 'default' }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goHome, goLeaderboard, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goHome, goLeaderboard, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
     goHome: s.goHome,
     goLeaderboard: s.goLeaderboard,
+    goSoundDesign: s.goSoundDesign,
     reset: s.reset,
   })))
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
@@ -158,6 +160,7 @@ export function GlobalMenu() {
   // Leaving a paused Journey/Practice round for the leaderboard is a quit —
   // same teardown as quitToHome, different destination.
   const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
+  const openSoundDesign = () => { setOpen(false); if (inGame) resetGame(); goSoundDesign() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
 
   return (
@@ -241,6 +244,11 @@ export function GlobalMenu() {
             }}
             onVolume={setMusicVolume}
           />
+
+          {/* The calibration lab: every game sound as knobs + replay + saved
+              presets. Deliberately visible pre-launch — tuning on the live
+              build IS the current workflow. */}
+          <Action label="Sound Design" onClick={openSoundDesign} />
 
           {/* A full Settings screen is deliberately absent — the lone sound
               toggle above rides inline until there's more to expose. Training left

@@ -11,6 +11,7 @@ import { GameShell } from './components/GameShell'
 import { StaggerScreen } from './components/StaggerScreen'
 import { TrainingScreen } from './components/TrainingScreen'
 import { LeaderboardScreen } from './components/LeaderboardScreen'
+import { SoundDesignScreen } from './components/SoundDesignScreen'
 import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
 import { GlobalMenu } from './components/GlobalMenu'
 
@@ -43,6 +44,7 @@ export default function App() {
       case 'stagger': return <StaggerScreen />
       case 'training': return <TrainingScreen />
       case 'leaderboard': return <LeaderboardScreen />
+      case 'soundDesign': return <SoundDesignScreen />
       case 'playing':
       case 'practice':
         return <GameShell />

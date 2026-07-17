@@ -227,6 +227,26 @@ describe('sfx engine', () => {
     expect(ctx().oscillators.length).toBe(oscBefore)
   })
 
+  it('setPatch overrides what a gesture plays; resetPatch restores the default', async () => {
+    const sfx = await freshSfx()
+    sfx.setPatch('pickWrong', { layers: [{ kind: 'tone', freq: 505, dur: 0.1, gain: 0.1 }] })
+    sfx.pickWrong()
+    expect(ctx().oscillators).toHaveLength(1)
+    expect(ctx().oscillators[0].frequency.values[0]).toBe(505)
+    sfx.resetPatch('pickWrong')
+    sfx.pickWrong()
+    expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
+  })
+
+  it('previewOneShot honors gameplay context (streak transposes the coin)', async () => {
+    const sfx = await freshSfx()
+    sfx.previewOneShot('pickCorrect', { streak: 1 })
+    const base = ctx().oscillators[0].frequency.values[0]
+    const before = ctx().oscillators.length
+    sfx.previewOneShot('pickCorrect', { streak: 8 })
+    expect(ctx().oscillators[before].frequency.values[0]).toBeGreaterThan(base)
+  })
+
   it('no-ops safely where Web Audio does not exist (jsdom default)', async () => {
     vi.resetModules()
     delete (window as unknown as { AudioContext?: unknown }).AudioContext

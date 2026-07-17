@@ -107,6 +107,30 @@ board taps, and the reveal→recall handoff (the amber bar carries it).
   contract — lazy context, mute gate, streak climb + cap, bloom ascent + cap,
   jsdom no-op safety.
 
+## The Sound Design lab (v3)
+
+Describing timbre in prose is lossy, so the palette is tuned with knobs
+instead: menu → **Sound Design** (`SoundDesignScreen.tsx`). Every sound above
+is a **patch** — plain data (`SoundPatch`: tone/noise layers) played by two
+synth primitives — and the lab exposes every parameter:
+
+- per-layer knobs (pitch, length, loudness, attack, onset delay, pitch glide,
+  lowpass; noise sweep from/to, focus/Q), wave-type picker, add/remove layers;
+- ▶ replay per sound, with gameplay-context sliders where pitch depends on
+  play (preview streak for the coin, preview reveal # for the bloom);
+- the bed as named voicing knobs (root pitch, throb rate, hum/octave/fifth
+  levels, ocean level/depth, tide + swell rate/reach, fades) with live
+  re-voicing while it plays;
+- **labeled presets per sound** + active overrides, persisted in localStorage
+  (`vt:soundlab:v1`, `soundLabStore.ts`) and applied into the engine at boot —
+  the real game plays the tweaked palette immediately;
+- **Copy JSON export**: localStorage is per-browser, so the designer pastes
+  the exported bank into the design conversation and the winning values get
+  promoted into `DEFAULT_PATCHES` / `DEFAULT_BED` in code.
+
+Shipped visible (no admin gate) deliberately: pre-launch, tuning on the live
+build is the workflow.
+
 ## Deferred / next
 
 - **Haptics** (RN port): map the same semantic gestures to `expo-haptics`
