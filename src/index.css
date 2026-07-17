@@ -262,17 +262,23 @@
   .streak-pop { animation: none; }
 }
 
-/* Recall handoff: the tray pieces fade into their (already-present) sockets
-   instead of snapping in the instant the memorize phase ends — one simultaneous
-   opacity ease across the whole tray, no stagger. */
+/* Recall handoffs: the tray pieces fade into their (already-present) sockets
+   when recall begins, and fade back out when the next memorize begins — one
+   simultaneous opacity ease across the whole tray each way, no stagger. */
 @keyframes vtPieceIn {
   0%   { opacity: 0; }
   100% { opacity: 1; }
 }
 .vt-piece-in { animation: vtPieceIn 320ms ease-out both; }
+@keyframes vtPieceOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.vt-piece-out { animation: vtPieceOut 320ms ease-out forwards; }
 
 @media (prefers-reduced-motion: reduce) {
   .vt-piece-in { animation: none; }
+  .vt-piece-out { animation: none; opacity: 0; }
 }
 
 /* Auth-motif flicker: a soft, graceful bloom that rests dim most of the cycle,

@@ -23,6 +23,11 @@ const BOARD_PAD = 12          // p-3 around the board
 const STREAK_HOLD_MS = 2000
 const STREAK_FADE_MS = 900
 
+// Tray piece fade at the phase handoffs (how long the recall → memorize ghost
+// pieces stay mounted) — keep in lockstep with the 320ms vt-piece-in/out
+// animations in index.css, with a small buffer so the fade finishes on screen.
+const PIECE_FADE_MS = 340
+
 // Time → score "Lift" payoff (the cleared-batch animation): after a short
 // anticipation BEAT the timer bar rushes to empty over LIFT_MS while a single
 // big "+bonus" lifts off the bar and dissolves into the score, and the score
@@ -231,11 +236,32 @@ function PieceTray({
   demoTarget?: PieceType | null
   demoWrong?: PieceType | null
 }) {
+  // The recall → memorize handoff mirrors the fade-in: for one beat after
+  // `concealed` flips on, the sockets keep GHOST pieces (inert, inside the
+  // already-dormant socket divs) that fade out, instead of vanishing on the
+  // spot. A tray that first mounts already concealed (fresh reveal after a
+  // non-tray phase, the demo) starts empty — nothing was showing to fade.
+  const [leaving, setLeaving] = useState(false)
+  const prevConcealed = useRef(concealed)
+  useEffect(() => {
+    const was = prevConcealed.current
+    prevConcealed.current = concealed
+    if (concealed && !was) {
+      setLeaving(true)
+      const t = window.setTimeout(() => setLeaving(false), PIECE_FADE_MS)
+      return () => clearTimeout(t)
+    }
+    if (!concealed) setLeaving(false)
+  }, [concealed])
+  const ghosts = concealed && leaving
+
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className={`flex justify-between items-center mb-2 pointer-events-none select-none${demoTarget ? ' opacity-40' : ''}`}>
         <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Pieces</span>
-        {!concealed && <span className="vt-piece-in text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>}
+        {(!concealed || ghosts) && (
+          <span className={`${concealed ? 'vt-piece-out' : 'vt-piece-in'} text-[10px] text-vt-dim tracking-[0.04em]`}>tap to place from memory</span>
+        )}
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {/* The armed branch mounts fresh exactly at the memorize → recall
@@ -247,8 +273,14 @@ function PieceTray({
             return (
               <div
                 key={def.type}
-                className="h-12 p-1 rounded-md border bg-vt-raised border-vt-cyan/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-              />
+                className="flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised border-vt-cyan/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+              >
+                {ghosts && (
+                  <span className="vt-piece-out flex">
+                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+                  </span>
+                )}
+              </div>
             )
           }
           const isTarget = demoTarget === def.type
