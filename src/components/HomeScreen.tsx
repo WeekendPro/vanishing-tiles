@@ -9,9 +9,9 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
  * The primary landing page shown right after sign-in. One decision, one
- * action: the difficulty switch (Easy | Medium | Hard), then PLAY — the
- * cluster sits vertically centered under the top-anchored wordmark. Logout
- * is intentionally absent here — it lives in the global menu, and Training
+ * action: the difficulty switch (Easy | Medium | Hard), then PLAY — pinned
+ * to the bottom thumb arc under the centered wordmark. Logout is
+ * intentionally absent here — it lives in the global menu, and Training
  * (the consequence-free naming drill) lives there too, so PLAY always means
  * an Infinite Stagger run.
  *
@@ -100,8 +100,8 @@ export function HomeScreen() {
           aria-hidden={pane !== 'home'}
           className="w-1/2 min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
         >
-          {/* Brand sits at the top; the play cluster centers in the space below. */}
-          <div className="w-full max-w-sm">
+          {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
+          <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
             {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
             <VanishingMotif className="mb-5" />
             {/* VANISHING / TILES stacked, glowing */}
@@ -111,10 +111,8 @@ export function HomeScreen() {
             </p>
           </div>
 
-          {/* Vertically centered cluster: mode switch + PLAY. The bottom
-              padding nudges the optical center slightly above true center so
-              the cluster reads balanced under the top-anchored wordmark. */}
-          <div className="flex-1 w-full max-w-sm flex flex-col justify-center gap-4 pb-16">
+          {/* Bottom-pinned cluster: mode switch + PLAY. */}
+          <div className="w-full max-w-sm flex flex-col gap-4">
             {/* Mode — segmented neon switch (Easy / Medium / Hard). */}
             <div>
               <p className="text-center font-display text-[10px] font-medium uppercase tracking-[0.22em] text-gray-500 mb-2">
