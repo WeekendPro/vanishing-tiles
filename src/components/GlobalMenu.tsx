@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useTrainingStore } from '../store/trainingStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
@@ -58,12 +59,14 @@ function Action({ label, onClick, tone = 'default' }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goHome, goLeaderboard, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goHome, goLeaderboard, goTraining, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
     goHome: s.goHome,
     goLeaderboard: s.goLeaderboard,
+    goTraining: s.goTraining,
     goSoundDesign: s.goSoundDesign,
     reset: s.reset,
   })))
+  const startTraining = useTrainingStore(s => s.start)
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
@@ -113,6 +116,16 @@ export function GlobalMenu() {
   // Leaving a paused Journey/Practice round for the leaderboard is a quit —
   // same teardown as quitToHome, different destination.
   const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
+  // The menu tap is a user gesture, so it doubles as the audio unlock —
+  // Training's first bloom fires from a timer, and the context must already
+  // be running by then (same reason HomeScreen's PLAY unlocks).
+  const openTraining = () => {
+    setOpen(false)
+    if (inGame) resetGame()
+    sfx.unlock()
+    startTraining()
+    goTraining()
+  }
   const openSoundDesign = () => { setOpen(false); if (inGame) resetGame(); goSoundDesign() }
   const handleSignOut = async () => { setOpen(false); clearProfile(); await signOut(); resetNav() }
 
@@ -164,7 +177,18 @@ export function GlobalMenu() {
               >
                 <Avatar name={name} avatarUrl={avatarUrl} isGuest={false} />
                 <div className="min-w-0">
-                  <div className="font-pixel text-sm leading-tight truncate group-hover:text-neon-cyan transition-colors">{name}</div>
+                  <div className="flex items-center gap-1.5 font-pixel text-sm leading-tight group-hover:text-neon-cyan transition-colors">
+                    <span className="truncate">{name}</span>
+                    {/* Pencil = "this is editable"; the whole header stays the tap target. */}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                      className="w-3.5 h-3.5 shrink-0 text-gray-400 group-hover:text-neon-cyan transition-colors"
+                    >
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" />
+                    </svg>
+                  </div>
                   <div className="text-xs text-gray-400 truncate">{email ?? ''}</div>
                 </div>
               </button>
@@ -201,12 +225,16 @@ export function GlobalMenu() {
               only RANKING needs a named account). */}
           <Action label="Leaderboard" onClick={openLeaderboard} />
 
-          {/* Sound FX: toggle + volume. Re-enabling (or releasing the slider)
+          {/* The consequence-free naming drill — this menu entry is its only
+              way in since it left the Home mode switch. */}
+          <Action label="Training" onClick={openTraining} />
+
+          {/* Sound: toggle + volume. Re-enabling (or releasing the slider)
               plays the tiny UI tick as instant confirmation — those taps also
               satisfy the browser's audio-unlock gesture. (Music left with the
               synth bed; its channel returns with the produced audio bed.) */}
           <ChannelControl
-            label="Sound FX"
+            label="Sound"
             enabled={soundEnabled}
             volume={sfxVolume}
             onToggle={() => {
@@ -224,9 +252,7 @@ export function GlobalMenu() {
           <Action label="Sound Design" onClick={openSoundDesign} />
 
           {/* A full Settings screen is deliberately absent — the lone sound
-              toggle above rides inline until there's more to expose. Training left
-              the menu when it became "mode zero" on the Home switch — one home,
-              not two paths to the same door.
+              toggle above rides inline until there's more to expose.
 
               Guests never logged in, so "Logout" is the wrong ask — their exit
               ramp is SIGN UP: terminate the anonymous session and land on
