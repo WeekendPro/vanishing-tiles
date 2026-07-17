@@ -588,6 +588,9 @@ export function StaggerScreen() {
   }
   // Out-of-order hint takes over the phase label mid-recall (never over CLEAR!).
   const orderHintActive = orderHint > 0 && phase === 'selecting' && !cleared
+  // Streak takeover of the central line: only mid-recall, and outranked by both
+  // the IN ORDER hint and the CLEAR! beat.
+  const streakTakeover = streakChip !== null && phase === 'selecting' && !cleared && !orderHintActive
   const phaseLabel =
     phase === 'reveal' ? 'MEMORIZE' :
     phase === 'selecting' ? (cleared ? 'CLEAR!' : orderHintActive ? 'IN ORDER' : 'RECALL') : ''
@@ -627,14 +630,23 @@ export function StaggerScreen() {
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
-          <div className="w-full max-w-sm flex items-end justify-between mb-2 pointer-events-none">
-            <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
-            <div className="text-right">
-              <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
-              <div className="mt-1.5 font-grotesk font-semibold text-sm text-vt-text tabular-nums">
-                {gaps.filter(g => g.filled).length} / {gaps.length || gapCountForBatch(batchIndex)}
-                <span className="font-grotesk text-[10px] text-vt-dim ml-1.5 tracking-[0.12em] uppercase">items</span>
+          {/* Flat metadata bar (the Training-header grammar): the unlabeled
+              score spans the bar's full height on the left; items and lives
+              are label-above / value-below columns, bottoms on the score's
+              baseline. */}
+          <div className="w-full max-w-sm flex items-stretch justify-between mb-2 pointer-events-none">
+            <div className="flex items-end">
+              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
+            </div>
+            <div className="flex flex-col items-center justify-between">
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Items</div>
+              <div className="font-grotesk font-semibold text-[15px] leading-none text-vt-text tabular-nums">
+                {gaps.filter(g => g.filled).length} <span className="font-medium text-vt-dim">/ {gaps.length || gapCountForBatch(batchIndex)}</span>
               </div>
+            </div>
+            <div className="flex flex-col items-end justify-between">
+              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
+              <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
             </div>
           </div>
 
@@ -647,32 +659,37 @@ export function StaggerScreen() {
             />
           </div>
 
-          {/* Phase label (centered) above the grid; the running STREAK multiplier
-              rides the right of this row — labeled, so it never reads as score×N.
-              It pops in on each streak step, holds, then fades in the signature
-              style (see streakChip lifecycle above). ("Streak" is player-facing
-              copy only — the underlying store field is still `currentCombo`.) */}
+          {/* The central line above the grid. Usually the phase label; while a
+              streak is live in recall, the STREAK ×N takeover owns it instead —
+              the multiplier is the value (big), "streak" just the label (small).
+              It pops on each streak step, holds, then fades in the signature
+              style (see streakChip lifecycle above); the phase word returns
+              when it's gone. Priority: IN ORDER (hard-mode corrective) and
+              CLEAR! (the payoff beat) both outrank the streak, and the takeover
+              never plays outside recall, so MEMORIZE is never masked.
+              ("Streak" is player-facing copy only — the underlying store field
+              is still `currentCombo`.) */}
           <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
-            <div
-              key={orderHintActive ? `order-${orderHint}` : 'phase'}
-              className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}${orderHintActive ? ' vt-order-flash' : ''}`}
-            >
-              {phaseLabel}
-            </div>
-            {streakChip && (
-              /* Centered by the flex wrapper, NOT a translate: the pop/fade
-                 keyframes own `transform`, so any translate-based centering on
-                 the animated element would drop for the animation's duration
-                 and snap back after (a visible jump). */
-              <span className="absolute inset-y-0 right-0 flex items-center">
-                <span
-                  key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
-                  className={`font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
-                  style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
-                >
-                  STREAK ×{streakChip.value}
-                </span>
-              </span>
+            {streakTakeover && streakChip ? (
+              /* Centered by flex, NOT a translate: the pop/fade keyframes own
+                 `transform`, so translate-based centering on the animated
+                 element would drop for the animation's duration and snap back
+                 after (a visible jump). */
+              <div
+                key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
+                className={`absolute inset-0 flex items-center justify-center gap-1.5 text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
+                style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
+              >
+                <span className="font-grotesk font-semibold text-[10px] tracking-[0.2em] uppercase">Streak</span>
+                <span className="font-silk font-bold text-xl leading-none tabular-nums">×{streakChip.value}</span>
+              </div>
+            ) : (
+              <div
+                key={orderHintActive ? `order-${orderHint}` : 'phase'}
+                className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}${orderHintActive ? ' vt-order-flash' : ''}`}
+              >
+                {phaseLabel}
+              </div>
             )}
           </div>
         </>
