@@ -51,15 +51,15 @@ const FLOAT_TEXT_SHADOW = '0 2px 5px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.95
 /** Reveal-bloom flood color per piece type (hex of each piece's Tailwind class —
  *  I=cyan-400, O=yellow-400, T=purple-500, S=green-400, Z=red-500, J=blue-500,
  *  L=orange-400). On EASY, gaps bloom in their own piece color during reveal
- *  so the player can track shape AND color, easing the memory load. The recall
- *  tray always uses these same piece colors, in every mode. */
+ *  so the player can track shape AND color, easing the memory load — and the
+ *  EASY recall tray uses these same piece colors. */
 const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
 /** The uniform branded pink the reveal floods on MEDIUM and HARD (the signature
- *  Afterglow magenta — shape only, no colour crutch). The recall tray always
- *  shows each piece's own color, in every mode. */
+ *  Afterglow magenta — shape only, no colour crutch). The MEDIUM/HARD recall
+ *  tray goes monochrome pink to match; only EASY keeps per-piece colors. */
 const REVEAL_MAGENTA = '#FF2D9B'
 
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
@@ -217,19 +217,23 @@ function StaggerCountdown({
 }
 
 // ── Piece tray ────────────────────────────────────────────────────────────────
-// The recall tray always shows each piece's own color, in every mode
-// (PieceShape's default) — the monochrome-pink tray treatment is reveal-only.
+// On EASY the recall tray shows each piece's own color; on MEDIUM/HARD it goes
+// monochrome branded pink to match the reveal — the shape is the only cue, so
+// there's no colour crutch in the tray either (the tray colour used to break
+// from the reveal for no gameplay reason).
 // `concealed` (the memorize phase): the same panel at the same size, but the
 // seven sockets are EMPTY, dormant divs — no piece shapes to stare at instead
 // of the board, nothing clickable — so the pause button below keeps exactly
 // its recall-phase position when the phases swap.
 function PieceTray({
-  onPick, disabled, concealed = false, demoTarget, demoWrong,
+  onPick, disabled, concealed = false, monochrome = false, demoTarget, demoWrong,
 }: {
   onPick: (t: PieceType) => void
   disabled: boolean
   /** Memorize phase: same panel, seven EMPTY dormant sockets (see above). */
   concealed?: boolean
+  /** MEDIUM/HARD: render every tray piece in the branded pink, not its own color. */
+  monochrome?: boolean
   /** Demo guidance (T3): while set, the target button wears the spotlight ring +
    *  TAP cue and every other button drops behind the "veil" (dimmed, still
    *  tappable — a wrong tap gets the gentle correction, not a disable). */
@@ -277,7 +281,7 @@ function PieceTray({
               >
                 {ghosts && (
                   <span className="vt-piece-out flex">
-                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} />
                   </span>
                 )}
               </div>
@@ -308,7 +312,7 @@ function PieceTray({
               {/* flex, not inline: an inline span would seat the piece on the
                   text baseline and sink it below the button's center. */}
               <span className="vt-piece-in flex">
-                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} />
               </span>
             </button>
           )
@@ -1091,6 +1095,7 @@ export function StaggerScreen() {
               onPick={onPick}
               disabled={phase !== 'selecting' || cleared || paused}
               concealed={phase === 'reveal'}
+              monochrome={mode !== 'easy'}
               demoTarget={demoTarget}
               demoWrong={demoWrong}
             />
