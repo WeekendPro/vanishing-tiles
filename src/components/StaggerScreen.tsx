@@ -8,6 +8,7 @@ import { useNavStore } from '../store/navStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
+import { sfx } from '../lib/sfx'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
@@ -182,9 +183,13 @@ function StaggerCountdown({
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
+      // The fourth beat: 3 · 2 · 1 · GO — the decisive note the countdown
+      // resolves into, right as the reveal takes over.
+      sfx.go()
       const t = window.setTimeout(onDone, 350)
       return () => clearTimeout(t)
     }
+    sfx.count()
     const t = window.setTimeout(() => setCount(c => c - 1), BEAT_MS)
     return () => clearTimeout(t)
   }, [count, onDone])
@@ -278,6 +283,9 @@ export function StaggerScreen() {
   useEffect(() => {
     if (phase === 'gameOver' && !recordedRef.current) {
       recordedRef.current = true
+      // The run's farewell (rides the same once-per-game-over guard as the
+      // recording, so StrictMode never plays it twice).
+      sfx.gameOver()
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
       const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
@@ -357,6 +365,7 @@ export function StaggerScreen() {
   useEffect(() => {
     const delta = lives - prevLives.current
     if (phase === 'selecting' && delta > 0) {
+      sfx.lifeGained()
       const id = (lifeBurstId.current += 1)
       setLifeBursts(prev => [...prev, { id, n: delta }])
       window.setTimeout(() => setLifeBursts(prev => prev.filter(b => b.id !== id)), 1500)
@@ -417,7 +426,12 @@ export function StaggerScreen() {
       const { stepMs, bloomMs, decayMs, waveMs } = timingRef.current
       const lifetime = bloomMs + decayMs + 3 * waveMs + 80
       const myId = ++id
-      if (!cancelled) setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), bloomMs, decayMs, waveMs)])
+      if (!cancelled) {
+        setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), bloomMs, decayMs, waveMs)])
+        // Each bloom climbs one pentatonic step — the reveal sequence plays as
+        // a rising melody, so pitch order doubles as a memory hook for order.
+        sfx.bloom(idx)
+      }
       // Clear this gap's bloom once it has fully decayed.
       at(lifetime, () => {
         if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
@@ -441,7 +455,10 @@ export function StaggerScreen() {
       if (cancelled) return
       // A cleared batch is handled by the clear beat; only a genuinely-unfinished
       // batch reaches here, and running out of time costs a life.
-      if (!useStaggerStore.getState().gaps.every(g => g.filled)) timeoutBatch()
+      if (!useStaggerStore.getState().gaps.every(g => g.filled)) {
+        sfx.timeout()
+        timeoutBatch()
+      }
     }, remaining)
     return () => { cancelled = true; clearTimeout(expiry) }
   }, [phase, paused, batchIndex, selectStartTime, selectDuration, timeoutBatch])
@@ -482,7 +499,9 @@ export function StaggerScreen() {
   const onPick = (type: PieceType) => {
     if (cleared || paused) return
     const res = pickPiece(type)
-    if (res.gameOver) return
+    // gameOver only ever rides a miss: give the final pick its miss buzz too
+    // (the gameOver farewell itself fires from the phase effect above).
+    if (res.gameOver) { sfx.pickWrong(); return }
     // Any resolved pick ends a live "IN ORDER" hint; a right-shape-wrong-order
     // miss (re)starts it — the phase label swaps to the hint for ORDER_HINT_MS
     // as a central cue for WHY the pick missed, on top of the standard miss
@@ -495,6 +514,7 @@ export function StaggerScreen() {
       setOrderHint(0)
     }
     if (!res.ok) {
+      sfx.pickWrong()
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -506,6 +526,7 @@ export function StaggerScreen() {
     }
     // Correct recall. Float the "+points" earned (base × streak) over the filled
     // gap; the running ×N multiplier lives in the chip by the score.
+    sfx.pickCorrect(res.combo)
     if (res.gap) {
       const cells = res.gap.cells
       const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
@@ -518,6 +539,7 @@ export function StaggerScreen() {
     }
     if (res.batchCleared) {
       setCleared(true)
+      sfx.batchClear()
       const bonus = res.speedBonus
       // Freeze the lime bar where it currently sits (the leftover time), holding it
       // for a short anticipation beat before the payoff.
@@ -535,6 +557,7 @@ export function StaggerScreen() {
         setBarTransition(`width ${LIFT_MS}ms cubic-bezier(0.33,1,0.68,1)`)
         setBarPct(0)
         if (bonus > 0) {
+          sfx.bonusLift()
           spawnLiftFlyer(bonus, barRect)
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(bonus)

@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
 import { useNavStore } from '../store/navStore'
+import { sfx } from '../lib/sfx'
 import { PauseOverlay } from './ui'
 
 const CELL = 28
@@ -175,7 +176,8 @@ export function TrainingScreen() {
     if (leaving || !piece) return
     const res = guess(type)
     if (!res.ok) {
-      // The game's miss feedback: red border flash + board shake.
+      // The game's miss feedback: red border flash + board shake + miss buzz.
+      sfx.pickWrong()
       setXMark(true)
       boardRef.current?.animate?.(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -187,7 +189,9 @@ export function TrainingScreen() {
     }
     // Correct: float the SELECTION TIME off the named piece (the game's bubbly
     // "+points" flourish, repurposed — speed is training's score) while it
-    // fades back to the void, then bring on the next one.
+    // fades back to the void, then bring on the next one. Same streak-climbing
+    // blip as the game, so training teaches the audio grammar too.
+    sfx.pickCorrect(res.streak)
     const cells = piece.cells
     const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
     const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length

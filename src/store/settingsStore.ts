@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { PlayableComponent } from '../lib/components'
+import { sfx } from '../lib/sfx'
 
 export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
 
@@ -36,10 +37,16 @@ export interface UserSettings {
   mapStyle: MapStyle
   /** Selected Stagger reveal difficulty. Defaults to the gentlest (easy). */
   difficulty: Difficulty
+  /** Sound-effects toggle (the per-gesture one-shots, `src/lib/sfx.ts`).
+   *  (Music was cut with the synth bed — a produced audio bed returns later,
+   *  and its channel settings come back with it.) */
+  soundEnabled: boolean
+  /** Sound-effects volume, 0–1. */
+  sfxVolume: number
 }
 
 function emptySettings(): UserSettings {
-  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' }
+  return { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 }
 }
 
 function load(): UserSettings {
@@ -65,6 +72,8 @@ interface SettingsStore {
   setBriefingHidden: (component: PlayableComponent, hidden: boolean) => void
   setMapStyle: (style: MapStyle) => void
   setDifficulty: (difficulty: Difficulty) => void
+  setSoundEnabled: (on: boolean) => void
+  setSfxVolume: (v: number) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -98,4 +107,30 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       return { settings: next }
     })
   },
+
+  setSoundEnabled: (on) => {
+    sfx.setEnabled(on)
+    set((state) => {
+      const next: UserSettings = { ...state.settings, soundEnabled: on }
+      save(next)
+      return { settings: next }
+    })
+  },
+
+  setSfxVolume: (v) => {
+    sfx.setSfxVolume(v)
+    set((state) => {
+      const next: UserSettings = { ...state.settings, sfxVolume: v }
+      save(next)
+      return { settings: next }
+    })
+  },
 }))
+
+// Sync the engine's channel state with the persisted settings at boot (the
+// store is the source of truth; sfx just mirrors it).
+{
+  const s = useSettingsStore.getState().settings
+  sfx.setEnabled(s.soundEnabled)
+  sfx.setSfxVolume(s.sfxVolume)
+}

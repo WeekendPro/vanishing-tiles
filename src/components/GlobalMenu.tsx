@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { getUser, signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
+import { useSettingsStore } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
+import { sfx } from '../lib/sfx'
 import { ScanlineOverlay } from './ui'
 
 interface MenuUser {
@@ -47,6 +49,41 @@ function Avatar({ user }: { user: MenuUser }) {
   )
 }
 
+/** One audio channel's row: a toggle (styled like the menu's Actions) plus a
+ *  volume slider that dims/disables while the channel is off. Shared with the
+ *  Sound Design lab, which shows the same two channels above its knobs. */
+export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
+  label: string
+  enabled: boolean
+  volume: number
+  onToggle: () => void
+  onVolume: (v: number) => void
+  /** Fired when the user releases the slider — a chance to preview the level. */
+  onVolumeCommit?: () => void
+}) {
+  return (
+    <div className="flex items-center gap-4 py-3">
+      <button
+        onClick={onToggle}
+        className="w-44 shrink-0 text-left font-pixel uppercase tracking-[0.08em] text-base text-gray-200 hover:text-neon-cyan"
+      >
+        {label}: {enabled ? 'On' : 'Off'}
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(volume * 100)}
+        disabled={!enabled}
+        aria-label={`${label} volume`}
+        onChange={e => onVolume(Number(e.target.value) / 100)}
+        onPointerUp={onVolumeCommit}
+        className="flex-1 min-w-0 accent-cyan-400 disabled:opacity-30"
+      />
+    </div>
+  )
+}
+
 function Action({ label, onClick, tone = 'default' }:
   { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger' }) {
   const color = tone === 'danger' ? 'text-neon-red hover:text-glow-red'
@@ -61,15 +98,22 @@ function Action({ label, onClick, tone = 'default' }:
 
 export function GlobalMenu() {
   const appView = useNavStore(s => s.appView)
-  const { goHome, goLeaderboard, reset: resetNav } = useNavStore(useShallow(s => ({
+  const { goHome, goLeaderboard, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
     goHome: s.goHome,
     goLeaderboard: s.goLeaderboard,
+    goSoundDesign: s.goSoundDesign,
     reset: s.reset,
   })))
   const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
     pauseGame: s.pauseGame,
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
+  })))
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
+    soundEnabled: s.settings.soundEnabled,
+    setSoundEnabled: s.setSoundEnabled,
+    sfxVolume: s.settings.sfxVolume,
+    setSfxVolume: s.setSfxVolume,
   })))
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
@@ -109,6 +153,7 @@ export function GlobalMenu() {
   // Leaving a paused Journey/Practice round for the leaderboard is a quit —
   // same teardown as quitToHome, different destination.
   const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
+  const openSoundDesign = () => { setOpen(false); if (inGame) resetGame(); goSoundDesign() }
   const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
 
   return (
@@ -165,8 +210,30 @@ export function GlobalMenu() {
               only RANKING needs a named account). */}
           <Action label="Leaderboard" onClick={openLeaderboard} />
 
-          {/* Settings is deliberately absent — there's nothing behind it yet;
-              it returns when there are real settings to expose. Training left
+          {/* Sound FX: toggle + volume. Re-enabling (or releasing the slider)
+              plays the tiny UI tick as instant confirmation — those taps also
+              satisfy the browser's audio-unlock gesture. (Music left with the
+              synth bed; its channel returns with the produced audio bed.) */}
+          <ChannelControl
+            label="Sound FX"
+            enabled={soundEnabled}
+            volume={sfxVolume}
+            onToggle={() => {
+              const next = !soundEnabled
+              setSoundEnabled(next)
+              if (next) { sfx.unlock(); sfx.uiTap() }
+            }}
+            onVolume={setSfxVolume}
+            onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+          />
+
+          {/* The calibration lab: every game sound as knobs + replay + saved
+              presets. Deliberately visible pre-launch — tuning on the live
+              build IS the current workflow. */}
+          <Action label="Sound Design" onClick={openSoundDesign} />
+
+          {/* A full Settings screen is deliberately absent — the lone sound
+              toggle above rides inline until there's more to expose. Training left
               the menu when it became "mode zero" on the Home switch — one home,
               not two paths to the same door.
 

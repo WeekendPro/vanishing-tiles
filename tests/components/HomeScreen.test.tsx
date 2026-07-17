@@ -13,7 +13,7 @@ import { useTrainingStore } from '../../src/store/trainingStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy' } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
   useStaggerStore.getState().exit()
   useTrainingStore.getState().exit()
   vi.clearAllMocks()
@@ -41,7 +41,7 @@ describe('HomeScreen', () => {
 
   it('selecting Training never overwrites the persisted difficulty', async () => {
     const user = userEvent.setup()
-    useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'hard' } })
+    useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'hard', soundEnabled: true, sfxVolume: 1 } })
     render(<HomeScreen />)
     await user.click(screen.getByRole('button', { name: 'Training' }))
     expect(screen.getByRole('button', { name: 'Training', pressed: true })).toBeTruthy()
