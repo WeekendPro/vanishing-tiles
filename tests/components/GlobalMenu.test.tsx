@@ -3,25 +3,43 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../../src/lib/auth', () => ({
-  getUser: vi.fn().mockResolvedValue({
-    data: { user: { email: 'luis@example.com', is_anonymous: false, user_metadata: {} } },
-  }),
-  signOut: vi.fn().mockResolvedValue({ error: null }),
+  getUser: vi.fn(),
+  signOut: vi.fn(),
+}))
+// The menu's identity flows through profileStore → getUser + getOwnProfile.
+vi.mock('../../src/lib/api', () => ({
+  getOwnProfile: vi.fn(),
+  setDisplayName: vi.fn(),
 }))
 import * as auth from '../../src/lib/auth'
+import * as api from '../../src/lib/api'
 import { GlobalMenu } from '../../src/components/GlobalMenu'
 import { useNavStore } from '../../src/store/navStore'
 import { useGameStore } from '../../src/store/gameStore'
 import { useSettingsStore } from '../../src/store/settingsStore'
 import { useTrainingStore } from '../../src/store/trainingStore'
+import { useProfileStore } from '../../src/store/profileStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
   useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1 } })
   useTrainingStore.getState().exit()
+  useProfileStore.getState().clear()
   vi.clearAllMocks()
+  vi.mocked(auth.getUser).mockResolvedValue({
+    data: { user: { email: 'luis@example.com', is_anonymous: false, user_metadata: {} } },
+  } as never)
+  vi.mocked(auth.signOut).mockResolvedValue({ error: null } as never)
+  vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: 'NeonRider', isGuest: false })
 })
+
+const mockGuest = () => {
+  vi.mocked(auth.getUser).mockResolvedValue({
+    data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
+  } as never)
+  vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: null, isGuest: true })
+}
 
 describe('GlobalMenu', () => {
   it('is simplified to just Logout (no Training — that lives on Home; no Settings, modes, or maps)', async () => {
@@ -69,9 +87,7 @@ describe('GlobalMenu', () => {
   })
 
   it('a guest gets the generic person icon, not "GU" initials', async () => {
-    vi.mocked(auth.getUser).mockResolvedValueOnce({
-      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
-    } as never)
+    mockGuest()
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
@@ -81,9 +97,7 @@ describe('GlobalMenu', () => {
   })
 
   it('a guest gets "Sign up" instead of "Logout" — same teardown, back to the auth screen', async () => {
-    vi.mocked(auth.getUser).mockResolvedValueOnce({
-      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
-    } as never)
+    mockGuest()
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
@@ -107,9 +121,7 @@ describe('GlobalMenu', () => {
   })
 
   it('guests also get the Leaderboard entry (the board is viewable; only ranking needs an account)', async () => {
-    vi.mocked(auth.getUser).mockResolvedValueOnce({
-      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
-    } as never)
+    mockGuest()
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
@@ -124,5 +136,56 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     await user.click(screen.getByRole('button', { name: /Logout/i }))
     expect(auth.signOut).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the profiles display name, not the auth-metadata name', async () => {
+    vi.mocked(auth.getUser).mockResolvedValue({
+      data: { user: { email: 'luis@example.com', is_anonymous: false, user_metadata: { full_name: 'Luis Alejo' } } },
+    } as never)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByText('NeonRider')).toBeInTheDocument()
+    expect(screen.queryByText('Luis Alejo')).not.toBeInTheDocument()
+  })
+
+  it('tapping the profile header opens the edit form; saving updates the header', async () => {
+    vi.mocked(api.setDisplayName).mockResolvedValue({ ok: true, displayName: 'GapMaster' })
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(await screen.findByRole('button', { name: /edit profile/i }))
+
+    const input = screen.getByLabelText(/display name/i) as HTMLInputElement
+    expect(input.value).toBe('NeonRider') // prefilled with the current name
+    await user.clear(input)
+    await user.type(input, 'GapMaster')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(await screen.findByText('GapMaster')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/display name/i)).not.toBeInTheDocument() // overlay closed
+  })
+
+  it('Cancel closes the edit form without saving', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(await screen.findByRole('button', { name: /edit profile/i }))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(screen.queryByLabelText(/display name/i)).not.toBeInTheDocument()
+    expect(api.setDisplayName).not.toHaveBeenCalled()
+  })
+
+  it('guests have no edit affordance on the header', async () => {
+    mockGuest()
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByRole('img', { name: /guest avatar/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /edit profile/i })).not.toBeInTheDocument()
   })
 })

@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react'
-import { getUser, signOut } from '../lib/auth'
+import { signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
 import { ScanlineOverlay, ChannelControl } from './ui'
-
-interface MenuUser {
-  name: string
-  email: string | null
-  avatarUrl: string | null
-  isGuest: boolean
-}
+import { DisplayNameForm } from './DisplayNameForm'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -21,11 +16,11 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function Avatar({ user }: { user: MenuUser }) {
-  if (user.avatarUrl) {
-    return <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-full object-cover ring-1 ring-white/15" />
+function Avatar({ name, avatarUrl, isGuest }: { name: string; avatarUrl: string | null; isGuest: boolean }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt={name} className="w-12 h-12 rounded-full object-cover ring-1 ring-white/15" />
   }
-  if (user.isGuest) {
+  if (isGuest) {
     // Guests get a generic person icon — "GU" initials read as a weird
     // pseudo-name, and the familiar silhouette says "anonymous" at a glance.
     return (
@@ -44,7 +39,7 @@ function Avatar({ user }: { user: MenuUser }) {
   return (
     <div className="w-12 h-12 rounded-full grid place-items-center font-black text-lg text-white
       bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
-      {initials(user.name)}
+      {initials(name)}
     </div>
   )
 }
@@ -81,31 +76,31 @@ export function GlobalMenu() {
     setSfxVolume: s.setSfxVolume,
   })))
 
+  // Identity comes from profileStore — public.profiles is the same source
+  // the leaderboard reads, so the menu and the board can never disagree.
+  const { loaded, displayName, isGuest, email, avatarUrl, loadProfile, clearProfile } =
+    useProfileStore(useShallow(s => ({
+      loaded: s.loaded, displayName: s.displayName, isGuest: s.isGuest,
+      email: s.email, avatarUrl: s.avatarUrl,
+      loadProfile: s.loadProfile, clearProfile: s.clear,
+    })))
+
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
   // Journey/Practice round shells.
   const inGame = appView === 'playing' || appView === 'practice'
   const [open, setOpen] = useState(false)
-  const [user, setUser] = useState<MenuUser | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    getUser().then(({ data }) => {
-      if (cancelled || !data.user) return
-      const m = data.user.user_metadata ?? {}
-      const isGuest = data.user.is_anonymous ?? false
-      const name = (m.full_name || m.name || data.user.email?.split('@')[0] || (isGuest ? 'Guest' : 'Player')) as string
-      setUser({
-        name,
-        email: data.user.email ?? null,
-        avatarUrl: (m.avatar_url || m.picture || null) as string | null,
-        isGuest,
-      })
-    })
-    return () => { cancelled = true }
-  }, [])
+    if (!loaded) void loadProfile()
+  }, [loaded, loadProfile])
+
+  // Guests show as Guest; the email prefix only bridges the (unreachable
+  // post-gate) unnamed non-guest case.
+  const name = displayName ?? (isGuest ? 'Guest' : email?.split('@')[0] ?? '')
 
   const openMenu = () => { if (inGame) pauseGame(); setOpen(true) }
-  const close = () => { if (inGame) resumeGame(); setOpen(false) }
+  const close = () => { if (inGame) resumeGame(); setOpen(false); setEditOpen(false) }
 
   useEffect(() => {
     if (!open) return
@@ -119,7 +114,7 @@ export function GlobalMenu() {
   // same teardown as quitToHome, different destination.
   const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
   const openSoundDesign = () => { setOpen(false); if (inGame) resetGame(); goSoundDesign() }
-  const handleSignOut = async () => { setOpen(false); await signOut(); resetNav() }
+  const handleSignOut = async () => { setOpen(false); clearProfile(); await signOut(); resetNav() }
 
   return (
     <>
@@ -149,14 +144,45 @@ export function GlobalMenu() {
           {inGame && (
             <div className="font-pixel text-[9px] uppercase tracking-[0.2em] text-neon-cyan text-glow-cyan mb-1">Paused</div>
           )}
-          {user && (
-            <div className="flex items-center gap-3 mb-8">
-              <Avatar user={user} />
-              <div className="min-w-0">
-                <div className="font-pixel text-sm leading-tight truncate">{user.name}</div>
-                <div className="text-xs text-gray-400 truncate">
-                  {user.email ?? (user.isGuest ? 'Guest session' : '')}
+          {/* Profile header — for players it's a button: tap to edit your
+              display name (the only profile field there is). Guests have
+              nothing to edit, so theirs stays inert. */}
+          {loaded && (
+            isGuest ? (
+              <div className="flex items-center gap-3 mb-8">
+                <Avatar name={name} avatarUrl={avatarUrl} isGuest />
+                <div className="min-w-0">
+                  <div className="font-pixel text-sm leading-tight truncate">{name}</div>
+                  <div className="text-xs text-gray-400 truncate">Guest session</div>
                 </div>
+              </div>
+            ) : (
+              <button
+                aria-label="Edit profile"
+                onClick={() => setEditOpen(true)}
+                className="flex items-center gap-3 mb-8 text-left group"
+              >
+                <Avatar name={name} avatarUrl={avatarUrl} isGuest={false} />
+                <div className="min-w-0">
+                  <div className="font-pixel text-sm leading-tight truncate group-hover:text-neon-cyan transition-colors">{name}</div>
+                  <div className="text-xs text-gray-400 truncate">{email ?? ''}</div>
+                </div>
+              </button>
+            )
+          )}
+
+          {editOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/70">
+              <div className="relative w-full max-w-sm rounded-[28px] bg-vt-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6)] px-7 py-8">
+                <h2 className="font-silk text-sm text-vt-text uppercase tracking-[0.15em] mb-6 text-center">
+                  Edit profile
+                </h2>
+                <DisplayNameForm
+                  initialName={displayName ?? ''}
+                  submitLabel="Save"
+                  onDone={() => setEditOpen(false)}
+                  onCancel={() => setEditOpen(false)}
+                />
               </div>
             </div>
           )}
@@ -207,7 +233,7 @@ export function GlobalMenu() {
               AuthScreen, where they can create the account (or sign in). Same
               teardown either way; only the framing differs. */}
           <div className="mt-auto">
-            {user?.isGuest
+            {isGuest
               ? <Action label="Sign up" onClick={handleSignOut} />
               : <Action label="Logout" tone="danger" onClick={handleSignOut} />}
           </div>
