@@ -633,9 +633,12 @@ export function StaggerScreen() {
           {/* Flat metadata bar (the Training-header grammar): the unlabeled
               score spans the bar's full height on the left; items and lives
               are label-above / value-below columns, bottoms on the score's
-              baseline. */}
-          <div className="w-full max-w-sm flex items-stretch justify-between mb-2 pointer-events-none">
-            <div className="flex items-end">
+              baseline. A [1fr_auto_1fr] grid (not flex justify-between) so the
+              items column stays pinned to the bar's true center — equal side
+              tracks absorb the score growing wider, instead of it shoving the
+              middle to the right. */}
+          <div className="w-full max-w-sm grid grid-cols-[1fr_auto_1fr] items-stretch mb-2 pointer-events-none">
+            <div className="flex items-end justify-self-start">
               <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
             </div>
             <div className="flex flex-col items-center justify-between">
@@ -644,7 +647,7 @@ export function StaggerScreen() {
                 {gaps.filter(g => g.filled).length} <span className="font-medium text-vt-dim">/ {gaps.length || gapCountForBatch(batchIndex)}</span>
               </div>
             </div>
-            <div className="flex flex-col items-end justify-between">
+            <div className="flex flex-col items-end justify-between justify-self-end">
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
               <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
             </div>
