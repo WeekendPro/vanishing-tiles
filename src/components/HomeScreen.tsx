@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavStore } from '../store/navStore'
 import { useGameStore } from '../store/gameStore'
 import { useStaggerStore } from '../store/staggerStore'
-import { useTrainingStore } from '../store/trainingStore'
 import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
@@ -10,34 +9,24 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
  * The primary landing page shown right after sign-in. One decision, one
- * action: a MODE switch (Training | Easy | Medium | Hard), then PLAY —
- * pinned to the bottom thumb arc. Logout is intentionally absent here — it
- * lives in the global menu.
+ * action: the difficulty switch (Easy | Medium | Hard), then PLAY — the
+ * cluster sits vertically centered under the top-anchored wordmark. Logout
+ * is intentionally absent here — it lives in the global menu, and Training
+ * (the consequence-free naming drill) lives there too, so PLAY always means
+ * an Infinite Stagger run.
  *
  * The "Experimental Modes" entry (Practice, the legacy gauntlet + the three
  * Journey map styles) is HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and
  * its machinery are kept intact behind the flag — not deleted — so we can
  * bring them back in one line.
- *
- * TRAINING (learn the piece names) is "mode zero" on the switch: cyan, left
- * of the difficulty heat arc, → TrainingScreen. Selecting it is EPHEMERAL —
- * it never touches the persisted difficulty, so a returning player's PLAY
- * always plays Infinite Stagger at their real difficulty.
  */
 const SHOW_EXPERIMENTAL: boolean = false
 
-/** The four modes on the segmented neon switch: Training ("mode zero", cyan,
- *  zero stakes) then the three reveal difficulties along the heat arc
+/** The three difficulties on the segmented neon switch, along the heat arc
  *  (green → amber → red). Each carries a one-line description of its reveal
  *  visuals + recall ordering (shown under the switch for whichever segment is
  *  selected). The recall tray is always piece-colored, in every mode. */
-const MODES: { value: Difficulty | 'training'; label: string; hint: string; active: string }[] = [
-  {
-    value: 'training',
-    label: 'Training',
-    hint: 'Name the pieces. No clock, no lives.',
-    active: 'bg-neon-cyan text-arcade-bg shadow-[inset_0_0_14px_rgba(34,211,238,0.5),0_0_12px_rgba(34,211,238,0.35)]',
-  },
+const MODES: { value: Difficulty; label: string; hint: string; active: string }[] = [
   {
     value: 'easy',
     label: 'Easy',
@@ -60,19 +49,13 @@ const MODES: { value: Difficulty | 'training'; label: string; hint: string; acti
 
 export function HomeScreen() {
   const [pane, setPane] = useState<'home' | 'experimental'>('home')
-  // Training selection is deliberately component state, not a setting: it
-  // evaporates when the screen unmounts, so the persisted difficulty (and the
-  // habit "PLAY just plays") survives any detour through Training.
-  const [trainSelected, setTrainSelected] = useState(false)
 
-  const { goStagger, goJourney, goPractice, goTraining } = useNavStore(useShallow(s => ({
+  const { goStagger, goJourney, goPractice } = useNavStore(useShallow(s => ({
     goStagger: s.goStagger,
     goJourney: s.goJourney,
     goPractice: s.goPractice,
-    goTraining: s.goTraining,
   })))
   const startStagger = useStaggerStore(s => s.startRun)
-  const startTraining = useTrainingStore(s => s.start)
   const { startPractice, resetGame } = useGameStore(useShallow(s => ({
     startPractice: s.startPractice,
     resetGame: s.resetGame,
@@ -83,29 +66,26 @@ export function HomeScreen() {
     setDifficulty: s.setDifficulty,
   })))
 
-  // The single CTA: PLAY launches whatever the mode switch says — the
-  // Training drill on mode zero, otherwise an Infinite Stagger run at the
-  // persisted difficulty.
+  // The single CTA: PLAY starts an Infinite Stagger run at the persisted
+  // difficulty. (Training launches from the global menu, not from here.)
   const play = () => {
     // The PLAY tap is the audio UNLOCK gesture: browsers won't start sound
     // without one, and the run's first sounds (countdown, blooms) fire from
     // timers — so the context must already be running by then.
     sfx.unlock()
     sfx.uiTap()
-    if (trainSelected) { startTraining(); goTraining() }
-    else { startStagger(difficulty); goStagger() }
+    startStagger(difficulty)
+    goStagger()
   }
   const practice = () => { startPractice(); goPractice() }
   const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
-  const selectMode = (value: Difficulty | 'training') => {
+  const selectMode = (value: Difficulty) => {
     sfx.unlock()
     sfx.uiTap()
-    if (value === 'training') setTrainSelected(true)
-    else { setTrainSelected(false); setDifficulty(value) }
+    setDifficulty(value)
   }
-  const activeMode = trainSelected ? 'training' : difficulty
-  const activeHint = MODES.find(m => m.value === activeMode)?.hint
+  const activeHint = MODES.find(m => m.value === difficulty)?.hint
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
@@ -120,8 +100,8 @@ export function HomeScreen() {
           aria-hidden={pane !== 'home'}
           className="w-1/2 min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
         >
-          {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
-          <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
+          {/* Brand sits at the top; the play cluster centers in the space below. */}
+          <div className="w-full max-w-sm">
             {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}
             <VanishingMotif className="mb-5" />
             {/* VANISHING / TILES stacked, glowing */}
@@ -131,24 +111,24 @@ export function HomeScreen() {
             </p>
           </div>
 
-          {/* Bottom-pinned cluster: mode switch + PLAY. */}
-          <div className="w-full max-w-sm flex flex-col gap-4">
-            {/* Mode — segmented neon switch (Training / Easy / Medium / Hard). */}
+          {/* Vertically centered cluster: mode switch + PLAY. The bottom
+              padding nudges the optical center slightly above true center so
+              the cluster reads balanced under the top-anchored wordmark. */}
+          <div className="flex-1 w-full max-w-sm flex flex-col justify-center gap-4 pb-16">
+            {/* Mode — segmented neon switch (Easy / Medium / Hard). */}
             <div>
               <p className="text-center font-display text-[10px] font-medium uppercase tracking-[0.22em] text-gray-500 mb-2">
                 Mode
               </p>
-              {/* Tracking is trimmed vs the app's usual 0.08em so TRAINING fits
-                  four-across down to a 320px screen. */}
               <div className="flex rounded-md border-2 border-arcade-edge bg-arcade-panel overflow-hidden">
                 {MODES.map(m => {
-                  const active = m.value === activeMode
+                  const active = m.value === difficulty
                   return (
                     <button
                       key={m.value}
                       onClick={() => selectMode(m.value)}
                       aria-pressed={active}
-                      className={`flex-1 py-3 px-0.5 font-pixel uppercase text-xs tracking-[0.04em] whitespace-nowrap transition
+                      className={`flex-1 py-3 px-0.5 font-pixel uppercase text-xs tracking-[0.08em] whitespace-nowrap transition
                         border-r border-arcade-edge last:border-r-0
                         ${active ? m.active : 'text-gray-500 hover:text-gray-300'}`}
                     >
@@ -162,15 +142,12 @@ export function HomeScreen() {
               </p>
             </div>
 
-            {/* PLAY → whatever the mode switch says. The label never changes;
-                only the glow follows the mode (cyan while Training is up). */}
+            {/* PLAY → an Infinite Stagger run at the selected difficulty. */}
             <button
               onClick={play}
-              className={`font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
+              className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
                 transition active:translate-y-px py-4 text-base flex items-center justify-center
-                ${trainSelected
-                  ? 'border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan'
-                  : 'border-neon-green text-neon-green hover:bg-neon-green/10 hover:shadow-neon-green'}`}
+                border-neon-green text-neon-green hover:bg-neon-green/10 hover:shadow-neon-green"
             >
               Play
             </button>

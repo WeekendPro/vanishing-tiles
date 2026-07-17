@@ -28,43 +28,26 @@ describe('HomeScreen', () => {
     expect(useStaggerStore.getState().phase).toBe('countdown')
   })
 
-  it('Training is mode zero: select it, then Play drops into the piece-naming trainer', async () => {
-    const user = userEvent.setup()
+  it('has no Training segment — the drill lives in the global menu now', () => {
     render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Training' }))
-    await user.click(screen.getByRole('button', { name: 'Play' }))
-    expect(useNavStore.getState().appView).toBe('training')
-    expect(useTrainingStore.getState().active).toBe(true)
-    expect(useTrainingStore.getState().piece).not.toBeNull()
-    expect(useStaggerStore.getState().phase).toBe('idle')
-  })
-
-  it('selecting Training never overwrites the persisted difficulty', async () => {
-    const user = userEvent.setup()
-    useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'hard', soundEnabled: true, sfxVolume: 1 } })
-    render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Training' }))
-    expect(screen.getByRole('button', { name: 'Training', pressed: true })).toBeTruthy()
-    expect(useSettingsStore.getState().settings.difficulty).toBe('hard')
-  })
-
-  it('picking a difficulty deselects Training, and Play goes back to Stagger', async () => {
-    const user = userEvent.setup()
-    render(<HomeScreen />)
-    await user.click(screen.getByRole('button', { name: 'Training' }))
-    await user.click(screen.getByRole('button', { name: 'Medium' }))
-    expect(screen.getByRole('button', { name: 'Training', pressed: false })).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Play' }))
-    expect(useNavStore.getState().appView).toBe('stagger')
-    expect(useStaggerStore.getState().mode).toBe('medium')
+    expect(screen.queryByRole('button', { name: 'Training' })).toBeNull()
     expect(useTrainingStore.getState().active).toBe(false)
   })
 
-  it('the mode switch sits above Play (single CTA pinned to the thumb arc)', () => {
+  it('Play at a chosen difficulty starts Stagger in that mode', async () => {
+    const user = userEvent.setup()
     render(<HomeScreen />)
-    const training = screen.getByRole('button', { name: 'Training' })
+    await user.click(screen.getByRole('button', { name: 'Medium' }))
+    await user.click(screen.getByRole('button', { name: 'Play' }))
+    expect(useNavStore.getState().appView).toBe('stagger')
+    expect(useStaggerStore.getState().mode).toBe('medium')
+  })
+
+  it('the mode switch sits above Play', () => {
+    render(<HomeScreen />)
+    const easy = screen.getByRole('button', { name: 'Easy' })
     const play = screen.getByRole('button', { name: 'Play' })
-    expect(training.compareDocumentPosition(play) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(easy.compareDocumentPosition(play) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('hides the Experimental Modes entry (and its modes) for now', () => {
