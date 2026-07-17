@@ -104,10 +104,10 @@ const MAJOR = [0, 2, 4, 5, 7, 9, 11] // semitone offsets: the A major scale
  *  at streak 1 — gameplay scales their TONE layers up the scale from there
  *  (see `bloomScale`/`coinScale`), so edits keep the musical system intact.
  *
- *  bonusLift/timeout/lifeGained/pickCorrect/bloom/count are LAB-TUNED
- *  (designer's exported banks, 2026-07-17) — promoted verbatim from the
- *  Sound Design lab, including bloom's silenced noise layer (kept at gain 0,
- *  not deleted, so the shing stays one knob away from returning). */
+ *  go/bonusLift/timeout/gameOver/lifeGained/pickCorrect/bloom/count are
+ *  LAB-TUNED (designer's exported banks, 2026-07-17) — promoted verbatim from
+ *  the Sound Design lab, including bloom's silenced noise layer (kept at gain
+ *  0, not deleted, so the shing stays one knob away from returning). */
 export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   uiTap: { layers: [
     { kind: 'tone', freq: 1300, dur: 0.045, gain: 0.06 },
@@ -117,8 +117,8 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   ] },
   go: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.09, gain: 0.14 },
-    { kind: 'tone', freq: 880, type: 'triangle', at: 0.09, dur: 0.35, gain: 0.16 },
-    { kind: 'tone', freq: 1760, at: 0.09, dur: 0.3, gain: 0.07 },
+    { kind: 'tone', freq: 880, type: 'triangle', at: 0.0444, dur: 0.35, gain: 0.16 },
+    { kind: 'tone', freq: 1760, at: 0.0876, dur: 0.3, gain: 0.07 },
   ] },
   bloom: { layers: [
     { kind: 'tone', freq: 440, dur: 0.45, attack: 0.006, gain: 0.15, lowpass: 3200 },
@@ -140,14 +140,16 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
     { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
   ] },
-  // Designer's v004: a brighter sawtooth riser gliding nearly two octaves,
-  // a triangle sparkle a beat in, and a mid sine body under both. Plays as
-  // authored — the ~1.3s Lift animation ends under its 2.5s tail, which is
-  // the designed effect.
+  // Designer's chime-stack re-voicing (replaces the v004 sawtooth riser): a
+  // lowpassed high sine lead, two triangle shimmers around it, and two mid
+  // sine bodies underneath. Plays as authored — the ~1.3s Lift animation ends
+  // under its ~1.5s tail, which is the designed effect.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 649.8, endFreq: 2283, type: 'sawtooth', dur: 2.5, attack: 0.1, gain: 0.0455, lowpass: 2606 },
-    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.1152, dur: 1.315, attack: 0.003631, gain: 0.0515 },
-    { kind: 'tone', freq: 726.5, at: 0.1464, dur: 0.6563, gain: 0.0625 },
+    { kind: 'tone', freq: 2199, type: 'sine', at: 0.1056, dur: 1.028, attack: 0.004444, gain: 0.311, lowpass: 2606 },
+    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.0432, dur: 1.315, attack: 0.003631, gain: 0.0625 },
+    { kind: 'tone', freq: 1120, at: 0.1464, dur: 0.6563, gain: 0.107 },
+    { kind: 'tone', freq: 1509, at: 0.2136, dur: 0.2, gain: 0.0745 },
+    { kind: 'tone', freq: 2189, type: 'triangle', at: 0.006, dur: 1.499, attack: 0.001909, gain: 0.0475 },
   ] },
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
@@ -165,11 +167,13 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   timeout: { layers: [
     { kind: 'tone', freq: 330, endFreq: 76.38, type: 'square', dur: 1.183, gain: 0.22, lowpass: 600 },
     { kind: 'tone', freq: 220, endFreq: 82, dur: 0.5, gain: 0.14 },
+    { kind: 'tone', freq: 91.59, endFreq: 49.55, type: 'triangle', at: 0.0144, dur: 1.322, attack: 0.001183, gain: 0.12 },
   ] },
   gameOver: { layers: [
     { kind: 'tone', freq: 440, at: 0.12, dur: 0.5, gain: 0.16 },
     { kind: 'tone', freq: 330, at: 0.34, dur: 0.55, gain: 0.16 },
     { kind: 'tone', freq: 220, at: 0.6, dur: 0.9, gain: 0.16, type: 'triangle' },
+    { kind: 'tone', freq: 116.7, endFreq: 62.82, type: 'sine', at: 0.6084, dur: 2.132, gain: 0.0715 },
   ] },
 }
 
