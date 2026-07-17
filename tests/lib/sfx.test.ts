@@ -162,14 +162,12 @@ describe('sfx engine', () => {
     expect(atStreak99).toBeLessThanOrEqual(atStreak1 * 4)
   })
 
-  it('every 5th streak step adds the 1-Up-style milestone run', async () => {
+  it('a 5th streak pick is just the coin — the milestone flourish was cut', async () => {
     const sfx = await freshSfx()
     sfx.pickCorrect(4)
     const plain = ctx().oscillators.length
-    const before = ctx().oscillators.length
     sfx.pickCorrect(5)
-    const milestone = ctx().oscillators.length - before
-    expect(milestone).toBeGreaterThan(plain) // the flourish rides on top of the coin blip
+    expect(ctx().oscillators.length - plain).toBe(plain) // same layer count, no extra run
   })
 
   it('bloom melody rises with the reveal step; its muted shing layer plays NOTHING', async () => {
@@ -219,15 +217,23 @@ describe('sfx engine', () => {
     expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
   })
 
-  it('ships the lab-tuned bonusLift default (designer bank, 2026-07-17)', async () => {
+  it('ships the lab-tuned bonusLift default (designer v004, 2026-07-17)', async () => {
     const sfx = await freshSfx()
     sfx.bonusLift()
-    const [riser, sparkle] = ctx().oscillators
-    expect(riser.type).toBe('square')
-    expect(riser.frequency.values[0]).toBe(395.8)
-    expect(riser.frequency.values[1]).toBe(1817) // the glide target
+    const [riser, sparkle, body] = ctx().oscillators
+    expect(riser.type).toBe('sawtooth')
+    expect(riser.frequency.values[0]).toBe(649.8)
+    expect(riser.frequency.values[1]).toBe(2283) // the glide target
     expect(sparkle.type).toBe('triangle')
     expect(sparkle.frequency.values[0]).toBe(2251)
+    expect(body.type).toBe('sine')
+    expect(body.frequency.values[0]).toBe(726.5)
+  })
+
+  it('ships the lab-tuned high countdown tick', async () => {
+    const sfx = await freshSfx()
+    sfx.count()
+    expect(ctx().oscillators[0].frequency.values[0]).toBe(2976)
   })
 
   it('ships the lab-tuned timeout default (square womp, deeper + longer)', async () => {

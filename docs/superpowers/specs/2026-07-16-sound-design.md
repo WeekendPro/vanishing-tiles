@@ -66,22 +66,22 @@ Two load-bearing pitch rules (not just polish):
   real memory hook for Hard mode's ordered recall.
 - **Correct picks climb one A-major scale degree per streak step** (capped
   +2 octaves) and restart at the root when the streak breaks — you *hear* the
-  streak wind up and reset, mirroring the ×N scoring rule. The every-5th-step
-  1-Up run is the "you eventually get there" reward of consecutive-combo
-  scoring (game-show / Mario-stomp escalation).
+  streak wind up and reset, mirroring the ×N scoring rule. (An every-5th-step
+  1-Up flourish was tried and CUT 2026-07-17: with no visual indicator
+  attached it read as an unprompted sound falsely promising an extra life.)
 
 ## Gesture → sound map
 
 | Gesture | Trigger point | Sound |
 |---|---|---|
 | UI tap (PLAY, mode switch) | `HomeScreen` | 1.3 kHz tick, 45 ms — barely there |
-| Countdown beat (3·2·1) | `StaggerCountdown` | soft 700 Hz metronome blip |
+| Countdown beat (3·2·1) | `StaggerCountdown` | **lab-tuned:** high glassy 2976 Hz tick |
 | **GO** (the fourth beat) | countdown hits 0 | decisive E5 pickup → ringing A5 + octave sheen — the run-start note the 3·2·1 resolves into |
 | Gap bloom (memorize) | reveal driver, per gap | the NOTE (lowpassed sine, pentatonic ascent per step — pitch encodes reveal order) + high partial. The noise "shing" layer is **muted by the designer** (kept at gain 0 in the patch — one knob restores it) |
 | Correct recall | `pickPiece` ok (also Training) | **lab-tuned:** chiptune coin blip (square base + perfect fourth, retimed — longer 214 ms base under a hotter 0.125 fourth at +31 ms), climbing the A major scale one degree per streak (cap +2 octaves), root reset on a break; every 5th streak step adds a six-note 1-Up-style rising run |
 | Miss / wrong pick | `pickPiece` miss (also Training) | saw glide 150→95 Hz + 82 Hz thud, under the red flash + shake |
 | Batch CLEAR! | batch cleared | rising A-major arpeggio (A5–C#6–E6) + sparkle tail |
-| Speed-bonus Lift | lift payoff (bonus > 0) | **lab-tuned by the designer (2026-07-17, first knob-tuned default):** softened square riser 396→1817 Hz over 2.5 s under a high triangle sparkle (2251 Hz, +115 ms); plays as authored — the tail deliberately outlasts the 1.3 s drain animation |
+| Speed-bonus Lift | lift payoff (bonus > 0) | **lab-tuned (designer v004):** sawtooth riser 650→2283 Hz over 2.5 s + triangle sparkle (2251 Hz, +115 ms) + mid sine body (726 Hz); plays as authored — the tail deliberately outlasts the 1.3 s drain animation |
 | Extra life earned | life delta > 0 while selecting | **lab-tuned:** warm two-note rise E5→A5, the A5 now ringing 0.85 s at 0.223 under the heart burst |
 | Select clock timeout | expiry before `timeoutBatch` | **lab-tuned:** falling square womp 330→76 Hz over 1.18 s — deeper and longer; life lost, batch replays |
 | Game over | once-per-run guard | slow descending farewell A4–E4–A3; elegiac ("Memory Fades"), not punishing |
@@ -95,11 +95,12 @@ board taps, and the reveal→recall handoff (the amber bar carries it).
   tap (and mode-switch taps) call `sfx.unlock()`; every trigger also retries a
   `resume()`. A missed unlock degrades to silence, never an error. This
   constraint disappears on React Native.
-- **Channel controls:** `settingsStore` persists all four
-  (`soundEnabled`/`sfxVolume`/`musicEnabled`/`musicVolume`, defaults
-  on/1/on/0.6) and mirrors them into the engine's buses; gates are checked at
-  trigger time so muting mid-run silences instantly. Two toggle + slider rows
-  in the global menu.
+- **Channel controls:** `settingsStore` persists `soundEnabled`/`sfxVolume`
+  (defaults on/1) and mirrors them into the engine's bus; gates are checked
+  at trigger time so muting mid-run silences instantly. The Sound FX
+  toggle + slider row (`ui/ChannelControl`) appears in the global menu, atop
+  the Sound Design lab, and on the in-run PAUSE overlay (a pause is exactly
+  when you discover the volume is wrong mid-run).
 - **Tests:** `tests/lib/sfx.test.ts` fakes `AudioContext` and pins the
   contract — lazy context, mute gate, streak climb + cap, bloom ascent + cap,
   jsdom no-op safety.

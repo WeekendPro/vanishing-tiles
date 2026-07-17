@@ -8,8 +8,7 @@ import {
   type OneShotId, type SoundPatch, type SoundLayer, type ToneLayer, type NoiseLayer,
   type OscType,
 } from '../lib/sfx'
-import { ChannelControl } from './GlobalMenu'
-import { ScanlineOverlay } from './ui'
+import { ScanlineOverlay, ChannelControl } from './ui'
 
 /**
  * SOUND DESIGN — the calibration lab (menu → "Sound Design").
