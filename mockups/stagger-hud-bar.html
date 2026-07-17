@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Stagger HUD bar + streak placement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --grid:#1C1C28; --edge:#3A3E4F;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --lime:#B6FF3C; --cyan:#28F0FF; --magenta:#FF2D9B; --red:#FF3B47; --amber:#FFC23D;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 80px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:720px; margin:0 auto 40px; line-height:1.6}
+  .grid{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+
+  .col{width:375px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:0 0 4px; font-weight:600}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:8px 4px 0}
+  .note b{color:var(--text); font-weight:600}
+  .statelabel{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin:14px 0 5px 4px}
+
+  .frame{
+    position:relative; width:375px; border-radius:20px 20px 0 0;
+    background:var(--void); border:1px solid #1a1a26; border-bottom:0;
+    box-shadow:0 0 0 2px #0b0b14;
+    overflow:hidden; padding:20px 16px 0;
+  }
+  .frame::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; z-index:5;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+
+  /* Shared HUD atoms */
+  .label{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); line-height:1.2}
+  .num{font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+  .score{font-size:30px; color:var(--cyan); text-shadow:0 0 6px #28F0FF, 0 0 22px rgba(40,240,255,.45)}
+  .items-val{font-size:15px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; line-height:1}
+  .items-val .of{color:var(--dim); font-weight:500}
+  .hearts{display:flex; gap:4px; font-size:16px; line-height:1}
+  .hearts i{font-style:normal; color:var(--red); text-shadow:0 0 6px #FF3B47, 0 0 22px rgba(255,59,71,.45)}
+  .hearts i.spent{color:var(--faint); text-shadow:none}
+  .lime-glow{color:var(--lime); text-shadow:0 0 6px #B6FF3C, 0 0 22px rgba(182,255,60,.45)}
+
+  /* Flat bar: score spans the full bar height on the left; every other slot is
+     label-above / value-below, bottoms aligned with the score's baseline. */
+  .hud{display:flex; align-items:stretch; justify-content:space-between; height:31px; margin-bottom:8px}
+  .slot{display:flex; flex-direction:column; justify-content:space-between}
+  .slot.c{align-items:center; text-align:center}
+  .slot.r{align-items:flex-end; text-align:right}
+  .slot.l{align-items:flex-start}
+  .scorewrap{display:flex; align-items:flex-end}
+
+  /* Timer bar + phase label row (context under every bar variant) */
+  .timer{height:8px; border-radius:99px; background:#000; box-shadow:inset 0 1px 2px #000; overflow:hidden; margin-bottom:8px}
+  .timer i{display:block; height:100%; width:62%; border-radius:99px; background:var(--amber);
+           box-shadow:0 0 6px #FFC23D, 0 0 22px rgba(255,194,61,.45)}
+  .phaserow{position:relative; height:16px; margin:4px 0 8px}
+  .phaselabel{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+              font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+              color:var(--amber); text-shadow:0 0 8px rgba(255,194,61,.5)}
+
+  /* Board top slice */
+  .boardtop{
+    height:80px; border-radius:12px 12px 0 0; background:#04040a;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+    display:grid; grid-template-columns:repeat(12, 1fr); gap:2px; padding:10px 10px 0;
+  }
+  .boardtop i{aspect-ratio:1; border-radius:2px; background:#0d0d15}
+
+  /* Streak pop (the game's streakPop, minus the transform conflict) */
+  @keyframes pop{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+  .pop{animation:pop .3s cubic-bezier(.2,.8,.2,1)}
+
+  /* A — center-stage streak: takes over the phase label row */
+  .streak-center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:7px}
+  .streak-center .word{font-size:10px; letter-spacing:.2em; text-transform:uppercase; font-weight:600}
+  .streak-center .mult{font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1}
+
+  /* B — in-bar streak slot */
+  .slot .streak-val{font-size:18px}
+  .slot .streak-idle{font-size:18px; font-weight:700; color:var(--faint); line-height:1}
+
+  /* C — multiplier docked beside the score */
+  .dock{display:flex; flex-direction:column; justify-content:space-between; margin-left:10px; padding-bottom:1px}
+  .dock .label{font-size:8px}
+  .dock .mult{font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1}
+
+  .replay{display:inline-block; margin:10px 4px 0; font-size:11px; letter-spacing:.08em; color:var(--cyan);
+          cursor:pointer; user-select:none; border:1px solid #1e3a40; border-radius:6px; padding:4px 10px;
+          background:rgba(40,240,255,.05)}
+  .replay:hover{background:rgba(40,240,255,.12)}
+</style>
+</head>
+<body>
+<h1>Stagger HUD — flat metadata bar + where the streak lives</h1>
+<p class="sub">
+  Three takes on flattening the in-run HUD (Training-header style: small uppercase labels over values,
+  one sturdy left-to-right bar). The score keeps its size and spans the bar's full height in all three.
+  Each variant also answers where the <b>STREAK ×N</b> goes — shown quiet and mid-streak.
+  Tap <span style="color:var(--cyan)">replay pop</span> to re-fire the streak animation.
+</p>
+
+<div class="grid">
+
+  <!-- ── A: Luis's sketch + center-stage streak ─────────────────────────── -->
+  <div class="col">
+    <div class="caption">A — Sketch bar · streak takes center stage</div>
+
+    <div class="statelabel">Quiet (no streak)</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap"><span class="num score">1250</span></div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">3 <span class="of">/ 5</span></span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow"><div class="phaselabel">Recall</div></div>
+      <div class="boardtop"></div>
+    </div>
+
+    <div class="statelabel">Streak ×7 — takes over the phase label, holds, fades; RECALL returns</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap"><span class="num score">4870</span></div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">4 <span class="of">/ 6</span></span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow">
+        <div class="streak-center lime-glow" data-pop><span class="word">Streak</span><span class="num mult">×7</span></div>
+      </div>
+      <div class="boardtop"></div>
+    </div>
+    <span class="replay" data-replay>▶ replay pop</span>
+
+    <p class="note"><b>The bar is exactly the sketch</b>: score left (no label, full height), items middle,
+      lives right. The streak moves to the game's sanctioned spot for transient cues — the central line
+      above the grid — as a big lime <b>×7</b> with a small STREAK word. Most visible option; nothing
+      permanently reserved for it. While it holds, it replaces RECALL (the IN&nbsp;ORDER hint still wins on hard mode).</p>
+  </div>
+
+  <!-- ── B: four-slot bar, streak lives IN the bar ──────────────────────── -->
+  <div class="col">
+    <div class="caption">B — Four-up bar · streak has a permanent slot</div>
+
+    <div class="statelabel">Quiet (streak below ×3 reads as an em-dash)</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap"><span class="num score">1250</span></div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">3 <span class="of">/ 5</span></span></div>
+        <div class="slot c"><span class="label">Streak</span><span class="streak-idle">—</span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow"><div class="phaselabel">Recall</div></div>
+      <div class="boardtop"></div>
+    </div>
+
+    <div class="statelabel">Streak ×7 — the slot lights lime and pops on every step</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap"><span class="num score">4870</span></div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">4 <span class="of">/ 6</span></span></div>
+        <div class="slot c"><span class="label">Streak</span><span class="num streak-val lime-glow" data-pop>×7</span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow"><div class="phaselabel">Recall</div></div>
+      <div class="boardtop"></div>
+    </div>
+    <span class="replay" data-replay>▶ replay pop</span>
+
+    <p class="note"><b>Streak becomes a first-class stat</b> between items and lives — label above,
+      big ×N below, always in the same place (no appearing/disappearing chip at all). Trade-off: a
+      fourth slot tightens the bar on narrow phones, and the slot shows a dead “—” most of the early game.</p>
+  </div>
+
+  <!-- ── C: sketch bar, streak docked on the score ──────────────────────── -->
+  <div class="col">
+    <div class="caption">C — Sketch bar · streak docks beside the score</div>
+
+    <div class="statelabel">Quiet (no streak)</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap"><span class="num score">1250</span></div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">3 <span class="of">/ 5</span></span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow"><div class="phaselabel">Recall</div></div>
+      <div class="boardtop"></div>
+    </div>
+
+    <div class="statelabel">Streak ×7 — pops in against the score it's multiplying, holds, fades</div>
+    <div class="frame">
+      <div class="hud">
+        <div class="scorewrap">
+          <span class="num score">4870</span>
+          <span class="dock lime-glow" data-pop><span class="label" style="color:inherit">Streak</span><span class="num mult">×7</span></span>
+        </div>
+        <div class="slot c"><span class="label">Items</span><span class="items-val">4 <span class="of">/ 6</span></span></div>
+        <div class="slot r"><span class="label">Lives</span><span class="hearts"><i>♥</i><i>♥</i><i>♥</i><i>♥</i><i class="spent">♥</i></span></div>
+      </div>
+      <div class="timer"><i></i></div>
+      <div class="phaserow"><div class="phaselabel">Recall</div></div>
+      <div class="boardtop"></div>
+    </div>
+    <span class="replay" data-replay>▶ replay pop</span>
+
+    <p class="note"><b>The multiplier reads as part of the score</b> — ×7 snugs up against the number
+      it's multiplying, small STREAK label above, still transient (pop → hold → fade). Keeps the sketch's
+      three-slot bar and the phase label untouched. Trade-off: less central than A, and the score corner
+      gets busy at 5-digit scores.</p>
+  </div>
+
+</div>
+
+<script>
+  // Re-fire the pop animation on this column's streak element.
+  document.querySelectorAll('[data-replay]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const el = btn.closest('.col').querySelector('[data-pop]')
+      el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop')
+    })
+  })
+  document.querySelectorAll('[data-pop]').forEach(el => el.classList.add('pop'))
+</script>
+</body>
+</html>

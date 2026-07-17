@@ -660,12 +660,18 @@ export function StaggerScreen() {
               {phaseLabel}
             </div>
             {streakChip && (
-              <span
-                key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
-                style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
-              >
-                STREAK ×{streakChip.value}
+              /* Centered by the flex wrapper, NOT a translate: the pop/fade
+                 keyframes own `transform`, so any translate-based centering on
+                 the animated element would drop for the animation's duration
+                 and snap back after (a visible jump). */
+              <span className="absolute inset-y-0 right-0 flex items-center">
+                <span
+                  key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
+                  className={`font-silk font-bold text-[11px] tracking-[0.1em] text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
+                  style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
+                >
+                  STREAK ×{streakChip.value}
+                </span>
               </span>
             )}
           </div>
@@ -778,14 +784,19 @@ export function StaggerScreen() {
               </div>
             )}
 
-            <div className="flex flex-col gap-3 w-44 pointer-events-auto">
-              <NeonButton variant="primary" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
-              {/* The itch the summary creates — "where did that rank?" — gets
-                  its own door. Lands on this run's mode tab: the board opens
-                  on the persisted difficulty, which is what the run started
-                  with. */}
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goLeaderboard() }}>Leaderboard</NeonButton>
-              <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
+            {/* Play again is THE next action — full width, one tier up in size;
+                Leaderboard and Home are half-width secondary doors below it.
+                The column matches the stats/graph width above. */}
+            <div className="flex flex-col gap-3 w-full max-w-[300px] pointer-events-auto">
+              <NeonButton variant="primary" size="lg" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
+              <div className="flex gap-3">
+                {/* The itch the summary creates — "where did that rank?" — gets
+                    its own door. Lands on this run's mode tab: the board opens
+                    on the persisted difficulty, which is what the run started
+                    with. */}
+                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goLeaderboard() }}>Leaderboard</NeonButton>
+                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
+              </div>
             </div>
           </div>
         )}
@@ -844,7 +855,10 @@ export function StaggerScreen() {
             </div>
             <div>
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
-              <div className="mt-1.5"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
+              {/* Hearts sit in the same 18px line box as the neighboring text-lg
+                  values — a bare div's default line-height would pad below the
+                  hearts and push this column out of line. */}
+              <div className="mt-1 flex h-[18px] items-center"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
             </div>
             <div>
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
