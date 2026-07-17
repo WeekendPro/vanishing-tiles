@@ -152,8 +152,14 @@
     background:rgba(0,0,0,.7); backdrop-filter:blur(2px); text-align:center; padding:0 24px;
   }
   .ov-kicker{font-size:10px; letter-spacing:.22em; text-transform:uppercase; margin-bottom:8px}
-  .ov-title{font-family:Silkscreen,monospace; font-weight:700; font-size:22px; line-height:1.2; margin-bottom:10px}
+  .ov-title{font-weight:700; font-size:20px; letter-spacing:.04em; line-height:1.25; margin-bottom:10px}
   .ov-sub{font-size:12px; color:var(--dim); line-height:1.6; max-width:230px}
+  .ov-list{display:flex; flex-direction:column; gap:14px; text-align:left; margin:6px 0 2px}
+  .ov-list .step{display:flex; align-items:baseline; gap:10px}
+  .ov-list .n{flex:none; font-weight:700; font-size:13px; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5); font-variant-numeric:tabular-nums}
+  .ov-list .s{font-size:14px; font-weight:500; color:var(--text); line-height:1.45}
+  .ov-continue{margin-top:22px; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); animation:contPulse 1.8s ease-in-out infinite}
+  @keyframes contPulse{0%,100%{opacity:.45} 50%{opacity:1}}
   .ov-btn{
     margin-top:18px; width:100%; max-width:230px; padding:11px 0; border-radius:6px; border:2px solid var(--cyan);
     background:var(--raised); color:var(--cyan); font-family:"Space Grotesk"; font-weight:600; font-size:12px;
@@ -166,10 +172,11 @@
 
   /* NICE! burst */
   .burst{
-    position:absolute; z-index:25; font-family:Silkscreen,monospace; font-weight:700; font-size:13px; color:#fff;
+    position:absolute; z-index:25; font-weight:700; font-size:13px; color:#fff; text-align:center;
     text-shadow:0 2px 5px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.95); white-space:nowrap;
     animation:burstFloat 1.6s ease-out infinite;
   }
+  .burst .pts{display:block; font-family:Silkscreen,monospace; font-size:12px; margin-top:1px}
   @keyframes burstFloat{
     0%{opacity:0; transform:translate(-50%,6px) scale(.4)}
     18%{opacity:1; transform:translate(-50%,-10px) scale(1)}
@@ -185,7 +192,8 @@
 <p class="sub">
   A guided two-piece round that runs on the REAL Stagger screen, before the 3·2·1·GO countdown —
   a timeless space where the loop is learned, then the countdown itself announces that time begins now.
-  No score, no lives, no clock. Mirrors the selected mode (piece colors on Easy, monochrome magenta on
+  No clock, no lost lives — but the score runs for REAL (and resets to 0 as the countdown fires).
+  Mirrors the selected mode (piece colors on Easy, monochrome magenta on
   Medium/Hard); picks are guided in reveal order, which quietly pre-teaches Hard's IN&nbsp;ORDER rule.
   Section 2 compares the eye-guidance treatments — they loop, judge them in motion.
 </p>
@@ -201,17 +209,20 @@
     <p class="caption">Beat 1 — Intro (≈1.5s or tap)</p>
     <div class="frame">
       <div class="hud">
-        <div class="demochip">DEMO</div>
+        <div class="score">0</div>
         <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
-        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts">♥♥♥♥♥</div></div>
       </div>
       <div class="bar"><i class="inert"></i></div>
       <div class="phase"></div>
       <div class="board" data-board></div>
       <div class="overlay" style="position:absolute">
         <div class="ov-kicker ph-cyan">How it works</div>
-        <div class="ov-title" style="color:var(--cyan); text-shadow:0 0 18px rgba(40,240,255,.5)">WATCH,<br/>THEN RECALL</div>
-        <div class="ov-sub">Two shapes will flash and vanish. Remember them — then bring them back. No clock yet.</div>
+        <div class="ov-list">
+          <div class="step"><span class="n">1</span><span class="s">Memorize the pieces.</span></div>
+          <div class="step"><span class="n">2</span><span class="s">Tap to recall what you saw.</span></div>
+        </div>
+        <div class="ov-continue">Tap to continue</div>
       </div>
       <div class="tray">
         <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
@@ -219,8 +230,9 @@
       </div>
       <div class="skip">skip demo&nbsp;<b>›</b></div>
     </div>
-    <p class="note">Same overlay grammar as the countdown (board visible underneath). The HUD's score
-      slot reads <b>DEMO</b>, hearts are unlit, the bar is inert — stakes visibly absent.
+    <p class="note">Same overlay grammar as the countdown (board visible underneath), but plain type —
+      no pixel headline. Two steps, nothing else; <b>Tap to continue</b> breathes at the bottom.
+      The HUD is fully live (score 0, hearts lit) — only the bar sits inert: no clock yet.
       <b>Skip demo</b> rides faint below the tray (where the pause button lives in the real run) through every beat.</p>
   </div>
 
@@ -229,9 +241,9 @@
     <p class="caption">Beat 2 — Reveal (real bloom, held longer)</p>
     <div class="frame">
       <div class="hud">
-        <div class="demochip">DEMO</div>
+        <div class="score">0</div>
         <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
-        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts">♥♥♥♥♥</div></div>
       </div>
       <div class="bar"><i class="inert"></i></div>
       <div class="phase ph-magenta">Watch the shapes</div>
@@ -253,9 +265,9 @@
     <p class="caption">Beat 3 — Guided pick 1</p>
     <div class="frame">
       <div class="hud">
-        <div class="demochip">DEMO</div>
+        <div class="score">0</div>
         <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
-        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts">♥♥♥♥♥</div></div>
       </div>
       <div class="bar"><i class="inert"></i></div>
       <div class="phase ph-amber" style="position:relative; z-index:30">Tap the first shape you saw</div>
@@ -266,13 +278,13 @@
       <div class="tray" style="position:relative">
         <div class="veil" style="border-radius:12px"></div>
         <div class="trayhead" style="position:relative; z-index:30"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
-        <div class="pieces" data-tray data-target="O" data-treatment="spot"></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="spot" data-tapcue="1"></div>
       </div>
       <div class="skip">skip demo&nbsp;<b>›</b></div>
     </div>
-    <p class="note">The recommended treatment (see §2): the rest of the screen drops behind a veil,
-      the O button stays lit with a breathing glow ring. Coach copy owns the central line — the
-      <b>board goes quiet, the tray becomes the only bright thing.</b></p>
+    <p class="note">T3 guidance (§2): the rest of the screen drops behind a veil, the O button stays
+      lit with a breathing glow ring under the bobbing TAP cue. Coach copy owns the central line —
+      the <b>board goes quiet, the tray becomes the only bright thing.</b></p>
   </div>
 
   <!-- Beat 4: feedback + pick 2 -->
@@ -280,26 +292,27 @@
     <p class="caption">Beat 4 — Positive feedback → pick 2</p>
     <div class="frame">
       <div class="hud">
-        <div class="demochip">DEMO</div>
+        <div class="score">100</div>
         <div class="items"><div class="label">Items</div><div class="v">1 <span>/ 2</span></div></div>
-        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts">♥♥♥♥♥</div></div>
       </div>
       <div class="bar"><i class="inert"></i></div>
       <div class="phase ph-lime">Nice — one more</div>
       <div style="position:relative">
         <div class="board" data-board
              data-lit='[{"cells":[[3,4],[3,5],[4,4],[4,5]],"color":"var(--pO)","cls":"placed"}]'></div>
-        <div class="burst" style="left:118px; top:64px"><span class="thumb">👍</span>NICE!</div>
+        <div class="burst" style="left:118px; top:58px"><span class="thumb">👍</span>NICE!<span class="pts">+100</span></div>
       </div>
       <div class="tray">
         <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
-        <div class="pieces" data-tray data-target="I" data-treatment="spot-light"></div>
+        <div class="pieces" data-tray data-target="I" data-treatment="spot-light" data-tapcue="1"></div>
       </div>
       <div class="skip">skip demo&nbsp;<b>›</b></div>
     </div>
-    <p class="note">The real snap-in animation places the O in its piece color; instead of “+100”
-      a <b>👍 NICE!</b> floats off it in the same bubbly burst style (no points exist here).
-      Guidance immediately re-arms on the I. After pick 2: “PERFECT” beat, then…</p>
+    <p class="note">The real snap-in animation places the O in its piece color, and the score runs
+      for real: <b>+100</b> floats off the gap and counts into the HUD, with the <b>👍 NICE!</b>
+      riding the same burst. Real streak math too — pick 2 pays +200 (×2), so the demo ends at 300.
+      Guidance immediately re-arms on the I; after pick 2, a “PERFECT” beat, then…</p>
   </div>
 
   <!-- Beat 5: end beat -->
@@ -307,9 +320,9 @@
     <p class="caption">Beat 5 — End beat → countdown</p>
     <div class="frame">
       <div class="hud">
-        <div class="demochip">DEMO</div>
+        <div class="score">300</div>
         <div class="items"><div class="label">Items</div><div class="v">2 <span>/ 2</span></div></div>
-        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts">♥♥♥♥♥</div></div>
       </div>
       <div class="bar"><i class="inert"></i></div>
       <div class="phase"></div>
@@ -332,15 +345,16 @@
     <p class="note">Both pieces sit placed on the board behind the veil — proof of what they just did.
       The checkbox lives HERE, at the exact moment the player can judge if they'll ever need the demo
       again; it kills the demo in <b>every</b> difficulty. “Start the run” → the familiar 3·2·1·GO,
-      which now carries the meaning “time starts here.”</p>
+      which now carries the meaning “time starts here” — and the demo's 300 points reset to 0 as
+      it fires, so the run scores from scratch.</p>
   </div>
 
 </div>
 
 <h2>2 · Eye-guidance treatments (they loop — watch)</h2>
 <p class="sub">How we pull the player's eye to the target piece during the guided pick.
-  Same tray, three treatments. My pick is <b style="color:var(--text)">T3</b>: the veil does the
-  finding, the TAP cue does the telling — and both vanish for good after the demo.</p>
+  Same tray, three treatments. <b style="color:var(--text)">Chosen: T3</b> — the veil does the
+  finding, the TAP cue does the telling, and both vanish for good after the demo.</p>
 
 <div class="row">
   <div class="col">
@@ -372,7 +386,7 @@
   </div>
 
   <div class="col">
-    <p class="caption">T3 — Spotlight + TAP cue (recommended)</p>
+    <p class="caption">T3 — Spotlight + TAP cue (chosen)</p>
     <div class="frame" style="padding-top:18px">
       <div class="phase ph-amber" style="position:relative; z-index:30">Tap the first shape you saw</div>
       <div class="tray" style="position:relative; margin-top:4px">
