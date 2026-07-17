@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — First-Run Demo Round</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F; --board:#04040a; --dimcell:#0c0c14;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+    --lime:#B6FF3C; --cyan:#28F0FF; --magenta:#FF2D9B; --amber:#FFC23D; --red:#FF3B47;
+    --pO:#facc15; --pI:#22d3ee;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(120% 90% at 50% 0%, #0c0c18 0%, #06060B 60%);
+    color:var(--text); font-family:"Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; padding:40px 20px 100px;
+  }
+  h1{font-size:18px; font-weight:600; letter-spacing:.04em; text-align:center; margin:0 0 6px}
+  h2{font-size:14px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--cyan);
+     text-shadow:0 0 10px rgba(40,240,255,.4); text-align:center; margin:64px 0 8px}
+  .sub{text-align:center; color:var(--dim); font-size:13px; max-width:720px; margin:0 auto 36px; line-height:1.6}
+  .row{display:flex; flex-wrap:wrap; gap:36px 28px; justify-content:center; align-items:flex-start}
+  .col{width:320px}
+  .caption{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--cyan); margin:0 0 8px; font-weight:600; text-align:center}
+  .note{font-size:12px; color:var(--dim); line-height:1.55; margin:10px 4px 0}
+  .note b{color:var(--text); font-weight:600}
+
+  /* ── Phone frame ── */
+  .frame{
+    position:relative; width:320px; border-radius:20px;
+    background:radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), var(--void);
+    border:1px solid #1a1a26; box-shadow:0 0 0 2px #0b0b14;
+    overflow:hidden; padding:14px 18px 18px;
+  }
+  .frame::before{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; z-index:60;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  }
+
+  /* ── HUD ── */
+  .hud{display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; margin-bottom:8px}
+  .demochip{
+    align-self:end; justify-self:start; font-family:Silkscreen, monospace; font-weight:700;
+    font-size:15px; letter-spacing:.06em; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1;
+  }
+  .score{align-self:end; justify-self:start; font-family:Silkscreen,monospace; font-weight:700; font-size:24px; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); line-height:1}
+  .items{display:flex; flex-direction:column; align-items:center; justify-content:space-between}
+  .lives{display:flex; flex-direction:column; align-items:flex-end; justify-self:end; justify-content:space-between}
+  .label{font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .items .v{font-size:13px; font-weight:600; font-variant-numeric:tabular-nums}
+  .items .v span{color:var(--dim); font-weight:500}
+  .hearts{font-size:11px; letter-spacing:2px; color:var(--red); text-shadow:0 0 6px rgba(255,59,71,.5)}
+  .hearts.inert{color:#3d262c; text-shadow:none}
+
+  /* ── Timer bar ── */
+  .bar{height:6px; border-radius:99px; background:#000; box-shadow:inset 0 1px 2px #000; margin-bottom:8px; overflow:hidden}
+  .bar i{display:block; height:100%; border-radius:99px}
+  .bar .inert{width:100%; background:#14141f}
+
+  /* ── Central phase / coach line ── */
+  .phase{height:14px; text-align:center; font-size:10px; letter-spacing:.22em; text-transform:uppercase; margin:2px 0 8px; font-weight:600}
+  .ph-magenta{color:var(--magenta); text-shadow:0 0 8px rgba(255,45,155,.55)}
+  .ph-amber{color:var(--amber); text-shadow:0 0 8px rgba(255,194,61,.5)}
+  .ph-lime{color:var(--lime); text-shadow:0 0 8px rgba(182,255,60,.5)}
+  .ph-cyan{color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.5)}
+
+  /* ── Board ── */
+  .board{
+    position:relative; display:grid; grid-template-columns:repeat(12, 20px); gap:2px;
+    background:var(--board); border-radius:12px; padding:10px; width:max-content; margin:0 auto;
+    box-shadow:inset 0 2px 6px #000, inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .board i{width:20px; height:20px; border-radius:2px; background:var(--dimcell)}
+  .board i.lit{background:var(--c); box-shadow:0 0 9px var(--c); transform:scale(1)}
+  .board i.lit.fresh{animation:holdPulse 2s ease-in-out infinite}
+  @keyframes holdPulse{0%,100%{box-shadow:0 0 9px var(--c)} 50%{box-shadow:0 0 14px var(--c), 0 0 26px var(--c)}}
+  .board i.ghost{background:color-mix(in srgb, var(--c) 30%, var(--dimcell)); box-shadow:0 0 3px color-mix(in srgb, var(--c) 22%, transparent)}
+  .board i.placed{background:var(--c); box-shadow:0 0 8px rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.25)}
+
+  /* ── Tray ── */
+  .tray{
+    margin-top:12px; border-radius:12px; padding:10px 10px 8px; background:var(--panel);
+    border:1px solid rgba(255,255,255,.05); box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .trayhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+  .trayhead .t{font-family:Silkscreen,monospace; font-size:8px; letter-spacing:.15em; text-transform:uppercase; color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.4)}
+  .trayhead .h{font-size:9px; color:var(--dim)}
+  .pieces{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+  .pbtn{
+    position:relative; display:flex; align-items:center; justify-content:center; height:40px;
+    border-radius:6px; background:var(--raised); border:1px solid rgba(40,240,255,.25);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .mini{display:grid; gap:1px}
+  .mini i{width:6px; height:6px; border-radius:1px}
+
+  /* dimming of non-target pieces */
+  .pbtn.dimmed{opacity:.22; filter:saturate(.4)}
+
+  /* T1 — spotlight pulse ring on the target */
+  .pbtn.spot{
+    border-color:var(--cyan); z-index:30;
+    animation:spotRing 1.4s ease-in-out infinite;
+  }
+  @keyframes spotRing{
+    0%,100%{box-shadow:0 0 6px rgba(40,240,255,.55), 0 0 18px rgba(40,240,255,.30)}
+    50%{box-shadow:0 0 10px rgba(40,240,255,.95), 0 0 30px rgba(40,240,255,.55)}
+  }
+
+  /* T2 — periodic nudge wiggle */
+  .pbtn.nudge{border-color:var(--cyan); animation:nudge 1.8s ease-in-out infinite}
+  @keyframes nudge{
+    0%, 74%, 100%{transform:translateX(0) rotate(0); box-shadow:0 0 6px rgba(40,240,255,.4)}
+    78%{transform:translateX(-2px) rotate(-2.5deg)}
+    82%{transform:translateX(2px) rotate(2.5deg)}
+    86%{transform:translateX(-1.5px) rotate(-1.5deg)}
+    90%{transform:translateX(0) rotate(0); box-shadow:0 0 12px rgba(40,240,255,.8)}
+  }
+
+  /* T3 — spotlight + TAP chevron */
+  .tapcue{
+    position:absolute; left:50%; bottom:calc(100% - 10px); transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; z-index:31; pointer-events:none;
+    animation:tapBob 1.1s ease-in-out infinite;
+  }
+  .tapcue .word{font-family:Silkscreen,monospace; font-size:8px; letter-spacing:.1em; color:#fff; text-shadow:0 2px 5px rgba(0,0,0,.85)}
+  .tapcue .chev{width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid #fff; filter:drop-shadow(0 2px 3px rgba(0,0,0,.8)); margin-top:1px}
+  @keyframes tapBob{0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-4px)}}
+
+  /* wrong-tap headshake */
+  .pbtn.shake{border-color:rgba(255,255,255,.3); animation:headshake 1.6s ease-in-out infinite}
+  @keyframes headshake{
+    0%, 20%, 100%{transform:translateX(0)}
+    4%{transform:translateX(-3px)} 8%{transform:translateX(3px)} 12%{transform:translateX(-2px)} 16%{transform:translateX(0)}
+  }
+
+  /* veil (dim everything else) */
+  .veil{position:absolute; inset:0; background:rgba(0,0,0,.55); z-index:20; border-radius:0}
+
+  /* skip — rides where the pause button lives in the real run (below the tray) */
+  .skip{margin-top:10px; text-align:right; z-index:40; position:relative; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--faint)}
+  .skip b{color:var(--dim); font-weight:600}
+
+  /* intro / end overlays */
+  .overlay{
+    position:absolute; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.7); backdrop-filter:blur(2px); text-align:center; padding:0 24px;
+  }
+  .ov-kicker{font-size:10px; letter-spacing:.22em; text-transform:uppercase; margin-bottom:8px}
+  .ov-title{font-family:Silkscreen,monospace; font-weight:700; font-size:22px; line-height:1.2; margin-bottom:10px}
+  .ov-sub{font-size:12px; color:var(--dim); line-height:1.6; max-width:230px}
+  .ov-btn{
+    margin-top:18px; width:100%; max-width:230px; padding:11px 0; border-radius:6px; border:2px solid var(--cyan);
+    background:var(--raised); color:var(--cyan); font-family:"Space Grotesk"; font-weight:600; font-size:12px;
+    letter-spacing:.1em; text-transform:uppercase; box-shadow:0 0 14px rgba(40,240,255,.25);
+  }
+  .checkrow{margin-top:16px; display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim)}
+  .checkbox{width:14px; height:14px; border-radius:3px; border:1.5px solid var(--faint); background:rgba(255,255,255,.04); flex:none}
+  .checkbox.checked{border-color:var(--cyan); background:rgba(40,240,255,.15); box-shadow:0 0 6px rgba(40,240,255,.4); position:relative}
+  .checkbox.checked::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--cyan); font-size:10px; font-weight:700}
+
+  /* NICE! burst */
+  .burst{
+    position:absolute; z-index:25; font-family:Silkscreen,monospace; font-weight:700; font-size:13px; color:#fff;
+    text-shadow:0 2px 5px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.95); white-space:nowrap;
+    animation:burstFloat 1.6s ease-out infinite;
+  }
+  @keyframes burstFloat{
+    0%{opacity:0; transform:translate(-50%,6px) scale(.4)}
+    18%{opacity:1; transform:translate(-50%,-10px) scale(1)}
+    70%{opacity:1; transform:translate(-50%,-22px) scale(1)}
+    100%{opacity:0; transform:translate(-50%,-40px) scale(1.4)}
+  }
+  .thumb{font-size:15px; display:block; text-align:center; margin-bottom:1px}
+</style>
+</head>
+<body>
+
+<h1>First-Run Demo Round — “the demo is the game, minus stakes”</h1>
+<p class="sub">
+  A guided two-piece round that runs on the REAL Stagger screen, before the 3·2·1·GO countdown —
+  a timeless space where the loop is learned, then the countdown itself announces that time begins now.
+  No score, no lives, no clock. Mirrors the selected mode (piece colors on Easy, monochrome magenta on
+  Medium/Hard); picks are guided in reveal order, which quietly pre-teaches Hard's IN&nbsp;ORDER rule.
+  Section 2 compares the eye-guidance treatments — they loop, judge them in motion.
+</p>
+
+<h2>1 · The flow, beat by beat</h2>
+<p class="sub">Five beats from PLAY to the countdown. The demo pieces are O then I — the exact
+  shape pool the real level-1 batch draws from seconds later.</p>
+
+<div class="row">
+
+  <!-- Beat 1: intro -->
+  <div class="col">
+    <p class="caption">Beat 1 — Intro (≈1.5s or tap)</p>
+    <div class="frame">
+      <div class="hud">
+        <div class="demochip">DEMO</div>
+        <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+      </div>
+      <div class="bar"><i class="inert"></i></div>
+      <div class="phase"></div>
+      <div class="board" data-board></div>
+      <div class="overlay" style="position:absolute">
+        <div class="ov-kicker ph-cyan">How it works</div>
+        <div class="ov-title" style="color:var(--cyan); text-shadow:0 0 18px rgba(40,240,255,.5)">WATCH,<br/>THEN RECALL</div>
+        <div class="ov-sub">Two shapes will flash and vanish. Remember them — then bring them back. No clock yet.</div>
+      </div>
+      <div class="tray">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray></div>
+      </div>
+      <div class="skip">skip demo&nbsp;<b>›</b></div>
+    </div>
+    <p class="note">Same overlay grammar as the countdown (board visible underneath). The HUD's score
+      slot reads <b>DEMO</b>, hearts are unlit, the bar is inert — stakes visibly absent.
+      <b>Skip demo</b> rides faint below the tray (where the pause button lives in the real run) through every beat.</p>
+  </div>
+
+  <!-- Beat 2: reveal -->
+  <div class="col">
+    <p class="caption">Beat 2 — Reveal (real bloom, held longer)</p>
+    <div class="frame">
+      <div class="hud">
+        <div class="demochip">DEMO</div>
+        <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+      </div>
+      <div class="bar"><i class="inert"></i></div>
+      <div class="phase ph-magenta">Watch the shapes</div>
+      <div class="board" data-board
+           data-lit='[{"cells":[[3,4],[3,5],[4,4],[4,5]],"color":"var(--pO)","cls":"lit fresh"},{"cells":[[7,3],[7,4],[7,5],[7,6]],"color":"var(--pI)","cls":"ghost"}]'></div>
+      <div class="tray">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray></div>
+      </div>
+      <div class="skip">skip demo&nbsp;<b>›</b></div>
+    </div>
+    <p class="note">The game's exact bloom cascade (O flashing bright, I already on its ghost-tail
+      decay) — untouched code, just the coach line <b>“WATCH THE SHAPES”</b> in the central slot
+      instead of MEMORIZE. On Medium/Hard both bloom the branded magenta (see §4).</p>
+  </div>
+
+  <!-- Beat 3: guided pick -->
+  <div class="col">
+    <p class="caption">Beat 3 — Guided pick 1</p>
+    <div class="frame">
+      <div class="hud">
+        <div class="demochip">DEMO</div>
+        <div class="items"><div class="label">Items</div><div class="v">0 <span>/ 2</span></div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+      </div>
+      <div class="bar"><i class="inert"></i></div>
+      <div class="phase ph-amber" style="position:relative; z-index:30">Tap the first shape you saw</div>
+      <div style="position:relative">
+        <div class="board" data-board></div>
+        <div class="veil" style="border-radius:12px"></div>
+      </div>
+      <div class="tray" style="position:relative">
+        <div class="veil" style="border-radius:12px"></div>
+        <div class="trayhead" style="position:relative; z-index:30"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="spot"></div>
+      </div>
+      <div class="skip">skip demo&nbsp;<b>›</b></div>
+    </div>
+    <p class="note">The recommended treatment (see §2): the rest of the screen drops behind a veil,
+      the O button stays lit with a breathing glow ring. Coach copy owns the central line — the
+      <b>board goes quiet, the tray becomes the only bright thing.</b></p>
+  </div>
+
+  <!-- Beat 4: feedback + pick 2 -->
+  <div class="col">
+    <p class="caption">Beat 4 — Positive feedback → pick 2</p>
+    <div class="frame">
+      <div class="hud">
+        <div class="demochip">DEMO</div>
+        <div class="items"><div class="label">Items</div><div class="v">1 <span>/ 2</span></div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+      </div>
+      <div class="bar"><i class="inert"></i></div>
+      <div class="phase ph-lime">Nice — one more</div>
+      <div style="position:relative">
+        <div class="board" data-board
+             data-lit='[{"cells":[[3,4],[3,5],[4,4],[4,5]],"color":"var(--pO)","cls":"placed"}]'></div>
+        <div class="burst" style="left:118px; top:64px"><span class="thumb">👍</span>NICE!</div>
+      </div>
+      <div class="tray">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="I" data-treatment="spot-light"></div>
+      </div>
+      <div class="skip">skip demo&nbsp;<b>›</b></div>
+    </div>
+    <p class="note">The real snap-in animation places the O in its piece color; instead of “+100”
+      a <b>👍 NICE!</b> floats off it in the same bubbly burst style (no points exist here).
+      Guidance immediately re-arms on the I. After pick 2: “PERFECT” beat, then…</p>
+  </div>
+
+  <!-- Beat 5: end beat -->
+  <div class="col">
+    <p class="caption">Beat 5 — End beat → countdown</p>
+    <div class="frame">
+      <div class="hud">
+        <div class="demochip">DEMO</div>
+        <div class="items"><div class="label">Items</div><div class="v">2 <span>/ 2</span></div></div>
+        <div class="lives"><div class="label">Lives</div><div class="hearts inert">♥♥♥♥♥</div></div>
+      </div>
+      <div class="bar"><i class="inert"></i></div>
+      <div class="phase"></div>
+      <div style="position:relative">
+        <div class="board" data-board
+             data-lit='[{"cells":[[3,4],[3,5],[4,4],[4,5]],"color":"var(--pO)","cls":"placed"},{"cells":[[7,3],[7,4],[7,5],[7,6]],"color":"var(--pI)","cls":"placed"}]'></div>
+        <div class="overlay" style="border-radius:12px">
+          <div class="ov-kicker ph-lime">That's the loop</div>
+          <div class="ov-title" style="color:var(--lime); text-shadow:0 0 18px rgba(182,255,60,.5)">YOU'RE<br/>READY</div>
+          <div class="ov-sub">Same game from here — but the clock is real and misses cost lives.</div>
+          <button class="ov-btn">Start the run</button>
+          <div class="checkrow"><span class="checkbox"></span> Don't show this again</div>
+        </div>
+      </div>
+      <div class="tray">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray></div>
+      </div>
+    </div>
+    <p class="note">Both pieces sit placed on the board behind the veil — proof of what they just did.
+      The checkbox lives HERE, at the exact moment the player can judge if they'll ever need the demo
+      again; it kills the demo in <b>every</b> difficulty. “Start the run” → the familiar 3·2·1·GO,
+      which now carries the meaning “time starts here.”</p>
+  </div>
+
+</div>
+
+<h2>2 · Eye-guidance treatments (they loop — watch)</h2>
+<p class="sub">How we pull the player's eye to the target piece during the guided pick.
+  Same tray, three treatments. My pick is <b style="color:var(--text)">T3</b>: the veil does the
+  finding, the TAP cue does the telling — and both vanish for good after the demo.</p>
+
+<div class="row">
+  <div class="col">
+    <p class="caption">T1 — Spotlight veil + glow ring</p>
+    <div class="frame" style="padding-top:18px">
+      <div class="phase ph-amber" style="position:relative; z-index:30">Tap the first shape you saw</div>
+      <div class="tray" style="position:relative; margin-top:4px">
+        <div class="veil" style="border-radius:12px"></div>
+        <div class="trayhead" style="position:relative; z-index:30"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="spot"></div>
+      </div>
+    </div>
+    <p class="note">Everything non-target drops to ~22% behind a veil; the target breathes a cyan
+      ring (1.4s — calm, not alarming). <b>Quietest option; nothing moves.</b></p>
+  </div>
+
+  <div class="col">
+    <p class="caption">T2 — Subtle nudge (no dimming)</p>
+    <div class="frame" style="padding-top:18px">
+      <div class="phase ph-amber">Tap the first shape you saw</div>
+      <div class="tray" style="margin-top:4px">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="nudge"></div>
+      </div>
+    </div>
+    <p class="note">Full tray stays live and bright; the target does a tiny periodic wiggle + glow
+      tick every ~2s. <b>Least hand-holding, but the eye can miss it</b> on a first-ever screen
+      with seven unfamiliar buttons.</p>
+  </div>
+
+  <div class="col">
+    <p class="caption">T3 — Spotlight + TAP cue (recommended)</p>
+    <div class="frame" style="padding-top:18px">
+      <div class="phase ph-amber" style="position:relative; z-index:30">Tap the first shape you saw</div>
+      <div class="tray" style="position:relative; margin-top:4px">
+        <div class="veil" style="border-radius:12px"></div>
+        <div class="trayhead" style="position:relative; z-index:30"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="spot" data-tapcue="1"></div>
+      </div>
+    </div>
+    <p class="note">T1's veil + ring, plus a bobbing <b>TAP ▾</b> cue floating over the target —
+      the unmissable version. First-time players get zero ambiguity; the cue never appears
+      outside the demo.</p>
+  </div>
+</div>
+
+<h2>3 · Gentle correction (wrong tap)</h2>
+<p class="sub">Selection stays free — a wrong tap is corrected softly. No red flash, no board shake,
+  no life loss; the real miss feedback stays reserved for the real game.</p>
+
+<div class="row">
+  <div class="col">
+    <p class="caption">Wrong tap — soft headshake + coach line</p>
+    <div class="frame" style="padding-top:18px">
+      <div class="phase" style="position:relative; z-index:30"><span style="color:#fff; text-shadow:0 0 10px rgba(255,255,255,.75)">Not that one — try the glowing piece</span></div>
+      <div class="tray" style="position:relative; margin-top:4px">
+        <div class="veil" style="border-radius:12px"></div>
+        <div class="trayhead" style="position:relative; z-index:30"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray data-target="O" data-treatment="spot" data-wrong="T"></div>
+      </div>
+    </div>
+    <p class="note">The tapped piece (here T) does a quick horizontal headshake — “no” — while the
+      coach line takes the central slot in white (the IN&nbsp;ORDER hint grammar). The target's
+      pulse keeps breathing. In the demo, wrong taps CAN land (dimmed ≠ disabled) — honesty
+      without punishment.</p>
+  </div>
+
+  <!-- §4 folded into the same row to keep the page compact -->
+  <div class="col">
+    <h2 style="margin:0 0 8px; text-align:center">4 · Mode mirror</h2>
+    <p class="caption">Medium / Hard — monochrome reveal</p>
+    <div class="frame" style="padding-top:18px">
+      <div class="phase ph-magenta">Watch the shapes</div>
+      <div class="board" data-board
+           data-lit='[{"cells":[[3,4],[3,5],[4,4],[4,5]],"color":"var(--magenta)","cls":"lit fresh"},{"cells":[[7,3],[7,4],[7,5],[7,6]],"color":"var(--magenta)","cls":"ghost"}]'></div>
+      <div class="tray" style="margin-top:12px">
+        <div class="trayhead"><span class="t">Pieces</span><span class="h">tap to place from memory</span></div>
+        <div class="pieces" data-tray></div>
+      </div>
+    </div>
+    <p class="note">The demo mirrors the selected mode: on Medium/Hard both shapes bloom the branded
+      magenta — the player's first monochrome reveal happens HERE, with training wheels, not in the
+      scored run. Guided picks always follow reveal order, so Hard's IN&nbsp;ORDER rule is lived
+      once before it's enforced. The tray stays piece-colored in every mode, as in the game.</p>
+  </div>
+
+  <div class="col">
+    <h2 style="margin:0 0 8px; text-align:center">5 · Opt-out states</h2>
+    <p class="caption">End-beat checkbox (checked)</p>
+    <div class="frame" style="padding:0; height:280px">
+      <div class="overlay" style="position:absolute; border-radius:20px">
+        <div class="ov-kicker ph-lime">That's the loop</div>
+        <div class="ov-title" style="color:var(--lime); text-shadow:0 0 18px rgba(182,255,60,.5)">YOU'RE READY</div>
+        <button class="ov-btn">Start the run</button>
+        <div class="checkrow"><span class="checkbox checked"></span> <span style="color:var(--text)">Don't show this again</span></div>
+      </div>
+    </div>
+    <p class="note">Checked state: cyan tick, label brightens. Persists as one global
+      <b>hideDemo</b> flag in settings (localStorage, same pattern as the legacy briefing opt-out) —
+      checked once means never again, in any difficulty. Skipping the demo does NOT set the flag;
+      only this checkbox does.</p>
+  </div>
+</div>
+
+<script>
+  // ── tiny renderers so 144-cell boards + 7-piece trays aren't hand-written ──
+  const SHAPES = {
+    I: { cols:4, cells:[[0,0],[0,1],[0,2],[0,3]], color:'#22d3ee' },
+    O: { cols:2, cells:[[0,0],[0,1],[1,0],[1,1]], color:'#facc15' },
+    T: { cols:3, cells:[[0,0],[0,1],[0,2],[1,1]], color:'#a855f7' },
+    S: { cols:3, cells:[[0,1],[0,2],[1,0],[1,1]], color:'#4ade80' },
+    Z: { cols:3, cells:[[0,0],[0,1],[1,1],[1,2]], color:'#ef4444' },
+    J: { cols:3, cells:[[0,0],[1,0],[1,1],[1,2]], color:'#3b82f6' },
+    L: { cols:3, cells:[[0,2],[1,0],[1,1],[1,2]], color:'#fb923c' },
+  }
+  const ORDER = ['I','O','T','S','Z','J','L']
+
+  document.querySelectorAll('[data-board]').forEach(board => {
+    const lit = JSON.parse(board.dataset.lit || '[]')
+    const byCell = new Map()
+    lit.forEach(g => g.cells.forEach(([r,c]) => byCell.set(r+','+c, g)))
+    for (let r = 0; r < 12; r++) for (let c = 0; c < 12; c++) {
+      const cell = document.createElement('i')
+      const g = byCell.get(r+','+c)
+      if (g) { cell.className = g.cls; cell.style.setProperty('--c', g.color) }
+      board.appendChild(cell)
+    }
+  })
+
+  document.querySelectorAll('[data-tray]').forEach(tray => {
+    const target = tray.dataset.target
+    const treatment = tray.dataset.treatment
+    const wrong = tray.dataset.wrong
+    ORDER.forEach(t => {
+      const s = SHAPES[t]
+      const btn = document.createElement('div')
+      btn.className = 'pbtn'
+      if (target) {
+        if (t === target) {
+          if (treatment === 'spot' || treatment === 'spot-light') btn.classList.add('spot')
+          if (treatment === 'nudge') btn.classList.add('nudge')
+          if (tray.dataset.tapcue) {
+            const cue = document.createElement('div')
+            cue.className = 'tapcue'
+            cue.innerHTML = '<span class="word">TAP</span><span class="chev"></span>'
+            btn.appendChild(cue)
+          }
+        } else if (t === wrong) {
+          btn.classList.add('shake')
+          btn.style.zIndex = 30
+        } else if (treatment !== 'nudge') {
+          btn.classList.add('dimmed')
+        }
+      }
+      const mini = document.createElement('div')
+      mini.className = 'mini'
+      mini.style.gridTemplateColumns = `repeat(${s.cols}, 6px)`
+      const rows = Math.max(...s.cells.map(x => x[0])) + 1
+      const set = new Set(s.cells.map(([r,c]) => r+','+c))
+      for (let r = 0; r < rows; r++) for (let c = 0; c < s.cols; c++) {
+        const i = document.createElement('i')
+        if (set.has(r+','+c)) i.style.background = s.color
+        mini.appendChild(i)
+      }
+      btn.appendChild(mini)
+      tray.appendChild(btn)
+    })
+  })
+</script>
+</body>
+</html>
