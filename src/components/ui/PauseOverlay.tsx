@@ -9,7 +9,7 @@ import { ChannelControl } from './ChannelControl'
 /**
  * The hard-pause screen shared by Infinite Stagger and Training: covers
  * everything (no memorizing while frozen), shows the run's live stats so a
- * pause doubles as a scoreboard check, a Sound FX row (a pause is exactly
+ * pause doubles as a scoreboard check, a Sound row (a pause is exactly
  * when you discover the volume is wrong mid-run), then Resume / Exit to Home.
  *
  * `children` is the mode's stat readout — each mode surfaces its own metadata
@@ -33,7 +33,7 @@ export function PauseOverlay({
       {children}
       <div className="w-full max-w-xs border-y border-white/10">
         <ChannelControl
-          label="Sound FX"
+          label="Sound"
           enabled={soundEnabled}
           volume={sfxVolume}
           onToggle={() => {
