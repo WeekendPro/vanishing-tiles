@@ -273,7 +273,9 @@ function PieceTray({
                   <span className="mt-px w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]" />
                 </span>
               )}
-              <span className="vt-piece-in" style={{ animationDelay: `${i * 35}ms` }}>
+              {/* flex, not inline: an inline span would seat the piece on the
+                  text baseline and sink it below the button's center. */}
+              <span className="vt-piece-in flex" style={{ animationDelay: `${i * 35}ms` }}>
                 <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
               </span>
             </button>
