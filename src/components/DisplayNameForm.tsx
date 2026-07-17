@@ -83,7 +83,7 @@ export function DisplayNameForm({ initialName, submitLabel, onDone, onCancel }: 
       </div>
 
       <p className="font-grotesk text-[10px] tracking-[0.06em] text-vt-faint">
-        3–16 characters — letters, numbers and underscores. Shown on the global leaderboard.
+        Your name in lights — it's how you'll appear on the global leaderboards.
       </p>
 
       {(liveError || serverError) && (
