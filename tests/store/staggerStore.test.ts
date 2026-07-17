@@ -458,6 +458,43 @@ describe('Infinite Stagger replay + pause', () => {
     const remaining = resumed.selectStartTime + resumed.selectDuration - Date.now()
     expect(Math.abs(remaining - saved)).toBeLessThan(50)
   })
+
+  it('pause works mid-reveal without inventing a saved clock', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal()
+    st.pause()
+    const paused = useStaggerStore.getState()
+    expect(paused.paused).toBe(true)
+    expect(paused.resumeRemaining).toBeNull()
+    st.resume()
+    const resumed = useStaggerStore.getState()
+    expect(resumed.paused).toBe(false)
+    expect(resumed.phase).toBe('reveal')
+    // The clock starts fresh when the reveal hands off.
+    st.beginSelecting()
+    const sel = useStaggerStore.getState()
+    const remaining = sel.selectStartTime + sel.selectDuration - Date.now()
+    expect(Math.abs(remaining - sel.selectDuration)).toBeLessThan(50)
+  })
+
+  it('pausing a replayed reveal preserves the saved remaining time', () => {
+    const st = useStaggerStore.getState()
+    st.startRun(); st.beginReveal(); st.beginSelecting()
+    useStaggerStore.setState({ score: 600 })
+    expect(useStaggerStore.getState().replayReveal()).toBe(true)
+    const saved = useStaggerStore.getState().resumeRemaining!
+    expect(saved).toBeGreaterThan(0)
+    // A pause + resume during the replayed reveal must not consume the saved
+    // clock — beginSelecting still resumes from it.
+    st.pause()
+    expect(useStaggerStore.getState().resumeRemaining).toBe(saved)
+    st.resume()
+    expect(useStaggerStore.getState().resumeRemaining).toBe(saved)
+    st.beginSelecting()
+    const sel = useStaggerStore.getState()
+    const remaining = sel.selectStartTime + sel.selectDuration - Date.now()
+    expect(Math.abs(remaining - saved)).toBeLessThan(50)
+  })
 })
 
 describe('hard mode: ordered recall', () => {

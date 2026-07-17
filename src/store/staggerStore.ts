@@ -270,14 +270,28 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
 
   pause: () => {
     const { phase, paused, selectStartTime, selectDuration } = get()
-    if (phase !== 'selecting' || paused) return
-    const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
-    set({ paused: true, resumeRemaining: remaining })
+    if (paused) return
+    if (phase === 'selecting') {
+      const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
+      set({ paused: true, resumeRemaining: remaining })
+      return
+    }
+    // Mid-reveal pause: no clock to save — the select clock hasn't started, and
+    // a replayed reveal's saved remaining (resumeRemaining) must ride through
+    // untouched for beginSelecting to resume from.
+    if (phase === 'reveal') set({ paused: true })
   },
 
   resume: () => {
-    const { paused, resumeRemaining, selectDuration } = get()
+    const { phase, paused, resumeRemaining, selectDuration } = get()
     if (!paused) return
+    // Mid-reveal resume: only unfreeze — the select clock isn't running, and
+    // consuming resumeRemaining here would hand a replayed batch a fresh full
+    // clock instead of its saved remaining.
+    if (phase !== 'selecting') {
+      set({ paused: false })
+      return
+    }
     const remaining = resumeRemaining ?? selectDuration
     set({
       paused: false,

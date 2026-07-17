@@ -214,11 +214,17 @@ function StaggerCountdown({
 // ── Piece tray ────────────────────────────────────────────────────────────────
 // The recall tray always shows each piece's own color, in every mode
 // (PieceShape's default) — the monochrome-pink tray treatment is reveal-only.
+// `concealed` (the memorize phase): the same panel at the same size, but the
+// seven sockets are EMPTY, dormant divs — no piece shapes to stare at instead
+// of the board, nothing clickable — so the pause button below keeps exactly
+// its recall-phase position when the phases swap.
 function PieceTray({
-  onPick, disabled, demoTarget, demoWrong,
+  onPick, disabled, concealed = false, demoTarget, demoWrong,
 }: {
   onPick: (t: PieceType) => void
   disabled: boolean
+  /** Memorize phase: same panel, seven EMPTY dormant sockets (see above). */
+  concealed?: boolean
   /** Demo guidance (T3): while set, the target button wears the spotlight ring +
    *  TAP cue and every other button drops behind the "veil" (dimmed, still
    *  tappable — a wrong tap gets the gentle correction, not a disable). */
@@ -229,10 +235,18 @@ function PieceTray({
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className={`flex justify-between items-center mb-2 pointer-events-none select-none${demoTarget ? ' opacity-40' : ''}`}>
         <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Pieces</span>
-        <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>
+        {!concealed && <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>}
       </div>
       <div className="grid grid-cols-7 gap-1.5">
         {PIECE_DEFINITIONS.map(def => {
+          if (concealed) {
+            return (
+              <div
+                key={def.type}
+                className="h-12 p-1 rounded-md border bg-vt-raised border-vt-cyan/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+              />
+            )
+          }
           const isTarget = demoTarget === def.type
           const demoClass = !demoTarget ? ''
             : isTarget ? ' vt-demo-spot border-vt-cyan relative z-30'
@@ -422,8 +436,18 @@ export function StaggerScreen() {
   // Decays cascade (the next gap blooms before the last finishes dying), draining
   // the bar one step per gap as a COUNT, then hand off to selecting. Because the
   // reveals forwards-fill back to the void, past gaps leave no readable hole.
+  // Where a paused reveal picks back up: the index of the gap that was blooming
+  // (or queued) when the pause hit. Any FRESH reveal — next batch, timeout
+  // replay, paid replay — resets it to 0 (this effect's deps change on all of
+  // those but NOT on a pause/resume toggle, which only flips `paused`). It must
+  // run before the driver below so the driver reads the reset value.
+  const revealIdxRef = useRef(0)
   useEffect(() => {
-    if (phase !== 'reveal' || gaps.length === 0) return
+    if (phase === 'reveal') revealIdxRef.current = 0
+  }, [phase, batchIndex, gaps, revealPlan])
+
+  useEffect(() => {
+    if (phase !== 'reveal' || gaps.length === 0 || paused) return
     let cancelled = false
     const timers: number[] = []
     const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
@@ -440,14 +464,18 @@ export function StaggerScreen() {
     // spacing) outruns one bloom's lifetime, so the next gap flashes while the
     // previous is still decaying.
     // Memorize bar DRAINS: starts full and empties one step per gap as the
-    // sequence plays out (a visual count of memorize time spent). The demo's
-    // bar stays inert/empty — its whole point is that no clock exists yet.
-    if (demo) { setBarPct(0) } else { setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct(100) }
+    // sequence plays out (a visual count of memorize time spent). A reveal
+    // resumed from pause starts at the interrupted gap (re-blooming it in
+    // full), with the bar re-wound to just before that step. The demo's bar
+    // stays inert/empty — its whole point is that no clock exists yet.
+    const startIdx = revealIdxRef.current
+    if (demo) { setBarPct(0) } else { setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct((1 - startIdx / n) * 100) }
     setBlooms([])
     let id = 0
 
     const show = (idx: number) => {
       if (cancelled) return
+      revealIdxRef.current = idx
       if (idx >= n) {
         // Let the final gap finish its decay before recall lights-out.
         const { stepMs, bloomMs, decayMs } = timingRef.current
@@ -471,10 +499,11 @@ export function StaggerScreen() {
       })
       at(stepMs, () => show(idx + 1))
     }
-    // A short breath before the first gap (also paces continuous next batches).
-    at(350, () => show(0))
+    // A short breath before the first gap (also paces continuous next batches
+    // and re-entry from a mid-reveal pause).
+    at(350, () => show(startIdx))
     return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode, demo])
+  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode, demo, paused])
 
   // Selecting expiry: end the batch when the select clock runs out (lives are the
   // only fail condition). Paused → freeze: the effect tears down and re-arms when
@@ -1005,16 +1034,26 @@ export function StaggerScreen() {
           chip's styling) as a reminder that recall must follow the reveal
           sequence; no per-gap numbering — remembering the order IS the challenge. */}
       <div className="mt-4 w-full flex flex-col items-center">
-        {phase === 'selecting' && mode === 'hard' && (
-          <div className="w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta">
+        {/* On HARD the line is kept in the layout (invisible) through the
+            reveal too, so the tray and pause button hold one position across
+            the memorize ↔ recall swap. */}
+        {(phase === 'selecting' || phase === 'reveal') && mode === 'hard' && (
+          <div className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${phase === 'reveal' ? ' invisible' : ''}`}>
             IN ORDER
           </div>
         )}
         <div className="min-h-[88px] w-full flex justify-center">
-          {/* The tray stays mounted through the reveal too (disabled), so the
-              layout never jumps when recall begins. */}
+          {/* The tray stays mounted through the reveal too — as the concealed
+              empty-socket shell — so the layout never jumps when recall
+              begins. */}
           {(phase === 'reveal' || phase === 'selecting') && (
-            <PieceTray onPick={onPick} disabled={phase !== 'selecting' || cleared || paused} demoTarget={demoTarget} demoWrong={demoWrong} />
+            <PieceTray
+              onPick={onPick}
+              disabled={phase !== 'selecting' || cleared || paused}
+              concealed={phase === 'reveal'}
+              demoTarget={demoTarget}
+              demoWrong={demoWrong}
+            />
           )}
         </div>
       </div>
@@ -1032,10 +1071,11 @@ export function StaggerScreen() {
         </div>
       )}
 
-      {/* Pause — freeze the run (full width). (Replay-the-sequence was removed:
-          replaying after picks left correct pieces on the board, a confusing
-          experience to be redesigned later.) */}
-      {phase === 'selecting' && !demo && (
+      {/* Pause — freeze the run (full width), available during memorize too:
+          the overlay hides the board, the reveal driver freezes and re-blooms
+          the interrupted gap on resume. Not in the demo (no clock to freeze —
+          the skip link rides this spot instead). */}
+      {(phase === 'selecting' || phase === 'reveal') && !demo && (
         <div className="mt-3 w-full max-w-sm">
           <button
             aria-label="Pause"
