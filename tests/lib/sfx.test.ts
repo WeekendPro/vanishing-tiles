@@ -172,13 +172,13 @@ describe('sfx engine', () => {
     expect(milestone).toBeGreaterThan(plain) // the flourish rides on top of the coin blip
   })
 
-  it('bloom pairs the rising pentatonic note with a noise "shing" sweep', async () => {
+  it('bloom melody rises with the reveal step; its muted shing layer plays NOTHING', async () => {
     const sfx = await freshSfx()
     sfx.bloom(0)
     const first = ctx().oscillators[0].frequency.values[0]
-    expect(ctx().bufferSources.length).toBe(1) // the drawn-steel noise layer
-    const sweep = ctx().filters.find(f => f.type === 'bandpass')!
-    expect(sweep.frequency.values[1]).toBeGreaterThan(sweep.frequency.values[0]) // sweeps UP
+    // The designer muted the noise layer (gain 0): it must be silent-skipped,
+    // not an exponential-ramp-to-zero crash, and create no source at all.
+    expect(ctx().bufferSources.length).toBe(0)
     const beforeOsc = ctx().oscillators.length
     sfx.bloom(3)
     const later = ctx().oscillators[beforeOsc].frequency.values[0]
@@ -188,6 +188,24 @@ describe('sfx engine', () => {
     sfx.bloom(11)
     const deep = ctx().oscillators[beforeDeep].frequency.values[0]
     expect(deep).toBeLessThanOrEqual(first * 4)
+  })
+
+  it('a noise layer with gain > 0 still sweeps (the shing is one knob away)', async () => {
+    const sfx = await freshSfx()
+    const patch = sfx.getDefaultPatch('bloom')
+    patch.layers = patch.layers.map(l => (l.kind === 'noise' ? { ...l, gain: 0.12 } : l))
+    sfx.setPatch('bloom', patch)
+    sfx.bloom(0)
+    expect(ctx().bufferSources.length).toBe(1)
+    const sweep = ctx().filters.find(f => f.type === 'bandpass')!
+    expect(sweep.frequency.values[1]).toBeGreaterThan(sweep.frequency.values[0]) // sweeps UP
+  })
+
+  it('zero-gain tone layers are muted, not errors', async () => {
+    const sfx = await freshSfx()
+    sfx.setPatch('uiTap', { layers: [{ kind: 'tone', freq: 1300, dur: 0.05, gain: 0 }] })
+    expect(() => sfx.uiTap()).not.toThrow()
+    expect(ctx()?.oscillators ?? []).toHaveLength(0)
   })
 
   it('setPatch overrides what a gesture plays; resetPatch restores the default', async () => {
@@ -201,15 +219,23 @@ describe('sfx engine', () => {
     expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
   })
 
-  it('ships the lab-tuned bonusLift default (designer config, 2026-07-17)', async () => {
+  it('ships the lab-tuned bonusLift default (designer bank, 2026-07-17)', async () => {
     const sfx = await freshSfx()
     sfx.bonusLift()
     const [riser, sparkle] = ctx().oscillators
     expect(riser.type).toBe('square')
-    expect(riser.frequency.values[0]).toBe(396)
+    expect(riser.frequency.values[0]).toBe(395.8)
     expect(riser.frequency.values[1]).toBe(1817) // the glide target
     expect(sparkle.type).toBe('triangle')
     expect(sparkle.frequency.values[0]).toBe(2251)
+  })
+
+  it('ships the lab-tuned timeout default (square womp, deeper + longer)', async () => {
+    const sfx = await freshSfx()
+    sfx.timeout()
+    const [womp] = ctx().oscillators
+    expect(womp.type).toBe('square')
+    expect(womp.frequency.values[1]).toBe(76.38) // falls below the old 110 Hz floor
   })
 
   it('previewOneShot honors gameplay context (streak transposes the coin)', async () => {

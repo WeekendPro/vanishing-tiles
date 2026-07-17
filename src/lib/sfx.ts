@@ -99,7 +99,12 @@ const MAJOR = [0, 2, 4, 5, 7, 9, 11] // semitone offsets: the A major scale
 
 /** The shipped palette. `bloom` is voiced at reveal-step 0 and `pickCorrect`
  *  at streak 1 — gameplay scales their TONE layers up the scale from there
- *  (see `bloomScale`/`coinScale`), so edits keep the musical system intact. */
+ *  (see `bloomScale`/`coinScale`), so edits keep the musical system intact.
+ *
+ *  bonusLift/timeout/lifeGained/pickCorrect/bloom are LAB-TUNED (designer's
+ *  exported bank, 2026-07-17) — promoted verbatim from the Sound Design lab,
+ *  including bloom's silenced noise layer (kept at gain 0, not deleted, so
+ *  the shing stays one knob away from returning). */
 export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   uiTap: { layers: [
     { kind: 'tone', freq: 1300, dur: 0.045, gain: 0.06 },
@@ -115,12 +120,12 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   bloom: { layers: [
     { kind: 'tone', freq: 440, dur: 0.45, attack: 0.006, gain: 0.15, lowpass: 3200 },
     { kind: 'tone', freq: 1329, dur: 0.16, gain: 0.045 },
-    { kind: 'noise', from: 1400, to: 6800, dur: 0.24, gain: 0.12, q: 2.2 },
+    { kind: 'noise', from: 1400, to: 6800, dur: 0.24, gain: 0, q: 2.2 }, // shing muted by the designer
   ] },
   pickCorrect: { layers: [
-    { kind: 'tone', freq: 440, type: 'square', dur: 0.08, gain: 0.085 },
-    { kind: 'tone', freq: 587, type: 'square', at: 0.07, dur: 0.26, gain: 0.085 },
-    { kind: 'tone', freq: 880, at: 0.07, dur: 0.3, gain: 0.05 },
+    { kind: 'tone', freq: 440, type: 'square', dur: 0.2141, gain: 0.0425 },
+    { kind: 'tone', freq: 587, type: 'square', at: 0.0312, dur: 0.1393, gain: 0.125 },
+    { kind: 'tone', freq: 880, at: 0.07, dur: 0.07655, gain: 0.05 },
   ] },
   streakMilestone: { layers: [880, 1109, 1319, 1760, 2217, 2637].map((freq, i) => (
     { kind: 'tone' as const, freq, type: 'square' as OscType, at: i * 0.055, dur: 0.12, gain: 0.07 }
@@ -135,20 +140,19 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
     { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
   ] },
-  // Knob-tuned in the Sound Design lab (designer config, 2026-07-17): a
-  // softened square riser gliding nearly two octaves under a high triangle
+  // A softened square riser gliding nearly two octaves under a high triangle
   // sparkle that enters a beat later. Plays as authored — the ~1.3s Lift
   // animation ends under its 2.5s tail, which is the designed effect.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 396, endFreq: 1817, type: 'square', dur: 2.5, attack: 0.1, gain: 0.0963, lowpass: 1756 },
-    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.115, dur: 2.5, attack: 0.00363, gain: 0.0515 },
+    { kind: 'tone', freq: 395.8, endFreq: 1817, type: 'square', dur: 2.5, attack: 0.1, gain: 0.09625, lowpass: 1756 },
+    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.1152, dur: 2.5, attack: 0.003631, gain: 0.0515 },
   ] },
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
-    { kind: 'tone', freq: 880, type: 'triangle', at: 0.09, dur: 0.35, gain: 0.18 },
+    { kind: 'tone', freq: 880, type: 'triangle', at: 0.09, dur: 0.8477, gain: 0.223 },
   ] },
   timeout: { layers: [
-    { kind: 'tone', freq: 330, endFreq: 110, type: 'sawtooth', dur: 0.55, gain: 0.22, lowpass: 600 },
+    { kind: 'tone', freq: 330, endFreq: 76.38, type: 'square', dur: 1.183, gain: 0.22, lowpass: 600 },
     { kind: 'tone', freq: 220, endFreq: 82, dur: 0.5, gain: 0.14 },
   ] },
   gameOver: { layers: [
@@ -213,6 +217,10 @@ function sharedNoise(ac: AudioContext): AudioBuffer {
 
 function tone(spec: Omit<ToneLayer, 'kind'>): void {
   if (!sfxOn) return
+  // A zeroed layer is MUTED, not an error — the lab's loudness knob goes to
+  // 0, and Web Audio's exponential ramps reject non-positive targets.
+  const peak = spec.gain ?? 0.2
+  if (peak <= 0) return
   const ac = context()
   if (!ac || !sfxBus) return
   const t0 = ac.currentTime + (spec.at ?? 0)
@@ -221,11 +229,11 @@ function tone(spec: Omit<ToneLayer, 'kind'>): void {
   const osc = ac.createOscillator()
   osc.type = spec.type ?? 'sine'
   osc.frequency.setValueAtTime(spec.freq, t0)
-  if (spec.endFreq) osc.frequency.exponentialRampToValueAtTime(spec.endFreq, t0 + dur)
+  if (spec.endFreq && spec.endFreq > 0) osc.frequency.exponentialRampToValueAtTime(spec.endFreq, t0 + dur)
 
   const env = ac.createGain()
   env.gain.setValueAtTime(0.0001, t0)
-  env.gain.exponentialRampToValueAtTime(spec.gain ?? 0.2, t0 + (spec.attack ?? 0.004))
+  env.gain.exponentialRampToValueAtTime(peak, t0 + (spec.attack ?? 0.004))
   env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
 
   if (spec.lowpass) {
@@ -244,6 +252,10 @@ function tone(spec: Omit<ToneLayer, 'kind'>): void {
 
 function noiseSweep(spec: Omit<NoiseLayer, 'kind'>): void {
   if (!sfxOn) return
+  // Same zero-gain guard as tone(): a muted layer plays nothing (this is how
+  // the designer silenced the bloom's shing without deleting the layer).
+  const peak = spec.gain ?? 0.15
+  if (peak <= 0) return
   const ac = context()
   if (!ac || !sfxBus) return
   const t0 = ac.currentTime + (spec.at ?? 0)
@@ -253,11 +265,11 @@ function noiseSweep(spec: Omit<NoiseLayer, 'kind'>): void {
   const bp = ac.createBiquadFilter()
   bp.type = 'bandpass'
   bp.Q.value = spec.q ?? 1.8
-  bp.frequency.setValueAtTime(spec.from, t0)
-  bp.frequency.exponentialRampToValueAtTime(spec.to, t0 + spec.dur)
+  bp.frequency.setValueAtTime(Math.max(1, spec.from), t0)
+  bp.frequency.exponentialRampToValueAtTime(Math.max(1, spec.to), t0 + spec.dur)
   const env = ac.createGain()
   env.gain.setValueAtTime(0.0001, t0)
-  env.gain.exponentialRampToValueAtTime(spec.gain ?? 0.15, t0 + 0.012)
+  env.gain.exponentialRampToValueAtTime(peak, t0 + 0.012)
   env.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.dur)
 
   src.connect(bp)
