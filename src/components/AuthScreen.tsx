@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { signInAsGuest, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/auth'
-import { useNavStore } from '../store/navStore'
+import { routeAfterAuth } from '../store/profileStore'
 import { track } from '../store/asyncStatus'
 import { Wordmark } from './ui/Wordmark'
 import { VanishingMotif } from './ui/VanishingMotif'
@@ -19,7 +19,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function AuthScreen() {
-  const goHome = useNavStore(s => s.goHome)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
@@ -31,7 +30,10 @@ export function AuthScreen() {
     try {
       const { error } = await track(fn())
       if (error) { setError(error.message); return }
-      if (navigate) goHome()
+      // Route through the claim gate, not straight Home — a fresh account
+      // needs a display name first. (Google OAuth keeps navigate=false; its
+      // full-page redirect re-enters through App's mount effect, same gate.)
+      if (navigate) await routeAfterAuth()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sign-in failed')
     } finally {

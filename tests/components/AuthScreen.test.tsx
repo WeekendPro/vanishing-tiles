@@ -7,16 +7,30 @@ vi.mock('../../src/lib/auth', () => ({
   signInWithGoogle: vi.fn(),
   signInWithEmail: vi.fn(),
   signUpWithEmail: vi.fn(),
+  getUser: vi.fn(),
+}))
+// Post-auth routing loads the caller's profile — keep it off the network.
+vi.mock('../../src/lib/api', () => ({
+  getOwnProfile: vi.fn(),
+  setDisplayName: vi.fn(),
 }))
 import * as auth from '../../src/lib/auth'
+import * as api from '../../src/lib/api'
 import { AuthScreen } from '../../src/components/AuthScreen'
 import { useNavStore } from '../../src/store/navStore'
 import { useAsyncStatus } from '../../src/store/asyncStatus'
+import { useProfileStore } from '../../src/store/profileStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
+  useProfileStore.getState().clear()
   useAsyncStatus.setState({ pending: 0 })
   vi.clearAllMocks()
+  // Default post-auth world: a named non-guest → routeAfterAuth lands Home.
+  vi.mocked(auth.getUser).mockResolvedValue({
+    data: { user: { email: 'player@example.com', is_anonymous: false, user_metadata: {} } },
+  } as never)
+  vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: 'NeonRider', isGuest: false })
 })
 
 describe('AuthScreen', () => {
@@ -43,6 +57,10 @@ describe('AuthScreen', () => {
 
   it('guest sign-in calls signInAsGuest and navigates to home', async () => {
     ;(auth.signInAsGuest as any).mockResolvedValue({ data: {}, error: null })
+    vi.mocked(auth.getUser).mockResolvedValue({
+      data: { user: { email: null, is_anonymous: true, user_metadata: {} } },
+    } as never)
+    vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: null, isGuest: true })
     const user = userEvent.setup()
     render(<AuthScreen />)
     await user.click(screen.getByRole('button', { name: /Guest/i }))
