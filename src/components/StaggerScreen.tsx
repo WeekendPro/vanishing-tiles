@@ -593,11 +593,12 @@ export function StaggerScreen() {
         window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 1100)
       }
       if (res.batchCleared) {
-        // No lift payoff (no clock → no bonus): a short beat for the snap-in +
-        // burst to land, then the end overlay takes over.
+        // No lift payoff (no clock → no bonus): hold long enough for the snap-in
+        // AND the 👍 NICE! burst to play all the way through before the end
+        // overlay takes over (the burst lives ~1100ms).
         setCleared(true)
         sfx.batchClear()
-        window.setTimeout(() => setDemoDone(true), 700)
+        window.setTimeout(() => setDemoDone(true), 1400)
       }
       return
     }
@@ -854,7 +855,7 @@ export function StaggerScreen() {
         {/* Demo end beat — both pieces placed behind the veil as proof; the
             opt-out checkbox lives here, at the moment the player can judge it. */}
         {demoDone && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/75 backdrop-blur-[2px] px-6 text-center">
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-vt-void px-6 text-center">
             <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-lime text-glow-vt-lime mb-2">That's the loop</div>
             <div className="font-grotesk font-bold text-xl text-vt-lime text-glow-vt-lime mb-2">You're ready</div>
             <div className="font-grotesk text-xs text-vt-dim leading-relaxed max-w-[230px] mb-5">
@@ -1010,8 +1011,10 @@ export function StaggerScreen() {
           </div>
         )}
         <div className="min-h-[88px] w-full flex justify-center">
-          {phase === 'selecting' && (
-            <PieceTray onPick={onPick} disabled={cleared || paused} demoTarget={demoTarget} demoWrong={demoWrong} />
+          {/* The tray stays mounted through the reveal too (disabled), so the
+              layout never jumps when recall begins. */}
+          {(phase === 'reveal' || phase === 'selecting') && (
+            <PieceTray onPick={onPick} disabled={phase !== 'selecting' || cleared || paused} demoTarget={demoTarget} demoWrong={demoWrong} />
           )}
         </div>
       </div>
