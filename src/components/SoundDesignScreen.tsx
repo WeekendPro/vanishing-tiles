@@ -28,8 +28,10 @@ import { ScanlineOverlay } from './ui'
 
 // ── Knob ─────────────────────────────────────────────────────────────────────
 // One labeled slider. `log` spaces perceptual params (Hz, seconds) so the
-// bottom of the range isn't squeezed into the first few pixels.
-const STEPS = 400
+// bottom of the range isn't squeezed into the first few pixels. High internal
+// resolution — the lab is a desktop-width precision surface, and values
+// should settle exactly where the hand leaves them.
+const STEPS = 1000
 function Knob({ label, value, min, max, log = false, int = false, onChange, onCommit }: {
   label: string
   value: number
@@ -427,9 +429,12 @@ export function SoundDesignScreen() {
   const resetAll = useSoundLabStore(s => s.resetAll)
 
   return (
-    <div className="min-h-screen vt-vignette text-vt-text px-4 pt-12 pb-16">
+    // Unlike the game screens, the lab is a WORKBENCH — it gets desktop
+    // width (slider precision scales with pixel length), with generous side
+    // margins on very large monitors. Still collapses cleanly on a phone.
+    <div className="min-h-screen vt-vignette text-vt-text px-4 md:px-12 pt-12 pb-16">
       <ScanlineOverlay />
-      <div className="mx-auto w-full max-w-sm flex flex-col gap-3">
+      <div className="mx-auto w-full max-w-5xl flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <button
             onClick={() => { sfx.stopBed(); goHome() }}
