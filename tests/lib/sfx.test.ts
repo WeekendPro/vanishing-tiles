@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 /**
  * The sfx engine speaks pure Web Audio, which jsdom doesn't provide — so these
  * tests install a minimal fake AudioContext and assert the engine's CONTRACT:
- * lazy context creation, the enabled gate, gesture unlock/resume, and the
- * musical rules the game leans on (streak pitch climb, bloom melody ascent).
- * The module holds its context in module state, so each test re-imports fresh.
+ * lazy context creation, the per-channel gates (SFX / music), gesture
+ * unlock/resume, channel volumes, the ambient bed lifecycle, and the musical
+ * rules the game leans on (streak pitch climb, bloom melody ascent, the
+ * reveal's noise "shing"). The module holds its context in module state, so
+ * each test re-imports fresh.
  */
 
 class FakeParam {
@@ -13,6 +15,7 @@ class FakeParam {
   value = 0
   setValueAtTime(v: number) { this.values.push(v); this.value = v; return this }
   exponentialRampToValueAtTime(v: number) { this.values.push(v); return this }
+  linearRampToValueAtTime(v: number) { this.values.push(v); return this }
 }
 
 class FakeNode {
@@ -36,6 +39,16 @@ class FakeGain extends FakeNode {
 class FakeFilter extends FakeNode {
   type = 'lowpass'
   frequency = new FakeParam()
+  Q = new FakeParam()
+}
+
+class FakeBufferSource extends FakeNode {
+  buffer: unknown = null
+  loop = false
+  started = false
+  stopped = false
+  start() { this.started = true }
+  stop() { this.stopped = true }
 }
 
 class FakeAudioContext {
@@ -43,7 +56,9 @@ class FakeAudioContext {
   oscillators: FakeOscillator[] = []
   gains: FakeGain[] = []
   filters: FakeFilter[] = []
+  bufferSources: FakeBufferSource[] = []
   destination = new FakeNode()
+  sampleRate = 44100
   currentTime = 0
   state = 'suspended'
   resumeCalls = 0
@@ -52,6 +67,8 @@ class FakeAudioContext {
   createOscillator() { const o = new FakeOscillator(); this.oscillators.push(o); return o }
   createGain() { const g = new FakeGain(); this.gains.push(g); return g }
   createBiquadFilter() { const f = new FakeFilter(); this.filters.push(f); return f }
+  createBufferSource() { const s = new FakeBufferSource(); this.bufferSources.push(s); return s }
+  createBuffer(_ch: number, len: number) { return { getChannelData: () => new Float32Array(len) } }
 }
 
 async function freshSfx() {
@@ -62,8 +79,14 @@ async function freshSfx() {
   return sfx
 }
 
+const ctx = () => FakeAudioContext.instances[0]
+
 beforeEach(() => {
   vi.restoreAllMocks()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('sfx engine', () => {
@@ -81,13 +104,14 @@ describe('sfx engine', () => {
     const sfx = await freshSfx()
     sfx.unlock()
     expect(FakeAudioContext.instances).toHaveLength(1)
-    expect(FakeAudioContext.instances[0].resumeCalls).toBeGreaterThan(0)
-    expect(FakeAudioContext.instances[0].state).toBe('running')
+    expect(ctx().resumeCalls).toBeGreaterThan(0)
+    expect(ctx().state).toBe('running')
   })
 
-  it('plays nothing while disabled, and disabled unlock() creates no context', async () => {
+  it('plays no SFX while the channel is disabled', async () => {
     const sfx = await freshSfx()
     sfx.setEnabled(false)
+    sfx.setMusicEnabled(false)
     sfx.unlock()
     sfx.pickCorrect(3)
     sfx.pickWrong()
@@ -96,52 +120,111 @@ describe('sfx engine', () => {
     sfx.setEnabled(true)
     sfx.pickWrong()
     expect(FakeAudioContext.instances).toHaveLength(1)
-    expect(FakeAudioContext.instances[0].oscillators.length).toBeGreaterThan(0)
+    expect(ctx().oscillators.length).toBeGreaterThan(0)
   })
 
   it('every oscillator is started and scheduled to stop', async () => {
     const sfx = await freshSfx()
     sfx.batchClear()
-    const ctx = FakeAudioContext.instances[0]
-    expect(ctx.oscillators.length).toBeGreaterThan(0)
-    ctx.oscillators.forEach(o => {
+    expect(ctx().oscillators.length).toBeGreaterThan(0)
+    ctx().oscillators.forEach(o => {
       expect(o.started).toBe(true)
       expect(o.stopped).toBe(true)
     })
   })
 
+  it('channel volumes land on the channel buses', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    // Bus creation order in context(): master, sfxBus, musicBus.
+    const [, sfxBus, musicBus] = ctx().gains
+    sfx.setSfxVolume(0.25)
+    expect(sfxBus.gain.value).toBe(0.25)
+    sfx.setMusicVolume(0.8)
+    expect(musicBus.gain.value).toBe(0.8)
+    // Clamped to 0..1.
+    sfx.setSfxVolume(7)
+    expect(sfxBus.gain.value).toBe(1)
+    sfx.setMusicVolume(-2)
+    expect(musicBus.gain.value).toBe(0)
+  })
+
   it('pickCorrect pitch climbs with the streak and resets with it', async () => {
     const sfx = await freshSfx()
     const fundamentalOf = (call: () => void) => {
-      const ctx = FakeAudioContext.instances[0]
-      const before = ctx?.oscillators.length ?? 0
+      const before = ctx()?.oscillators.length ?? 0
       call()
-      return FakeAudioContext.instances[0].oscillators[before].frequency.values[0]
+      return ctx().oscillators[before].frequency.values[0]
     }
     const atStreak1 = fundamentalOf(() => sfx.pickCorrect(1))
-    const atStreak5 = fundamentalOf(() => sfx.pickCorrect(5))
+    const atStreak4 = fundamentalOf(() => sfx.pickCorrect(4))
     const backTo1 = fundamentalOf(() => sfx.pickCorrect(1))
-    expect(atStreak5).toBeGreaterThan(atStreak1)
+    expect(atStreak4).toBeGreaterThan(atStreak1)
     expect(backTo1).toBe(atStreak1) // broken streak audibly restarts at the root
-    // The climb caps an octave up — deep streaks never go shrill.
+    // The climb caps two octaves up — deep streaks never go shrill.
     const atStreak99 = fundamentalOf(() => sfx.pickCorrect(99))
-    expect(atStreak99).toBeLessThanOrEqual(atStreak1 * 2)
+    expect(atStreak99).toBeLessThanOrEqual(atStreak1 * 4)
   })
 
-  it('bloom melody rises with the reveal step and stays capped', async () => {
+  it('every 5th streak step adds the 1-Up-style milestone run', async () => {
     const sfx = await freshSfx()
-    const ctx = () => FakeAudioContext.instances[0]
+    sfx.pickCorrect(4)
+    const plain = ctx().oscillators.length
+    const before = ctx().oscillators.length
+    sfx.pickCorrect(5)
+    const milestone = ctx().oscillators.length - before
+    expect(milestone).toBeGreaterThan(plain) // the flourish rides on top of the coin blip
+  })
+
+  it('bloom pairs the rising pentatonic note with a noise "shing" sweep', async () => {
+    const sfx = await freshSfx()
     sfx.bloom(0)
     const first = ctx().oscillators[0].frequency.values[0]
-    const before = ctx().oscillators.length
+    expect(ctx().bufferSources.length).toBe(1) // the drawn-steel noise layer
+    const sweep = ctx().filters.find(f => f.type === 'bandpass')!
+    expect(sweep.frequency.values[1]).toBeGreaterThan(sweep.frequency.values[0]) // sweeps UP
+    const beforeOsc = ctx().oscillators.length
     sfx.bloom(3)
-    const later = ctx().oscillators[before].frequency.values[0]
+    const later = ctx().oscillators[beforeOsc].frequency.values[0]
     expect(later).toBeGreaterThan(first)
     // Step 11 (the 12-gap cap batch) stays within two octaves of the root.
     const beforeDeep = ctx().oscillators.length
     sfx.bloom(11)
     const deep = ctx().oscillators[beforeDeep].frequency.values[0]
     expect(deep).toBeLessThanOrEqual(first * 4)
+  })
+
+  it('the ambient bed starts drones + looped noise, and stops on stopBed', async () => {
+    vi.useFakeTimers()
+    const sfx = await freshSfx()
+    sfx.startBed()
+    const loops = ctx().bufferSources.filter(s => s.loop)
+    expect(loops).toHaveLength(1)
+    expect(loops[0].started).toBe(true)
+    expect(ctx().oscillators.filter(o => o.started && !o.stopped).length).toBeGreaterThan(0)
+    sfx.stopBed()
+    vi.runAllTimers() // the fade-out grace period before sources stop
+    expect(loops[0].stopped).toBe(true)
+    ctx().oscillators.forEach(o => expect(o.stopped).toBe(true))
+  })
+
+  it('the bed respects the music toggle, and rejoins a run when re-enabled', async () => {
+    const sfx = await freshSfx()
+    sfx.setMusicEnabled(false)
+    sfx.startBed()
+    expect(FakeAudioContext.instances).toHaveLength(0) // nothing built while off
+    sfx.setMusicEnabled(true) // bed was WANTED (run in progress) → starts now
+    expect(ctx().bufferSources.filter(s => s.loop && s.started)).toHaveLength(1)
+  })
+
+  it('music and SFX channels are independent', async () => {
+    const sfx = await freshSfx()
+    sfx.setEnabled(false) // SFX off…
+    sfx.startBed()        // …must not silence the bed
+    expect(ctx().bufferSources.filter(s => s.loop && s.started)).toHaveLength(1)
+    const oscBefore = ctx().oscillators.length
+    sfx.pickCorrect(2) // SFX still gated off
+    expect(ctx().oscillators.length).toBe(oscBefore)
   })
 
   it('no-ops safely where Web Audio does not exist (jsdom default)', async () => {
@@ -151,6 +234,9 @@ describe('sfx engine', () => {
     expect(() => {
       sfx.unlock()
       sfx.pickCorrect(2)
+      sfx.go()
+      sfx.startBed()
+      sfx.stopBed()
       sfx.timeout()
     }).not.toThrow()
   })

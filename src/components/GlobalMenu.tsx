@@ -49,6 +49,40 @@ function Avatar({ user }: { user: MenuUser }) {
   )
 }
 
+/** One audio channel's row: a toggle (styled like the menu's Actions) plus a
+ *  volume slider that dims/disables while the channel is off. */
+function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
+  label: string
+  enabled: boolean
+  volume: number
+  onToggle: () => void
+  onVolume: (v: number) => void
+  /** Fired when the user releases the slider — a chance to preview the level. */
+  onVolumeCommit?: () => void
+}) {
+  return (
+    <div className="flex items-center gap-4 py-3">
+      <button
+        onClick={onToggle}
+        className="w-44 shrink-0 text-left font-pixel uppercase tracking-[0.08em] text-base text-gray-200 hover:text-neon-cyan"
+      >
+        {label}: {enabled ? 'On' : 'Off'}
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(volume * 100)}
+        disabled={!enabled}
+        aria-label={`${label} volume`}
+        onChange={e => onVolume(Number(e.target.value) / 100)}
+        onPointerUp={onVolumeCommit}
+        className="flex-1 min-w-0 accent-cyan-400 disabled:opacity-30"
+      />
+    </div>
+  )
+}
+
 function Action({ label, onClick, tone = 'default' }:
   { label: string; onClick: () => void; tone?: 'default' | 'muted' | 'danger' }) {
   const color = tone === 'danger' ? 'text-neon-red hover:text-glow-red'
@@ -73,9 +107,18 @@ export function GlobalMenu() {
     resumeGame: s.resumeGame,
     resetGame: s.resetGame,
   })))
-  const { soundEnabled, setSoundEnabled } = useSettingsStore(useShallow(s => ({
+  const {
+    soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume,
+    musicEnabled, setMusicEnabled, musicVolume, setMusicVolume,
+  } = useSettingsStore(useShallow(s => ({
     soundEnabled: s.settings.soundEnabled,
     setSoundEnabled: s.setSoundEnabled,
+    sfxVolume: s.settings.sfxVolume,
+    setSfxVolume: s.setSfxVolume,
+    musicEnabled: s.settings.musicEnabled,
+    setMusicEnabled: s.setMusicEnabled,
+    musicVolume: s.settings.musicVolume,
+    setMusicVolume: s.setMusicVolume,
   })))
 
   // Stagger runs its own pause/exit, so the only in-game hosts here are the
@@ -171,16 +214,32 @@ export function GlobalMenu() {
               only RANKING needs a named account). */}
           <Action label="Leaderboard" onClick={openLeaderboard} />
 
-          {/* Master sound toggle (the synthesized SFX layer). Re-enabling
-              plays the tiny UI tick as instant confirmation — the tap that
-              flips it also satisfies the browser's audio-unlock gesture. */}
-          <Action
-            label={soundEnabled ? 'Sound: On' : 'Sound: Off'}
-            onClick={() => {
+          {/* Audio channels — SFX and the ambient music bed are independent:
+              each gets its own toggle + volume slider. Re-enabling SFX (or
+              releasing its slider) plays the tiny UI tick as instant
+              confirmation — those taps also satisfy the browser's
+              audio-unlock gesture. */}
+          <ChannelControl
+            label="Sound FX"
+            enabled={soundEnabled}
+            volume={sfxVolume}
+            onToggle={() => {
               const next = !soundEnabled
               setSoundEnabled(next)
               if (next) { sfx.unlock(); sfx.uiTap() }
             }}
+            onVolume={setSfxVolume}
+            onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+          />
+          <ChannelControl
+            label="Music"
+            enabled={musicEnabled}
+            volume={musicVolume}
+            onToggle={() => {
+              setMusicEnabled(!musicEnabled)
+              if (!musicEnabled) sfx.unlock()
+            }}
+            onVolume={setMusicVolume}
           />
 
           {/* A full Settings screen is deliberately absent — the lone sound

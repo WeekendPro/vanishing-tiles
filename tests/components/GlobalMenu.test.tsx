@@ -18,7 +18,7 @@ import { useTrainingStore } from '../../src/store/trainingStore'
 beforeEach(() => {
   useNavStore.getState().reset()
   useGameStore.getState().resetGame()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true } })
+  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, musicEnabled: true, musicVolume: 0.6 } })
   useTrainingStore.getState().exit()
   vi.clearAllMocks()
 })

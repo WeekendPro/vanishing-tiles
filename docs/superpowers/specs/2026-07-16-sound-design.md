@@ -1,8 +1,8 @@
 # Sound Design — the Afterglow audio layer
 
-**Date:** 2026-07-16
-**Status:** Shipped for web (v1 palette). Haptics deferred to the React Native port.
-**Code:** `src/lib/sfx.ts` (engine + palette) · toggle in `GlobalMenu` · setting in `settingsStore` (`soundEnabled`)
+**Date:** 2026-07-16 (v2: 2026-07-17 — zen bed, sword-draw reveals, game-show picks, GO beat, per-channel controls)
+**Status:** Shipped for web. Haptics deferred to the React Native port.
+**Code:** `src/lib/sfx.ts` (engine + palette) · channel controls in `GlobalMenu` · settings in `settingsStore` (`soundEnabled`/`sfxVolume`/`musicEnabled`/`musicVolume`)
 
 ## The technology decision
 
@@ -39,6 +39,20 @@ few lines of reviewable code. If a future sound genuinely needs production
 polish (e.g. a licensed music bed), path 1 slots in beside the synth palette
 without changing the gesture API.
 
+## Two channels
+
+- **SFX** — the per-gesture one-shots below. Toggle + volume (`sfxVolume`).
+- **Music** — the **ambient bed**: a zen meditation hum that fades in for the
+  length of a run (Stagger + Training, through game over) and fades out on
+  exit. Synthesized like everything else: two barely-detuned A2 drones whose
+  interference beats at ~0.34 Hz (the binaural-style throb), a soft octave +
+  fifth, and lowpassed noise whose cutoff/level drift on sub-0.1 Hz LFOs —
+  hollow ocean swells. Toggle + volume (`musicVolume`, default 0.6).
+
+Each channel has an independent on/off and volume slider in the global menu
+(`ChannelControl` rows). Screens request the bed with `sfx.startBed()` /
+`sfx.stopBed()`; the music toggle can silence and re-join a run in progress.
+
 ## The musical system
 
 Everything is rooted on **A** so the whole game stays in one key:
@@ -53,9 +67,11 @@ Two load-bearing pitch rules (not just polish):
 - **Reveal blooms climb one pentatonic step per gap** — the memorize sequence
   plays as a rising melody, so pitch order *encodes reveal order*. That's a
   real memory hook for Hard mode's ordered recall.
-- **Correct picks climb one semitone per streak step** (capped +1 octave) and
-  restart at the root when the streak breaks — you *hear* the streak wind up
-  and reset, mirroring the ×N scoring rule.
+- **Correct picks climb one A-major scale degree per streak step** (capped
+  +2 octaves) and restart at the root when the streak breaks — you *hear* the
+  streak wind up and reset, mirroring the ×N scoring rule. The every-5th-step
+  1-Up run is the "you eventually get there" reward of consecutive-combo
+  scoring (game-show / Mario-stomp escalation).
 
 ## Gesture → sound map
 
@@ -63,8 +79,9 @@ Two load-bearing pitch rules (not just polish):
 |---|---|---|
 | UI tap (PLAY, mode switch) | `HomeScreen` | 1.3 kHz tick, 45 ms — barely there |
 | Countdown beat (3·2·1) | `StaggerCountdown` | soft 700 Hz metronome blip |
-| Gap bloom (memorize) | reveal driver, per gap | airy lowpassed sine + octave shimmer, pentatonic ascent per step |
-| Correct recall | `pickPiece` ok (also Training) | bright triangle blip, +1 semitone per streak |
+| **GO** (the fourth beat) | countdown hits 0 | decisive E5 pickup → ringing A5 + octave sheen — the run-start note the 3·2·1 resolves into |
+| Gap bloom (memorize) | reveal driver, per gap | the NOTE (lowpassed sine, pentatonic ascent per step — pitch encodes reveal order) + the EDGE: upward bandpassed-noise sweep + high inharmonic partial — a sword drawn from its scabbard |
+| Correct recall | `pickPiece` ok (also Training) | chiptune coin blip (square base + perfect fourth), climbing the A major scale one degree per streak (cap +2 octaves), root reset on a break; every 5th streak step adds a six-note 1-Up-style rising run |
 | Miss / wrong pick | `pickPiece` miss (also Training) | saw glide 150→95 Hz + 82 Hz thud, under the red flash + shake |
 | Batch CLEAR! | batch cleared | rising A-major arpeggio (A5–C#6–E6) + sparkle tail |
 | Speed-bonus Lift | lift payoff (bonus > 0) | filtered saw riser sized to the 1.3 s drain window |
@@ -81,9 +98,11 @@ board taps, and the reveal→recall handoff (the amber bar carries it).
   tap (and mode-switch taps) call `sfx.unlock()`; every trigger also retries a
   `resume()`. A missed unlock degrades to silence, never an error. This
   constraint disappears on React Native.
-- **Mute:** `settingsStore.soundEnabled` (persisted, default on) mirrors into
-  the engine; checked at trigger time so muting mid-run silences instantly.
-  Toggle lives in the global menu ("Sound: On/Off").
+- **Channel controls:** `settingsStore` persists all four
+  (`soundEnabled`/`sfxVolume`/`musicEnabled`/`musicVolume`, defaults
+  on/1/on/0.6) and mirrors them into the engine's buses; gates are checked at
+  trigger time so muting mid-run silences instantly. Two toggle + slider rows
+  in the global menu.
 - **Tests:** `tests/lib/sfx.test.ts` fakes `AudioContext` and pins the
   contract — lazy context, mute gate, streak climb + cap, bloom ascent + cap,
   jsdom no-op safety.

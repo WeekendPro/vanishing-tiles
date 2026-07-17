@@ -172,6 +172,13 @@ export function TrainingScreen() {
     return () => { timers.forEach(clearTimeout) }
   }, [start])
 
+  // The same ambient zen bed as the game — training should feel like the
+  // meditative corner of the same room. Fades out on exit.
+  useEffect(() => {
+    sfx.startBed()
+    return () => sfx.stopBed()
+  }, [])
+
   const onPick = (type: PieceType) => {
     if (leaving || !piece) return
     const res = guess(type)

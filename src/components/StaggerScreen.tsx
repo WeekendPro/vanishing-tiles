@@ -183,6 +183,9 @@ function StaggerCountdown({
   const [count, setCount] = useState(3)
   useEffect(() => {
     if (count <= 0) {
+      // The fourth beat: 3 · 2 · 1 · GO — the decisive note the countdown
+      // resolves into, right as the reveal takes over.
+      sfx.go()
       const t = window.setTimeout(onDone, 350)
       return () => clearTimeout(t)
     }
@@ -272,6 +275,14 @@ export function StaggerScreen() {
   timingRef.current = timing
 
   const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
+
+  // The ambient zen bed hums for as long as the run screen is up (through
+  // game over — the farewell is designed to ring against it) and fades out
+  // when the player leaves.
+  useEffect(() => {
+    sfx.startBed()
+    return () => sfx.stopBed()
+  }, [])
 
   // Once-per-game-over run recording (guard ref prevents double-fire under StrictMode).
   const recordedRef = useRef(false)
