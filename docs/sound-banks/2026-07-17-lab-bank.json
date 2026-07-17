@@ -1,0 +1,83 @@
+{
+  "uiTap": {
+    "layers": [
+      { "kind": "tone", "freq": 1300, "dur": 0.045, "gain": 0.06 }
+    ]
+  },
+  "count": {
+    "layers": [
+      { "kind": "tone", "freq": 2976, "dur": 0.07, "gain": 0.1 }
+    ]
+  },
+  "go": {
+    "layers": [
+      { "kind": "tone", "freq": 659, "type": "triangle", "dur": 0.09, "gain": 0.14 },
+      { "kind": "tone", "freq": 880, "type": "triangle", "at": 0.0444, "dur": 0.35, "gain": 0.16 },
+      { "kind": "tone", "freq": 1760, "at": 0.0876, "dur": 0.3, "gain": 0.07 }
+    ]
+  },
+  "bloom": {
+    "layers": [
+      { "kind": "tone", "freq": 440, "dur": 0.45, "attack": 0.006, "gain": 0.15, "lowpass": 3200 },
+      { "kind": "tone", "freq": 1329, "dur": 0.16, "gain": 0.045 },
+      { "kind": "noise", "from": 1400, "to": 6800, "dur": 0.24, "gain": 0, "q": 2.2 }
+    ]
+  },
+  "pickCorrect": {
+    "layers": [
+      { "kind": "tone", "freq": 440, "type": "square", "dur": 0.2141, "gain": 0.0425 },
+      { "kind": "tone", "freq": 587, "type": "square", "at": 0.0312, "dur": 0.1393, "gain": 0.125 },
+      { "kind": "tone", "freq": 880, "at": 0.07, "dur": 0.07655, "gain": 0.05 }
+    ]
+  },
+  "pickWrong": {
+    "layers": [
+      { "kind": "tone", "freq": 150, "endFreq": 95, "type": "sawtooth", "dur": 0.22, "gain": 0.26, "lowpass": 420 },
+      { "kind": "tone", "freq": 82, "dur": 0.18, "gain": 0.2 }
+    ]
+  },
+  "batchClear": {
+    "layers": [
+      { "kind": "tone", "freq": 880, "type": "triangle", "dur": 0.18, "gain": 0.14 },
+      { "kind": "tone", "freq": 1109, "type": "triangle", "at": 0.07, "dur": 0.18, "gain": 0.14 },
+      { "kind": "tone", "freq": 1319, "type": "triangle", "at": 0.14, "dur": 0.22, "gain": 0.14 },
+      { "kind": "tone", "freq": 1760, "at": 0.21, "dur": 0.4, "gain": 0.08 }
+    ]
+  },
+  "bonusLift": {
+    "layers": [
+      { "kind": "tone", "freq": 2199, "type": "sine", "at": 0.1056, "dur": 1.028, "attack": 0.004444, "gain": 0.311, "lowpass": 2606 },
+      { "kind": "tone", "freq": 2251, "type": "triangle", "at": 0.0432, "dur": 1.315, "attack": 0.003631, "gain": 0.0625 },
+      { "kind": "tone", "freq": 1120, "at": 0.1464, "dur": 0.6563, "gain": 0.107 },
+      { "kind": "tone", "freq": 1509, "at": 0.2136, "dur": 0.2, "gain": 0.0745 },
+      { "kind": "tone", "freq": 2189, "type": "triangle", "at": 0.006, "dur": 1.499, "attack": 0.001909, "gain": 0.0475 }
+    ]
+  },
+  "lifeGained": {
+    "layers": [
+      { "kind": "tone", "freq": 659, "type": "triangle", "dur": 0.2, "gain": 0.16 },
+      { "kind": "tone", "freq": 880, "type": "triangle", "at": 0.09, "dur": 0.8477, "gain": 0.223 }
+    ]
+  },
+  "urgentTick": {
+    "layers": [
+      { "kind": "tone", "freq": 1760, "dur": 0.035, "gain": 0.075 },
+      { "kind": "tone", "freq": 220, "type": "triangle", "dur": 0.08, "gain": 0.11, "lowpass": 750 }
+    ]
+  },
+  "timeout": {
+    "layers": [
+      { "kind": "tone", "freq": 330, "endFreq": 76.38, "type": "square", "dur": 1.183, "gain": 0.22, "lowpass": 600 },
+      { "kind": "tone", "freq": 220, "endFreq": 82, "dur": 0.5, "gain": 0.14 },
+      { "kind": "tone", "freq": 91.59, "endFreq": 49.55, "type": "triangle", "at": 0.0144, "dur": 1.322, "attack": 0.001183, "gain": 0.12 }
+    ]
+  },
+  "gameOver": {
+    "layers": [
+      { "kind": "tone", "freq": 440, "at": 0.12, "dur": 0.5, "gain": 0.16 },
+      { "kind": "tone", "freq": 330, "at": 0.34, "dur": 0.55, "gain": 0.16 },
+      { "kind": "tone", "freq": 220, "at": 0.6, "dur": 0.9, "gain": 0.16, "type": "triangle" },
+      { "kind": "tone", "freq": 116.7, "endFreq": 62.82, "type": "sine", "at": 0.6084, "dur": 2.132, "gain": 0.0715 }
+    ]
+  }
+}

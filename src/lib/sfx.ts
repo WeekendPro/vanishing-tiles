@@ -8,7 +8,8 @@
  * defaults below are the shipped palette; the Sound Design screen
  * (`SoundDesignScreen.tsx` + `soundLabStore.ts`) can override any patch live
  * via `setPatch`, which is how the soundscape gets tuned by ear instead of by
- * prose. (`bonusLift` is the first knob-tuned default, promoted 2026-07-17.)
+ * prose. (The shipped bank is swapped wholesale from time to time; snapshots
+ * live in docs/sound-banks/ — see the note on DEFAULT_PATCHES below.)
  *
  * SFX only for now: the ambient music bed was tried (synth zen hum) and cut —
  * music returns as a produced audio file when the designer's Logic Pro bed
@@ -104,76 +105,91 @@ const MAJOR = [0, 2, 4, 5, 7, 9, 11] // semitone offsets: the A major scale
  *  at streak 1 — gameplay scales their TONE layers up the scale from there
  *  (see `bloomScale`/`coinScale`), so edits keep the musical system intact.
  *
- *  go/bonusLift/timeout/gameOver/lifeGained/pickCorrect/bloom/count are
- *  LAB-TUNED (designer's exported banks, 2026-07-17) — promoted verbatim from
- *  the Sound Design lab, including bloom's silenced noise layer (kept at gain
- *  0, not deleted, so the shing stays one knob away from returning). */
+ *  ON TRIAL (2026-07-17): a full-palette re-synthesis of ALL 12 sounds —
+ *  multi-layer, glide-heavy, with noise transients back on the punchy ones
+ *  (go / bloom / batchClear / pickWrong / timeout / gameOver). Bloom's noise
+ *  "shing" is UN-muted again in this bank (gain > 0). This replaced the
+ *  designer's earlier lab-tuned bank, which is preserved verbatim at
+ *  docs/sound-banks/2026-07-17-lab-bank.json — paste it back over this object
+ *  (and update the pinned defaults in tests/lib/sfx.test.ts) to revert. This
+ *  bank is also mirrored at docs/sound-banks/2026-07-17-full-palette.json. */
 export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   uiTap: { layers: [
-    { kind: 'tone', freq: 1300, dur: 0.045, gain: 0.06 },
+    { kind: 'tone', freq: 1180, endFreq: 1540, type: 'square', dur: 0.032, gain: 0.045, lowpass: 2800 },
+    { kind: 'tone', freq: 2360, type: 'sine', at: 0.008, dur: 0.025, gain: 0.025 },
   ] },
   count: { layers: [
-    { kind: 'tone', freq: 2976, dur: 0.07, gain: 0.1 }, // lab-tuned: a high glassy tick
+    { kind: 'tone', freq: 1480, endFreq: 1780, type: 'triangle', dur: 0.075, attack: 0.002, gain: 0.105, lowpass: 4200 },
+    { kind: 'tone', freq: 2960, type: 'sine', at: 0.012, dur: 0.045, gain: 0.035 },
   ] },
   go: { layers: [
-    { kind: 'tone', freq: 659, type: 'triangle', dur: 0.09, gain: 0.14 },
-    { kind: 'tone', freq: 880, type: 'triangle', at: 0.0444, dur: 0.35, gain: 0.16 },
-    { kind: 'tone', freq: 1760, at: 0.0876, dur: 0.3, gain: 0.07 },
+    { kind: 'tone', freq: 392, endFreq: 523, type: 'triangle', dur: 0.12, attack: 0.004, gain: 0.13 },
+    { kind: 'tone', freq: 587, endFreq: 784, type: 'square', at: 0.055, dur: 0.17, gain: 0.085, lowpass: 2400 },
+    { kind: 'tone', freq: 1047, endFreq: 1568, type: 'triangle', at: 0.115, dur: 0.31, attack: 0.004, gain: 0.11 },
+    { kind: 'noise', from: 1800, to: 7200, at: 0.1, dur: 0.18, gain: 0.025, q: 2.5 },
   ] },
   bloom: { layers: [
-    { kind: 'tone', freq: 440, dur: 0.45, attack: 0.006, gain: 0.15, lowpass: 3200 },
-    { kind: 'tone', freq: 1329, dur: 0.16, gain: 0.045 },
-    { kind: 'noise', from: 1400, to: 6800, dur: 0.24, gain: 0, q: 2.2 }, // shing muted by the designer
+    { kind: 'tone', freq: 196, endFreq: 588, type: 'sawtooth', dur: 0.34, attack: 0.008, gain: 0.1, lowpass: 1800 },
+    { kind: 'tone', freq: 784, endFreq: 1176, type: 'triangle', at: 0.018, dur: 0.29, attack: 0.005, gain: 0.09, lowpass: 3600 },
+    { kind: 'tone', freq: 2352, endFreq: 1764, type: 'sine', at: 0.045, dur: 0.38, gain: 0.045 },
+    { kind: 'noise', from: 1200, to: 7600, dur: 0.21, gain: 0.032, q: 2.8 }, // shing back ON in this bank
   ] },
   pickCorrect: { layers: [
-    { kind: 'tone', freq: 440, type: 'square', dur: 0.2141, gain: 0.0425 },
-    { kind: 'tone', freq: 587, type: 'square', at: 0.0312, dur: 0.1393, gain: 0.125 },
-    { kind: 'tone', freq: 880, at: 0.07, dur: 0.07655, gain: 0.05 },
+    { kind: 'tone', freq: 330, endFreq: 495, type: 'square', dur: 0.115, attack: 0.002, gain: 0.085, lowpass: 1800 },
+    { kind: 'tone', freq: 587, endFreq: 784, type: 'triangle', at: 0.024, dur: 0.14, gain: 0.13 },
+    { kind: 'tone', freq: 1175, endFreq: 1568, type: 'sine', at: 0.07, dur: 0.095, gain: 0.055 },
   ] },
   pickWrong: { layers: [
-    { kind: 'tone', freq: 150, endFreq: 95, type: 'sawtooth', dur: 0.22, gain: 0.26, lowpass: 420 },
-    { kind: 'tone', freq: 82, dur: 0.18, gain: 0.2 },
+    { kind: 'tone', freq: 185, endFreq: 68, type: 'sawtooth', dur: 0.29, attack: 0.002, gain: 0.2, lowpass: 520 },
+    { kind: 'tone', freq: 123, endFreq: 91, type: 'square', at: 0.035, dur: 0.19, gain: 0.13, lowpass: 380 },
+    { kind: 'noise', from: 240, to: 1300, at: 0.01, dur: 0.11, gain: 0.035, q: 1.7 },
   ] },
   batchClear: { layers: [
-    { kind: 'tone', freq: 880, type: 'triangle', dur: 0.18, gain: 0.14 },
-    { kind: 'tone', freq: 1109, type: 'triangle', at: 0.07, dur: 0.18, gain: 0.14 },
-    { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
-    { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
+    { kind: 'tone', freq: 98, endFreq: 65, type: 'sine', dur: 0.28, gain: 0.12, lowpass: 420 },
+    { kind: 'tone', freq: 523, type: 'triangle', dur: 0.14, gain: 0.11 },
+    { kind: 'tone', freq: 659, type: 'triangle', at: 0.065, dur: 0.15, gain: 0.115 },
+    { kind: 'tone', freq: 784, type: 'triangle', at: 0.13, dur: 0.17, gain: 0.12 },
+    { kind: 'tone', freq: 1047, endFreq: 1568, type: 'square', at: 0.205, dur: 0.34, gain: 0.075, lowpass: 3400 },
+    { kind: 'noise', from: 1600, to: 8200, at: 0.2, dur: 0.16, gain: 0.025, q: 3 },
   ] },
-  // Designer's chime-stack re-voicing (replaces the v004 sawtooth riser): a
-  // lowpassed high sine lead, two triangle shimmers around it, and two mid
-  // sine bodies underneath. Plays as authored — the ~1.3s Lift animation ends
-  // under its ~1.5s tail, which is the designed effect.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 2199, type: 'sine', at: 0.1056, dur: 1.028, attack: 0.004444, gain: 0.311, lowpass: 2606 },
-    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.0432, dur: 1.315, attack: 0.003631, gain: 0.0625 },
-    { kind: 'tone', freq: 1120, at: 0.1464, dur: 0.6563, gain: 0.107 },
-    { kind: 'tone', freq: 1509, at: 0.2136, dur: 0.2, gain: 0.0745 },
-    { kind: 'tone', freq: 2189, type: 'triangle', at: 0.006, dur: 1.499, attack: 0.001909, gain: 0.0475 },
+    { kind: 'tone', freq: 196, endFreq: 392, type: 'sawtooth', dur: 0.52, attack: 0.008, gain: 0.09, lowpass: 1200 },
+    { kind: 'tone', freq: 784, endFreq: 1175, type: 'triangle', at: 0.035, dur: 0.48, attack: 0.005, gain: 0.12 },
+    { kind: 'tone', freq: 988, endFreq: 1568, type: 'triangle', at: 0.13, dur: 0.52, attack: 0.004, gain: 0.105 },
+    { kind: 'tone', freq: 2350, endFreq: 3136, type: 'sine', at: 0.24, dur: 0.55, gain: 0.055 },
+    { kind: 'tone', freq: 3136, endFreq: 2350, type: 'sine', at: 0.64, dur: 0.28, gain: 0.035 },
+    { kind: 'noise', from: 1200, to: 9000, at: 0.22, dur: 0.24, gain: 0.025, q: 3.2 },
   ] },
   lifeGained: { layers: [
-    { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
-    { kind: 'tone', freq: 880, type: 'triangle', at: 0.09, dur: 0.8477, gain: 0.223 },
+    { kind: 'tone', freq: 196, endFreq: 220, type: 'sine', dur: 0.13, gain: 0.12, lowpass: 620 },
+    { kind: 'tone', freq: 196, endFreq: 262, type: 'sine', at: 0.16, dur: 0.18, gain: 0.15, lowpass: 720 },
+    { kind: 'tone', freq: 659, endFreq: 880, type: 'triangle', at: 0.21, dur: 0.46, attack: 0.006, gain: 0.12 },
+    { kind: 'tone', freq: 1760, endFreq: 2640, type: 'sine', at: 0.31, dur: 0.44, gain: 0.045 },
   ] },
-  // The urgency tick: a tense clock "tock" — a glassy high click over a low
-  // A3 heartbeat thump. Fired repeatedly by the select clock's red zone
-  // (StaggerScreen's urgency ticker, paced by CLOCK_URGENT in staggerCurve),
-  // pitching up as expiry nears. Gains sit LOW on purpose — it repeats every
-  // batch for the whole run, so it must read as tension, not alarm.
+  // The urgency tick: a tense clock "tock" fired repeatedly by the select
+  // clock's red zone (StaggerScreen's urgency ticker, paced by CLOCK_URGENT in
+  // staggerCurve), pitching up as expiry nears. Gains sit LOW on purpose — it
+  // repeats every batch for the whole run, so it must read as tension, not alarm.
   urgentTick: { layers: [
-    { kind: 'tone', freq: 1760, dur: 0.035, gain: 0.075 },
-    { kind: 'tone', freq: 220, type: 'triangle', dur: 0.08, gain: 0.11, lowpass: 750 },
+    { kind: 'tone', freq: 2200, endFreq: 1760, type: 'square', dur: 0.028, gain: 0.065, lowpass: 4200 },
+    { kind: 'tone', freq: 145, endFreq: 110, type: 'triangle', at: 0.004, dur: 0.075, gain: 0.13, lowpass: 550 },
+    { kind: 'noise', from: 2600, to: 7000, dur: 0.022, gain: 0.018, q: 3.5 },
   ] },
   timeout: { layers: [
-    { kind: 'tone', freq: 330, endFreq: 76.38, type: 'square', dur: 1.183, gain: 0.22, lowpass: 600 },
-    { kind: 'tone', freq: 220, endFreq: 82, dur: 0.5, gain: 0.14 },
-    { kind: 'tone', freq: 91.59, endFreq: 49.55, type: 'triangle', at: 0.0144, dur: 1.322, attack: 0.001183, gain: 0.12 },
+    { kind: 'tone', freq: 392, endFreq: 62, type: 'square', dur: 0.88, attack: 0.003, gain: 0.16, lowpass: 850 },
+    { kind: 'tone', freq: 196, endFreq: 49, type: 'sawtooth', at: 0.055, dur: 1.12, gain: 0.11, lowpass: 520 },
+    { kind: 'tone', freq: 2350, endFreq: 440, type: 'sine', at: 0.02, dur: 0.46, gain: 0.055 },
+    { kind: 'noise', from: 5200, to: 180, at: 0.04, dur: 0.5, gain: 0.038, q: 2 },
+    { kind: 'tone', freq: 54, type: 'sine', at: 0.53, dur: 0.72, gain: 0.085 },
   ] },
   gameOver: { layers: [
-    { kind: 'tone', freq: 440, at: 0.12, dur: 0.5, gain: 0.16 },
-    { kind: 'tone', freq: 330, at: 0.34, dur: 0.55, gain: 0.16 },
-    { kind: 'tone', freq: 220, at: 0.6, dur: 0.9, gain: 0.16, type: 'triangle' },
-    { kind: 'tone', freq: 116.7, endFreq: 62.82, type: 'sine', at: 0.6084, dur: 2.132, gain: 0.0715 },
+    { kind: 'tone', freq: 523, endFreq: 494, type: 'triangle', dur: 0.3, gain: 0.12 },
+    { kind: 'tone', freq: 392, endFreq: 370, type: 'triangle', at: 0.24, dur: 0.34, gain: 0.125 },
+    { kind: 'tone', freq: 294, endFreq: 277, type: 'triangle', at: 0.52, dur: 0.42, gain: 0.13 },
+    { kind: 'tone', freq: 196, endFreq: 92, type: 'sawtooth', at: 0.82, dur: 1.28, gain: 0.105, lowpass: 620 },
+    { kind: 'tone', freq: 98, endFreq: 48, type: 'sine', at: 0.84, dur: 1.85, gain: 0.085 },
+    { kind: 'tone', freq: 2350, endFreq: 880, type: 'sine', at: 0.86, dur: 0.72, gain: 0.035 },
+    { kind: 'noise', from: 4400, to: 120, at: 0.92, dur: 0.72, gain: 0.03, q: 1.8 },
   ] },
 }
 
