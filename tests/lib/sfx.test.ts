@@ -244,6 +244,33 @@ describe('sfx engine', () => {
     expect(womp.frequency.values[1]).toBe(76.38) // falls below the old 110 Hz floor
   })
 
+  it('urgentTick pitches up with heat, capped at a fifth above the patch root', async () => {
+    const sfx = await freshSfx()
+    const rootOf = (call: () => void) => {
+      const before = ctx()?.oscillators.length ?? 0
+      call()
+      return ctx().oscillators[before].frequency.values[0]
+    }
+    const cold = rootOf(() => sfx.urgentTick(0))
+    const warm = rootOf(() => sfx.urgentTick(0.5))
+    const expiring = rootOf(() => sfx.urgentTick(1))
+    expect(cold).toBe(1760) // the shipped patch's high-click root, untransposed
+    expect(warm).toBeGreaterThan(cold)
+    expect(expiring).toBeGreaterThan(warm)
+    expect(expiring).toBeCloseTo(cold * 2 ** (7 / 12), 6) // a perfect fifth up
+    // Out-of-range heat clamps instead of running away.
+    expect(rootOf(() => sfx.urgentTick(5))).toBeCloseTo(expiring, 6)
+  })
+
+  it('previewOneShot honors heat for urgentTick (the lab slider)', async () => {
+    const sfx = await freshSfx()
+    sfx.previewOneShot('urgentTick', { heat: 0 })
+    const base = ctx().oscillators[0].frequency.values[0]
+    const before = ctx().oscillators.length
+    sfx.previewOneShot('urgentTick', { heat: 1 })
+    expect(ctx().oscillators[before].frequency.values[0]).toBeGreaterThan(base)
+  })
+
   it('previewOneShot honors gameplay context (streak transposes the coin)', async () => {
     const sfx = await freshSfx()
     sfx.previewOneShot('pickCorrect', { streak: 1 })

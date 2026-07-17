@@ -6,7 +6,7 @@ import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
-import { STAGGER, gapCountForBatch, DISPLAY_ROTATION } from '../lib/staggerCurve'
+import { STAGGER, CLOCK_URGENT, gapCountForBatch, urgentHeat, urgentTickIntervalMs, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
 import { sfx } from '../lib/sfx'
 import { PieceShape } from './PieceShape'
@@ -481,6 +481,32 @@ export function StaggerScreen() {
     return () => clearInterval(id)
   }, [phase, paused, cleared, selectStartTime, selectDuration])
 
+  // Urgency ticker: the moment the recall clock enters its red zone (the same
+  // CLOCK_URGENT.FRACTION that flips the bar red), a clock tick starts and
+  // accelerates + pitches up as expiry nears (sfx.urgentTick(heat)). A
+  // self-scheduling timeout chain: before the threshold it sleeps until the
+  // crossing; inside it, each tick books the next at the shrinking interval.
+  // Pause / clear / timeout / game over all tear the chain down via the deps
+  // (paused freezes the clock — resume re-dates selectStartTime and re-arms).
+  useEffect(() => {
+    if (phase !== 'selecting' || paused || cleared || selectDuration <= 0) return
+    let timer: number
+    const schedule = () => {
+      const rem = selectStartTime + selectDuration - Date.now()
+      if (rem <= 0) return
+      const threshold = selectDuration * CLOCK_URGENT.FRACTION
+      if (rem > threshold) {
+        timer = window.setTimeout(schedule, rem - threshold)
+        return
+      }
+      const heat = urgentHeat(rem / selectDuration)
+      sfx.urgentTick(heat)
+      timer = window.setTimeout(schedule, urgentTickIntervalMs(heat))
+    }
+    schedule()
+    return () => clearTimeout(timer)
+  }, [phase, paused, cleared, selectStartTime, selectDuration])
+
   // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
   // bar up to the score readout. Skipped under reduced motion — the score still
   // counts up, just without the traveling flyer.
@@ -599,8 +625,9 @@ export function StaggerScreen() {
   // amber draining on recall, red pulse under 25% as the clock heats up, lime on
   // the clear-payoff drain.
   // "Low" tracks real remaining time (not the bar's width state), so the bar +
-  // label only heat to red in the final quarter of the recall clock.
-  const barLow = barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < 0.25
+  // label only heat to red in the final quarter of the recall clock — the same
+  // CLOCK_URGENT.FRACTION the urgency ticker starts on.
+  const barLow = barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < CLOCK_URGENT.FRACTION
   const barClass =
     barColor === 'magenta' ? 'bg-vt-magenta shadow-vt-magenta' :
     barColor === 'lime' ? 'bg-vt-lime shadow-vt-lime' :

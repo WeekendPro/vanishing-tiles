@@ -193,6 +193,33 @@ export function difficultyForBatch(batchIndex: number): DifficultyConfig {
   }
 }
 
+/** The select clock's URGENCY window. When remaining/duration drops below
+ *  FRACTION the timer bar flips red (StaggerScreen's `barLow`) AND the urgency
+ *  ticker starts — one shared threshold, so ear and eye heat up on the same
+ *  beat. Inside the window the tick repeats on an interval that shrinks from
+ *  TICK_MAX_MS (right at the threshold) to TICK_MIN_MS (at expiry) — an
+ *  accelerating clock. The tick's SOUND is the `urgentTick` patch in sfx.ts
+ *  (tweakable in the Sound Design lab); these constants shape only WHEN it
+ *  fires. */
+export const CLOCK_URGENT = {
+  FRACTION: 0.25,   // urgency begins when remaining/duration falls below this
+  TICK_MAX_MS: 560, // tick interval at the threshold…
+  TICK_MIN_MS: 200, // …tightening to this as the clock hits zero
+} as const
+
+/** How deep into the urgency window the clock is: 0 at the threshold, 1 at
+ *  expiry (clamped). `fractionLeft` = remaining/duration. */
+export function urgentHeat(fractionLeft: number): number {
+  return Math.min(1, Math.max(0, 1 - fractionLeft / CLOCK_URGENT.FRACTION))
+}
+
+/** Interval to the next urgency tick — linear from TICK_MAX_MS down to
+ *  TICK_MIN_MS as heat runs 0 → 1 (the accelerando). */
+export function urgentTickIntervalMs(heat: number): number {
+  const h = Math.min(1, Math.max(0, heat))
+  return Math.round(CLOCK_URGENT.TICK_MAX_MS - (CLOCK_URGENT.TICK_MAX_MS - CLOCK_URGENT.TICK_MIN_MS) * h)
+}
+
 /** Per-batch speed bonus = SPEED_MAX × fraction of the select clock left when the
  *  final gap was filled (the same ratio-based model the rest of the game uses). */
 export function batchSpeedBonus(remainingMs: number, durationMs: number): number {

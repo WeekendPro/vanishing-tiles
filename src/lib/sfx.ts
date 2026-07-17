@@ -69,7 +69,7 @@ export interface SoundPatch { layers: SoundLayer[] }
 
 export const ONE_SHOT_IDS = [
   'uiTap', 'count', 'go', 'bloom', 'pickCorrect',
-  'pickWrong', 'batchClear', 'bonusLift', 'lifeGained', 'timeout', 'gameOver',
+  'pickWrong', 'batchClear', 'bonusLift', 'lifeGained', 'urgentTick', 'timeout', 'gameOver',
 ] as const
 export type OneShotId = typeof ONE_SHOT_IDS[number]
 // (streakMilestone — an every-5th-pick 1-Up flourish — was CUT 2026-07-17:
@@ -86,6 +86,7 @@ export const SOUND_LABELS: Record<OneShotId, string> = {
   batchClear: 'Round complete',
   bonusLift: 'Speed-bonus lift',
   lifeGained: 'Extra life',
+  urgentTick: 'Clock urgency tick',
   timeout: 'Clock timeout',
   gameOver: 'Game over',
 }
@@ -151,6 +152,15 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
     { kind: 'tone', freq: 880, type: 'triangle', at: 0.09, dur: 0.8477, gain: 0.223 },
+  ] },
+  // The urgency tick: a tense clock "tock" — a glassy high click over a low
+  // A3 heartbeat thump. Fired repeatedly by the select clock's red zone
+  // (StaggerScreen's urgency ticker, paced by CLOCK_URGENT in staggerCurve),
+  // pitching up as expiry nears. Gains sit LOW on purpose — it repeats every
+  // batch for the whole run, so it must read as tension, not alarm.
+  urgentTick: { layers: [
+    { kind: 'tone', freq: 1760, dur: 0.035, gain: 0.075 },
+    { kind: 'tone', freq: 220, type: 'triangle', dur: 0.08, gain: 0.11, lowpass: 750 },
   ] },
   timeout: { layers: [
     { kind: 'tone', freq: 330, endFreq: 76.38, type: 'square', dur: 1.183, gain: 0.22, lowpass: 600 },
@@ -317,6 +327,13 @@ function coinScale(streak: number): number {
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
+/** Urgency transpose: the tick climbs up to a perfect fifth (7 semitones) as
+ *  the clock's red zone runs out (heat 0 → 1) — pitch winds UP while the
+ *  caller shrinks the interval: the classic ticking-bomb accelerando. */
+function urgentScale(heat: number): number {
+  return 2 ** ((7 * clamp01(heat)) / 12)
+}
+
 export const sfx = {
   // ── Channel controls (driven by settingsStore) ─────────────────────────────
   /** SFX on/off. Checked at trigger time, so muting mid-run is instant. */
@@ -340,9 +357,10 @@ export const sfx = {
 
   /** Lab replay of any one-shot, with the gameplay context that shapes it
    *  (streak for the coin's scale climb, reveal step for the bloom's). */
-  previewOneShot(id: OneShotId, ctxOpts: { streak?: number; step?: number } = {}): void {
+  previewOneShot(id: OneShotId, ctxOpts: { streak?: number; step?: number; heat?: number } = {}): void {
     if (id === 'pickCorrect') playPatch(patches.pickCorrect, { freqScale: coinScale(ctxOpts.streak ?? 1) })
     else if (id === 'bloom') playPatch(patches.bloom, { freqScale: bloomScale(ctxOpts.step ?? 0) })
+    else if (id === 'urgentTick') playPatch(patches.urgentTick, { freqScale: urgentScale(ctxOpts.heat ?? 0) })
     else playPatch(patches[id])
   },
 
@@ -394,6 +412,15 @@ export const sfx = {
   /** An extra life earned (every 5000 pts) — a warm two-note rise (E5 → A5)
    *  under the heart burst. */
   lifeGained(): void { playPatch(patches.lifeGained) },
+
+  /** One tick of the select clock's URGENCY accelerando — fired repeatedly by
+   *  the screen once the clock enters its red zone (the same threshold that
+   *  turns the bar red). `heat` runs 0 → 1 across the window (threshold →
+   *  expiry) and pitches the tick up to a fifth; the CALLER shrinks the
+   *  interval between ticks (CLOCK_URGENT in staggerCurve.ts). */
+  urgentTick(heat: number): void {
+    playPatch(patches.urgentTick, { freqScale: urgentScale(heat) })
+  },
 
   /** The select clock expiring — a falling "womp" (life lost, same batch
    *  replays). Downward glide: the opposite arc of every reward. */

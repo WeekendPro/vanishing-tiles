@@ -187,9 +187,12 @@ function PresetRow({ soundId }: { soundId: LabSoundId }) {
 // ── One-shot sound card ──────────────────────────────────────────────────────
 
 // Sounds whose in-game pitch depends on context get a preview slider for it.
-const PREVIEW_CTX: Partial<Record<OneShotId, { label: string; min: number; max: number; def: number; toCtx: (v: number) => { streak?: number; step?: number } }>> = {
+const PREVIEW_CTX: Partial<Record<OneShotId, { label: string; min: number; max: number; def: number; toCtx: (v: number) => { streak?: number; step?: number; heat?: number } }>> = {
   pickCorrect: { label: 'Preview streak', min: 1, max: 15, def: 1, toCtx: v => ({ streak: v }) },
   bloom: { label: 'Preview reveal #', min: 1, max: 12, def: 1, toCtx: v => ({ step: v - 1 }) },
+  // Heat = how deep into the clock's red zone (0% = just crossed the
+  // threshold, 100% = about to expire) — in-game it pitches the tick up.
+  urgentTick: { label: 'Preview heat %', min: 0, max: 100, def: 50, toCtx: v => ({ heat: v / 100 }) },
 }
 
 function SoundCard({ id }: { id: OneShotId }) {
