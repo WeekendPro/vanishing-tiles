@@ -217,19 +217,19 @@ describe('sfx engine', () => {
     expect(ctx().oscillators.length).toBe(1 + 2) // default is the two-layer buzz
   })
 
-  it('ships the lab-tuned bonusLift default (designer chime stack, 2026-07-17)', async () => {
+  it('ships the cash-register bonusLift default (square thunk + sine chord, 2026-07-17)', async () => {
     const sfx = await freshSfx()
     sfx.bonusLift()
-    const [lead, sparkle, body, glint, shimmer] = ctx().oscillators
-    expect(lead.type).toBe('sine')
-    expect(lead.frequency.values[0]).toBe(2199)
-    expect(sparkle.type).toBe('triangle')
-    expect(sparkle.frequency.values[0]).toBe(2251)
-    expect(body.type).toBe('sine')
-    expect(body.frequency.values[0]).toBe(1120)
-    expect(glint.frequency.values[0]).toBe(1509)
-    expect(shimmer.type).toBe('triangle')
-    expect(shimmer.frequency.values[0]).toBe(2189)
+    // Two noise chinks (drawer) are buffer sources; the tone layers are the
+    // square drawer-thunk then the ringing A6·D7·A7 chord.
+    expect(ctx().bufferSources.length).toBe(2)
+    const [thunk, chordRoot, chordThird, chordOctave] = ctx().oscillators
+    expect(thunk.type).toBe('square')
+    expect(thunk.frequency.values[0]).toBe(180)
+    expect(chordRoot.type).toBe('sine')
+    expect(chordRoot.frequency.values[0]).toBe(1760)
+    expect(chordThird.frequency.values[0]).toBe(2349)
+    expect(chordOctave.frequency.values[0]).toBe(3520)
   })
 
   it('ships the lab-tuned high countdown tick', async () => {

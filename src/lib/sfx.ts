@@ -140,16 +140,17 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
     { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
   ] },
-  // Designer's chime-stack re-voicing (replaces the v004 sawtooth riser): a
-  // lowpassed high sine lead, two triangle shimmers around it, and two mid
-  // sine bodies underneath. Plays as authored — the ~1.3s Lift animation ends
-  // under its ~1.5s tail, which is the designed effect.
+  // Designer's "cash register" cha-ching (replaces the chime stack): a bright
+  // noise chink + a low square drawer-thunk (the mechanism), resolving into a
+  // ringing sine chord (A6 · D7 · A7). Plays as authored; the ~0.65s tail is
+  // shorter than the ~1.3s Lift animation, so the ring settles before it ends.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 2199, type: 'sine', at: 0.1056, dur: 1.028, attack: 0.004444, gain: 0.311, lowpass: 2606 },
-    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.0432, dur: 1.315, attack: 0.003631, gain: 0.0625 },
-    { kind: 'tone', freq: 1120, at: 0.1464, dur: 0.6563, gain: 0.107 },
-    { kind: 'tone', freq: 1509, at: 0.2136, dur: 0.2, gain: 0.0745 },
-    { kind: 'tone', freq: 2189, type: 'triangle', at: 0.006, dur: 1.499, attack: 0.001909, gain: 0.0475 },
+    { kind: 'noise', from: 900, to: 4200, dur: 0.045, gain: 0.055, q: 1.8 },
+    { kind: 'tone', freq: 180, endFreq: 105, type: 'square', at: 0.035, dur: 0.11, gain: 0.14, lowpass: 650 },
+    { kind: 'noise', from: 180, to: 900, at: 0.04, dur: 0.09, gain: 0.045, q: 1.2 },
+    { kind: 'tone', freq: 1760, type: 'sine', at: 0.105, dur: 0.55, attack: 0.002, gain: 0.14 },
+    { kind: 'tone', freq: 2349, type: 'sine', at: 0.108, dur: 0.38, attack: 0.002, gain: 0.075 },
+    { kind: 'tone', freq: 3520, endFreq: 3460, type: 'sine', at: 0.112, dur: 0.24, attack: 0.001, gain: 0.035 },
   ] },
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
