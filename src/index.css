@@ -228,6 +228,75 @@
   .vt-bloom-decay { animation: none; background: #0c0c14; box-shadow: none; }
 }
 
+/* HARD reveal — the Severance "glossy black paint" impasto (the sludge). Where
+   MEDIUM floods bright magenta, HARD blooms a heavy near-black graphite surface
+   that barely lifts off the void: a brightness pop + soft halo at the flash,
+   then it settles to a murky ridged sheen, then decays back to the void. Self-
+   colored (no --bloom-color) — the low-contrast murk is the whole added
+   difficulty. One timeline per cell (its animation-duration is set inline to
+   hold+decay), so the four cells still wink out in the diagonal wave. */
+@keyframes vtPaint {
+  0% {
+    background: #0c0c14;
+    box-shadow: none;
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  4% {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
+      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
+      inset -1px 1px 1px rgba(255, 255, 255, 0.05), 0 0 18px rgba(190, 200, 235, 0.4);
+    filter: brightness(1.9);
+    transform: scale(1.13);
+  }
+  52% {
+    background:
+      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
+      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
+      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
+      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  70% { opacity: 0.62; }
+  88% { opacity: 0.24; }
+  100% {
+    background: #0c0c14;
+    box-shadow: none;
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+.vt-paint { animation: vtPaint 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
+
+/* The settled impasto surface as a STATIC swatch — no animation. Worn by HARD's
+   recall-tray pieces and its placed board cells, so the whole HARD palette is
+   the one graphite sludge (matching the reveal it decays from). Uses
+   background-image (not the `background` shorthand) so the tray bloom-in's
+   background-color flash sits behind the gradient rather than wiping it. */
+.vt-paint-surface {
+  background-color: #12121a;
+  background-image:
+    radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.14), transparent 55%),
+    radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.10), transparent 60%),
+    linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-paint {
+    animation: none;
+    background: linear-gradient(150deg, #20202b, #121219 55%, #08080d);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+  }
+}
+
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
    appears, HOLDS at full strength for most of its beat, then smears out —
    blurring and swelling outward as it fades to nothing — in the final ~28%,

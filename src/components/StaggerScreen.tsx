@@ -5,7 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
 import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
-import { useSettingsStore } from '../store/settingsStore'
+import { useSettingsStore, type Difficulty } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, CLOCK_URGENT, gapCountForBatch, urgentHeat, urgentTickIntervalMs, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
@@ -57,10 +57,29 @@ const PIECE_BLOOM_HEX: Record<PieceType, string> = {
   I: '#22d3ee', O: '#facc15', T: '#a855f7', S: '#4ade80', Z: '#ef4444', J: '#3b82f6', L: '#fb923c',
 }
 
-/** The uniform branded pink the reveal floods on MEDIUM and HARD (the signature
- *  Afterglow magenta — shape only, no colour crutch). The MEDIUM/HARD recall
- *  tray goes monochrome pink to match; only EASY keeps per-piece colors. */
+/** The uniform branded pink MEDIUM floods (the signature Afterglow magenta —
+ *  shape only, no colour crutch). MEDIUM's whole palette — reveal, recall tray,
+ *  placed pieces — is this one pink; only EASY keeps per-piece colors. */
 const REVEAL_MAGENTA = '#FF2D9B'
+
+/** HARD's graphite "impasto" sludge — the soft cool-grey the surface lifts
+ *  toward at the tray flash peak (the resting surface itself is the static
+ *  `.vt-paint-surface` gradient; the reveal is the animated `.vt-paint`). HARD's
+ *  whole palette is this one sludge — deliberately harder to read than pink. */
+const HARD_SLUDGE_LIFT = '#5b6172'
+
+/** Per-mode surface class for a recall-tray piece / placed board cell.
+ *  EASY → undefined (PieceShape falls back to the piece's own color); MEDIUM →
+ *  uniform pink; HARD → the graphite impasto sludge. */
+function monoSurfaceClass(mode: Difficulty): string | undefined {
+  return mode === 'easy' ? undefined : mode === 'medium' ? 'bg-vt-magenta' : 'vt-paint-surface'
+}
+
+/** The color the tray bloom-in/decay animation flashes THROUGH for a piece:
+ *  its own color on EASY, pink on MEDIUM, a soft graphite lift on HARD. */
+function monoBloomVar(mode: Difficulty, piece: PieceType): string {
+  return mode === 'easy' ? PIECE_BLOOM_HEX[piece] : mode === 'medium' ? REVEAL_MAGENTA : HARD_SLUDGE_LIFT
+}
 
 /** A bloom instance: one tetromino lit at a single tick, with a per-cell decay
  *  DURATION that lengthens along the board diagonal (r+c) so the four cells flash
@@ -111,13 +130,14 @@ function useCountUp(value: number, durationMs = 600): number {
 // tick, flood a color (the gap's PIECE COLOR on EASY, the branded magenta on
 // MEDIUM/HARD via --bloom-color), then decay along a luminous ghost tail back to the
 // void — fading away in a WAVE (each cell sets its own duration + delay). Filled/
-// placed gaps keep their piece color (a correct pick lighting out of the dark),
-// ringed with a soft glow.
+// placed gaps light out of the dark in the mode's own surface (EASY piece color,
+// MEDIUM pink, HARD graphite sludge), ringed with a soft glow.
 function StaggerBoard({
-  gaps, bloomByCell,
+  gaps, bloomByCell, mode,
 }: {
   gaps: StaggerGap[]
   bloomByCell: Map<string, { id: number; holdMs: number; decayMs: number; color: string }>
+  mode: Difficulty
 }) {
   const colorByCell = new Map<string, PieceType>()
   gaps.forEach(g => {
@@ -135,15 +155,20 @@ function StaggerBoard({
         const key = `${r},${c}`
         const piece = colorByCell.get(key)
         if (piece) {
-          // A correct pick lighting up out of the dark — keep its piece identity,
-          // add a soft glow ring. (Never recolored to lime.)
+          // A correct pick lighting up out of the dark — in the mode's own
+          // surface (EASY piece color, MEDIUM pink, HARD graphite sludge), never
+          // recolored to lime. HARD stays murkier even placed (a dimmer ring).
+          const surface = mode === 'easy' ? getPieceColor(piece) : monoSurfaceClass(mode)
+          const ring = mode === 'hard'
+            ? 'ring-1 ring-white/10 shadow-[0_0_6px_rgba(150,160,190,0.25)]'
+            : 'ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]'
           return (
             <motion.div
               key={i}
               initial={{ scale: 0.5, opacity: 0.4 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className={`w-7 h-7 rounded-sm ${getPieceColor(piece)} ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]`}
+              className={`w-7 h-7 rounded-sm ${surface} ${ring}`}
             />
           )
         }
@@ -152,8 +177,21 @@ function StaggerBoard({
         // and keep decaying — keyed by their instance id — so they overlap.
         const bloom = bloomByCell.get(key)
         if (bloom) {
-          // Every tier floods --bloom-color (.vt-bloom) — piece color on
-          // EASY, the branded magenta on MEDIUM/HARD.
+          // HARD: the Severance graphite "impasto" bloom — self-colored murk
+          // (no --bloom-color) that flashes bright, settles to sludge, then
+          // decays. One timeline per cell (hold+decay as the animation-duration),
+          // so later cells still fade out in the diagonal wave.
+          if (mode === 'hard') {
+            return (
+              <div
+                key={`${i}-bloom-${bloom.id}`}
+                className="w-7 h-7 rounded-sm vt-paint"
+                style={{ animationDuration: `${bloom.holdMs + bloom.decayMs}ms` } as CSSProperties}
+              />
+            )
+          }
+          // EASY/MEDIUM flood --bloom-color (.vt-bloom): piece color on EASY,
+          // the branded magenta on MEDIUM.
           return (
             <div
               key={`${i}-bloom-${bloom.id}`}
@@ -217,23 +255,22 @@ function StaggerCountdown({
 }
 
 // ── Piece tray ────────────────────────────────────────────────────────────────
-// On EASY the recall tray shows each piece's own color; on MEDIUM/HARD it goes
-// monochrome branded pink to match the reveal — the shape is the only cue, so
-// there's no colour crutch in the tray either (the tray colour used to break
-// from the reveal for no gameplay reason).
+// The recall tray wears the mode's own palette, matching the reveal — EASY each
+// piece's own color, MEDIUM uniform pink, HARD the graphite sludge. On MEDIUM/
+// HARD the shape is the only cue; there's no colour crutch in the tray either.
 // `concealed` (the memorize phase): the same panel at the same size, but the
 // seven sockets are EMPTY, dormant divs — no piece shapes to stare at instead
 // of the board, nothing clickable — so the pause button below keeps exactly
 // its recall-phase position when the phases swap.
 function PieceTray({
-  onPick, disabled, concealed = false, monochrome = false, demoTarget, demoWrong,
+  onPick, disabled, concealed = false, mode, demoTarget, demoWrong,
 }: {
   onPick: (t: PieceType) => void
   disabled: boolean
   /** Memorize phase: same panel, seven EMPTY dormant sockets (see above). */
   concealed?: boolean
-  /** MEDIUM/HARD: render every tray piece in the branded pink, not its own color. */
-  monochrome?: boolean
+  /** Drives the tray palette: EASY per-piece color, MEDIUM pink, HARD sludge. */
+  mode: Difficulty
   /** Demo guidance (T3): while set, the target button wears the spotlight ring +
    *  TAP cue and every other button drops behind the "veil" (dimmed, still
    *  tappable — a wrong tap gets the gentle correction, not a disable). */
@@ -281,11 +318,10 @@ function PieceTray({
                 className="flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised border-vt-cyan/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
               >
                 {ghosts && (
-                  /* The decay floods the same color the piece rested in:
-                     branded magenta on the monochrome (MEDIUM/HARD) tray,
-                     the piece's own color on EASY. */
-                  <span className="flex" style={{ ['--bloom-color']: monochrome ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[def.type as PieceType] } as CSSProperties}>
-                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} cellClassName="vt-tray-decay" />
+                  /* The decay floods the same color the piece rested in: pink on
+                     MEDIUM, a graphite lift on HARD, the piece's own color on EASY. */
+                  <span className="flex" style={{ ['--bloom-color']: monoBloomVar(mode, def.type as PieceType) } as CSSProperties}>
+                    <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monoSurfaceClass(mode)} cellClassName="vt-tray-decay" />
                   </span>
                 )}
               </div>
@@ -315,8 +351,8 @@ function PieceTray({
               )}
               {/* flex, not inline: an inline span would seat the piece on the
                   text baseline and sink it below the button's center. */}
-              <span className="flex" style={{ ['--bloom-color']: monochrome ? REVEAL_MAGENTA : PIECE_BLOOM_HEX[def.type as PieceType] } as CSSProperties}>
-                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monochrome ? 'bg-vt-magenta' : undefined} cellClassName="vt-tray-bloom-in" />
+              <span className="flex" style={{ ['--bloom-color']: monoBloomVar(mode, def.type as PieceType) } as CSSProperties}>
+                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} colorClass={monoSurfaceClass(mode)} cellClassName="vt-tray-bloom-in" />
               </span>
             </button>
           )
@@ -504,8 +540,9 @@ export function StaggerScreen() {
     const order = revealPlan.length ? revealPlan : gaps.map((_, i) => i)
     const n = order.length
     // Difficulty shapes the reveal: EASY floods each gap in its own piece
-    // colour; MEDIUM and HARD flood the uniform branded pink (shape only, no
-    // colour crutch). All tiers play at the same (normal) reveal speed.
+    // colour; MEDIUM floods the uniform branded pink; HARD paints the self-
+    // colored graphite "impasto" (StaggerBoard renders .vt-paint for HARD, so
+    // this color is unused there). All tiers play at the same reveal speed.
     const colorFor = (gap: StaggerGap) =>
       mode === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
     // Reveal/decay timing is read LIVE from timingRef per gap. `step` (gap-to-gap
@@ -897,7 +934,7 @@ export function StaggerScreen() {
       {/* Board + overlays */}
       <div className="relative">
         <div ref={boardRef}>
-          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} />
+          <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} mode={mode} />
         </div>
 
         {/* Demo spotlight veil: during a guided pick the board goes quiet so the
@@ -1099,7 +1136,7 @@ export function StaggerScreen() {
               onPick={onPick}
               disabled={phase !== 'selecting' || cleared || paused}
               concealed={phase === 'reveal'}
-              monochrome={mode !== 'easy'}
+              mode={mode}
               demoTarget={demoTarget}
               demoWrong={demoWrong}
             />
