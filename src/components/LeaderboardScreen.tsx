@@ -12,7 +12,7 @@ import { ScanlineOverlay } from './ui'
  * name, overall rank, and all three bests each with its OWN global rank — then
  * one continuous top-players table where your row wears a small YOU tag (badge
  * + cyan name only; deliberately no outline ring). Guests get the board but no
- * hero (they're unranked — see stagger_mode_best in migration 0013) and a
+ * hero (they're unranked — see get_stagger_leaderboard, migration 0014) and a
  * dashed sign-up nudge pinned at the bottom instead.
  */
 

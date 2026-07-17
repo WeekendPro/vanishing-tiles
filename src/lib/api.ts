@@ -56,7 +56,7 @@ export interface LeaderboardRow {
 
 /** The caller's own standing. Stats are null until they finish a run in the
  *  mode; every rank is null for guests — their bests record privately but
- *  never rank (see stagger_mode_best in migration 0013). */
+ *  never rank (see get_stagger_leaderboard, migrations 0014/0015). */
 export interface LeaderboardMe {
   displayName: string
   isGuest: boolean
