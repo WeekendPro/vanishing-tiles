@@ -44,8 +44,14 @@ function load(): Persisted {
     const raw = localStorage.getItem(SOUNDLAB_STORAGE_KEY)
     const parsed = raw ? (JSON.parse(raw) as Partial<Persisted>) : {}
     const known = new Set<string>(ONE_SHOT_IDS)
+    // Drop overrides/presets for sounds that no longer exist (cut gestures —
+    // 'bed', 'streakMilestone' — linger in older banks).
+    const overrides: Persisted['overrides'] = {}
+    for (const [id, patch] of Object.entries(parsed.overrides ?? {})) {
+      if (known.has(id) && patch) overrides[id as OneShotId] = patch
+    }
     return {
-      overrides: parsed.overrides ?? {},
+      overrides,
       presets: (parsed.presets ?? []).filter(p => known.has(p.soundId)),
     }
   } catch {

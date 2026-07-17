@@ -68,10 +68,13 @@ export type SoundLayer = ToneLayer | NoiseLayer
 export interface SoundPatch { layers: SoundLayer[] }
 
 export const ONE_SHOT_IDS = [
-  'uiTap', 'count', 'go', 'bloom', 'pickCorrect', 'streakMilestone',
+  'uiTap', 'count', 'go', 'bloom', 'pickCorrect',
   'pickWrong', 'batchClear', 'bonusLift', 'lifeGained', 'timeout', 'gameOver',
 ] as const
 export type OneShotId = typeof ONE_SHOT_IDS[number]
+// (streakMilestone — an every-5th-pick 1-Up flourish — was CUT 2026-07-17:
+// with no visual indicator attached, it read as an unprompted sound that
+// falsely promised an extra life.)
 
 export const SOUND_LABELS: Record<OneShotId, string> = {
   uiTap: 'UI tap',
@@ -79,7 +82,6 @@ export const SOUND_LABELS: Record<OneShotId, string> = {
   go: 'GO (run start)',
   bloom: 'Reveal bloom',
   pickCorrect: 'Correct choice',
-  streakMilestone: 'Streak milestone (every 5th)',
   pickWrong: 'Incorrect choice',
   batchClear: 'Round complete',
   bonusLift: 'Speed-bonus lift',
@@ -101,16 +103,16 @@ const MAJOR = [0, 2, 4, 5, 7, 9, 11] // semitone offsets: the A major scale
  *  at streak 1 — gameplay scales their TONE layers up the scale from there
  *  (see `bloomScale`/`coinScale`), so edits keep the musical system intact.
  *
- *  bonusLift/timeout/lifeGained/pickCorrect/bloom are LAB-TUNED (designer's
- *  exported bank, 2026-07-17) — promoted verbatim from the Sound Design lab,
- *  including bloom's silenced noise layer (kept at gain 0, not deleted, so
- *  the shing stays one knob away from returning). */
+ *  bonusLift/timeout/lifeGained/pickCorrect/bloom/count are LAB-TUNED
+ *  (designer's exported banks, 2026-07-17) — promoted verbatim from the
+ *  Sound Design lab, including bloom's silenced noise layer (kept at gain 0,
+ *  not deleted, so the shing stays one knob away from returning). */
 export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
   uiTap: { layers: [
     { kind: 'tone', freq: 1300, dur: 0.045, gain: 0.06 },
   ] },
   count: { layers: [
-    { kind: 'tone', freq: 700, dur: 0.07, gain: 0.1 },
+    { kind: 'tone', freq: 2976, dur: 0.07, gain: 0.1 }, // lab-tuned: a high glassy tick
   ] },
   go: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.09, gain: 0.14 },
@@ -127,9 +129,6 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 587, type: 'square', at: 0.0312, dur: 0.1393, gain: 0.125 },
     { kind: 'tone', freq: 880, at: 0.07, dur: 0.07655, gain: 0.05 },
   ] },
-  streakMilestone: { layers: [880, 1109, 1319, 1760, 2217, 2637].map((freq, i) => (
-    { kind: 'tone' as const, freq, type: 'square' as OscType, at: i * 0.055, dur: 0.12, gain: 0.07 }
-  )) },
   pickWrong: { layers: [
     { kind: 'tone', freq: 150, endFreq: 95, type: 'sawtooth', dur: 0.22, gain: 0.26, lowpass: 420 },
     { kind: 'tone', freq: 82, dur: 0.18, gain: 0.2 },
@@ -140,12 +139,14 @@ export const DEFAULT_PATCHES: Record<OneShotId, SoundPatch> = {
     { kind: 'tone', freq: 1319, type: 'triangle', at: 0.14, dur: 0.22, gain: 0.14 },
     { kind: 'tone', freq: 1760, at: 0.21, dur: 0.4, gain: 0.08 },
   ] },
-  // A softened square riser gliding nearly two octaves under a high triangle
-  // sparkle that enters a beat later. Plays as authored — the ~1.3s Lift
-  // animation ends under its 2.5s tail, which is the designed effect.
+  // Designer's v004: a brighter sawtooth riser gliding nearly two octaves,
+  // a triangle sparkle a beat in, and a mid sine body under both. Plays as
+  // authored — the ~1.3s Lift animation ends under its 2.5s tail, which is
+  // the designed effect.
   bonusLift: { layers: [
-    { kind: 'tone', freq: 395.8, endFreq: 1817, type: 'square', dur: 2.5, attack: 0.1, gain: 0.09625, lowpass: 1756 },
-    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.1152, dur: 2.5, attack: 0.003631, gain: 0.0515 },
+    { kind: 'tone', freq: 649.8, endFreq: 2283, type: 'sawtooth', dur: 2.5, attack: 0.1, gain: 0.0455, lowpass: 2606 },
+    { kind: 'tone', freq: 2251, type: 'triangle', at: 0.1152, dur: 1.315, attack: 0.003631, gain: 0.0515 },
+    { kind: 'tone', freq: 726.5, at: 0.1464, dur: 0.6563, gain: 0.0625 },
   ] },
   lifeGained: { layers: [
     { kind: 'tone', freq: 659, type: 'triangle', dur: 0.2, gain: 0.16 },
@@ -371,11 +372,9 @@ export const sfx = {
    *  chiptune coin blip (square base note + a perfect fourth above) that
    *  climbs the A MAJOR scale one degree per streak step (capped two octaves
    *  up), restarting at the root when the streak breaks — you HEAR the
-   *  multiplier wind up and reset. Every 5th streak step lands the
-   *  streakMilestone patch on top: the "you eventually get there" reward. */
+   *  multiplier wind up and reset. */
   pickCorrect(streak: number): void {
     playPatch(patches.pickCorrect, { freqScale: coinScale(streak) })
-    if (streak > 0 && streak % 5 === 0) playPatch(patches.streakMilestone, { at: 0.16 })
   },
 
   /** A miss — a short dissonant buzz falling out of the scale, under the red
