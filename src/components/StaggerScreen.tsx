@@ -235,10 +235,14 @@ function PieceTray({
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
       <div className={`flex justify-between items-center mb-2 pointer-events-none select-none${demoTarget ? ' opacity-40' : ''}`}>
         <span className="font-silk text-[10px] tracking-[0.15em] uppercase text-vt-cyan text-glow-vt-cyan">Pieces</span>
-        {!concealed && <span className="text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>}
+        {!concealed && <span className="vt-piece-in text-[10px] text-vt-dim tracking-[0.04em]">tap to place from memory</span>}
       </div>
       <div className="grid grid-cols-7 gap-1.5">
-        {PIECE_DEFINITIONS.map(def => {
+        {/* The armed branch mounts fresh exactly at the memorize → recall
+            handoff (concealed flips), so the mount-time vt-piece-in fade plays
+            precisely then — and NOT on mid-recall re-renders (pause/resume,
+            picks, demo guidance), which reconcile in place. */}
+        {PIECE_DEFINITIONS.map((def, i) => {
           if (concealed) {
             return (
               <div
@@ -269,7 +273,9 @@ function PieceTray({
                   <span className="mt-px w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]" />
                 </span>
               )}
-              <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+              <span className="vt-piece-in" style={{ animationDelay: `${i * 35}ms` }}>
+                <PieceShape pieceType={def.type as PieceType} rotation={DISPLAY_ROTATION[def.type]} cellSize={8} />
+              </span>
             </button>
           )
         })}
