@@ -4,9 +4,15 @@
 > public debut of the **Weekend Pro™** label. Written for a maker with a demanding full-time job —
 > everything here is batched, weekend-timed, and designed to be done in the margins.
 >
-> **Companion docs:** deployment/analytics/social-metadata work is tracked in
-> `2026-06-27-pwa-launch-roadmap.md`; name/IP hygiene in `docs/ip-protection-playbook.md`. This doc
-> is the *distribution* layer on top of those.
+> **Status (verified against the live app + `main`, 2026-07-18):** already live at
+> **`vanishingtiles.weekendpro.io`** with guest play, PWA + icons, Vercel Analytics (funnel +
+> acquisition events), proprietary LICENSE + ™, a showcase README, and full brand media in
+> `docs/media/`. The product is essentially launch-ready — see Readiness gates for the one real gap.
+>
+> **Companion docs, with a caveat:** `2026-06-27-pwa-launch-roadmap.md` and `docs/HANDOFF.md` are
+> **stale** — they predate the deploy, the custom domain, the analytics wiring, and the legacy-mode
+> removal, so their unchecked boxes overstate what's left. `docs/ip-protection-playbook.md` is current.
+> This doc is the *distribution* layer and reflects the real current state.
 
 ---
 
@@ -49,22 +55,29 @@ This concern is real and it's handled by design, not by hiding:
 
 ## Readiness gates (do these BEFORE any post)
 
-You only get one first impression with your professional network. None of the public posts go out
-until these are true. Most are small and already scoped in the PWA roadmap.
+**Good news: you're almost entirely launch-ready already.** The game is live at a custom Weekend Pro
+domain — **`vanishingtiles.weekendpro.io`** — with guest play (no signup), PWA install + icons,
+Vercel Analytics (route tracking *plus* custom `run_started` / acquisition-split / engagement events),
+a proprietary LICENSE, ™ usage, a polished showcase README, and a full brand media set in
+`docs/media/` (hero, screen gallery, `loop.gif`, and a 1200×630 `social-preview.png`). The dated PWA
+roadmap and HANDOFF docs understate this — treat *this* table, not those, as current.
 
-| # | Gate | Why it blocks a launch | Effort |
-|---|------|------------------------|--------|
-| 1 | **Open Graph + Twitter card metadata** (`og:title`, `og:description`, `og:image` 1200×630, `twitter:card`) — PWA roadmap **B.2** | Without it, your link renders as a bare URL with no image in LinkedIn / HN / Reddit / iMessage. This is the difference between a post that looks legit and one that looks like spam. **Verify with a real paste test, not view-source.** | S |
-| 2 | **Icon / favicon** (replace default `vite.svg`) — PWA roadmap **A.1** | Doubles as the source for the OG image and the browser-tab identity. This is Weekend Pro's first visual mark. | S |
-| 3 | **Analytics** (Vercel Analytics one-liner, or Plausible) — PWA roadmap **B.3** | You cannot run a launch you can't measure. Answer three questions: how many opened the link, how many started a run, how many cleared a batch. | S |
-| 4 | **Mobile smoke pass** (real iOS + Android) — PWA roadmap **C.1** | Most social traffic taps through on a phone. If the board is broken or unplayable on mobile, every share is wasted. Guest play must work with no signup on mobile. | S |
-| 5 | **A 15–20s demo clip** (screen recording of a run, captioned) | Native video/GIF is the single biggest reach lever on LinkedIn and X, and it's the hook that makes people click. Record it *once*, reuse everywhere. | S |
-| 6 | **IP hygiene** — start using **™** on "Vanishing Tiles™" and "Weekend Pro™" in-app + in copy; run the free USPTO knockout search (Class 9 + 41) before publicizing the name; confirm the GitHub org + Vercel + Supabase are in your own control | Cheap insurance the moment the name goes public. See `ip-protection-playbook.md`. The knockout search catches an obvious name blocker *before* you get attached to it. | S |
-| 7 | **A feedback path** | Decide where feedback lands: "reply in comments" is enough for v1, optionally a one-field form or your email. Don't build anything. | XS |
+Only two things actually stand between you and posting:
 
-> **PWA install (Phase A.2–A.4) is NOT a gate.** "Play free in your browser, no download" is a
-> *stronger* pitch for a cold social audience than "install this." Ship the install prompt after
-> launch, in parallel.
+| # | Gate | State | Why it matters | Effort |
+|---|------|-------|----------------|--------|
+| 1 | **Open Graph + Twitter card metadata** in `index.html` (`og:title`, `og:description`, `og:image`, `og:url`, `twitter:card`) | ❌ **Missing** — no `og:*` anywhere in the repo, even though `docs/media/social-preview.png` is ready to be the image | Without it, your link renders as a bare, imageless URL in every LinkedIn / HN / Reddit / iMessage preview — the difference between "looks legit" and "looks like spam." The one true blocker. **Verify with a real paste test, not view-source.** | S — one edit |
+| 2 | **Mobile smoke pass** (real iOS + Android) | ⚠️ Unverified | Most social traffic taps through on a phone. Confirm the board renders, guest play works with no signup, and a full run is playable on a small screen before humans see the link. | S |
+
+Nice-to-have, not blockers:
+
+| Item | State | Note |
+|------|-------|------|
+| **Demo clip for posts** | 🟡 Partial | `docs/media/loop.gif` already exists and is a strong hook. A slightly longer (15–20s) captioned screen-record of a real run is worth doing for LinkedIn/X native video, but the GIF alone will do. |
+| **IP knockout search** | 🟡 Recommended | LICENSE + ™ are done. Still run the free USPTO knockout search (Class 9 + 41) now that the name is going fully public — see `ip-protection-playbook.md`. |
+| **Feedback path** | 🟢 Optional | "Reply in comments" is enough for v1. The leaderboard already gives players a reason to come back. |
+| **Analytics** | ✅ Done | Already captures the full funnel + acquisition source — see Metrics below. Nothing to add. |
+| **Icons / PWA / favicon** | ✅ Done | `/icons/`, `apple-touch-icon`, `manifest.webmanifest`, `theme-color` all shipped. |
 
 ---
 
@@ -128,14 +141,17 @@ bug-catch wave (see below). Don't cold-join servers to spam — only ones you're
 Sequenced so your **professional network sees a polished, bug-free, socially-proven version** — never
 the raw first cut. You get one first impression on LinkedIn; spend the soft launch to earn it.
 
-### Weekend 0 — Prep (batched into 2–3 evenings)
-Clear the readiness gates above, all at once:
-- Ship OG tags + favicon/icon + analytics (roadmap B.2/A.1/B.3 — one focused session).
-- Mobile smoke pass on a real phone.
-- Record the 15–20s demo clip. Write the copy *once* (drafts below), reuse everywhere.
-- ™ everywhere + USPTO knockout search. Reserve Weekend Pro handles (itch.io; X if you'll use it —
-  the GitHub org `WeekendPro` already exists).
-- Decide the feedback path.
+### Weekend 0 — Prep (a single evening — most of this is already done)
+The heavy lifting (deploy, domain, analytics, icons, PWA, README, brand media) is behind you. All
+that's left:
+- **Wire the OG/Twitter tags into `index.html`** pointing at `docs/media/social-preview.png`, redeploy,
+  and confirm with a real paste test into LinkedIn's composer + iMessage. *(This is the one true
+  blocker — it can be done in minutes.)*
+- **Mobile smoke pass** on a real phone: board renders, guest play works, a full run is playable.
+- Optionally record a 15–20s captioned run for native video (the existing `loop.gif` is a fine
+  fallback). Write the copy *once* (drafts below), reuse everywhere.
+- Run the USPTO knockout search; reserve the itch.io handle (and X, if you'll use it — the GitHub org
+  `WeekendPro` and `weekendpro.io` already exist).
 
 ### Weekend 1 — Soft launch (Saturday, low stakes)
 Post to **feedback-first, forgiving** spaces only:
@@ -195,7 +211,8 @@ This is what turns a one-shot into a *label*:
 >
 > \#buildinpublic \#indiedev \#webdev
 >
-> *(First comment: the play link + the demo clip if not in the post.)*
+> *(First comment: `Play it here → https://vanishingtiles.weekendpro.io` + the demo clip if it's not in
+> the post itself.)*
 
 ### Show HN
 - **Title:** `Show HN: Vanishing Tiles – a memory puzzle game I built on weekends`
@@ -207,8 +224,10 @@ This is what turns a one-shot into a *label*:
 > with tetromino pieces before a select clock runs out. Three difficulties — Hard makes you recall the
 > gaps in the exact order they appeared. It's endless and ramps forever.
 >
+> Play it here (guest mode, no signup): https://vanishingtiles.weekendpro.io
+>
 > Stack: React + TS + Vite, Supabase for auth/leaderboard, all sound synthesized live via the Web
-> Audio API (no audio files), deployed on Vercel. Play as a guest, no signup.
+> Audio API (no audio files), deployed on Vercel. The repo README has the details.
 >
 > I'd love feedback on the difficulty curve especially — it took forever to tune. Roast away.
 
@@ -230,8 +249,11 @@ This is what turns a one-shot into a *label*:
 Don't chase virality — you're validating that people *play and enjoy* it, and planting the Weekend Pro
 flag. Track:
 
-- **Quant (from analytics):** link opens → runs started → batches cleared → return visits. The
-  open→start→clear funnel tells you if the game hooks people.
+- **Quant (already instrumented — Vercel Analytics):** you already fire `run_started`, an
+  acquisition-source split (guest / email / google), and a per-run engagement payload (mode + how far
+  the player got). So the funnel is *link opens → run started → how deep → return visits*, and you can
+  see which channel sent the players who actually engaged. No new tracking needed — just watch the
+  dashboard during launch.
 - **Engagement:** leaderboard signups (guest→named conversion), LinkedIn reactions/comments, HN
   points/comment count, Reddit upvotes.
 - **Qual (the real prize):** feedback themes. Cluster what people say — that's your next weekend's
@@ -246,7 +268,7 @@ A modest, honest first launch that generates real feedback and a handful of enga
 
 | When | Do | Channels | Goal |
 |------|----|----------|------|
-| **Weekend 0** | Clear readiness gates; record demo; write copy; ™ + knockout search | — | Be launch-ready |
+| **Weekend 0** *(≈1 evening)* | Wire OG tags → redeploy → paste-test; mobile smoke pass; write copy; knockout search | — | Be launch-ready (nearly there already) |
 | **Weekend 1** | Soft launch (Sat), fix bugs (Sun) | r/playmygame, Discords, direct DMs | Catch bugs, seed leaderboard, get quotes |
 | **Weekend 2** | The debut (Sat AM), be present in comments | LinkedIn, Show HN, itch.io, Indie Hackers, X, r/WebGames | The Weekend Pro launch |
 | **+2 weeks** | Retrospective post; ship one visible fix | LinkedIn, X | Turn launch into a series |
