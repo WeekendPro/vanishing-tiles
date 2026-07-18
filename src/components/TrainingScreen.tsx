@@ -5,7 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
 import { useNavStore } from '../store/navStore'
 import { sfx } from '../lib/sfx'
-import { PauseOverlay } from './ui'
+import { PauseOverlay, ScaleToFit } from './ui'
 
 const CELL = 28
 const CELL_PITCH = CELL + 2   // cell + 2px grid gap
@@ -221,7 +221,12 @@ export function TrainingScreen() {
   if (!active) return null
 
   return (
-    <div className="min-h-dvh flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+    <div className="min-h-dvh flex flex-col vt-vignette text-vt-text select-none">
+      {/* Fixed-size play surface scaled to fit the viewport; the pause overlay
+          below renders OUTSIDE the transform (a transformed ancestor would become
+          its containing block and shrink it with the stage). */}
+      <ScaleToFit>
+        <div className="flex flex-col items-center pt-12 pb-8">
       {/* HUD — no score, no lives, no visible clock: the flat four-stat bar,
           one shared size and baseline. Streaks are lime-family (BEST dimmed),
           MISS a muted red (a record, not an alarm), speed cyan. */}
@@ -309,6 +314,8 @@ export function TrainingScreen() {
           </span>
         </button>
       </div>
+        </div>
+      </ScaleToFit>
 
       {/* Hard pause — covers the whole screen (the held piece stays hidden, so
           no free memorizing) with the session's full stat bar riding along. */}

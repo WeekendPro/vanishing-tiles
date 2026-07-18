@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
@@ -12,7 +13,7 @@ import { submitStaggerRun } from '../lib/api'
 import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
 import { PieceShape } from './PieceShape'
-import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
+import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay, ScaleToFit } from './ui'
 import { RunHistoryGraph } from './RunHistoryGraph'
 
 const CELL = 28
@@ -880,7 +881,14 @@ export function StaggerScreen() {
     'text-vt-amber text-glow-vt-amber'
 
   return (
-    <div className="min-h-dvh flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+    <div className="min-h-dvh flex flex-col vt-vignette text-vt-text select-none">
+      {/* The play surface is authored at a fixed ~384px width; ScaleToFit shrinks
+          it uniformly to fit smaller viewports (phones) and stays 1:1 on desktop.
+          The game-over overlay is portaled to <body> and the pause / lift-flyer
+          overlays render below, all OUTSIDE this transform — otherwise the scale
+          would become their containing block and shrink them with the stage. */}
+      <ScaleToFit>
+        <div className="flex flex-col items-center pt-12 pb-8">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
@@ -1085,7 +1093,10 @@ export function StaggerScreen() {
           )}
         </AnimatePresence>
 
-        {phase === 'gameOver' && (
+        {/* Portaled to <body> so it escapes ScaleToFit's transform (a transformed
+            ancestor would become this fixed overlay's containing block and shrink
+            it to the scaled stage instead of covering the viewport). */}
+        {phase === 'gameOver' && createPortal(
           <div className="fixed inset-0 z-40 flex flex-col items-center bg-vt-void overflow-y-auto px-6 py-10">
             <ScanlineOverlay />
             <div className="font-silk text-base text-vt-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
@@ -1131,7 +1142,8 @@ export function StaggerScreen() {
                 <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
 
       </div>
@@ -1200,6 +1212,8 @@ export function StaggerScreen() {
           </button>
         </div>
       )}
+        </div>
+      </ScaleToFit>
 
       {/* Hard pause — covers the whole screen so no memorizing happens while
           frozen; resume picks the clock back up, exit bails to the landing page.
