@@ -11,9 +11,10 @@ vi.mock('../../src/lib/api', () => ({
   getOwnProfile: vi.fn(),
   setDisplayName: vi.fn(),
   eraseStaggerRecords: vi.fn(),
+  deleteOwnAccount: vi.fn(),
 }))
-// Admin-only tools (Sound Design + Erase My Records) gate on isAdminEnv; default
-// to admin (matches the local dev session tests run under) and override per-test.
+// Sound Design gates on isAdminEnv; default to admin (matches the local dev
+// session tests run under) and override per-test. Erase My Data is NOT gated.
 vi.mock('../../src/lib/config', () => ({
   PROVIDERS_ENABLED: false,
   isAdminEnv: vi.fn(() => true),
@@ -39,6 +40,7 @@ beforeEach(() => {
   vi.mocked(auth.signOut).mockResolvedValue({ error: null } as never)
   vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: 'NeonRider', isGuest: false })
   vi.mocked(api.eraseStaggerRecords).mockResolvedValue(undefined)
+  vi.mocked(api.deleteOwnAccount).mockResolvedValue(undefined)
   vi.mocked(config.isAdminEnv).mockReturnValue(true)
 })
 
@@ -186,49 +188,91 @@ describe('GlobalMenu', () => {
     expect(screen.queryByRole('button', { name: /edit profile/i })).not.toBeInTheDocument()
   })
 
-  it('in the admin env, shows Sound Design and Erase My Records', async () => {
+  it('Sound Design shows in the admin env and hides outside it', async () => {
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
-    render(<GlobalMenu />)
+    const { unmount } = render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(screen.getByRole('button', { name: /Sound Design/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Erase My Records/i })).toBeInTheDocument()
-  })
+    unmount()
 
-  it('outside the admin env, hides both Sound Design and Erase My Records', async () => {
     vi.mocked(config.isAdminEnv).mockReturnValue(false)
-    useNavStore.setState({ appView: 'home' })
-    const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(screen.queryByRole('button', { name: /Sound Design/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Erase My Records/i })).not.toBeInTheDocument()
   })
 
-  it('Erase My Records asks to confirm, then wipes the caller records on confirm', async () => {
+  it('Erase My Data is shown regardless of admin env — to players and guests alike', async () => {
+    vi.mocked(config.isAdminEnv).mockReturnValue(false)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    const { unmount } = render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByRole('button', { name: /Erase My Data/i })).toBeInTheDocument()
+    unmount()
+
+    mockGuest()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(await screen.findByRole('button', { name: /Erase My Data/i })).toBeInTheDocument()
+  })
+
+  it('Erase My Data opens a confirmation modal defaulting to the in-game (non-destructive) option', async () => {
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Erase My Data/i }))
 
-    // First tap only arms the confirm — nothing is erased yet.
-    await user.click(screen.getByRole('button', { name: /Erase My Records/i }))
+    // Modal is up with the irreversibility warning + both options; nothing fired.
+    expect(screen.getByRole('dialog', { name: /erase my data/i })).toBeInTheDocument()
+    expect(screen.getByText(/permanent and can.t be undone/i)).toBeInTheDocument()
+    const ingame = screen.getByRole('radio', { name: /Erase my In-Game Data/i }) as HTMLInputElement
+    const account = screen.getByRole('radio', { name: /Erase my Account/i }) as HTMLInputElement
+    expect(ingame.checked).toBe(true)   // safe default
+    expect(account.checked).toBe(false)
     expect(api.eraseStaggerRecords).not.toHaveBeenCalled()
-    expect(screen.getByText(/Erase all your leaderboard records\?/i)).toBeInTheDocument()
+    expect(api.deleteOwnAccount).not.toHaveBeenCalled()
+  })
 
-    await user.click(screen.getByRole('button', { name: /Yes, erase/i }))
+  it('in-game scope wipes only the game records, keeps the account, and confirms', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Erase My Data/i }))
+    await user.click(screen.getByRole('button', { name: /^Erase$/i }))
+
     expect(api.eraseStaggerRecords).toHaveBeenCalledTimes(1)
-    expect(await screen.findByText(/Records erased/i)).toBeInTheDocument()
+    expect(api.deleteOwnAccount).not.toHaveBeenCalled()
+    expect(auth.signOut).not.toHaveBeenCalled()   // account survives
+    expect(await screen.findByText(/in-game data has been erased/i)).toBeInTheDocument()
   })
 
-  it('Erase My Records can be cancelled without wiping anything', async () => {
+  it('account scope deletes the account, signs out, and returns to the auth screen', async () => {
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: /Erase My Records/i }))
-    await user.click(screen.getByRole('button', { name: /Cancel/i }))
+    await user.click(screen.getByRole('button', { name: /Erase My Data/i }))
+    await user.click(screen.getByRole('radio', { name: /Erase my Account/i }))
+    await user.click(screen.getByRole('button', { name: /^Erase$/i }))
+
+    expect(api.deleteOwnAccount).toHaveBeenCalledTimes(1)
     expect(api.eraseStaggerRecords).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: /Erase My Records/i })).toBeInTheDocument()
+    expect(auth.signOut).toHaveBeenCalledTimes(1)
+    expect(useNavStore.getState().appView).toBe('auth')
+  })
+
+  it('Cancel closes the Erase My Data modal without erasing anything', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Erase My Data/i }))
+    await user.click(screen.getByRole('button', { name: /Cancel/i }))
+    expect(screen.queryByRole('dialog', { name: /erase my data/i })).not.toBeInTheDocument()
+    expect(api.eraseStaggerRecords).not.toHaveBeenCalled()
+    expect(api.deleteOwnAccount).not.toHaveBeenCalled()
   })
 })

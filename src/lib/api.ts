@@ -48,9 +48,19 @@ export async function submitStaggerRun(a: SubmitStaggerRunInput): Promise<unknow
 /** Erases the caller's own Infinite Stagger history — every stagger_runs row
  *  and per-mode stagger_stats aggregate scoped to auth.uid() (migration 0017).
  *  This is what removes the caller from (or resets their bests on) every
- *  leaderboard board. */
+ *  leaderboard board. Leaves the profile + account intact ("Erase my In-Game
+ *  Data"). */
 export async function eraseStaggerRecords(): Promise<void> {
   const { error } = await supabase.rpc('erase_stagger_records')
+  if (error) throw error
+}
+
+/** Deletes the caller's entire account — the auth.users row, which cascades to
+ *  their profile and ALL game history (migration 0018, "Erase my Account").
+ *  Irreversible. The caller's session is invalid afterward, so the client must
+ *  sign out immediately once this resolves. */
+export async function deleteOwnAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_own_account')
   if (error) throw error
 }
 

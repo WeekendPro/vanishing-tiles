@@ -7,7 +7,7 @@ import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
 import { analytics } from '../lib/analytics'
-import { eraseStaggerRecords } from '../lib/api'
+import { eraseStaggerRecords, deleteOwnAccount } from '../lib/api'
 import { isAdminEnv } from '../lib/config'
 import { ScanlineOverlay, ChannelControl } from './ui'
 import { DisplayNameForm } from './DisplayNameForm'
@@ -85,11 +85,19 @@ export function GlobalMenu() {
 
   const [open, setOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  // Admin-only tools (Sound Design + Erase My Records) show only in the local
-  // dev session — never on the deployed build. `erase` walks a tiny confirm →
-  // working → done state machine so a destructive tap can't fire by accident.
+  // Sound Design is a developer instrument — the local dev session only, never
+  // the deployed build (isAdminEnv). "Erase My Data" below is NOT gated: it's a
+  // real, user-facing account/data control available to everyone.
   const admin = isAdminEnv()
-  const [erase, setErase] = useState<'idle' | 'confirm' | 'working' | 'done'>('idle')
+
+  // "Erase My Data" confirmation modal. `scope` is the radio choice:
+  //   'ingame'  → wipe only leaderboard/game history, keep the account (0017 RPC)
+  //   'account' → delete the whole account, cascading all game data (0018 RPC)
+  const [dataOpen, setDataOpen] = useState(false)
+  const [scope, setScope] = useState<'ingame' | 'account'>('ingame')
+  const [dataBusy, setDataBusy] = useState(false)
+  const [dataDone, setDataDone] = useState(false)   // in-game success (account navigates away)
+  const [dataError, setDataError] = useState(false)
 
   useEffect(() => {
     if (!loaded) void loadProfile()
@@ -100,17 +108,34 @@ export function GlobalMenu() {
   const name = displayName ?? (isGuest ? 'Guest' : email?.split('@')[0] ?? '')
 
   const openMenu = () => { setOpen(true) }
-  const close = () => { setOpen(false); setEditOpen(false); setErase('idle') }
+  const closeEraseData = () => { setDataOpen(false); setDataBusy(false); setDataDone(false); setDataError(false); setScope('ingame') }
+  const close = () => { setOpen(false); setEditOpen(false); closeEraseData() }
 
-  // Wipe the caller's own leaderboard records (all modes) via the 0017 RPC.
-  // On success the boards re-fetch fresh the next time they open.
-  const handleErase = async () => {
-    setErase('working')
+  const openEraseData = () => { setDataDone(false); setDataError(false); setScope('ingame'); setDataOpen(true) }
+
+  // Runs the chosen erase. In-game data wipes the leaderboard rows and shows an
+  // in-modal confirmation; account deletion nukes the auth user (cascading all
+  // data) and — since the session now points at a deleted user — immediately
+  // tears down and lands on AuthScreen, same teardown as Logout.
+  const handleEraseData = async () => {
+    setDataBusy(true)
+    setDataError(false)
     try {
-      await eraseStaggerRecords()
-      setErase('done')
+      if (scope === 'account') {
+        await deleteOwnAccount()
+        setDataOpen(false)
+        setOpen(false)
+        clearProfile()
+        await signOut()
+        resetNav()
+      } else {
+        await eraseStaggerRecords()
+        setDataDone(true)
+      }
     } catch {
-      setErase('confirm')
+      setDataError(true)
+    } finally {
+      setDataBusy(false)
     }
   }
 
@@ -239,59 +264,137 @@ export function GlobalMenu() {
             onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
           />
 
-          {/* Admin-only tools — the local dev session only, never the deployed
-              build (isAdminEnv). The Sound Design calibration lab is a
-              developer instrument; Erase My Records wipes the signed-in user's
-              own leaderboard records so the boards can be reset during testing. */}
-          {admin && (
-            <>
-              <Action label="Sound Design" onClick={openSoundDesign} />
-              {erase === 'done' ? (
-                <div className="flex items-center gap-2.5 font-pixel uppercase tracking-[0.08em] text-base py-3 text-neon-green">
-                  Records erased
-                </div>
-              ) : erase === 'idle' ? (
-                <Action label="Erase My Records" tone="danger" onClick={() => setErase('confirm')} />
-              ) : (
-                <div className="flex flex-col gap-2 py-3">
-                  <span className="font-pixel uppercase tracking-[0.08em] text-sm text-neon-red">
-                    Erase all your leaderboard records?
-                  </span>
-                  <div className="flex items-center gap-5">
-                    <button
-                      onClick={handleErase}
-                      disabled={erase === 'working'}
-                      className="font-pixel uppercase tracking-[0.08em] text-base text-neon-red hover:text-glow-red disabled:opacity-50"
-                    >
-                      {erase === 'working' ? 'Erasing…' : 'Yes, erase'}
-                    </button>
-                    <button
-                      onClick={() => setErase('idle')}
-                      disabled={erase === 'working'}
-                      className="font-pixel uppercase tracking-[0.08em] text-base text-arcade-edge hover:text-gray-300 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          {/* The calibration lab: every game sound as knobs + replay + saved
+              presets. Admin-only — a developer instrument, never on the
+              deployed build (isAdminEnv). */}
+          {admin && <Action label="Sound Design" onClick={openSoundDesign} />}
 
           {/* A full Settings screen is deliberately absent — the lone sound
               toggle above rides inline until there's more to expose.
+
+              Erase My Data + the exit control are pinned to the bottom. Erase
+              My Data opens a confirmation modal (in-game data vs whole account);
+              it's a real user-facing control, shown to everyone including
+              guests (guests have an anon account + game history too).
 
               Guests never logged in, so "Logout" is the wrong ask — their exit
               ramp is SIGN UP: terminate the anonymous session and land on
               AuthScreen, where they can create the account (or sign in). Same
               teardown either way; only the framing differs. */}
-          <div className="mt-auto">
+          <div className="mt-auto flex flex-col">
+            <Action label="Erase My Data" tone="danger" onClick={openEraseData} />
             {isGuest
               ? <Action label="Sign up" onClick={handleSignOut} />
               : <Action label="Logout" tone="danger" onClick={handleSignOut} />}
           </div>
+
+          {dataOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/70">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Erase my data"
+                className="relative w-full max-w-sm rounded-[28px] bg-vt-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6)] px-7 py-8"
+              >
+                {dataDone ? (
+                  // In-game data erased — the whole account survives, so we stay
+                  // put and just confirm.
+                  <div className="text-center">
+                    <h2 className="font-silk text-sm text-neon-green uppercase tracking-[0.15em] mb-2">Done</h2>
+                    <p className="text-sm text-gray-300 mb-7">
+                      Your in-game data has been erased. Your profile and account are untouched.
+                    </p>
+                    <button
+                      onClick={closeEraseData}
+                      className="w-full rounded-full bg-white/10 hover:bg-white/15 py-3 font-pixel uppercase tracking-[0.1em] text-sm text-white"
+                    >
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="font-silk text-sm text-neon-red uppercase tracking-[0.15em] mb-2 text-center">
+                      Erase my data
+                    </h2>
+                    <p className="text-sm text-gray-300 mb-6 text-center">
+                      This is permanent and can’t be undone. Choose what to erase:
+                    </p>
+
+                    <div className="flex flex-col gap-2.5 mb-6">
+                      <EraseOption
+                        checked={scope === 'ingame'}
+                        onSelect={() => setScope('ingame')}
+                        title="Erase my In-Game Data"
+                        subtitle="Keeps your profile, but deletes your game history from the leaderboards."
+                      />
+                      <EraseOption
+                        checked={scope === 'account'}
+                        onSelect={() => setScope('account')}
+                        title="Erase my Account"
+                        subtitle="Your game history along with your profile and account will be deleted."
+                      />
+                    </div>
+
+                    {dataError && (
+                      <p className="text-xs text-neon-red mb-4 text-center">Something went wrong. Please try again.</p>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={closeEraseData}
+                        disabled={dataBusy}
+                        className="flex-1 rounded-full bg-white/10 hover:bg-white/15 py-3 font-pixel uppercase tracking-[0.1em] text-sm text-white disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEraseData}
+                        disabled={dataBusy}
+                        className="flex-1 rounded-full bg-neon-red/90 hover:bg-neon-red py-3 font-pixel uppercase tracking-[0.1em] text-sm text-white disabled:opacity-50"
+                      >
+                        {dataBusy ? 'Erasing…' : 'Erase'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
+  )
+}
+
+/** One radio row in the Erase-my-data modal: a real radio input (accessible +
+ *  keyboard-selectable) with a custom dot, title, and explanatory subtitle. */
+function EraseOption({ checked, onSelect, title, subtitle }:
+  { checked: boolean; onSelect: () => void; title: string; subtitle: string }) {
+  return (
+    <label
+      className={`flex gap-3 items-start cursor-pointer rounded-2xl border px-4 py-3 transition-colors ${
+        checked ? 'border-neon-red/70 bg-neon-red/10' : 'border-white/10 hover:border-white/20'
+      }`}
+    >
+      <input
+        type="radio"
+        name="erase-scope"
+        checked={checked}
+        onChange={onSelect}
+        className="sr-only"
+      />
+      <span
+        aria-hidden="true"
+        className={`mt-0.5 grid place-items-center w-4 h-4 rounded-full border flex-none ${
+          checked ? 'border-neon-red' : 'border-white/40'
+        }`}
+      >
+        {checked && <span className="w-2 h-2 rounded-full bg-neon-red" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block font-pixel uppercase tracking-[0.06em] text-sm text-white">{title}</span>
+        <span className="block text-xs text-gray-400 mt-1 leading-snug">{subtitle}</span>
+      </span>
+    </label>
   )
 }
