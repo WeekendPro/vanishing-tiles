@@ -8,6 +8,8 @@ import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
 import { analytics } from '../lib/analytics'
+import { eraseStaggerRecords } from '../lib/api'
+import { isAdminEnv } from '../lib/config'
 import { ScanlineOverlay, ChannelControl } from './ui'
 import { DisplayNameForm } from './DisplayNameForm'
 
@@ -94,6 +96,11 @@ export function GlobalMenu() {
   const inGame = appView === 'playing' || appView === 'practice'
   const [open, setOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  // Admin-only tools (Sound Design + Erase My Records) show only in the local
+  // dev session — never on the deployed build. `erase` walks a tiny confirm →
+  // working → done state machine so a destructive tap can't fire by accident.
+  const admin = isAdminEnv()
+  const [erase, setErase] = useState<'idle' | 'confirm' | 'working' | 'done'>('idle')
 
   useEffect(() => {
     if (!loaded) void loadProfile()
@@ -104,7 +111,19 @@ export function GlobalMenu() {
   const name = displayName ?? (isGuest ? 'Guest' : email?.split('@')[0] ?? '')
 
   const openMenu = () => { if (inGame) pauseGame(); setOpen(true) }
-  const close = () => { if (inGame) resumeGame(); setOpen(false); setEditOpen(false) }
+  const close = () => { if (inGame) resumeGame(); setOpen(false); setEditOpen(false); setErase('idle') }
+
+  // Wipe the caller's own leaderboard records (all modes) via the 0017 RPC.
+  // On success the boards re-fetch fresh the next time they open.
+  const handleErase = async () => {
+    setErase('working')
+    try {
+      await eraseStaggerRecords()
+      setErase('done')
+    } catch {
+      setErase('confirm')
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -248,10 +267,44 @@ export function GlobalMenu() {
             onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
           />
 
-          {/* The calibration lab: every game sound as knobs + replay + saved
-              presets. Deliberately visible pre-launch — tuning on the live
-              build IS the current workflow. */}
-          <Action label="Sound Design" onClick={openSoundDesign} />
+          {/* Admin-only tools — the local dev session only, never the deployed
+              build (isAdminEnv). The Sound Design calibration lab is a
+              developer instrument; Erase My Records wipes the signed-in user's
+              own leaderboard records so the boards can be reset during testing. */}
+          {admin && (
+            <>
+              <Action label="Sound Design" onClick={openSoundDesign} />
+              {erase === 'done' ? (
+                <div className="flex items-center gap-2.5 font-pixel uppercase tracking-[0.08em] text-base py-3 text-neon-green">
+                  Records erased
+                </div>
+              ) : erase === 'idle' ? (
+                <Action label="Erase My Records" tone="danger" onClick={() => setErase('confirm')} />
+              ) : (
+                <div className="flex flex-col gap-2 py-3">
+                  <span className="font-pixel uppercase tracking-[0.08em] text-sm text-neon-red">
+                    Erase all your leaderboard records?
+                  </span>
+                  <div className="flex items-center gap-5">
+                    <button
+                      onClick={handleErase}
+                      disabled={erase === 'working'}
+                      className="font-pixel uppercase tracking-[0.08em] text-base text-neon-red hover:text-glow-red disabled:opacity-50"
+                    >
+                      {erase === 'working' ? 'Erasing…' : 'Yes, erase'}
+                    </button>
+                    <button
+                      onClick={() => setErase('idle')}
+                      disabled={erase === 'working'}
+                      className="font-pixel uppercase tracking-[0.08em] text-base text-arcade-edge hover:text-gray-300 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           {/* A full Settings screen is deliberately absent — the lone sound
               toggle above rides inline until there's more to expose.

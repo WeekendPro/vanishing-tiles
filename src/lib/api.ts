@@ -45,6 +45,15 @@ export async function submitStaggerRun(a: SubmitStaggerRunInput): Promise<unknow
   return data
 }
 
+/** Erases the caller's own Infinite Stagger history — every stagger_runs row
+ *  and per-mode stagger_stats aggregate scoped to auth.uid() (migration 0017).
+ *  This is what removes the caller from (or resets their bests on) every
+ *  leaderboard board. */
+export async function eraseStaggerRecords(): Promise<void> {
+  const { error } = await supabase.rpc('erase_stagger_records')
+  if (error) throw error
+}
+
 /** One ranked (non-guest) player on a mode's global board. */
 export interface LeaderboardRow {
   rank: number

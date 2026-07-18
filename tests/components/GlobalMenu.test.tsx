@@ -10,9 +10,17 @@ vi.mock('../../src/lib/auth', () => ({
 vi.mock('../../src/lib/api', () => ({
   getOwnProfile: vi.fn(),
   setDisplayName: vi.fn(),
+  eraseStaggerRecords: vi.fn(),
+}))
+// Admin-only tools (Sound Design + Erase My Records) gate on isAdminEnv; default
+// to admin (matches the local dev session tests run under) and override per-test.
+vi.mock('../../src/lib/config', () => ({
+  PROVIDERS_ENABLED: false,
+  isAdminEnv: vi.fn(() => true),
 }))
 import * as auth from '../../src/lib/auth'
 import * as api from '../../src/lib/api'
+import * as config from '../../src/lib/config'
 import { GlobalMenu } from '../../src/components/GlobalMenu'
 import { useNavStore } from '../../src/store/navStore'
 import { useGameStore } from '../../src/store/gameStore'
@@ -32,6 +40,8 @@ beforeEach(() => {
   } as never)
   vi.mocked(auth.signOut).mockResolvedValue({ error: null } as never)
   vi.mocked(api.getOwnProfile).mockResolvedValue({ displayName: 'NeonRider', isGuest: false })
+  vi.mocked(api.eraseStaggerRecords).mockResolvedValue(undefined)
+  vi.mocked(config.isAdminEnv).mockReturnValue(true)
 })
 
 const mockGuest = () => {
@@ -202,5 +212,51 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(await screen.findByRole('img', { name: /guest avatar/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /edit profile/i })).not.toBeInTheDocument()
+  })
+
+  it('in the admin env, shows Sound Design and Erase My Records', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(screen.getByRole('button', { name: /Sound Design/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Erase My Records/i })).toBeInTheDocument()
+  })
+
+  it('outside the admin env, hides both Sound Design and Erase My Records', async () => {
+    vi.mocked(config.isAdminEnv).mockReturnValue(false)
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    expect(screen.queryByRole('button', { name: /Sound Design/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Erase My Records/i })).not.toBeInTheDocument()
+  })
+
+  it('Erase My Records asks to confirm, then wipes the caller records on confirm', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+
+    // First tap only arms the confirm — nothing is erased yet.
+    await user.click(screen.getByRole('button', { name: /Erase My Records/i }))
+    expect(api.eraseStaggerRecords).not.toHaveBeenCalled()
+    expect(screen.getByText(/Erase all your leaderboard records\?/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Yes, erase/i }))
+    expect(api.eraseStaggerRecords).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText(/Records erased/i)).toBeInTheDocument()
+  })
+
+  it('Erase My Records can be cancelled without wiping anything', async () => {
+    useNavStore.setState({ appView: 'home' })
+    const user = userEvent.setup()
+    render(<GlobalMenu />)
+    await user.click(screen.getByRole('button', { name: /menu/i }))
+    await user.click(screen.getByRole('button', { name: /Erase My Records/i }))
+    await user.click(screen.getByRole('button', { name: /Cancel/i }))
+    expect(api.eraseStaggerRecords).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /Erase My Records/i })).toBeInTheDocument()
   })
 })
