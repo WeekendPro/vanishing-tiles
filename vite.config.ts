@@ -8,6 +8,9 @@ export default defineConfig({
     port: process.env.PORT ? Number(process.env.PORT) : 5173,
   },
   resolve: {
+    // Force a single React instance so Vite's dep pre-bundling doesn't hand
+    // @vercel/analytics/react its own copy (causes "Invalid hook call").
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@shared': fileURLToPath(new URL('./supabase/functions/_shared', import.meta.url)),
     },
