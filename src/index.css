@@ -301,6 +301,36 @@ html {
   .vt-paint { animation: none; background: #1a1c26; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 }
 
+/* Recall-tray piece TAP feedback: on tap the button gives a quick ~2px lift and
+   a brief cyan edge-glow (the same vt-cyan the old hover wore), then settles
+   back over 500ms — an unmistakable "you picked this" that never lingers (the
+   sticky-hover glow it replaces stayed lit on touch). The base inset top
+   highlight is carried through every frame so it doesn't blink out. Retriggered
+   on every tap — including repeat taps of the same piece — via a forced reflow
+   in the click handler (remove → reflow → re-add the class). */
+@keyframes vtPieceTap {
+  0% {
+    transform: translateY(0);
+    border-color: rgba(40, 240, 255, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 6px rgba(40, 240, 255, 0), 0 0 22px rgba(40, 240, 255, 0);
+  }
+  20% {
+    transform: translateY(-2px);
+    border-color: rgba(40, 240, 255, 1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 6px rgba(40, 240, 255, 1), 0 0 22px rgba(40, 240, 255, 0.45);
+  }
+  100% {
+    transform: translateY(0);
+    border-color: rgba(40, 240, 255, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 6px rgba(40, 240, 255, 0), 0 0 22px rgba(40, 240, 255, 0);
+  }
+}
+.vt-piece-tap { animation: vtPieceTap 500ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-piece-tap { animation: none; }
+}
+
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
    appears, HOLDS at full strength for most of its beat, then smears out —
    blurring and swelling outward as it fades to nothing — in the final ~28%,

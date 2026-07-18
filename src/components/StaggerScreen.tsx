@@ -343,7 +343,18 @@ function PieceTray({
               key={def.type}
               data-piece-option={def.type}
               disabled={disabled}
-              onClick={() => onPick(def.type as PieceType)}
+              onClick={e => {
+                // Restart the lift+glow tap animation even on repeat taps of the
+                // same button: remove the class, force a reflow, re-add it.
+                const el = e.currentTarget
+                el.classList.remove('vt-piece-tap')
+                void el.offsetWidth
+                el.classList.add('vt-piece-tap')
+                onPick(def.type as PieceType)
+              }}
+              // Only the button's OWN tap animation clears the class — the inner
+              // piece cells' bloom animations also bubble an animationend here.
+              onAnimationEnd={e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('vt-piece-tap') }}
               className={`relative flex items-center justify-center h-12 p-1 rounded-md border bg-vt-raised
                 border-vt-cyan/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
                 hover:border-vt-cyan hover:shadow-vt-cyan cursor-pointer transition
