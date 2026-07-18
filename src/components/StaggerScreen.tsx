@@ -148,7 +148,7 @@ function StaggerBoard({
 
   return (
     <div
-      className="inline-grid gap-[2px] p-3 bg-[#04040a] rounded-xl shadow-[inset_0_2px_6px_#000,inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+      className="inline-grid gap-[2px] p-3 bg-[#04040a] rounded-xl border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_2px_6px_#000]"
       style={{ gridTemplateColumns: `repeat(${COLS}, ${CELL}px)` }}
     >
       {Array.from({ length: ROWS * COLS }, (_, i) => {
@@ -269,12 +269,17 @@ function StaggerCountdown({
 // of the board, nothing clickable — so the pause button below keeps exactly
 // its recall-phase position when the phases swap.
 function PieceTray({
-  onPick, disabled, concealed = false, mode, demoTarget, demoWrong,
+  onPick, disabled, concealed = false, skeleton = false, mode, demoTarget, demoWrong,
 }: {
   onPick: (t: PieceType) => void
   disabled: boolean
   /** Memorize phase: same panel, seven EMPTY dormant sockets (see above). */
   concealed?: boolean
+  /** Countdown phase: same panel DIMENSIONS, but a solid seamless black box (grid
+   *  styling, invisible header, borderless black sockets) so the play column's
+   *  natural height is identical to the gameplay tray — the ScaleToFit scale
+   *  therefore doesn't jump when countdown → reveal. Non-interactive. */
+  skeleton?: boolean
   /** Drives the tray palette: EASY per-piece color, MEDIUM pink, HARD sludge. */
   mode: Difficulty
   /** Demo guidance (T3): while set, the target button wears the spotlight ring +
@@ -302,6 +307,29 @@ function PieceTray({
     if (!concealed) setLeaving(false)
   }, [concealed])
   const ghosts = concealed && leaving
+
+  // Countdown skeleton: the SAME outer/header/socket dimensions as the concealed
+  // tray (so the column height — and thus the ScaleToFit scale — is identical),
+  // but recolored to the grid's black fill with no socket borders, so it reads as
+  // one seamless solid box. Non-interactive, no piece shapes.
+  if (skeleton) {
+    return (
+      <div
+        aria-hidden
+        className="w-full max-w-sm rounded-xl p-3 bg-[#04040a] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_2px_6px_#000] pointer-events-none"
+      >
+        <div className="flex justify-between items-center mb-2 select-none invisible">
+          <span className="font-silk text-[10px] tracking-[0.15em] uppercase">Pieces</span>
+          <span className="text-[10px] tracking-[0.04em]">tap to place from memory</span>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {PIECE_DEFINITIONS.map(def => (
+            <div key={def.type} className="h-12 rounded-md bg-[#04040a]" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-sm rounded-xl p-3 bg-vt-panel border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
@@ -402,7 +430,9 @@ export function StaggerScreen() {
   const { hideDemo, setHideDemo } = useSettingsStore(useShallow(s => ({ hideDemo: s.settings.hideDemo, setHideDemo: s.setHideDemo })))
 
   // Demo-only UI state: the gentle-correction piece (soft headshake + coach
-  // line, no red/shake/life) and the end beat ("You're ready" + opt-out).
+  // line, no red/shake/life) and the end beat — a short "you're ready"
+  // acknowledgment shown after the demo batch clears, the last screen before
+  // the real countdown (still carries the opt-out).
   const [demoWrong, setDemoWrong] = useState<PieceType | null>(null)
   const [demoDone, setDemoDone] = useState(false)
   const demoWrongTimer = useRef<number | undefined>(undefined)
@@ -497,7 +527,7 @@ export function StaggerScreen() {
   // Streak: a run of correct recalls (tracked in the store). Each correct pick
   // floats the "+points" it earned over the just-filled gap; the running ×N
   // multiplier shows as a chip above the board.
-  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number; demo?: boolean }[]>([])
+  const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
   const streakBurstId = useRef(0)
 
   // Streak chip lifecycle: a fresh streak step pops the chip in and holds it for
@@ -706,8 +736,8 @@ export function StaggerScreen() {
     })
   }
 
-  // Any exit from the demo (skip, or the end beat's Start-the-run) resets the
-  // demo's score/stats in the store and fires the real countdown.
+  // Any exit from the demo (the skip link, or the end beat's tap-to-start)
+  // resets the demo's score/stats in the store and fires the real countdown.
   const leaveDemo = () => {
     window.clearTimeout(demoWrongTimer.current)
     setDemoWrong(null)
@@ -732,24 +762,26 @@ export function StaggerScreen() {
       setDemoWrong(null)
       sfx.pickCorrect(res.combo)
       if (res.gap) {
+        // Exactly the real game's feedback — the "+points" the piece earned
+        // bubbles up off the filled gap. No demo-only praise flourish.
         const cells = res.gap.cells
         const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
         const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
         const id = (streakBurstId.current += 1)
         setStreakBursts(prev => [...prev, {
-          id, pts: res.gained, demo: true,
+          id, pts: res.gained,
           x: BOARD_PAD + avgC * CELL_PITCH + CELL / 2,
           y: BOARD_PAD + avgR * CELL_PITCH + CELL / 2,
         }])
-        window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 1100)
+        window.setTimeout(() => setStreakBursts(prev => prev.filter(p => p.id !== id)), 700)
       }
       if (res.batchCleared) {
-        // No lift payoff (no clock → no bonus): hold long enough for the snap-in
-        // AND the 👍 NICE! burst to play all the way through before the end
-        // overlay takes over (the burst lives ~1100ms).
+        // Let the final snap-in and its "+points" read (the board shows CLEAR!),
+        // then raise the short "you're ready" acknowledgment — the player taps
+        // that to start the real countdown.
         setCleared(true)
         sfx.batchClear()
-        window.setTimeout(() => setDemoDone(true), 1400)
+        window.setTimeout(() => setDemoDone(true), 1100)
       }
       return
     }
@@ -845,13 +877,14 @@ export function StaggerScreen() {
     ? (() => { const next = revealPlan.find(i => !gaps[i].filled); return next !== undefined ? gaps[next].pieceType : null })()
     : null
   // Demo coach copy owns the central line (the transient-cue slot) while the
-  // demo is in flight; the normal phase words return with the real run.
+  // demo is in flight; the normal phase words return with the real run. The copy
+  // only ever points them to the answer — no praise ("nice job") beats.
   const demoCoach =
     !demo ? null :
     phase === 'reveal' ? 'WATCH THE SHAPES' :
     phase === 'selecting' && !cleared
       ? (demoWrong ? 'NOT THAT ONE — TRY THE GLOWING PIECE'
-        : gaps.some(g => g.filled) ? 'NICE — ONE MORE' : 'TAP THE FIRST SHAPE YOU SAW')
+        : gaps.some(g => g.filled) ? 'NOW THE NEXT SHAPE' : 'TAP THE FIRST SHAPE YOU SAW')
       : null
 
   // Out-of-order hint takes over the phase label mid-recall (never over CLEAR!).
@@ -916,7 +949,9 @@ export function StaggerScreen() {
               middle to the right. */}
           <div className="w-full max-w-sm grid grid-cols-[1fr_auto_1fr] items-stretch mb-2 pointer-events-none">
             <div className="flex items-end justify-self-start">
-              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{displayScore}</div>
+              {/* During the demo the most prominent readout says DEMO, not a
+                  score — a constant reminder this isn't a scored run. */}
+              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{demo ? 'DEMO' : displayScore}</div>
             </div>
             <div className="flex flex-col items-center justify-between">
               <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Items</div>
@@ -988,15 +1023,21 @@ export function StaggerScreen() {
         )}
 
         {/* Demo intro — the countdown's overlay grammar (board visible under a
-            veil), plain type: the two-step how-to, tap anywhere to begin. */}
+            veil), plain type: the two-step how-to + the opt-out, tap anywhere to
+            begin. This is the ONE text screen the demo shows; a cleared demo
+            batch flows straight into the real run (no end screen). Tapping the
+            checkbox stops there — it must not also fire the tap-anywhere
+            continue. */}
         {phase === 'demoIntro' && (
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => beginReveal()}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); beginReveal() } }}
             className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] cursor-pointer text-left"
           >
             <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-cyan text-glow-vt-cyan mb-5">How it works</div>
-            <div className="flex flex-col gap-3.5 mb-7">
+            <div className="flex flex-col gap-3.5 mb-5">
               <div className="flex items-baseline gap-2.5">
                 <span className="font-grotesk font-bold text-[13px] text-vt-cyan text-glow-vt-cyan tabular-nums">1</span>
                 <span className="font-grotesk text-sm font-medium text-vt-text">Memorize the pieces.</span>
@@ -1006,21 +1047,33 @@ export function StaggerScreen() {
                 <span className="font-grotesk text-sm font-medium text-vt-text">Tap to recall what you saw.</span>
               </div>
             </div>
+            {/* Sits right under step 2; the opt-out is NOT here — it's paired
+                with the skip link down in the bottom row (see below). */}
             <div className="vt-demo-continue font-grotesk text-[10px] uppercase tracking-[0.2em] text-vt-dim">Tap to continue</div>
-          </button>
+          </div>
         )}
 
-        {/* Demo end beat — both pieces placed behind the veil as proof; the
-            opt-out checkbox lives here, at the moment the player can judge it. */}
+        {/* Demo end beat — the intro's bookend: a short "you're ready"
+            acknowledgment before the real run. OPAQUE background (bg-vt-void,
+            no veil) — the board tiles behind must not show through. No timer/
+            lives explainer. The opt-out is pinned to the bottom, under the
+            start affordance: the LAST chance to turn the demo off before the
+            countdown. Tapping anywhere (except the checkbox) starts the run. */}
         {demoDone && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-vt-void px-6 text-center">
-            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-lime text-glow-vt-lime mb-2">That's the loop</div>
-            <div className="font-grotesk font-bold text-xl text-vt-lime text-glow-vt-lime mb-2">You're ready</div>
-            <div className="font-grotesk text-xs text-vt-dim leading-relaxed max-w-[230px] mb-5">
-              Same game from here — but the clock is real and misses cost lives.
-            </div>
-            <NeonButton variant="primary" onClick={leaveDemo}>Start the run</NeonButton>
-            <label className="mt-4 flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={leaveDemo}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); leaveDemo() } }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-vt-void cursor-pointer px-6 text-center"
+          >
+            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-lime text-glow-vt-lime mb-2">Nice work</div>
+            <div className="font-grotesk font-bold text-xl text-vt-lime text-glow-vt-lime mb-6">You're ready to play</div>
+            <div className="vt-demo-continue font-grotesk text-[10px] uppercase tracking-[0.2em] text-vt-dim">Tap to start</div>
+            <label
+              onClick={e => e.stopPropagation()}
+              className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim whitespace-nowrap"
+            >
               <input
                 type="checkbox"
                 checked={hideDemo}
@@ -1051,15 +1104,7 @@ export function StaggerScreen() {
                 textShadow: FLOAT_TEXT_SHADOW,
               }}
             >
-              {cb.demo ? (
-                // Demo flourish: the same burst, with a 👍 NICE! riding the
-                // real "+points" — warm feedback AND the real scoring grammar.
-                <span className="flex flex-col items-center leading-tight">
-                  <span className="text-[17px]">👍</span>
-                  <span className="font-grotesk font-bold text-xs tracking-[0.08em]">NICE!</span>
-                  <span>+{cb.pts}</span>
-                </span>
-              ) : <>+{cb.pts}</>}
+              +{cb.pts}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -1170,8 +1215,8 @@ export function StaggerScreen() {
         {/* On HARD the line is kept in the layout (invisible) through the
             reveal too, so the tray and pause button hold one position across
             the memorize ↔ recall swap. */}
-        {(phase === 'selecting' || phase === 'reveal') && mode === 'hard' && (
-          <div className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${phase === 'reveal' ? ' invisible' : ''}`}>
+        {(phase === 'selecting' || phase === 'reveal' || phase === 'countdown') && mode === 'hard' && (
+          <div className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${phase === 'reveal' || phase === 'countdown' ? ' invisible' : ''}`}>
             IN ORDER
           </div>
         )}
@@ -1179,10 +1224,11 @@ export function StaggerScreen() {
           {/* The tray stays mounted through the reveal too — as the concealed
               empty-socket shell — so the layout never jumps when recall
               begins. */}
-          {(phase === 'reveal' || phase === 'selecting') && (
+          {(phase === 'countdown' || phase === 'reveal' || phase === 'selecting') && (
             <PieceTray
               onPick={onPick}
               disabled={phase !== 'selecting' || cleared || paused}
+              skeleton={phase === 'countdown'}
               concealed={phase === 'reveal'}
               mode={mode}
               demoTarget={demoTarget}
@@ -1192,13 +1238,27 @@ export function StaggerScreen() {
         </div>
       </div>
 
-      {/* Skip demo — rides where the pause button lives in the real run. Does
-          NOT set the opt-out; only the end beat's checkbox does. */}
+      {/* Demo bottom row — the opt-out and the skip link, thematic siblings on
+          one line (bottom third): "Don't show this again" centered, "skip demo"
+          flush right (rides where the pause button lives in the real run). Shown
+          the whole demo — intro, memorize, recall — up until the countdown;
+          hidden once the end beat is up (that screen carries its own opt-out).
+          The equal 1fr side tracks center the opt-out across the full row. */}
       {demo && !demoDone && (
-        <div className="mt-3 w-full max-w-sm text-right">
+        <div className="mt-3 w-full max-w-sm grid grid-cols-[1fr_auto_1fr] items-center">
+          <span aria-hidden />
+          <label className="flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={hideDemo}
+              onChange={e => setHideDemo(e.target.checked)}
+              className="accent-[#28F0FF]"
+            />
+            Don't show this again
+          </label>
           <button
             onClick={leaveDemo}
-            className="font-grotesk text-[10px] uppercase tracking-[0.18em] text-vt-faint hover:text-vt-dim transition-colors"
+            className="justify-self-end font-grotesk text-[10px] uppercase tracking-[0.18em] text-vt-faint hover:text-vt-dim transition-colors"
           >
             skip demo ›
           </button>
@@ -1215,8 +1275,8 @@ export function StaggerScreen() {
             aria-label="Pause"
             disabled={cleared}
             onClick={() => pause()}
-            className="w-full flex items-center justify-center gap-2 rounded-md border-2 bg-vt-raised py-3 px-4 text-sm font-grotesk font-semibold uppercase tracking-[0.1em]
-              border-vt-cyan text-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
+            className="w-full flex items-center justify-center gap-2 rounded-xl border bg-vt-raised py-3 px-4
+              border-vt-cyan/25 text-vt-cyan shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
               transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
           >
             {/* Icon-only: the two-bar glyph is universal — the word was noise. */}
@@ -1225,6 +1285,25 @@ export function StaggerScreen() {
               <span className="block w-[5px] h-4 rounded-sm bg-current" />
             </span>
           </button>
+        </div>
+      )}
+
+      {/* Countdown pause skeleton: a non-interactive solid-black box with the
+          EXACT dimensions of the real pause button (same wrapper, py-3 px-4,
+          rounded-xl, grid-styled fill; an invisible two-bar glyph holds the
+          height) so the play column height — and the ScaleToFit scale — matches
+          reveal/selecting and the countdown → reveal transition doesn't jump. */}
+      {phase === 'countdown' && (
+        <div className="mt-3 w-full max-w-sm">
+          <div
+            aria-hidden
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#04040a] py-3 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_2px_6px_#000] pointer-events-none"
+          >
+            <span className="flex gap-[4px] invisible">
+              <span className="block w-[5px] h-4 rounded-sm bg-current" />
+              <span className="block w-[5px] h-4 rounded-sm bg-current" />
+            </span>
+          </div>
         </div>
       )}
         </div>
