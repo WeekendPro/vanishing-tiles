@@ -196,6 +196,7 @@ let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let sfxBus: GainNode | null = null // one-shots; gain = sfxVolume
 let lifecycleBound = false
+let outputPrimed = false
 
 let sfxOn = true
 let sfxVolume = 1
@@ -215,6 +216,25 @@ function resumeIfNeeded(): void {
   if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
   void ctx.resume().catch(() => {})
+}
+
+/** iOS Safari keeps the audio hardware COLD until a buffer actually plays
+ *  inside a user gesture — `resume()` alone can leave the context reporting
+ *  'running' while every synth voice comes out SILENT (this is why the game
+ *  was dead-silent from the first tap on iPhone). Playing one sample of a
+ *  silent buffer straight to the destination warms the output route. Must run
+ *  from a gesture (unlock() is), and only needs to land once per context.
+ *  Inaudible and harmless on every other platform. */
+function primeOutput(ac: AudioContext): void {
+  if (outputPrimed) return
+  try {
+    const buf = ac.createBuffer(1, 1, ac.sampleRate)
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    src.connect(ac.destination)
+    src.start(0)
+    outputPrimed = true
+  } catch { /* best-effort warm-up; never block a real sound on it */ }
 }
 
 /** Bind the app-lifecycle listeners ONCE, when the context is first built.
@@ -239,7 +259,7 @@ function context(): AudioContext | null {
   // A context the browser has fully CLOSED is unrecoverable (iOS can do this
   // after a long interruption) — drop it so the buses below rewire to a fresh,
   // live destination instead of a dead one.
-  if (ctx && ctx.state === 'closed') { ctx = null; master = null; sfxBus = null }
+  if (ctx && ctx.state === 'closed') { ctx = null; master = null; sfxBus = null; outputPrimed = false }
   if (!ctx) {
     ctx = new Ctor()
     master = ctx.createGain()
@@ -393,8 +413,14 @@ export const sfx = {
 
   /** Create/resume the audio context from a USER GESTURE (autoplay policy).
    *  The Home screen's PLAY tap calls this so the run's timer-driven sounds
-   *  (blooms, timeout) are already unlocked when they fire. */
-  unlock(): void { if (sfxOn) context() },
+   *  (blooms, timeout) are already unlocked when they fire. On iOS this also
+   *  warms the output route (see primeOutput) so the first synth voice is
+   *  actually audible, not just "running but silent". */
+  unlock(): void {
+    if (!sfxOn) return
+    const ac = context()
+    if (ac) primeOutput(ac)
+  },
 
   // ── Patch access (the Sound Design lab drives these) ───────────────────────
   getPatch(id: OneShotId): SoundPatch { return clone(patches[id]) },

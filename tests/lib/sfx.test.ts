@@ -291,6 +291,26 @@ describe('sfx engine', () => {
   }
   afterEach(() => setVisibility('visible'))
 
+  it('unlock() warms the output route once (iOS silent-until-a-buffer-plays)', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    const c = ctx()
+    // A single 1-sample silent buffer, connected straight to the destination.
+    expect(c.bufferSources).toHaveLength(1)
+    expect(c.bufferSources[0].started).toBe(true)
+    expect(c.bufferSources[0].connected).toContain(c.destination)
+    // Idempotent: a second gesture doesn't re-prime.
+    sfx.unlock()
+    expect(c.bufferSources).toHaveLength(1)
+  })
+
+  it('a muted channel neither builds a context nor primes output', async () => {
+    const sfx = await freshSfx()
+    sfx.setEnabled(false)
+    sfx.unlock()
+    expect(FakeAudioContext.instances).toHaveLength(0)
+  })
+
   it('resumes a context the OS suspended when the app returns (visibilitychange)', async () => {
     const sfx = await freshSfx()
     sfx.unlock() // build + resume → running
