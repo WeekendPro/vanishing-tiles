@@ -2,19 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { type PieceType } from '@shared/types'
-import { useStaggerStore, type StaggerGap, type StaggerPhase } from '../store/staggerStore'
+import { useStaggerStore } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
-import { useRunHistoryStore } from '../store/runHistoryStore'
-import { STAGGER, CLOCK_URGENT, urgentHeat, urgentTickIntervalMs } from '../lib/staggerCurve'
-import { submitStaggerRun } from '../lib/api'
+import { CLOCK_URGENT } from '../lib/staggerCurve'
 import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
 import { NeonButton, ScaleToFit } from './ui'
 import { useCountUp } from '../hooks/useCountUp'
-import { CELL, CELL_PITCH, BOARD_PAD, STREAK_HOLD_MS, STREAK_FADE_MS, LIFT_BEAT_MS, LIFT_MS, ORDER_HINT_MS } from './stagger/constants'
-import { PIECE_BLOOM_HEX, REVEAL_MAGENTA } from './stagger/palette'
-import { type Bloom, bloomForGap } from './stagger/bloom'
+import { CELL, CELL_PITCH, BOARD_PAD, LIFT_BEAT_MS, LIFT_MS, ORDER_HINT_MS } from './stagger/constants'
 import { StaggerBoard } from './stagger/StaggerBoard'
 import { StaggerCountdown } from './stagger/StaggerCountdown'
 import { PieceTray } from './stagger/PieceTray'
@@ -23,6 +19,12 @@ import { GameOverSummary } from './stagger/GameOverSummary'
 import { DemoIntroOverlay, DemoEndOverlay, DemoFooterRow } from './stagger/DemoOverlays'
 import { StreakBursts, LifeBursts, WrongPickFlash, LiftFlyer } from './stagger/FloatingFx'
 import { PauseButton, CountdownPauseSkeleton, PauseStatsOverlay } from './stagger/PauseControls'
+import { useRunRecording } from './stagger/useRunRecording'
+import { useStreakChip } from './stagger/useStreakChip'
+import { useLifeBursts } from './stagger/useLifeBursts'
+import { useTimerBar } from './stagger/useTimerBar'
+import { useRevealDriver } from './stagger/useRevealDriver'
+import { useSelectClock } from './stagger/useSelectClock'
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
@@ -52,69 +54,12 @@ export function StaggerScreen() {
   const [demoDone, setDemoDone] = useState(false)
   const demoWrongTimer = useRef<number | undefined>(undefined)
 
-  // Reveal/decay timing for this run — the STAGGER constants. Held in a ref so
-  // the reveal driver reads the LATEST values as each beat fires without
-  // re-arming the whole effect and flickering.
-  const timing = {
-    stepMs: STAGGER.REVEAL_STEP_MS,
-    bloomMs: STAGGER.REVEAL_BLOOM_MS,
-    decayMs: STAGGER.REVEAL_DECAY_MS,
-    waveMs: STAGGER.REVEAL_WAVE_MS,
-  }
-  const timingRef = useRef(timing)
-  timingRef.current = timing
+  // Once-per-run bookkeeping: the game-over recording (sfx + localStorage +
+  // analytics + server submit) and the run-started analytics ping.
+  const { records, currentRunId } = useRunRecording({
+    phase, mode, batchIndex, score, shapesRecalled, bestStreak, totalPicks, correctPicks,
+  })
 
-  const { records, recordRun } = useRunHistoryStore(useShallow(s => ({ records: s.records, recordRun: s.recordRun })))
-
-  // Once-per-game-over run recording (guard ref prevents double-fire under StrictMode).
-  const recordedRef = useRef(false)
-  const [currentRunId, setCurrentRunId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (phase === 'gameOver' && !recordedRef.current) {
-      recordedRef.current = true
-      // The run's farewell (rides the same once-per-game-over guard as the
-      // recording, so StrictMode never plays it twice).
-      sfx.gameOver()
-      const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
-      const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
-      setCurrentRunId(run.id)
-      // Analytics: the run's engagement payload — mode, how far (level =
-      // batchIndex reached, 1-based), and how well. `level` here is the LAST
-      // batch played (the run ends mid-batch on the fatal miss).
-      analytics.runEnded({ mode, level: batchIndex + 1, score, bestStreak, accuracy })
-      // Server-side per-(user, mode) stats — fire-and-forget so a network
-      // failure never blocks the game-over screen (localStorage above is the
-      // source of truth for the graph).
-      submitStaggerRun({ mode, score, bestStreak, accuracy, gapsRecalled: shapesRecalled })
-        .catch((err) => console.warn('Failed to record stagger run server-side', err))
-    } else if (phase !== 'gameOver') {
-      recordedRef.current = false
-      setCurrentRunId(null)
-    }
-  }, [phase, mode, batchIndex, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
-
-  // Analytics: fire `run_started` once when a REAL run begins. Every real run
-  // (PLAY, Play again, and the demo→real handoff) enters through `countdown`;
-  // the guided demo enters through `demoIntro`, so this never counts demos.
-  // Keyed on the transition INTO countdown (prev phase differs) so it fires once
-  // per run, not on every render, and survives StrictMode's double-invoke. The
-  // null seed (not `phase`) is deliberate: PLAY with the demo disabled mounts
-  // this screen already in `countdown`, and null != countdown lets that first
-  // real run register.
-  const prevPhaseRef = useRef<StaggerPhase | null>(null)
-  useEffect(() => {
-    if (phase === 'countdown' && prevPhaseRef.current !== 'countdown') {
-      analytics.runStarted(mode)
-    }
-    prevPhaseRef.current = phase
-  }, [phase, mode])
-
-  const [blooms, setBlooms] = useState<Bloom[]>([])
-  const [barPct, setBarPct] = useState(0)
-  const [barColor, setBarColor] = useState<'magenta' | 'amber' | 'lime'>('magenta')
-  const [barTransition, setBarTransition] = useState('width 180ms ease-out')
-  const [clockMs, setClockMs] = useState(0)
   const [xMark, setXMark] = useState(false)
   const [cleared, setCleared] = useState(false)
   // Out-of-order hint (hard mode): a counter so back-to-back hints restart the
@@ -122,9 +67,13 @@ export function StaggerScreen() {
   const [orderHint, setOrderHint] = useState(0)
   const orderHintTimer = useRef<number | undefined>(undefined)
   const boardRef = useRef<HTMLDivElement>(null)
-  const barRef = useRef<HTMLDivElement>(null)
   const scoreRef = useRef<HTMLDivElement>(null)
   const reduceMotion = useReducedMotion()
+
+  // The §1 temperature-arc timer bar (barPct/barColor/barTransition + barRef),
+  // driven through semantic gestures by the reveal driver, the recall clock, and
+  // onPick's clear-payoff.
+  const timerBar = useTimerBar()
 
   // The leftover-time "+bonus" that lifts off the bar and dissolves into the score
   // on a cleared batch (the "Lift" payoff). Null when no payoff is in flight.
@@ -145,43 +94,12 @@ export function StaggerScreen() {
   const [streakBursts, setStreakBursts] = useState<{ id: number; pts: number; x: number; y: number }[]>([])
   const streakBurstId = useRef(0)
 
-  // Streak chip lifecycle: a fresh streak step pops the chip in and holds it for
-  // STREAK_HOLD_MS, then it fades out in our signature fade style (vt-fade-away:
-  // hold → opacity/blur to nothing) and unmounts. Each new step re-arms the hold,
-  // so the chip lingers a beat after the last correct pick. A broken streak
-  // (currentStreak < 3) clears it immediately — the streak shattered.
-  const [streakChip, setStreakChip] = useState<{ value: number; fading: boolean } | null>(null)
-  const streakTimers = useRef<number[]>([])
-  useEffect(() => {
-    streakTimers.current.forEach(clearTimeout)
-    streakTimers.current = []
-    if (currentStreak >= 3) {
-      setStreakChip({ value: currentStreak, fading: false })
-      streakTimers.current.push(window.setTimeout(
-        () => setStreakChip(c => (c ? { ...c, fading: true } : c)), STREAK_HOLD_MS))
-      streakTimers.current.push(window.setTimeout(
-        () => setStreakChip(null), STREAK_HOLD_MS + STREAK_FADE_MS))
-    } else {
-      setStreakChip(null)
-    }
-    return () => { streakTimers.current.forEach(clearTimeout); streakTimers.current = [] }
-  }, [currentStreak])
+  // Streak chip lifecycle (pop → hold → signature fade). The setter is exposed so
+  // the phase-reset effect below can also clear it alongside the other FX.
+  const { streakChip, setStreakChip } = useStreakChip(currentStreak)
 
-  // Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
-  // celebratory heart burst over the board.
-  const [lifeBursts, setLifeBursts] = useState<{ id: number; n: number }[]>([])
-  const lifeBurstId = useRef(0)
-  const prevLives = useRef(lives)
-  useEffect(() => {
-    const delta = lives - prevLives.current
-    if (phase === 'selecting' && delta > 0) {
-      sfx.lifeGained()
-      const id = (lifeBurstId.current += 1)
-      setLifeBursts(prev => [...prev, { id, n: delta }])
-      window.setTimeout(() => setLifeBursts(prev => prev.filter(b => b.id !== id)), 1500)
-    }
-    prevLives.current = lives
-  }, [lives, phase])
+  // Earn-a-life heart bursts (the shared life pool growing mid-run).
+  const lifeBursts = useLifeBursts(lives, phase)
 
   // A fresh run / game over / a broken board clears any lingering bursts.
   useEffect(() => {
@@ -193,147 +111,21 @@ export function StaggerScreen() {
       setDemoWrong(null)
       setDemoDone(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // Reveal driver (shape-bloom): bloom each gap in turn — the gap's cells all get
-  // .vt-bloom at the same tick, flood the piece color (EASY) or magenta
-  // (MEDIUM/HARD), then decay along a ghost tail back to the void (fading away in a
-  // per-cell wave).
-  // Decays cascade (the next gap blooms before the last finishes dying), draining
-  // the bar one step per gap as a COUNT, then hand off to selecting. Because the
-  // reveals forwards-fill back to the void, past gaps leave no readable hole.
-  // Where a paused reveal picks back up: the index of the gap that was blooming
-  // (or queued) when the pause hit. Any FRESH reveal — next batch, timeout
-  // replay, paid replay — resets it to 0 (this effect's deps change on all of
-  // those but NOT on a pause/resume toggle, which only flips `paused`). It must
-  // run before the driver below so the driver reads the reset value.
-  const revealIdxRef = useRef(0)
-  useEffect(() => {
-    if (phase === 'reveal') revealIdxRef.current = 0
-  }, [phase, batchIndex, gaps, revealPlan])
+  // Reveal driver (shape-bloom cascade): blooms each gap in turn, drains the bar
+  // one step per gap as a count, then hands off to selecting.
+  const blooms = useRevealDriver({
+    phase, batchIndex, gaps, revealPlan, mode, demo, paused, beginSelecting, timerBar,
+  })
 
-  useEffect(() => {
-    if (phase !== 'reveal' || gaps.length === 0 || paused) return
-    let cancelled = false
-    const timers: number[] = []
-    const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
-    // The reveal plays as a sequence of gaps, in revealPlan's shuffled order; fall
-    // back to index order if a batch somehow arrived without a plan (e.g. legacy state).
-    const order = revealPlan.length ? revealPlan : gaps.map((_, i) => i)
-    const n = order.length
-    // Difficulty shapes the reveal: EASY floods each gap in its own piece
-    // colour; MEDIUM floods the uniform branded pink; HARD paints the self-
-    // colored graphite "impasto" (StaggerBoard renders .vt-paint for HARD, so
-    // this color is unused there). All tiers play at the same reveal speed.
-    const colorFor = (gap: StaggerGap) =>
-      mode === 'easy' ? PIECE_BLOOM_HEX[gap.pieceType] : REVEAL_MAGENTA
-    // Reveal/decay timing is read LIVE from timingRef per gap. `step` (gap-to-gap
-    // spacing) outruns one bloom's lifetime, so the next gap flashes while the
-    // previous is still decaying.
-    // Memorize bar DRAINS: starts full and empties one step per gap as the
-    // sequence plays out (a visual count of memorize time spent). A reveal
-    // resumed from pause starts at the interrupted gap (re-blooming it in
-    // full), with the bar re-wound to just before that step. The demo's bar
-    // stays inert/empty — its whole point is that no clock exists yet.
-    const startIdx = revealIdxRef.current
-    if (demo) { setBarPct(0) } else { setBarColor('magenta'); setBarTransition('width 180ms ease-out'); setBarPct((1 - startIdx / n) * 100) }
-    setBlooms([])
-    let id = 0
-
-    const show = (idx: number) => {
-      if (cancelled) return
-      revealIdxRef.current = idx
-      if (idx >= n) {
-        // Let the final gap finish its decay before recall lights-out.
-        const { stepMs, bloomMs, decayMs } = timingRef.current
-        at(Math.max(0, bloomMs + decayMs - stepMs), beginSelecting)
-        return
-      }
-      if (!demo) setBarPct((1 - (idx + 1) / n) * 100)
-      const gi = order[idx]
-      const { stepMs, bloomMs, decayMs, waveMs } = timingRef.current
-      const lifetime = bloomMs + decayMs + 3 * waveMs + 80
-      const myId = ++id
-      if (!cancelled) {
-        setBlooms(prev => [...prev, bloomForGap(myId, gaps[gi], colorFor(gaps[gi]), bloomMs, decayMs, waveMs)])
-        // Each bloom climbs one pentatonic step — the reveal sequence plays as
-        // a rising melody, so pitch order doubles as a memory hook for order.
-        sfx.bloom(idx)
-      }
-      // Clear this gap's bloom once it has fully decayed.
-      at(lifetime, () => {
-        if (!cancelled) setBlooms(prev => prev.filter(b => b.id !== myId))
-      })
-      at(stepMs, () => show(idx + 1))
-    }
-    // A short breath before the first gap (also paces continuous next batches
-    // and re-entry from a mid-reveal pause).
-    at(350, () => show(startIdx))
-    return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [phase, batchIndex, gaps, revealPlan, beginSelecting, mode, demo, paused])
-
-  // Selecting expiry: end the batch when the select clock runs out (lives are the
-  // only fail condition). Paused → freeze: the effect tears down and re-arms when
-  // `resume` re-dates selectStartTime.
-  useEffect(() => {
-    if (phase !== 'selecting' || paused || demo) return
-    let cancelled = false
-    setCleared(false)
-    const remaining = Math.max(0, selectStartTime + selectDuration - Date.now())
-    const expiry = window.setTimeout(() => {
-      if (cancelled) return
-      // A cleared batch is handled by the clear beat; only a genuinely-unfinished
-      // batch reaches here, and running out of time costs a life.
-      if (!useStaggerStore.getState().gaps.every(g => g.filled)) {
-        sfx.timeout()
-        timeoutBatch()
-      }
-    }, remaining)
-    return () => { cancelled = true; clearTimeout(expiry) }
-  }, [phase, paused, demo, batchIndex, selectStartTime, selectDuration, timeoutBatch])
-
-  // Recall clock + bar drain: tick the remaining time every 100ms, draining the
-  // amber bar and feeding the in-bar seconds off the SAME live clock (so the bar
-  // and the temperature arc track real time, not a fragile CSS-only transition).
-  // Bails while cleared so onPick's lime payoff drain isn't overwritten.
-  useEffect(() => {
-    if (phase !== 'selecting' || paused || cleared || demo) return
-    setBarColor('amber'); setBarTransition('width 120ms linear')
-    const tick = () => {
-      const rem = Math.max(0, selectStartTime + selectDuration - Date.now())
-      setClockMs(rem)
-      setBarPct(selectDuration > 0 ? (rem / selectDuration) * 100 : 0)
-    }
-    tick()
-    const id = window.setInterval(tick, 100)
-    return () => clearInterval(id)
-  }, [phase, paused, cleared, demo, selectStartTime, selectDuration])
-
-  // Urgency ticker: the moment the recall clock enters its red zone (the same
-  // CLOCK_URGENT.FRACTION that flips the bar red), a clock tick starts and
-  // accelerates + pitches up as expiry nears (sfx.urgentTick(heat)). A
-  // self-scheduling timeout chain: before the threshold it sleeps until the
-  // crossing; inside it, each tick books the next at the shrinking interval.
-  // Pause / clear / timeout / game over all tear the chain down via the deps
-  // (paused freezes the clock — resume re-dates selectStartTime and re-arms).
-  useEffect(() => {
-    if (phase !== 'selecting' || paused || cleared || demo || selectDuration <= 0) return
-    let timer: number
-    const schedule = () => {
-      const rem = selectStartTime + selectDuration - Date.now()
-      if (rem <= 0) return
-      const threshold = selectDuration * CLOCK_URGENT.FRACTION
-      if (rem > threshold) {
-        timer = window.setTimeout(schedule, rem - threshold)
-        return
-      }
-      const heat = urgentHeat(rem / selectDuration)
-      sfx.urgentTick(heat)
-      timer = window.setTimeout(schedule, urgentTickIntervalMs(heat))
-    }
-    schedule()
-    return () => clearTimeout(timer)
-  }, [phase, paused, cleared, demo, selectStartTime, selectDuration])
+  // Recall select clock: expiry (out of time costs a life + replays), the 100ms
+  // clock/bar tick, and the accelerating urgency ticker.
+  const clockMs = useSelectClock({
+    phase, paused, cleared, demo, batchIndex, selectStartTime, selectDuration,
+    timeoutBatch, setCleared, timerBar,
+  })
 
   // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
   // bar up to the score readout. Skipped under reduced motion — the score still
@@ -444,19 +236,14 @@ export function StaggerScreen() {
       const bonus = res.speedBonus
       // Freeze the lime bar where it currently sits (the leftover time), holding it
       // for a short anticipation beat before the payoff.
-      const el = barRef.current, parent = el?.parentElement
-      const frozenPct = el && parent
-        ? (el.getBoundingClientRect().width / parent.getBoundingClientRect().width) * 100
-        : barPct
-      setBarColor('lime'); setBarTransition('none'); setBarPct(frozenPct)
+      timerBar.freezeLime()
       // Release: the bar rushes to empty while the leftover time LIFTS off it as a
       // single big "+bonus" that floats up and dissolves into the score, and the
       // score counts up by exactly that bonus — all over the same LIFT_MS window,
       // so remaining time is read as turning into points.
       window.setTimeout(() => {
-        const barRect = barRef.current?.getBoundingClientRect() ?? null
-        setBarTransition(`width ${LIFT_MS}ms cubic-bezier(0.33,1,0.68,1)`)
-        setBarPct(0)
+        const barRect = timerBar.barRef.current?.getBoundingClientRect() ?? null
+        timerBar.rushToEmpty()
         if (bonus > 0) {
           sfx.bonusLift()
           spawnLiftFlyer(bonus, barRect)
@@ -517,10 +304,10 @@ export function StaggerScreen() {
   // "Low" tracks real remaining time (not the bar's width state), so the bar +
   // label only heat to red in the final quarter of the recall clock — the same
   // CLOCK_URGENT.FRACTION the urgency ticker starts on.
-  const barLow = barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < CLOCK_URGENT.FRACTION
+  const barLow = timerBar.barColor === 'amber' && !cleared && selectDuration > 0 && clockMs / selectDuration < CLOCK_URGENT.FRACTION
   const barClass =
-    barColor === 'magenta' ? 'bg-vt-magenta shadow-vt-magenta' :
-    barColor === 'lime' ? 'bg-vt-lime shadow-vt-lime' :
+    timerBar.barColor === 'magenta' ? 'bg-vt-magenta shadow-vt-magenta' :
+    timerBar.barColor === 'lime' ? 'bg-vt-lime shadow-vt-lime' :
     barLow ? 'bg-vt-red shadow-vt-red animate-[redpulse_0.5s_cubic-bezier(0.7,0,0.3,1)_infinite]' :
     'bg-vt-amber shadow-vt-amber'
 
@@ -560,10 +347,10 @@ export function StaggerScreen() {
           gaps={gaps}
           batchIndex={batchIndex}
           lives={lives}
-          barRef={barRef}
-          barPct={barPct}
+          barRef={timerBar.barRef}
+          barPct={timerBar.barPct}
           barClass={barClass}
-          barTransition={barTransition}
+          barTransition={timerBar.barTransition}
           scoreRef={scoreRef}
           streakTakeover={streakTakeover}
           streakChip={streakChip}
@@ -684,4 +471,3 @@ export function StaggerScreen() {
     </div>
   )
 }
-
