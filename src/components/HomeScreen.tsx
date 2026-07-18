@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { useNavStore } from '../store/navStore'
-import { useGameStore } from '../store/gameStore'
 import { useStaggerStore } from '../store/staggerStore'
-import { useSettingsStore, type MapStyle, type Difficulty } from '../store/settingsStore'
+import { useSettingsStore, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
 import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
@@ -14,13 +12,7 @@ import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
  * intentionally absent here — it lives in the global menu, and Training
  * (the consequence-free naming drill) lives there too, so PLAY always means
  * an Infinite Stagger run.
- *
- * The "Experimental Modes" entry (Practice, the legacy gauntlet + the three
- * Journey map styles) is HIDDEN for now via `SHOW_EXPERIMENTAL`. The pane and
- * its machinery are kept intact behind the flag — not deleted — so we can
- * bring them back in one line.
  */
-const SHOW_EXPERIMENTAL: boolean = false
 
 /** The three difficulties on the segmented neon switch, along the heat arc
  *  (green → amber → red). Each carries a one-line description of its reveal
@@ -48,20 +40,9 @@ const MODES: { value: Difficulty; label: string; hint: string; active: string }[
 ]
 
 export function HomeScreen() {
-  const [pane, setPane] = useState<'home' | 'experimental'>('home')
-
-  const { goStagger, goJourney, goPractice } = useNavStore(useShallow(s => ({
-    goStagger: s.goStagger,
-    goJourney: s.goJourney,
-    goPractice: s.goPractice,
-  })))
+  const goStagger = useNavStore(s => s.goStagger)
   const startStagger = useStaggerStore(s => s.startRun)
-  const { startPractice, resetGame } = useGameStore(useShallow(s => ({
-    startPractice: s.startPractice,
-    resetGame: s.resetGame,
-  })))
-  const { setMapStyle, difficulty, setDifficulty } = useSettingsStore(useShallow(s => ({
-    setMapStyle: s.setMapStyle,
+  const { difficulty, setDifficulty } = useSettingsStore(useShallow(s => ({
     difficulty: s.settings.difficulty,
     setDifficulty: s.setDifficulty,
   })))
@@ -79,8 +60,6 @@ export function HomeScreen() {
     startStagger(difficulty, { demo: !useSettingsStore.getState().settings.hideDemo })
     goStagger()
   }
-  const practice = () => { startPractice(); goPractice() }
-  const openMap = (style: MapStyle) => { setMapStyle(style); resetGame(); goJourney() }
 
   const selectMode = (value: Difficulty) => {
     sfx.unlock()
@@ -93,14 +72,10 @@ export function HomeScreen() {
     <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
       <ScanlineOverlay />
 
-      <div
-        className="flex w-[200%] min-h-dvh transition-transform duration-[340ms] ease-[cubic-bezier(.4,0,.2,1)]"
-        style={{ transform: pane === 'experimental' ? 'translateX(-50%)' : 'translateX(0)' }}
-      >
+      <div className="flex min-h-dvh">
         {/* ── Home pane ── */}
         <section
-          aria-hidden={pane !== 'home'}
-          className="w-1/2 min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
+          className="w-full min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
         >
           {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
           <div className="flex-1 w-full max-w-sm flex flex-col justify-center">
@@ -151,72 +126,9 @@ export function HomeScreen() {
             >
               Play
             </button>
-
-            {/* Experimental Modes → slide to second pane (hidden for now). */}
-            {SHOW_EXPERIMENTAL && (
-              <button
-                onClick={() => setPane('experimental')}
-                aria-label="Experimental Modes"
-                className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-                  transition active:translate-y-px py-4 px-5 text-sm flex items-center justify-between
-                  border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-neon-cyan"
-              >
-                <span>Experimental Modes</span>
-                <span className="text-lg leading-none">›</span>
-              </button>
-            )}
           </div>
         </section>
-
-        {/* ── Experimental pane (hidden behind SHOW_EXPERIMENTAL) ── */}
-        {SHOW_EXPERIMENTAL && (
-          <section
-            aria-hidden={pane !== 'experimental'}
-            className="w-1/2 flex flex-col items-center px-6 pt-10 pb-8 bg-arcade-glow-magenta"
-          >
-            <div className="w-full max-w-sm">
-              <button
-                onClick={() => setPane('home')}
-                className="flex items-center gap-1.5 text-neon-magenta font-display font-semibold text-sm mb-8
-                  transition-transform active:translate-y-px"
-              >
-                <span className="text-lg leading-none">‹</span> Back
-              </button>
-              <h2 className="font-pixel font-bold text-sm leading-none uppercase tracking-[0.08em] text-white text-glow-magenta">
-                Experimental
-              </h2>
-              <p className="mt-3 font-display text-[10px] font-medium uppercase tracking-[0.28em] text-gray-500">
-                Roads not yet taken
-              </p>
-            </div>
-
-            <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
-              <ModeButton label="Practice" hint="The classic gauntlet" onClick={practice} />
-              <ModeButton label="Subway Map" hint="Ride the transit lines" onClick={() => openMap('transit')} />
-              <ModeButton label="Mind Map" hint="Light up the neurons" onClick={() => openMap('mentalBrain')} />
-              <ModeButton label="Git Map" hint="Branch through the graph" onClick={() => openMap('git')} />
-            </div>
-          </section>
-        )}
       </div>
     </div>
-  )
-}
-
-/** A magenta neon-outline button (matching NeonButton) for each Experimental mode. */
-function ModeButton({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="font-pixel uppercase tracking-[0.08em] rounded-md border-2 bg-arcade-panel
-        transition active:translate-y-px py-3.5 px-5 text-sm text-left flex items-center justify-between
-        border-neon-magenta text-neon-magenta hover:bg-neon-magenta/10 hover:shadow-neon-magenta"
-    >
-      <span>
-        <span className="block">{label}</span>
-        <span className="block normal-case tracking-normal text-[10px] text-neon-magenta/60 mt-0.5">{hint}</span>
-      </span>
-      <span className="text-lg leading-none">›</span>
-    </button>
   )
 }

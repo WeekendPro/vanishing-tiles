@@ -23,14 +23,12 @@ import * as api from '../../src/lib/api'
 import * as config from '../../src/lib/config'
 import { GlobalMenu } from '../../src/components/GlobalMenu'
 import { useNavStore } from '../../src/store/navStore'
-import { useGameStore } from '../../src/store/gameStore'
 import { useSettingsStore } from '../../src/store/settingsStore'
 import { useTrainingStore } from '../../src/store/trainingStore'
 import { useProfileStore } from '../../src/store/profileStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useGameStore.getState().resetGame()
   useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useTrainingStore.getState().exit()
   useProfileStore.getState().clear()
@@ -83,32 +81,6 @@ describe('GlobalMenu', () => {
     expect(useTrainingStore.getState().piece).not.toBeNull()
     // Menu overlay is gone — only the reopen toggle remains.
     expect(screen.queryByRole('button', { name: 'Training' })).not.toBeInTheDocument()
-  })
-
-  it('in game shows Resume + Quit and pauses on open, resumes on Resume', async () => {
-    useNavStore.setState({ appView: 'practice' })
-    useGameStore.setState({ phase: 'viewing', phaseStartTime: Date.now(), phaseDuration: 10000 })
-    const user = userEvent.setup()
-    render(<GlobalMenu />)
-
-    await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(useGameStore.getState().paused).toBe(true)
-    expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Exit Practice/i })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /Resume/i }))
-    expect(useGameStore.getState().paused).toBe(false)
-  })
-
-  it('Exit resets the game and navigates to Home', async () => {
-    useNavStore.setState({ appView: 'practice' })
-    useGameStore.setState({ phase: 'viewing', round: 4 })
-    const user = userEvent.setup()
-    render(<GlobalMenu />)
-    await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: /Exit Practice/i }))
-    expect(useNavStore.getState().appView).toBe('home')
-    expect(useGameStore.getState().paused).toBe(false)
   })
 
   it('a guest gets the generic person icon, not "GU" initials', async () => {

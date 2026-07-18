@@ -6,10 +6,6 @@ import { routeAfterAuth } from './store/profileStore'
 import { AuthScreen } from './components/AuthScreen'
 import { ClaimNameScreen } from './components/ClaimNameScreen'
 import { HomeScreen } from './components/HomeScreen'
-import { JourneyScreen } from './components/JourneyScreen'
-import { LevelScreen } from './components/LevelScreen'
-import { ResultsScreen } from './components/ResultsScreen'
-import { GameShell } from './components/GameShell'
 import { StaggerScreen } from './components/StaggerScreen'
 import { TrainingScreen } from './components/TrainingScreen'
 import { LeaderboardScreen } from './components/LeaderboardScreen'
@@ -40,16 +36,10 @@ export default function App() {
       case 'auth': return <AuthScreen />
       case 'claimName': return <ClaimNameScreen />
       case 'home': return <HomeScreen />
-      case 'journey': return <JourneyScreen />
-      case 'levelDetail': return <LevelScreen />
-      case 'results': return <ResultsScreen />
       case 'stagger': return <StaggerScreen />
       case 'training': return <TrainingScreen />
       case 'leaderboard': return <LeaderboardScreen />
       case 'soundDesign': return <SoundDesignScreen />
-      case 'playing':
-      case 'practice':
-        return <GameShell />
       default: return <AuthScreen />
     }
   })()

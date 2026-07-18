@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
-import { useGameStore } from '../store/gameStore'
 import { useTrainingStore } from '../store/trainingStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useProfileStore } from '../store/profileStore'
@@ -61,20 +60,13 @@ function Action({ label, onClick, tone = 'default' }:
 }
 
 export function GlobalMenu() {
-  const appView = useNavStore(s => s.appView)
-  const { goHome, goLeaderboard, goTraining, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
-    goHome: s.goHome,
+  const { goLeaderboard, goTraining, goSoundDesign, reset: resetNav } = useNavStore(useShallow(s => ({
     goLeaderboard: s.goLeaderboard,
     goTraining: s.goTraining,
     goSoundDesign: s.goSoundDesign,
     reset: s.reset,
   })))
   const startTraining = useTrainingStore(s => s.start)
-  const { pauseGame, resumeGame, resetGame } = useGameStore(useShallow(s => ({
-    pauseGame: s.pauseGame,
-    resumeGame: s.resumeGame,
-    resetGame: s.resetGame,
-  })))
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
     soundEnabled: s.settings.soundEnabled,
     setSoundEnabled: s.setSoundEnabled,
@@ -91,9 +83,6 @@ export function GlobalMenu() {
       loadProfile: s.loadProfile, clearProfile: s.clear,
     })))
 
-  // Stagger runs its own pause/exit, so the only in-game hosts here are the
-  // Journey/Practice round shells.
-  const inGame = appView === 'playing' || appView === 'practice'
   const [open, setOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   // Admin-only tools (Sound Design + Erase My Records) show only in the local
@@ -110,8 +99,8 @@ export function GlobalMenu() {
   // post-gate) unnamed non-guest case.
   const name = displayName ?? (isGuest ? 'Guest' : email?.split('@')[0] ?? '')
 
-  const openMenu = () => { if (inGame) pauseGame(); setOpen(true) }
-  const close = () => { if (inGame) resumeGame(); setOpen(false); setEditOpen(false); setErase('idle') }
+  const openMenu = () => { setOpen(true) }
+  const close = () => { setOpen(false); setEditOpen(false); setErase('idle') }
 
   // Wipe the caller's own leaderboard records (all modes) via the 0017 RPC.
   // On success the boards re-fetch fresh the next time they open.
@@ -132,22 +121,18 @@ export function GlobalMenu() {
     return () => document.removeEventListener('keydown', onKey)
   })
 
-  const quitToHome = () => { setOpen(false); resetGame(); goHome() }
-  // Leaving a paused Journey/Practice round for the leaderboard is a quit —
-  // same teardown as quitToHome, different destination.
-  const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); analytics.leaderboardOpened(); goLeaderboard() }
+  const openLeaderboard = () => { setOpen(false); analytics.leaderboardOpened(); goLeaderboard() }
   // The menu tap is a user gesture, so it doubles as the audio unlock —
   // Training's first bloom fires from a timer, and the context must already
   // be running by then (same reason HomeScreen's PLAY unlocks).
   const openTraining = () => {
     setOpen(false)
-    if (inGame) resetGame()
     sfx.unlock()
     analytics.trainingStarted()
     startTraining()
     goTraining()
   }
-  const openSoundDesign = () => { setOpen(false); if (inGame) resetGame(); goSoundDesign() }
+  const openSoundDesign = () => { setOpen(false); goSoundDesign() }
   const handleSignOut = async () => { setOpen(false); clearProfile(); await signOut(); resetNav() }
 
   return (
@@ -175,9 +160,6 @@ export function GlobalMenu() {
         <div className="fixed inset-0 z-40 flex flex-col px-7 pt-20 pb-8 text-white
           bg-gradient-to-b from-arcade-bg via-arcade-panel to-black">
           <ScanlineOverlay />
-          {inGame && (
-            <div className="font-pixel text-[9px] uppercase tracking-[0.2em] text-neon-cyan text-glow-cyan mb-1">Paused</div>
-          )}
           {/* Profile header — for players it's a button: tap to edit your
               display name (the only profile field there is). Guests have
               nothing to edit, so theirs stays inert. */}
@@ -230,16 +212,6 @@ export function GlobalMenu() {
                 />
               </div>
             </div>
-          )}
-
-          {inGame && (
-            <>
-              <Action label="Resume" onClick={close} />
-              <Action
-                label={appView === 'practice' ? 'Exit Practice' : 'Exit to Home'}
-                onClick={quitToHome}
-              />
-            </>
           )}
 
           {/* Global rankings — visible to guests too (the board is public;
