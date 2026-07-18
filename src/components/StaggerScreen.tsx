@@ -3,12 +3,13 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { ROWS, COLS, type PieceType } from '@shared/types'
 import { PIECE_DEFINITIONS, getPieceColor } from '@shared/engine/pieces'
-import { useStaggerStore, type StaggerGap } from '../store/staggerStore'
+import { useStaggerStore, type StaggerGap, type StaggerPhase } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore, type Difficulty } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
 import { STAGGER, CLOCK_URGENT, gapCountForBatch, urgentHeat, urgentTickIntervalMs, DISPLAY_ROTATION } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
+import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
 import { PieceShape } from './PieceShape'
 import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay } from './ui'
@@ -417,6 +418,10 @@ export function StaggerScreen() {
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
       const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)
+      // Analytics: the run's engagement payload — mode, how far (level =
+      // batchIndex reached, 1-based), and how well. `level` here is the LAST
+      // batch played (the run ends mid-batch on the fatal miss).
+      analytics.runEnded({ mode, level: batchIndex + 1, score, bestStreak, accuracy })
       // Server-side per-(user, mode) stats — fire-and-forget so a network
       // failure never blocks the game-over screen (localStorage above is the
       // source of truth for the graph).
@@ -426,7 +431,23 @@ export function StaggerScreen() {
       recordedRef.current = false
       setCurrentRunId(null)
     }
-  }, [phase, mode, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
+  }, [phase, mode, batchIndex, score, shapesRecalled, bestStreak, totalPicks, correctPicks, recordRun])
+
+  // Analytics: fire `run_started` once when a REAL run begins. Every real run
+  // (PLAY, Play again, and the demo→real handoff) enters through `countdown`;
+  // the guided demo enters through `demoIntro`, so this never counts demos.
+  // Keyed on the transition INTO countdown (prev phase differs) so it fires once
+  // per run, not on every render, and survives StrictMode's double-invoke. The
+  // null seed (not `phase`) is deliberate: PLAY with the demo disabled mounts
+  // this screen already in `countdown`, and null != countdown lets that first
+  // real run register.
+  const prevPhaseRef = useRef<StaggerPhase | null>(null)
+  useEffect(() => {
+    if (phase === 'countdown' && prevPhaseRef.current !== 'countdown') {
+      analytics.runStarted(mode)
+    }
+    prevPhaseRef.current = phase
+  }, [phase, mode])
 
   const [blooms, setBlooms] = useState<Bloom[]>([])
   const [barPct, setBarPct] = useState(0)
@@ -1106,7 +1127,7 @@ export function StaggerScreen() {
                     its own door. Lands on this run's mode tab: the board opens
                     on the persisted difficulty, which is what the run started
                     with. */}
-                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goLeaderboard() }}>Leaderboard</NeonButton>
+                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); analytics.leaderboardOpened(); goLeaderboard() }}>Leaderboard</NeonButton>
                 <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
               </div>
             </div>

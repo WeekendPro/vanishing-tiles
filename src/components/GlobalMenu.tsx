@@ -7,6 +7,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
+import { analytics } from '../lib/analytics'
 import { ScanlineOverlay, ChannelControl } from './ui'
 import { DisplayNameForm } from './DisplayNameForm'
 
@@ -115,7 +116,7 @@ export function GlobalMenu() {
   const quitToHome = () => { setOpen(false); resetGame(); goHome() }
   // Leaving a paused Journey/Practice round for the leaderboard is a quit —
   // same teardown as quitToHome, different destination.
-  const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); goLeaderboard() }
+  const openLeaderboard = () => { setOpen(false); if (inGame) resetGame(); analytics.leaderboardOpened(); goLeaderboard() }
   // The menu tap is a user gesture, so it doubles as the audio unlock —
   // Training's first bloom fires from a timer, and the context must already
   // be running by then (same reason HomeScreen's PLAY unlocks).
@@ -123,6 +124,7 @@ export function GlobalMenu() {
     setOpen(false)
     if (inGame) resetGame()
     sfx.unlock()
+    analytics.trainingStarted()
     startTraining()
     goTraining()
   }

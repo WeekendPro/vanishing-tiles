@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { signInAsGuest, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/auth'
 import { routeAfterAuth } from '../store/profileStore'
 import { track } from '../store/asyncStatus'
+import { analytics, type AuthMethod } from '../lib/analytics'
 import { Wordmark } from './ui/Wordmark'
 import { VanishingMotif } from './ui/VanishingMotif'
 
@@ -24,12 +25,16 @@ export function AuthScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const run = async (fn: () => Promise<{ error: { message: string } | null }>, navigate: boolean) => {
+  const run = async (fn: () => Promise<{ error: { message: string } | null }>, navigate: boolean, method: AuthMethod) => {
     setError(null)
     setBusy(true)
     try {
       const { error } = await track(fn())
       if (error) { setError(error.message); return }
+      // Analytics: the acquisition split (guest vs email vs google). Fires on a
+      // clean result; for Google this is the pre-redirect "initiated" signal
+      // (the OAuth round-trip re-enters through App's mount effect).
+      analytics.authCompleted(method)
       // Route through the claim gate, not straight Home — a fresh account
       // needs a display name first. (Google OAuth keeps navigate=false; its
       // full-page redirect re-enters through App's mount effect, same gate.)
@@ -95,7 +100,7 @@ export function AuthScreen() {
 
           <button
             disabled={!canSubmit}
-            onClick={() => run(() => signInWithEmail(email, password), true)}
+            onClick={() => run(() => signInWithEmail(email, password), true, 'email_signin')}
             className="mt-1 h-12 rounded-[11px] inline-flex items-center justify-center gap-2
               border-2 border-vt-cyan bg-vt-raised text-vt-cyan
               font-grotesk text-[13px] tracking-[0.1em] uppercase
@@ -107,7 +112,7 @@ export function AuthScreen() {
           </button>
           <button
             disabled={!canSubmit}
-            onClick={() => run(() => signUpWithEmail(email, password), true)}
+            onClick={() => run(() => signUpWithEmail(email, password), true, 'email_signup')}
             className="h-11 rounded-[11px] inline-flex items-center justify-center
               border border-white/10 bg-vt-raised text-vt-dim
               font-grotesk text-[12px] tracking-[0.06em]
@@ -127,7 +132,7 @@ export function AuthScreen() {
           {/* Google OAuth — outlined. */}
           <button
             disabled={busy}
-            onClick={() => run(signInWithGoogle, false)}
+            onClick={() => run(signInWithGoogle, false, 'google')}
             className="h-12 rounded-[11px] inline-flex items-center justify-center gap-2
               border-2 border-white/15 bg-vt-raised text-vt-text
               font-grotesk text-[12px] tracking-[0.04em]
@@ -147,7 +152,7 @@ export function AuthScreen() {
           {/* Guest path — kept friendly. */}
           <button
             disabled={busy}
-            onClick={() => run(signInAsGuest, true)}
+            onClick={() => run(signInAsGuest, true, 'guest')}
             className="mt-3 text-center font-grotesk text-[12px] tracking-[0.04em] text-vt-dim
               hover:text-vt-text transition-colors disabled:opacity-50"
           >

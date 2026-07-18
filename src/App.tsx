@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { getSession } from './lib/auth'
 import { useNavStore } from './store/navStore'
 import { routeAfterAuth } from './store/profileStore'
@@ -61,6 +62,12 @@ export default function App() {
 
   return (
     <>
+      {/* Virtual page views: this is a single-URL SPA, so feed the active view
+          as the route/path. The @vercel/analytics/react component disables URL
+          auto-tracking when given `route` and fires a fresh page view on each
+          change — turning every screen (home/stagger/leaderboard/…) into its
+          own "page" in the dashboard without any router. */}
+      <Analytics route={appView} path={`/${appView}`} />
       <GlobalLoadingOverlay />
       {view}
       {showMenu && <GlobalMenu />}
