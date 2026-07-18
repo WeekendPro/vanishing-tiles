@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hard sludge — deep ink with lift</title>
+<style>
+  :root { --void: #0c0c14; --bezel: #04040a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #020207; color: #cfcfe0;
+    font-family: system-ui, -apple-system, sans-serif; padding: 28px 22px 60px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  p.sub { font-size: 12px; color: #8A8AA0; margin: 0 0 24px; max-width: 660px; line-height: 1.5; }
+  .grid-opts { display: flex; flex-wrap: wrap; gap: 22px; }
+  .opt { background: #0a0a12; border: 1px solid rgba(255,255,255,.06); border-radius: 14px;
+    padding: 16px; width: 230px; }
+  .opt h2 { font-size: 12px; margin: 0 0 2px; }
+  .opt .hex { font-size: 11px; color: #7a7a90; font-family: ui-monospace, monospace;
+    margin: 0 0 12px; line-height: 1.4; min-height: 28px; }
+  .opt.current h2 { color: #ff8fbf; }
+  .opt.flat h2 { color: #9aa; }
+  .board { display: grid; grid-template-columns: repeat(6, 28px); gap: 2px;
+    padding: 11px; background: var(--bezel); border-radius: 10px; width: max-content; }
+  .cell { width: 28px; height: 28px; border-radius: 4px; background: var(--void); }
+
+  /* void → bright FLASH → hold (with the candidate's lift) → clean decay to void */
+  @keyframes bloomLift {
+    0%   { background: var(--void); box-shadow: none; transform: scale(1); }
+    2.5% { background: var(--flash-bg); box-shadow: var(--flash-shadow); transform: scale(1.12); }
+    7%   { background: var(--hold-bg); box-shadow: var(--hold-shadow); transform: scale(1); }
+    34%  { background: var(--hold-bg); box-shadow: var(--hold-shadow); }
+    46%  { background: #161620; box-shadow: none; }
+    60%  { background: color-mix(in srgb, #161620 45%, var(--void)); }
+    70%, 100% { background: var(--void); box-shadow: none; }
+  }
+  @keyframes bloomGloss {
+    0%   { background: var(--void); box-shadow: none; transform: scale(1); }
+    2.5% { background:
+             radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+             radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+             linear-gradient(150deg,#20202b,#121219 55%,#08080d);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7),
+             inset -1px 1px 1px rgba(255,255,255,.05), 0 0 18px rgba(190,200,235,.4);
+           filter: brightness(1.9); transform: scale(1.12); }
+    7%,34% { background:
+             radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+             radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+             linear-gradient(150deg,#20202b,#121219 55%,#08080d);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7),
+             inset -1px 1px 1px rgba(255,255,255,.05); filter: brightness(1); transform: scale(1); }
+    46%  { background: #161620; box-shadow: none; filter: brightness(1); }
+    60%  { background: color-mix(in srgb, #161620 45%, var(--void)); }
+    70%, 100% { background: var(--void); box-shadow: none; }
+  }
+  .on  { animation: bloomLift 3.4s ease-in-out infinite; }
+  .current .on { animation-name: bloomGloss; }
+</style>
+</head>
+<body>
+  <h1>Hard sludge — deep ink (#1a1c26) with increasing "lift"</h1>
+  <p class="sub">Same murky deep-ink tone you liked, but with a soft directional gradient + a 1px top
+  highlight + a bottom shadow (the game's own "filled cell" trick) to give the tile some form without
+  the glossy hotspot. Ramp runs left→right from dead-flat to the current gloss. All still decay cleanly
+  to the grid void. Which lift amount feels right?</p>
+  <div class="grid-opts" id="opts"></div>
+
+<script>
+  var SHAPE = [1,2,3,8]; // T-tetromino on a 6-wide mini board
+  var options = [
+    { key:'flat', cls:'flat', name:'E0 · Flat (too flat)', hex:'#1a1c26 · no lift',
+      hold_bg:'#1a1c26', hold_shadow:'none',
+      flash_bg:'#34384a', flash_shadow:'0 0 12px rgba(120,130,165,.4)' },
+
+    { key:'e1', name:'E1 · Soft bevel', hex:'grad #232a3a→#131420\n+ 1px top edge',
+      hold_bg:'linear-gradient(160deg,#232a3a,#131420)',
+      hold_shadow:'inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 1px rgba(0,0,0,.45)',
+      flash_bg:'#3a4560', flash_shadow:'0 0 12px rgba(130,145,185,.4)' },
+
+    { key:'e2', name:'E2 · Bevel + faint sheen', hex:'+ soft top-left sheen\n(no hotspot)',
+      hold_bg:'radial-gradient(90% 70% at 30% 20%, rgba(255,255,255,.05), transparent 55%), linear-gradient(160deg,#242b3c,#131420)',
+      hold_shadow:'inset 0 1px 0 rgba(255,255,255,.07), inset 0 -1px 1px rgba(0,0,0,.45)',
+      flash_bg:'#3d4866', flash_shadow:'0 0 13px rgba(140,155,195,.42)' },
+
+    { key:'e3', name:'E3 · Stronger lift', hex:'grad #2b3350→#101018\n+ brighter top edge',
+      hold_bg:'linear-gradient(155deg,#2b3350,#101018)',
+      hold_shadow:'inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 2px rgba(0,0,0,.5)',
+      flash_bg:'#454e6c', flash_shadow:'0 0 14px rgba(150,165,205,.45)' },
+
+    { key:'current', cls:'current', name:'A · Current gloss', hex:'(too much shape) reference',
+      hold_bg:'', hold_shadow:'', flash_bg:'', flash_shadow:'' },
+  ];
+  var wrap = document.getElementById('opts');
+  options.forEach(function(o){
+    var panel = document.createElement('div');
+    panel.className = 'opt' + (o.cls ? ' ' + o.cls : '');
+    var board = document.createElement('div');
+    board.className = 'board';
+    for (var i = 0; i < 18; i++) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      if (SHAPE.indexOf(i) > -1) {
+        cell.classList.add('on');
+        if (o.key !== 'current') {
+          cell.style.setProperty('--hold-bg', o.hold_bg);
+          cell.style.setProperty('--hold-shadow', o.hold_shadow);
+          cell.style.setProperty('--flash-bg', o.flash_bg);
+          cell.style.setProperty('--flash-shadow', o.flash_shadow);
+        }
+      }
+      board.appendChild(cell);
+    }
+    panel.innerHTML = '<h2>' + o.name + '</h2><div class="hex">' + o.hex.replace(/\n/g,'<br>') + '</div>';
+    panel.appendChild(board);
+    wrap.appendChild(panel);
+  });
+</script>
+</body>
+</html>

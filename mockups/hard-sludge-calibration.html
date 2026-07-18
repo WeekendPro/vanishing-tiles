@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hard mode — sludge color calibration</title>
+<style>
+  :root { --void: #0c0c14; --bezel: #04040a; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #020207; color: #cfcfe0;
+    font-family: system-ui, -apple-system, sans-serif; padding: 28px 22px 60px;
+  }
+  h1 { font-size: 15px; font-weight: 600; letter-spacing: .04em; margin: 0 0 4px; }
+  p.sub { font-size: 12px; color: #8A8AA0; margin: 0 0 24px; max-width: 640px; line-height: 1.5; }
+  .grid-opts { display: flex; flex-wrap: wrap; gap: 22px; }
+  .opt {
+    background: #0a0a12; border: 1px solid rgba(255,255,255,.06); border-radius: 14px;
+    padding: 16px 16px 14px; width: 214px;
+  }
+  .opt h2 { font-size: 12px; margin: 0 0 2px; letter-spacing: .03em; }
+  .opt .hex { font-size: 11px; color: #7a7a90; font-family: ui-monospace, monospace; margin: 0 0 12px; }
+  .opt.current h2 { color: #ff8fbf; }
+  .board {
+    display: grid; grid-template-columns: repeat(6, 26px); gap: 2px;
+    padding: 10px; background: var(--bezel); border-radius: 10px; width: max-content;
+  }
+  .cell { width: 26px; height: 26px; border-radius: 4px; background: var(--void); }
+
+  /* Matte reveal: void → quick bright FLASH → settle to the sludge hold →
+     decay cleanly back to the grid void (#0c0c14) at full opacity (the fix).
+     No gloss: flat fills, glow only on the flash halo. Loops with a rest gap. */
+  @keyframes bloomMatte {
+    0%   { background: var(--void); box-shadow: none; transform: scale(1); }
+    2.5% { background: var(--flash); box-shadow: 0 0 12px var(--halo); transform: scale(1.12); }
+    7%   { background: var(--sludge); box-shadow: none; transform: scale(1); }
+    34%  { background: var(--sludge); }
+    46%  { background: #161620; }
+    60%  { background: color-mix(in srgb, #161620 45%, var(--void)); }
+    70%, 100% { background: var(--void); }
+  }
+  /* Current shipped gloss (for contrast): radial white highlights + inset gloss. */
+  @keyframes bloomGloss {
+    0%   { background: var(--void); box-shadow: none; transform: scale(1); }
+    2.5% { background:
+             radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+             radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+             linear-gradient(150deg,#20202b,#121219 55%,#08080d);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7),
+             inset -1px 1px 1px rgba(255,255,255,.05), 0 0 18px rgba(190,200,235,.4);
+           filter: brightness(1.9); transform: scale(1.12); }
+    7%,34% { background:
+             radial-gradient(80% 60% at 32% 24%, rgba(255,255,255,.18), transparent 55%),
+             radial-gradient(60% 90% at 72% 80%, rgba(120,130,160,.12), transparent 60%),
+             linear-gradient(150deg,#20202b,#121219 55%,#08080d);
+           box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 1px -1px 2px rgba(0,0,0,.7),
+             inset -1px 1px 1px rgba(255,255,255,.05); filter: brightness(1); transform: scale(1); }
+    46%  { background: #161620; }
+    60%  { background: color-mix(in srgb, #161620 45%, var(--void)); }
+    70%, 100% { background: var(--void); }
+  }
+  /* Only the tetromino's occupied cells animate. Each cell delays slightly along
+     the diagonal so the shape winks out in a wave, then the whole thing loops. */
+  .on { animation: bloomMatte 3.4s ease-in-out infinite; }
+  .current .on { animation-name: bloomGloss; }
+  .on.d1 { animation-delay: .06s; }
+  .on.d2 { animation-delay: .12s; }
+  .on.d3 { animation-delay: .18s; }
+</style>
+</head>
+<body>
+  <h1>Hard mode — sludge color calibration (matte, clean decay)</h1>
+  <p class="sub">Each tile blooms in, holds ~1s, then decays back to the grid void — the same clean settle
+  as Easy/Medium (no more black trace). All candidates are <strong>matte</strong> (the glossy sheen is gone);
+  they differ only in the hold tone. The first panel is the current shipped glossy version for contrast.
+  Tell me which hold tone reads right — murky enough to be Hard, but still memorizable.</p>
+  <div class="grid-opts" id="opts"></div>
+
+<script>
+  // A T-tetromino footprint on a 6-col mini board (row-major indices that are "on").
+  const SHAPE = [1,2,3,8]; // top row 3 + one below middle
+  const options = [
+    { key:'current', name:'A · Current (glossy)', hex:'gradient #20202b→#08080d', current:true },
+    { key:'graphite', name:'B · Graphite', hex:'#2a2d3a  (design-system filled)', sludge:'#2a2d3a', flash:'#4a4e60', halo:'rgba(150,160,190,.45)' },
+    { key:'slate',    name:'C · Midnight slate', hex:'#232a3a', sludge:'#232a3a', flash:'#3c4560', halo:'rgba(120,140,190,.45)' },
+    { key:'charcoal', name:'D · Charcoal (lighter)', hex:'#33343e', sludge:'#33343e', flash:'#54555f', halo:'rgba(160,165,180,.45)' },
+    { key:'ink',      name:'E · Deep ink (murkiest)', hex:'#1a1c26', sludge:'#1a1c26', flash:'#34384a', halo:'rgba(120,130,165,.4)' },
+    { key:'bluegrey', name:'F · Blue-graphite', hex:'#242a3a', sludge:'#242a3a', flash:'#404862', halo:'rgba(120,145,200,.45)' },
+  ];
+  const wrap = document.getElementById('opts');
+  for (const o of options) {
+    const panel = document.createElement('div');
+    panel.className = 'opt' + (o.current ? ' current' : '');
+    const board = document.createElement('div');
+    board.className = 'board';
+    for (let i = 0; i < 18; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const idx = SHAPE.indexOf(i);
+      if (idx > -1) {
+        cell.classList.add('on', 'd' + Math.min(idx, 3));
+        if (!o.current) {
+          cell.style.setProperty('--sludge', o.sludge);
+          cell.style.setProperty('--flash', o.flash);
+          cell.style.setProperty('--halo', o.halo);
+        }
+      }
+      board.appendChild(cell);
+    }
+    panel.innerHTML = '<h2>' + o.name + '</h2><div class="hex">' + o.hex + '</div>';
+    panel.appendChild(board);
+    wrap.appendChild(panel);
+  }
+</script>
+</body>
+</html>
