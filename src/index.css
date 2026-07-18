@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reserve the scrollbar's space permanently on the root scroller. The game
+   screen's content has a fixed height, so on viewports shorter than it a
+   vertical scrollbar appears — and with classic (always-on) scrollbars its
+   appearance/disappearance across phases and screens reflows the centered
+   layout sideways by the scrollbar's width (~16px), a jarring horizontal
+   "jump". `stable` keeps the gutter reserved whether or not the bar is
+   showing, so the column width never changes. (Harmless under overlay
+   scrollbars, which reserve nothing.) */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* ── Arcade aesthetic primitives ──────────────────────────────────────────
    Shared building blocks for the retro/arcade look. Currently consumed by the
    global loading overlay; intended to be reused by the broader visual overhaul. */

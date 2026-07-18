@@ -221,7 +221,7 @@ export function TrainingScreen() {
   if (!active) return null
 
   return (
-    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+    <div className="min-h-dvh flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
       {/* HUD — no score, no lives, no visible clock: the flat four-stat bar,
           one shared size and baseline. Streaks are lime-family (BEST dimmed),
           MISS a muted red (a record, not an alarm), speed cyan. */}

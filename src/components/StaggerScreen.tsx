@@ -790,7 +790,7 @@ export function StaggerScreen() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center vt-vignette select-none">
+      <div className="min-h-dvh flex flex-col items-center justify-center vt-vignette select-none">
         <NeonButton variant="primary" onClick={() => startRun(mode)}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
@@ -859,7 +859,7 @@ export function StaggerScreen() {
     'text-vt-amber text-glow-vt-amber'
 
   return (
-    <div className="min-h-screen flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
+    <div className="min-h-dvh flex flex-col items-center vt-vignette text-vt-text px-4 pt-12 pb-8 select-none">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
         <>
