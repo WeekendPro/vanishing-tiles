@@ -240,54 +240,41 @@ html {
   .vt-bloom-decay { animation: none; background: #0c0c14; box-shadow: none; }
 }
 
-/* HARD reveal — the Severance "glossy black paint" impasto (the sludge). Where
-   MEDIUM floods bright magenta, HARD blooms a heavy near-black graphite surface
-   that barely lifts off the void: a brightness pop + soft halo at the flash,
-   then it settles to a murky ridged sheen, then decays back to the void. Self-
-   colored (no --bloom-color) — the low-contrast murk is the whole added
-   difficulty. One timeline per cell (its animation-duration is set inline to
-   hold+decay), so the four cells still wink out in the diagonal wave. */
+/* HARD reveal — the deep-ink "sludge" (matte near-black midnight). Where MEDIUM
+   floods bright magenta, HARD blooms a murky deep-ink surface that barely lifts
+   off the void: a modest cool FLASH announces the gap, then it settles to the
+   flat sludge tone, then decays cleanly back to the grid void. Self-colored (no
+   --bloom-color) — the low-contrast murk is the whole added difficulty, and the
+   surface is flat/matte (no gloss). One timeline per cell (animation-duration
+   set inline to hold+decay), so the four cells wink out in the diagonal wave. */
 @keyframes vtPaint {
   0% {
     background: #0c0c14;
     box-shadow: none;
-    filter: brightness(1);
     transform: scale(1);
   }
+  /* Flash: a cool brightness pop so the gap still registers at reveal — far
+     dimmer than MEDIUM's pink, but enough to perceive the shape and place. */
   4% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
-      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05), 0 0 18px rgba(190, 200, 235, 0.4);
-    filter: brightness(1.9);
+    background: #363b4f;
+    box-shadow: 0 0 16px rgba(140, 150, 185, 0.4);
     transform: scale(1.13);
   }
-  52% {
-    background:
-      radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.18), transparent 55%),
-      radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.12), transparent 60%),
-      linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 1px -1px 2px rgba(0, 0, 0, 0.7),
-      inset -1px 1px 1px rgba(255, 255, 255, 0.05);
-    filter: brightness(1);
+  8% {
+    background: #1a1c26;
+    box-shadow: none;
     transform: scale(1);
   }
-  /* Decay: settle the surface down to the grid's own void tone (#0c0c14) at
-     FULL opacity — exactly like vtBloomDecay — so a spent gap leaves no trace.
-     The old opacity fade (→ opacity 0) revealed the darker board bezel behind
-     the cell (#04040a), reading as a pure-black hole darker than the grid. */
-  62% {
-    background: #161620;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  }
-  82% {
-    background: color-mix(in srgb, #161620 45%, #0c0c14);
+  /* Hold: the flat deep-ink sludge — the murk you have to memorize. */
+  52% {
+    background: #1a1c26;
     box-shadow: none;
   }
+  /* Decay to the grid's own void tone (#0c0c14) at FULL opacity — like
+     vtBloomDecay — so a spent gap leaves no trace (an opacity fade would reveal
+     the darker board bezel behind the cell, reading as a pure-black hole). */
+  70% { background: color-mix(in srgb, #1a1c26 55%, #0c0c14); }
+  85% { background: color-mix(in srgb, #1a1c26 22%, #0c0c14); }
   100% {
     background: #0c0c14;
     box-shadow: none;
@@ -295,26 +282,20 @@ html {
 }
 .vt-paint { animation: vtPaint 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
-/* The settled impasto surface as a STATIC swatch — no animation. Worn by HARD's
+/* The flat deep-ink sludge as a STATIC swatch — no animation. Worn by HARD's
    recall-tray pieces and its placed board cells, so the whole HARD palette is
-   the one graphite sludge (matching the reveal it decays from). Uses
-   background-image (not the `background` shorthand) so the tray bloom-in's
-   background-color flash sits behind the gradient rather than wiping it. */
+   the one deep-ink sludge (matching the reveal it decays from). The hairline
+   edge keeps the deep-ink pieces legible where they must be USABLE — in the
+   tray (on the #15151f sockets) and as placed confirmations — since the fill
+   sits too close to the socket/void tone to read a shape on its own. The
+   reveal (.vt-paint) has no such edge: its unlit murk is the memory challenge. */
 .vt-paint-surface {
-  background-color: #12121a;
-  background-image:
-    radial-gradient(80% 60% at 32% 24%, rgba(255, 255, 255, 0.14), transparent 55%),
-    radial-gradient(60% 90% at 72% 80%, rgba(120, 130, 160, 0.10), transparent 60%),
-    linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+  background: #1a1c26;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vt-paint {
-    animation: none;
-    background: linear-gradient(150deg, #20202b, #121219 55%, #08080d);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
-  }
+  .vt-paint { animation: none; background: #1a1c26; box-shadow: none; }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
