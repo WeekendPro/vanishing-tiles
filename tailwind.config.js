@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}', './supabase/functions/_shared/**/*.{ts,tsx}'],
+  // Mobile-first game: only apply `hover:` styles on devices with a real
+  // pointer (mouse). On touch, `:hover` sticks after a tap, so a tapped piece
+  // button kept its hover glow (looked "still selected"). This wraps every
+  // hover variant in `@media (hover: hover)` — desktop is unchanged.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {
