@@ -6,9 +6,8 @@ vi.mock('../../src/lib/auth', () => ({
   getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
   signOut: vi.fn(),
 }))
-// Keep the journey/leaderboard screens from hitting the network in this routing test.
+// Keep the leaderboard screen from hitting the network in this routing test.
 vi.mock('../../src/lib/api', () => ({
-  getJourney: vi.fn().mockResolvedValue([]),
   getStaggerLeaderboard: vi.fn().mockResolvedValue({ total: 0, top: [], me: null }),
   getOwnProfile: vi.fn().mockResolvedValue(null),
   setDisplayName: vi.fn(),

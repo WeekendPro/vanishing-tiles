@@ -30,7 +30,7 @@ import { useProfileStore } from '../../src/store/profileStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
+  useSettingsStore.setState({ settings: { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useTrainingStore.getState().exit()
   useProfileStore.getState().clear()
   vi.clearAllMocks()
@@ -53,7 +53,7 @@ const mockGuest = () => {
 
 describe('GlobalMenu', () => {
   it('offers Leaderboard, Training, and Logout — but no Settings, modes, or maps', async () => {
-    useNavStore.setState({ appView: 'journey' })
+    useNavStore.setState({ appView: 'stagger' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
@@ -129,7 +129,7 @@ describe('GlobalMenu', () => {
   })
 
   it('Logout calls signOut and resets navigation', async () => {
-    useNavStore.setState({ appView: 'journey' })
+    useNavStore.setState({ appView: 'stagger' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))

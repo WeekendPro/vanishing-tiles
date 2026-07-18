@@ -18,7 +18,7 @@ import { sfx } from '../../src/lib/sfx'
 beforeEach(() => {
   localStorage.clear()
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
+  useSettingsStore.setState({ settings: { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useSoundLabStore.setState({ overrides: {}, presets: [] })
   useSoundLabStore.getState().resetAll()
   vi.restoreAllMocks()

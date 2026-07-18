@@ -6,7 +6,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore'
 
 beforeEach(() => {
   localStorage.clear()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
+  useSettingsStore.setState({ settings: { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
 })
 
 describe('PauseOverlay', () => {

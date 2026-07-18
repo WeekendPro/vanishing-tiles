@@ -13,7 +13,7 @@ import { useTrainingStore } from '../../src/store/trainingStore'
 
 beforeEach(() => {
   useNavStore.getState().reset()
-  useSettingsStore.setState({ settings: { hideBriefing: {}, mapStyle: 'transit', difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
+  useSettingsStore.setState({ settings: { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false } })
   useStaggerStore.getState().exit()
   useTrainingStore.getState().exit()
   vi.clearAllMocks()
