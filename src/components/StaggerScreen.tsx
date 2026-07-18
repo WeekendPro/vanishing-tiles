@@ -244,7 +244,7 @@ function StaggerCountdown({
     return () => clearTimeout(t)
   }, [count, onDone])
   return (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] pointer-events-none">
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl border border-white/10 bg-black/70 backdrop-blur-[2px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] pointer-events-none">
       <div className={`font-grotesk text-[11px] uppercase tracking-[0.22em] mb-2 ${modeColor}`}>{modeLabel}</div>
       <div className="relative flex h-44 w-44 items-center justify-center">
         {count > 0 && (
