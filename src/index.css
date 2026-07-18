@@ -262,13 +262,15 @@ html {
   }
   8% {
     background: #1a1c26;
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
     transform: scale(1);
   }
-  /* Hold: the flat deep-ink sludge — the murk you have to memorize. */
+  /* Hold: the flat deep-ink sludge, ringed with the same hairline edge HARD's
+     placed/tray pieces wear — so the murk you memorize looks exactly like the
+     piece you later place. The edge fades out with the cell during decay. */
   52% {
     background: #1a1c26;
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
   /* Decay to the grid's own void tone (#0c0c14) at FULL opacity — like
      vtBloomDecay — so a spent gap leaves no trace (an opacity fade would reveal
@@ -288,14 +290,15 @@ html {
    edge keeps the deep-ink pieces legible where they must be USABLE — in the
    tray (on the #15151f sockets) and as placed confirmations — since the fill
    sits too close to the socket/void tone to read a shape on its own. The
-   reveal (.vt-paint) has no such edge: its unlit murk is the memory challenge. */
+   reveal (.vt-paint) wears the same hairline through its hold, so HARD's
+   memorize and place phases match. */
 .vt-paint-surface {
   background: #1a1c26;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vt-paint { animation: none; background: #1a1c26; box-shadow: none; }
+  .vt-paint { animation: none; background: #1a1c26; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 }
 
 /* Countdown numeral (Afterglow Smear): the glyph burns bright the instant it
