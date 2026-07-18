@@ -157,20 +157,24 @@ function StaggerBoard({
         const key = `${r},${c}`
         const piece = colorByCell.get(key)
         if (piece) {
-          // A correct pick lighting up out of the dark — in the mode's own
-          // surface (EASY piece color, MEDIUM pink, HARD graphite sludge), never
-          // recolored to lime. HARD stays murkier even placed (a dimmer ring).
+          // A placed gap rests in EXACTLY the look it bloomed in during memorize:
+          // the mode's own surface lit by its OWN colored afterglow — never a
+          // white ring/edge (that stray grey border read as "still selected" and
+          // never appeared in the reveal). EASY = piece color, MEDIUM = pink, both
+          // with a soft same-color glow (the bloom's resting glow); HARD = the flat
+          // deep-ink sludge, self-lit with no glow, matching its murky reveal (its
+          // vt-paint-surface carries only the faint hairline HARD needs to stay
+          // legible in the tray and as a placed confirmation).
           const surface = mode === 'easy' ? getPieceColor(piece) : monoSurfaceClass(mode)
-          const ring = mode === 'hard'
-            ? 'ring-1 ring-white/10 shadow-[0_0_6px_rgba(150,160,190,0.25)]'
-            : 'ring-1 ring-white/25 shadow-[0_0_8px_rgba(255,255,255,0.25)]'
+          const glow = mode === 'easy' ? PIECE_BLOOM_HEX[piece] : mode === 'medium' ? REVEAL_MAGENTA : null
           return (
             <motion.div
               key={i}
               initial={{ scale: 0.5, opacity: 0.4 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className={`w-7 h-7 rounded-sm ${surface} ${ring}`}
+              className={`w-7 h-7 rounded-sm ${surface}`}
+              style={glow ? { boxShadow: `0 0 8px ${glow}` } : undefined}
             />
           )
         }
