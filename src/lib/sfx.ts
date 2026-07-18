@@ -25,8 +25,16 @@
  * BROWSER AUTOPLAY: browsers refuse to start audio until a user gesture.
  * `unlock()` must be called from a tap handler (the Home screen's PLAY does
  * this) before any timer-driven sounds (reveal blooms, timeouts, the bed) can
- * play; afterwards the context stays running. Every trigger also retries a
- * resume, so a missed unlock degrades to silence, never an error.
+ * play. Every trigger also retries a resume, so a missed unlock degrades to
+ * silence, never an error.
+ *
+ * APP-SWITCH / BACKGROUNDING: mobile browsers SUSPEND the context when the app
+ * is backgrounded (iOS Safari drops it into a WebKit 'interrupted' state), and
+ * nothing resumes it on its own — leave the game to read a text and come back,
+ * and the audio graph is dead. The engine binds app-lifecycle listeners
+ * (visibilitychange/pageshow/focus) + the context's own statechange to resume
+ * the moment the page returns to the foreground, and rebuilds a context the
+ * browser has fully closed. See `resumeIfNeeded`/`bindLifecycle`.
  *
  * The design map (which gesture gets which sound, and why) is documented in
  * docs/superpowers/specs/2026-07-16-sound-design.md.
@@ -187,6 +195,7 @@ const MASTER_GAIN = 0.5
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let sfxBus: GainNode | null = null // one-shots; gain = sfxVolume
+let lifecycleBound = false
 
 let sfxOn = true
 let sfxVolume = 1
@@ -196,6 +205,29 @@ const patches: Record<OneShotId, SoundPatch> = clone(DEFAULT_PATCHES)
 
 let noiseBuffer: AudioBuffer | null = null
 
+/** Resume a context the OS parked when the app was backgrounded. Mobile
+ *  browsers SUSPEND the context on app-switch (iOS Safari drops it into the
+ *  WebKit-only 'interrupted' state); nothing brings it back on its own, so
+ *  without this the audio graph stays dead after you leave the game and
+ *  return. We only nudge it while the page is actually visible — resuming a
+ *  hidden page produces no sound and just fights the browser's own suspend. */
+function resumeIfNeeded(): void {
+  if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+  void ctx.resume().catch(() => {})
+}
+
+/** Bind the app-lifecycle listeners ONCE, when the context is first built.
+ *  Returning to the foreground (visibilitychange → visible, focus) and
+ *  bfcache restores (pageshow) all re-resume the parked context. */
+function bindLifecycle(): void {
+  if (lifecycleBound || typeof document === 'undefined') return
+  lifecycleBound = true
+  document.addEventListener('visibilitychange', resumeIfNeeded)
+  window.addEventListener('pageshow', resumeIfNeeded)
+  window.addEventListener('focus', resumeIfNeeded)
+}
+
 /** Lazily create (and re-resume) the shared context + channel buses. Returns
  *  null wherever Web Audio doesn't exist (jsdom tests, SSR) — every sound
  *  no-ops safely. */
@@ -204,6 +236,10 @@ function context(): AudioContext | null {
   const Ctor = window.AudioContext
     ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!Ctor) return null
+  // A context the browser has fully CLOSED is unrecoverable (iOS can do this
+  // after a long interruption) — drop it so the buses below rewire to a fresh,
+  // live destination instead of a dead one.
+  if (ctx && ctx.state === 'closed') { ctx = null; master = null; sfxBus = null }
   if (!ctx) {
     ctx = new Ctor()
     master = ctx.createGain()
@@ -212,10 +248,16 @@ function context(): AudioContext | null {
     sfxBus = ctx.createGain()
     sfxBus.gain.value = sfxVolume
     sfxBus.connect(master)
+    // iOS fires statechange when an interruption ENDS (leaving the context
+    // suspended/interrupted) — resume off the same signal, not just the next
+    // incidental sound.
+    ctx.onstatechange = resumeIfNeeded
+    bindLifecycle()
   }
-  // Autoplay policy: a suspended context resumes silently on the next
-  // gesture-driven trigger. Fire-and-forget — failure just means silence.
-  if (ctx.state === 'suspended') void ctx.resume().catch(() => {})
+  // Autoplay policy + app-switch recovery: a suspended (or iOS 'interrupted')
+  // context resumes silently on the next gesture-driven trigger. Fire-and-
+  // forget — failure just means silence.
+  resumeIfNeeded()
   return ctx
 }
 

@@ -62,6 +62,7 @@ class FakeAudioContext {
   currentTime = 0
   state = 'suspended'
   resumeCalls = 0
+  onstatechange: (() => void) | null = null
   constructor() { FakeAudioContext.instances.push(this) }
   resume() { this.resumeCalls += 1; this.state = 'running'; return Promise.resolve() }
   createOscillator() { const o = new FakeOscillator(); this.oscillators.push(o); return o }
@@ -280,6 +281,69 @@ describe('sfx engine', () => {
     const before = ctx().oscillators.length
     sfx.previewOneShot('pickCorrect', { streak: 8 })
     expect(ctx().oscillators[before].frequency.values[0]).toBeGreaterThan(base)
+  })
+
+  // ── App-switch / backgrounding recovery ──────────────────────────────────
+  // Mobile browsers SUSPEND the context when the app is backgrounded; nothing
+  // resumes it on its own, so the engine must react to the app returning.
+  function setVisibility(state: 'visible' | 'hidden') {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+  }
+  afterEach(() => setVisibility('visible'))
+
+  it('resumes a context the OS suspended when the app returns (visibilitychange)', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock() // build + resume → running
+    const c = ctx()
+    const before = c.resumeCalls
+    c.state = 'suspended' // the browser parked it while backgrounded
+    setVisibility('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(c.resumeCalls).toBe(before + 1)
+    expect(c.state).toBe('running')
+  })
+
+  it('does NOT resume while the page is still hidden (do not fight the browser)', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    const c = ctx()
+    const before = c.resumeCalls
+    c.state = 'suspended'
+    setVisibility('hidden')
+    document.dispatchEvent(new Event('visibilitychange')) // fires on hide too
+    expect(c.resumeCalls).toBe(before)
+    expect(c.state).toBe('suspended')
+  })
+
+  it('resumes on window focus and on pageshow (bfcache restore)', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    const c = ctx()
+    c.state = 'suspended'
+    window.dispatchEvent(new Event('focus'))
+    expect(c.state).toBe('running')
+    c.state = 'suspended'
+    window.dispatchEvent(new Event('pageshow'))
+    expect(c.state).toBe('running')
+  })
+
+  it('resumes off the context statechange (iOS interruption ending)', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    const c = ctx()
+    c.state = 'suspended'
+    c.onstatechange?.() // iOS fires this when the interruption ends
+    expect(c.state).toBe('running')
+  })
+
+  it('rebuilds a context the browser fully closed instead of playing into a dead one', async () => {
+    const sfx = await freshSfx()
+    sfx.unlock()
+    expect(FakeAudioContext.instances).toHaveLength(1)
+    ctx().state = 'closed' // unrecoverable — iOS can do this after a long interruption
+    sfx.pickCorrect(1)
+    expect(FakeAudioContext.instances).toHaveLength(2) // a fresh, live context
+    expect(FakeAudioContext.instances[1].oscillators.length).toBeGreaterThan(0)
   })
 
   it('no-ops safely where Web Audio does not exist (jsdom default)', async () => {
