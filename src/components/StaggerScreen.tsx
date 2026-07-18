@@ -1,27 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { type PieceType } from '@shared/types'
 import { useStaggerStore, type StaggerGap, type StaggerPhase } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useRunHistoryStore } from '../store/runHistoryStore'
-import { STAGGER, CLOCK_URGENT, gapCountForBatch, urgentHeat, urgentTickIntervalMs } from '../lib/staggerCurve'
+import { STAGGER, CLOCK_URGENT, urgentHeat, urgentTickIntervalMs } from '../lib/staggerCurve'
 import { submitStaggerRun } from '../lib/api'
 import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
-import { NeonButton, ScanlineOverlay, LivesCounter, PauseOverlay, ScaleToFit } from './ui'
-import { RunHistoryGraph } from './RunHistoryGraph'
+import { NeonButton, ScaleToFit } from './ui'
 import { useCountUp } from '../hooks/useCountUp'
-import { CELL, CELL_PITCH, BOARD_PAD, STREAK_HOLD_MS, STREAK_FADE_MS, LIFT_BEAT_MS, LIFT_MS, ORDER_HINT_MS, FLOAT_TEXT_SHADOW } from './stagger/constants'
+import { CELL, CELL_PITCH, BOARD_PAD, STREAK_HOLD_MS, STREAK_FADE_MS, LIFT_BEAT_MS, LIFT_MS, ORDER_HINT_MS } from './stagger/constants'
 import { PIECE_BLOOM_HEX, REVEAL_MAGENTA } from './stagger/palette'
 import { type Bloom, bloomForGap } from './stagger/bloom'
 import { StaggerBoard } from './stagger/StaggerBoard'
 import { StaggerCountdown } from './stagger/StaggerCountdown'
 import { PieceTray } from './stagger/PieceTray'
-
-// ── HUD ─────────────────────────────────────────────────────────────────────
+import { HudBar } from './stagger/HudBar'
+import { GameOverSummary } from './stagger/GameOverSummary'
+import { DemoIntroOverlay, DemoEndOverlay, DemoFooterRow } from './stagger/DemoOverlays'
+import { StreakBursts, LifeBursts, WrongPickFlash, LiftFlyer } from './stagger/FloatingFx'
+import { PauseButton, CountdownPauseSkeleton, PauseStatsOverlay } from './stagger/PauseControls'
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export function StaggerScreen() {
@@ -553,75 +554,24 @@ export function StaggerScreen() {
         <div className="flex flex-col items-center pt-12 pb-8">
       {/* HUD + timer — hidden at game over (the summary covers score; lives/shapes are moot) */}
       {phase !== 'gameOver' && (
-        <>
-          {/* Flat metadata bar (the Training-header grammar): the unlabeled
-              score spans the bar's full height on the left; items and lives
-              are label-above / value-below columns, bottoms on the score's
-              baseline. A [1fr_auto_1fr] grid (not flex justify-between) so the
-              items column stays pinned to the bar's true center — equal side
-              tracks absorb the score growing wider, instead of it shoving the
-              middle to the right. */}
-          <div className="w-full max-w-sm grid grid-cols-[1fr_auto_1fr] items-stretch mb-2 pointer-events-none">
-            <div className="flex items-end justify-self-start">
-              {/* During the demo the most prominent readout says DEMO, not a
-                  score — a constant reminder this isn't a scored run. */}
-              <div ref={scoreRef} className="font-silk font-bold text-3xl text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">{demo ? 'DEMO' : displayScore}</div>
-            </div>
-            <div className="flex flex-col items-center justify-between">
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Items</div>
-              <div className="font-grotesk font-semibold text-[15px] leading-none text-vt-text tabular-nums">
-                {gaps.filter(g => g.filled).length} <span className="font-medium text-vt-dim">/ {gaps.length || gapCountForBatch(batchIndex)}</span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end justify-between justify-self-end">
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
-              <LivesCounter lives={lives} cap={STAGGER.START_LIVES} />
-            </div>
-          </div>
-
-          {/* Timer / count bar — phase-colored (magenta → amber → red → lime). */}
-          <div className="w-full max-w-sm h-2 rounded-full bg-black overflow-hidden mb-2 shadow-[inset_0_1px_2px_#000]">
-            <div
-              ref={barRef}
-              className={`h-full rounded-full ${barClass}`}
-              style={{ width: `${barPct}%`, transition: barTransition }}
-            />
-          </div>
-
-          {/* The central line above the grid. Usually the phase label; while a
-              streak is live in recall, the STREAK ×N takeover owns it instead —
-              the multiplier is the value (big), "streak" just the label (small).
-              It pops on each streak step, holds, then fades in the signature
-              style (see streakChip lifecycle above); the phase word returns
-              when it's gone. Priority: IN ORDER (hard-mode corrective) and
-              CLEAR! (the payoff beat) both outrank the streak, and the takeover
-              never plays outside recall, so MEMORIZE is never masked.
-              ("Streak" is player-facing copy only — the underlying store field
-              is still `currentCombo`.) */}
-          <div className="relative w-full max-w-sm h-4 mt-1 mb-2 pointer-events-none">
-            {streakTakeover && streakChip ? (
-              /* Centered by flex, NOT a translate: the pop/fade keyframes own
-                 `transform`, so translate-based centering on the animated
-                 element would drop for the animation's duration and snap back
-                 after (a visible jump). */
-              <div
-                key={streakChip.fading ? `fade-${streakChip.value}` : streakChip.value}
-                className={`absolute inset-0 flex items-center justify-center gap-1.5 text-vt-lime text-glow-vt-lime whitespace-nowrap ${streakChip.fading ? 'vt-fade-away' : 'streak-pop'}`}
-                style={streakChip.fading ? { animationDuration: `${STREAK_FADE_MS}ms` } : undefined}
-              >
-                <span className="font-grotesk font-semibold text-[10px] tracking-[0.2em] uppercase">Streak</span>
-                <span className="font-silk font-bold text-xl leading-none tabular-nums">×{streakChip.value}</span>
-              </div>
-            ) : (
-              <div
-                key={orderHintActive ? `order-${orderHint}` : 'phase'}
-                className={`text-center font-grotesk text-[11px] tracking-[0.22em] uppercase transition-colors ${phaseLabelClass}${orderHintActive ? ' vt-order-flash' : ''}`}
-              >
-                {phaseLabel}
-              </div>
-            )}
-          </div>
-        </>
+        <HudBar
+          demo={demo}
+          displayScore={displayScore}
+          gaps={gaps}
+          batchIndex={batchIndex}
+          lives={lives}
+          barRef={barRef}
+          barPct={barPct}
+          barClass={barClass}
+          barTransition={barTransition}
+          scoreRef={scoreRef}
+          streakTakeover={streakTakeover}
+          streakChip={streakChip}
+          orderHint={orderHint}
+          orderHintActive={orderHintActive}
+          phaseLabel={phaseLabel}
+          phaseLabelClass={phaseLabelClass}
+        />
       )}
 
       {/* Board + overlays */}
@@ -636,116 +586,17 @@ export function StaggerScreen() {
           <div className="absolute inset-0 z-10 rounded-xl bg-black/55 pointer-events-none" />
         )}
 
-        {/* Demo intro — the countdown's overlay grammar (board visible under a
-            veil), plain type: the two-step how-to + the opt-out, tap anywhere to
-            begin. This is the ONE text screen the demo shows; a cleared demo
-            batch flows straight into the real run (no end screen). Tapping the
-            checkbox stops there — it must not also fire the tap-anywhere
-            continue. */}
         {phase === 'demoIntro' && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => beginReveal()}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); beginReveal() } }}
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/70 backdrop-blur-[2px] cursor-pointer text-left"
-          >
-            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-cyan text-glow-vt-cyan mb-5">How it works</div>
-            <div className="flex flex-col gap-3.5 mb-5">
-              <div className="flex items-baseline gap-2.5">
-                <span className="font-grotesk font-bold text-[13px] text-vt-cyan text-glow-vt-cyan tabular-nums">1</span>
-                <span className="font-grotesk text-sm font-medium text-vt-text">Memorize the pieces.</span>
-              </div>
-              <div className="flex items-baseline gap-2.5">
-                <span className="font-grotesk font-bold text-[13px] text-vt-cyan text-glow-vt-cyan tabular-nums">2</span>
-                <span className="font-grotesk text-sm font-medium text-vt-text">Tap to recall what you saw.</span>
-              </div>
-            </div>
-            {/* Sits right under step 2; the opt-out is NOT here — it's paired
-                with the skip link down in the bottom row (see below). */}
-            <div className="vt-demo-continue font-grotesk text-[10px] uppercase tracking-[0.2em] text-vt-dim">Tap to continue</div>
-          </div>
+          <DemoIntroOverlay onBeginReveal={beginReveal} />
         )}
 
-        {/* Demo end beat — the intro's bookend: a short "you're ready"
-            acknowledgment before the real run. OPAQUE background (bg-vt-void,
-            no veil) — the board tiles behind must not show through. No timer/
-            lives explainer. The opt-out is pinned to the bottom, under the
-            start affordance: the LAST chance to turn the demo off before the
-            countdown. Tapping anywhere (except the checkbox) starts the run. */}
         {demoDone && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={leaveDemo}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); leaveDemo() } }}
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-vt-void cursor-pointer px-6 text-center"
-          >
-            <div className="font-grotesk text-[10px] uppercase tracking-[0.22em] text-vt-lime text-glow-vt-lime mb-2">Nice work</div>
-            <div className="font-grotesk font-bold text-xl text-vt-lime text-glow-vt-lime mb-6">You're ready to play</div>
-            <div className="vt-demo-continue font-grotesk text-[10px] uppercase tracking-[0.2em] text-vt-dim">Tap to start</div>
-            <label
-              onClick={e => e.stopPropagation()}
-              className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim whitespace-nowrap"
-            >
-              <input
-                type="checkbox"
-                checked={hideDemo}
-                onChange={e => setHideDemo(e.target.checked)}
-                className="accent-[#28F0FF]"
-              />
-              Don't show this again
-            </label>
-          </div>
+          <DemoEndOverlay onLeave={leaveDemo} hideDemo={hideDemo} setHideDemo={setHideDemo} />
         )}
 
-        {/* Streak bursts — a "+points" flourish floats up from each filled gap. */}
-        <AnimatePresence>
-          {streakBursts.map(cb => (
-            <motion.div
-              key={cb.id}
-              initial={{ opacity: 0, scale: 0.4, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: -22 }}
-              exit={{ opacity: 0, scale: 1.5, y: -46 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2
-                font-silk font-bold text-sm whitespace-nowrap text-white"
-              style={{
-                left: cb.x,
-                top: cb.y,
-                // White lifted off any piece color by a soft drop shadow (not a
-                // stroke) so it stays legible without an outline.
-                textShadow: FLOAT_TEXT_SHADOW,
-              }}
-            >
-              +{cb.pts}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <StreakBursts streakBursts={streakBursts} />
 
-        {/* Earn-a-life celebration — a heart blooms and rises off the board. */}
-        <AnimatePresence>
-          {lifeBursts.map(lb => (
-            <motion.div
-              key={lb.id}
-              initial={{ opacity: 0, scale: 0.3, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: -6 }}
-              exit={{ opacity: 0, scale: 1.7, y: -52 }}
-              transition={{ duration: 0.55, ease: 'easeOut' }}
-              className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
-            >
-              <span className="relative flex items-center justify-center">
-                <span className="text-7xl leading-none text-vt-red text-glow-vt-red">♥</span>
-                <span
-                  className="absolute -translate-y-[3px] font-silk font-bold text-lg text-white"
-                  style={{ textShadow: FLOAT_TEXT_SHADOW }}
-                >
-                  +{lb.n}
-                </span>
-              </span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <LifeBursts lifeBursts={lifeBursts} />
 
         {/* Run-intro countdown — anchored OVER the board (not a full-screen
             void): the board/grid is visible underneath, the mode label sits
@@ -754,70 +605,21 @@ export function StaggerScreen() {
           <StaggerCountdown modeLabel={modeLabel} modeColor={modeColor} onDone={beginReveal} />
         )}
 
-        {/* Wrong pick: a red border flashes around the board (with the shake). */}
-        <AnimatePresence>
-          {xMark && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
-              className="absolute inset-0 rounded-xl pointer-events-none shadow-[inset_0_0_0_2px_#FF3B47,0_0_24px_rgba(255,59,71,0.28)]"
-            />
-          )}
-        </AnimatePresence>
+        <WrongPickFlash xMark={xMark} />
 
-        {/* Portaled to <body> so it escapes ScaleToFit's transform (a transformed
-            ancestor would become this fixed overlay's containing block and shrink
-            it to the scaled stage instead of covering the viewport). */}
-        {phase === 'gameOver' && createPortal(
-          <div className="fixed inset-0 z-40 flex flex-col items-center bg-vt-void overflow-y-auto px-6 py-10">
-            <ScanlineOverlay />
-            <div className="font-silk text-base text-vt-text uppercase tracking-[0.15em] mb-1.5">Game Over</div>
-            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase text-vt-magenta text-glow-vt-magenta mb-5 vt-fade-away">Memory Fades</div>
-            <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Final score</div>
-            <div className="font-silk font-bold text-4xl text-vt-amber text-glow-vt-amber mb-6 tabular-nums">{score}</div>
-
-            {/* Run-stats trio — items recalled / best combo / accuracy. */}
-            <div className="flex w-full max-w-[300px] border-y border-white/10 mb-6">
-              <div className="flex-1 text-center py-3.5">
-                <div className="font-silk font-bold text-base text-vt-magenta text-glow-vt-magenta tabular-nums">{shapesRecalled}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Items recalled</div>
-              </div>
-              <div className="flex-1 text-center py-3.5 border-x border-white/10">
-                <div className="font-silk font-bold text-base text-vt-lime text-glow-vt-lime tabular-nums">{bestStreak > 0 ? `×${bestStreak}` : 'N/A'}</div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Best streak</div>
-              </div>
-              <div className="flex-1 text-center py-3.5">
-                <div className="font-silk font-bold text-base text-vt-cyan text-glow-vt-cyan tabular-nums">
-                  {totalPicks === 0 ? 0 : Math.round((correctPicks / totalPicks) * 100)}%
-                </div>
-                <div className="font-grotesk text-[9px] tracking-[0.1em] uppercase text-vt-faint mt-1.5">Accuracy</div>
-              </div>
-            </div>
-
-            {currentRunId && (
-              <div className="w-full max-w-[300px] mb-6 pointer-events-auto">
-                <RunHistoryGraph records={records} currentId={currentRunId} />
-              </div>
-            )}
-
-            {/* Play again is THE next action — full width, one tier up in size;
-                Leaderboard and Home are half-width secondary doors below it.
-                The column matches the stats/graph width above. */}
-            <div className="flex flex-col gap-3 w-full max-w-[300px] pointer-events-auto">
-              <NeonButton variant="primary" size="lg" fullWidth onClick={() => startRun(mode)}>Play again</NeonButton>
-              <div className="flex gap-3">
-                {/* The itch the summary creates — "where did that rank?" — gets
-                    its own door. Lands on this run's mode tab: the board opens
-                    on the persisted difficulty, which is what the run started
-                    with. */}
-                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); analytics.leaderboardOpened(); goLeaderboard() }}>Leaderboard</NeonButton>
-                <NeonButton variant="ghost" fullWidth onClick={() => { exit(); goHome() }}>Home</NeonButton>
-              </div>
-            </div>
-          </div>,
-          document.body,
+        {phase === 'gameOver' && (
+          <GameOverSummary
+            score={score}
+            shapesRecalled={shapesRecalled}
+            bestStreak={bestStreak}
+            totalPicks={totalPicks}
+            correctPicks={correctPicks}
+            currentRunId={currentRunId}
+            records={records}
+            onPlayAgain={() => startRun(mode)}
+            onLeaderboard={() => { exit(); analytics.leaderboardOpened(); goLeaderboard() }}
+            onHome={() => { exit(); goHome() }}
+          />
         )}
 
       </div>
@@ -852,126 +654,32 @@ export function StaggerScreen() {
         </div>
       </div>
 
-      {/* Demo bottom row — the opt-out and the skip link, thematic siblings on
-          one line (bottom third): "Don't show this again" centered, "skip demo"
-          flush right (rides where the pause button lives in the real run). Shown
-          the whole demo — intro, memorize, recall — up until the countdown;
-          hidden once the end beat is up (that screen carries its own opt-out).
-          The equal 1fr side tracks center the opt-out across the full row. */}
       {demo && !demoDone && (
-        <div className="mt-3 w-full max-w-sm grid grid-cols-[1fr_auto_1fr] items-center">
-          <span aria-hidden />
-          <label className="flex items-center gap-2 cursor-pointer font-grotesk text-[11px] text-vt-dim whitespace-nowrap">
-            <input
-              type="checkbox"
-              checked={hideDemo}
-              onChange={e => setHideDemo(e.target.checked)}
-              className="accent-[#28F0FF]"
-            />
-            Don't show this again
-          </label>
-          <button
-            onClick={leaveDemo}
-            className="justify-self-end font-grotesk text-[10px] uppercase tracking-[0.18em] text-vt-faint hover:text-vt-dim transition-colors"
-          >
-            skip demo ›
-          </button>
-        </div>
+        <DemoFooterRow onLeave={leaveDemo} hideDemo={hideDemo} setHideDemo={setHideDemo} />
       )}
 
-      {/* Pause — freeze the run (full width), available during memorize too:
-          the overlay hides the board, the reveal driver freezes and re-blooms
-          the interrupted gap on resume. Not in the demo (no clock to freeze —
-          the skip link rides this spot instead). */}
       {(phase === 'selecting' || phase === 'reveal') && !demo && (
-        <div className="mt-3 w-full max-w-sm">
-          <button
-            aria-label="Pause"
-            disabled={cleared}
-            onClick={() => pause()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border bg-vt-raised py-3 px-4
-              border-vt-cyan/25 text-vt-cyan shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:border-vt-cyan hover:bg-vt-cyan/10 hover:shadow-vt-cyan
-              transition active:translate-y-px disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {/* Icon-only: the two-bar glyph is universal — the word was noise. */}
-            <span className="flex gap-[4px]">
-              <span className="block w-[5px] h-4 rounded-sm bg-current" />
-              <span className="block w-[5px] h-4 rounded-sm bg-current" />
-            </span>
-          </button>
-        </div>
+        <PauseButton onPause={pause} cleared={cleared} />
       )}
 
-      {/* Countdown pause skeleton: a non-interactive solid-black box with the
-          EXACT dimensions of the real pause button (same wrapper, py-3 px-4,
-          rounded-xl, grid-styled fill; an invisible two-bar glyph holds the
-          height) so the play column height — and the ScaleToFit scale — matches
-          reveal/selecting and the countdown → reveal transition doesn't jump. */}
       {phase === 'countdown' && (
-        <div className="mt-3 w-full max-w-sm">
-          <div
-            aria-hidden
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#04040a] py-3 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_2px_6px_#000] pointer-events-none"
-          >
-            <span className="flex gap-[4px] invisible">
-              <span className="block w-[5px] h-4 rounded-sm bg-current" />
-              <span className="block w-[5px] h-4 rounded-sm bg-current" />
-            </span>
-          </div>
-        </div>
+        <CountdownPauseSkeleton />
       )}
         </div>
       </ScaleToFit>
 
-      {/* Hard pause — covers the whole screen so no memorizing happens while
-          frozen; resume picks the clock back up, exit bails to the landing page.
-          The run's live stats ride along: a pause doubles as a scoreboard check. */}
       {paused && (
-        <PauseOverlay onResume={() => resume()} onExit={() => { exit(); goHome() }}>
-          <div className="flex items-end gap-10 pointer-events-none">
-            <div>
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
-              <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-                {score}
-              </div>
-            </div>
-            <div>
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
-              {/* Hearts sit in the same 18px line box as the neighboring text-lg
-                  values — a bare div's default line-height would pad below the
-                  hearts and push this column out of line. */}
-              <div className="mt-1 flex h-[18px] items-center"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
-            </div>
-            <div>
-              <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
-              <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
-                {currentStreak}
-              </div>
-            </div>
-          </div>
-        </PauseOverlay>
+        <PauseStatsOverlay
+          score={score}
+          lives={lives}
+          currentStreak={currentStreak}
+          onResume={resume}
+          onExit={() => { exit(); goHome() }}
+        />
       )}
 
-      {/* Time → score "Lift": the leftover-time "+bonus" rises off the right end of
-          the timer bar and dissolves into the score readout as the bar drains and
-          the number climbs (fired from onPick on a cleared batch). */}
       {liftFlyer && (
-        <motion.div
-          initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
-          animate={{
-            x: liftFlyer.x1 - liftFlyer.x0,
-            y: liftFlyer.y1 - liftFlyer.y0,
-            opacity: [0, 1, 1, 0],
-            scale: [0.6, 1.1, 1, 0.7],
-          }}
-          transition={{ duration: LIFT_MS / 1000, ease: [0.33, 1, 0.68, 1], times: [0, 0.18, 0.72, 1] }}
-          onAnimationComplete={() => setLiftFlyer(null)}
-          transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
-          className="fixed z-[60] pointer-events-none font-silk font-bold text-2xl whitespace-nowrap text-vt-lime text-glow-vt-lime tabular-nums"
-          style={{ left: liftFlyer.x0, top: liftFlyer.y0, textShadow: FLOAT_TEXT_SHADOW }}
-        >
-          +{liftFlyer.value}
-        </motion.div>
+        <LiftFlyer liftFlyer={liftFlyer} onDone={() => setLiftFlyer(null)} />
       )}
     </div>
   )
