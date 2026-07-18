@@ -16,11 +16,11 @@ phosphor-inspired *visual* system is still called **Afterglow**; the runtime des
 
 ## The Game
 
-Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. The shipped MVP is a single endless mode, **Infinite Stagger**; the earlier Journey (transit-map level hub) and Practice (4-round gauntlet) modes still exist in code but are hidden — see "Legacy modes" below.
+Players memorize the shape of empty gaps in a pre-filled grid, then pick the Tetris-style pieces needed to fill them — all under time pressure. The shipped MVP is a single endless mode, **Infinite Stagger** (plus a consequence-free **Training** drill). The earlier Journey (transit-map level hub) and Practice (4-round gauntlet) modes have been **fully removed** from the codebase — see "Legacy modes (removed)" below.
 
 ### Entry flow
 
-`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`; session present → `routeAfterAuth()` (`src/store/profileStore.ts`), which loads the caller's `profiles` row and routes: non-guest with no `display_name` → `ClaimNameScreen` (a mandatory "Choose your display name" gate — no skip), otherwise → `HomeScreen`. AuthScreen's email/guest sign-ins route through the same helper (Google OAuth re-enters via the mount effect after its redirect). Display names are handle-style — `^[A-Za-z][A-Za-z0-9_]{2,15}$`, case-insensitively unique across non-guests — claimed/edited via the `set_display_name` RPC (migration `0015`); `src/lib/displayName.ts` mirrors the exact validation client-side, and `profileStore` is the single source of identity truth (the menu no longer derives names from auth metadata). Guests skip the gate entirely and stay unnamed/unranked. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. `HomeScreen` is one decision + one action: a three-segment difficulty switch — **Easy / Medium / Hard** — plus a single **PLAY** button pinned to the bottom thumb arc, under the vertically centered wordmark. The difficulty persists via `useSettingsStore` (localStorage); PLAY always starts an Infinite Stagger run (`src/components/StaggerScreen.tsx`) at the selected difficulty. Training's ONLY entry point is the global hamburger menu (`GlobalMenu.tsx`) — its "Training" action (directly after Leaderboard) fires `sfx.unlock()` (the menu tap is the audio-unlock gesture) then starts the drill; it's no longer a "mode zero" segment on the Home switch. The menu is the profile header (initials avatar + display name; for non-guests it's TAP-TO-EDIT with a pencil glyph next to the name — opens the shared `DisplayNameForm` in an overlay) + **Leaderboard** + **Training** + a **Sound** row (on/off toggle + volume slider) + **Sound Design** (the calibration lab, `SoundDesignScreen.tsx`) + Logout (Settings and Reset Journey were removed; guests get a generic person-icon avatar instead of initials, and "Sign up" instead of Logout). Leaderboard opens the global rankings screen (`LeaderboardScreen.tsx`): per-mode Easy/Medium/Hard boards (tabs echo the Home mode switch), a "you-hero" card with the caller's rank + per-metric ranks, and a top-50 table where the caller's row wears a YOU tag. Data comes from the `get_stagger_leaderboard` RPC (migration `0014`, layered on `0013`'s `stagger_stats`; re-created by `0015` to hide profiles that haven't claimed a display name yet — their stats reappear once they claim); guests see the board but rank as null and get a dashed sign-up nudge instead of the hero card. The Stagger game-over summary links straight to the leaderboard (it lands on the finished run's mode tab for free — the board opens on the persisted difficulty, which is what the run was started with), and the in-run/Training pause buttons are icon-only (two-bar glyph, `aria-label="Pause"`). An "Experimental Modes" entry point (Practice, the legacy gauntlet + the three Journey map styles) exists in `HomeScreen.tsx` but is hidden behind `SHOW_EXPERIMENTAL = false`.
+`src/App.tsx` gates on a Supabase session (`getSession()`): no session → `AuthScreen`; session present → `routeAfterAuth()` (`src/store/profileStore.ts`), which loads the caller's `profiles` row and routes: non-guest with no `display_name` → `ClaimNameScreen` (a mandatory "Choose your display name" gate — no skip), otherwise → `HomeScreen`. AuthScreen's email/guest sign-ins route through the same helper (Google OAuth re-enters via the mount effect after its redirect). Display names are handle-style — `^[A-Za-z][A-Za-z0-9_]{2,15}$`, case-insensitively unique across non-guests — claimed/edited via the `set_display_name` RPC (migration `0015`); `src/lib/displayName.ts` mirrors the exact validation client-side, and `profileStore` is the single source of identity truth (the menu no longer derives names from auth metadata). Guests skip the gate entirely and stay unnamed/unranked. `AuthScreen` offers email/password (sign in + create account), Google OAuth, and a "Continue as guest" anonymous sign-in (`supabase.auth.signInAnonymously()`); a `signInWithApple` helper exists in `src/lib/auth.ts` but isn't wired into any button yet. `HomeScreen` is one decision + one action: a three-segment difficulty switch — **Easy / Medium / Hard** — plus a single **PLAY** button pinned to the bottom thumb arc, under the vertically centered wordmark. The difficulty persists via `useSettingsStore` (localStorage); PLAY always starts an Infinite Stagger run (`src/components/StaggerScreen.tsx`) at the selected difficulty. Training's ONLY entry point is the global hamburger menu (`GlobalMenu.tsx`) — its "Training" action (directly after Leaderboard) fires `sfx.unlock()` (the menu tap is the audio-unlock gesture) then starts the drill; it's no longer a "mode zero" segment on the Home switch. The menu is the profile header (initials avatar + display name; for non-guests it's TAP-TO-EDIT with a pencil glyph next to the name — opens the shared `DisplayNameForm` in an overlay) + **Leaderboard** + **Training** + a **Sound** row (on/off toggle + volume slider) + **Sound Design** (the calibration lab, `SoundDesignScreen.tsx`) + Logout (Settings and Reset Journey were removed; guests get a generic person-icon avatar instead of initials, and "Sign up" instead of Logout). Leaderboard opens the global rankings screen (`LeaderboardScreen.tsx`): per-mode Easy/Medium/Hard boards (tabs echo the Home mode switch), a "you-hero" card with the caller's rank + per-metric ranks, and a top-50 table where the caller's row wears a YOU tag. Data comes from the `get_stagger_leaderboard` RPC (migration `0014`, layered on `0013`'s `stagger_stats`; re-created by `0015` to hide profiles that haven't claimed a display name yet — their stats reappear once they claim); guests see the board but rank as null and get a dashed sign-up nudge instead of the hero card. The Stagger game-over summary links straight to the leaderboard (it lands on the finished run's mode tab for free — the board opens on the persisted difficulty, which is what the run was started with), and the in-run/Training pause buttons are icon-only (two-bar glyph, `aria-label="Pause"`). (There is no longer any "Experimental Modes" entry point or `SHOW_EXPERIMENTAL` toggle — the legacy Journey/Practice modes it once gated have been removed.)
 
 ### Infinite Stagger
 
@@ -42,13 +42,18 @@ The recall tray always shows pieces in their own piece colors, in every mode —
 
 A consequence-free naming drill (`src/store/trainingStore.ts` + `src/components/TrainingScreen.tsx`): one tetromino at a time blooms onto the same 12×12 void board in its own piece color (the game's exact reveal flash-in, but HELD lit — CSS `.vt-bloom-hold`), and the player taps the letter that names it from a 7-letter tray (white uppercase I/O/T/S/Z/J/L). A correct pick flips the prompt to a lime "CORRECT", floats the **selection time** (appearance → correct pick, e.g. "3.7s") off the piece in the game's bubbly "+points" style, and fades the piece out with the reveal's ghost-tail decay (`.vt-bloom-decay`) at a much brisker clip than in-game (420ms + 90ms wave — training has no clock, so inter-piece downtime is kept short), then the next piece (always a different type, always at the tray's `DISPLAY_ROTATION`, random board position) blooms in. A wrong pick gives the in-game miss feedback (red border flash + board shake) and breaks the streak — and the speed clock keeps running, so fumbles surface in the eventual correct pick's time. **No score, no select clock, no lives** — the HUD tracks the current streak (left) plus the running **average selection speed** and best streak (right). An "Exit Training" button below the tray leaves at any moment. Nothing persists.
 
-### Legacy modes (hidden)
+### Legacy modes (removed)
 
-Journey (tap a station on a transit/brain/git map to open a `LevelScreen` level hub: main puzzle + 4 opt-in badges) and Practice (the old 4-round gauntlet, `src/store/gameStore.ts`) are still fully present in the codebase — `src/components/JourneyScreen.tsx`, `LevelScreen.tsx`, `JourneyMap/`, `GameShell.tsx`, `ResolutionPhase/`, `SelectingPhase.tsx`, `ViewingPhase.tsx`, `CountdownPhase.tsx`, etc. — but are reachable only by flipping `SHOW_EXPERIMENTAL` to `true` in `HomeScreen.tsx`. This code was deliberately left untouched by the three-mode MVP work, so treat any pre-existing scoring/UI detail for Journey/Practice as unverified unless you re-check it against the current source — it has drifted from earlier docs (e.g. the "efficiency" scoring pillar described below is now retired). The mechanics removed entirely from the codebase during the MVP simplification (named levels SOLOS/TWINS/TRIPLETS/TRANSFORMERS/CRAWLERS, pairs/triples reveal chunking, inverted reveal, the calibration sandbox) survive only at the git tag `pre-mvp-simplification`. Background: `docs/superpowers/specs/2026-06-08-journey-rework-design.md`, `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`.
+Journey (a transit/brain/git-map level hub: main puzzle + 4 opt-in badges) and Practice (the old 4-round gauntlet) have been **completely removed** from the codebase — there is no live or hidden code path to either. Removal happened in two passes:
+
+- **Frontend** (commit `0ed1fa9`): every Journey/Practice screen, phase, and store — `JourneyScreen`, `LevelScreen`, `JourneyMap/`, `GameShell`, `ResolutionPhase/`, `SelectingPhase`, `ViewingPhase`, `CountdownPhase`, `BriefingPhase`, the `level/`+`briefing/` dirs, `gameStore.ts`, `progressStore.ts`, `journeyScoring.ts`, and the `SHOW_EXPERIMENTAL` toggle.
+- **Backend + shared** (this follow-up): the `start_session`/`submit_attempt` edge functions and the `_shared` engine code only they used (`cors.ts`, `core/scoring.ts`, `core/levelConfig.ts`, `core/themeResolution.ts`, `engine/solver.ts`, `engine/cartSlots.ts`), plus the last dead client trims (`lib/components.ts`; `settingsStore`'s `hideBriefing`/`mapStyle`; `navStore`'s journey/level/practice routes; `api.ts`'s `getJourney`/`getLevel`/`getStats`/`submitLevelResult`).
+
+The legacy Journey/Practice **DB schema** (the `levels` / `level_sessions` tables + `seed.sql`) still exists but is fully dormant — no remaining code path reads or writes it. All of the removed code is recoverable from git history (frontend prior to `0ed1fa9`; earlier-removed mechanics — SOLOS/TWINS/TRIPLETS/TRANSFORMERS/CRAWLERS levels, pairs/triples reveal chunking, inverted reveal, the calibration sandbox — at the git tag `pre-mvp-simplification`). Background: `docs/superpowers/specs/2026-06-08-journey-rework-design.md`, `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`.
 
 ### Piece types
 
-`I, O, T, S, Z, J, L` — the seven standard tetrominoes (4 cells each). The `SINGLE` (1-cell decoy) piece type has been removed from `PieceType`; the "efficiency" scoring pillar it existed to drive is retired (see Critical rules below).
+`I, O, T, S, Z, J, L` — the seven standard tetrominoes (4 cells each). The `SINGLE` (1-cell decoy) piece type has been removed from `PieceType`; the "efficiency" scoring pillar it existed to drive was retired with the legacy Journey/Practice scoring code.
 
 ---
 
@@ -56,72 +61,59 @@ Journey (tap a station on a transit/brain/git map to open a `LevelScreen` level 
 
 ### File map
 
-Shared game engine + types live OUTSIDE `src/`, at `supabase/functions/_shared/` (so the Supabase Edge Functions can import the same code as the client); Vite/Vitest alias `@shared` → `supabase/functions/_shared` (see `vite.config.ts`).
+Shared game engine + types live OUTSIDE `src/`, at `supabase/functions/_shared/`. This was originally so Supabase Edge Functions could import the same code as the client; those edge functions are gone now, so `_shared` is imported only by the client — but the directory + the Vite/Vitest `@shared` → `supabase/functions/_shared` alias (see `vite.config.ts`) are kept as-is.
 
 ```
 supabase/functions/_shared/
   types.ts             — PieceType (I/O/T/S/Z/J/L — no SINGLE), Rotation, Cell, Grid, Gap, DifficultyConfig
   engine/
     pieces.ts          — PIECE_DEFINITIONS, getRotatedCells(), getPieceColor()
-    puzzleGenerator.ts — generatePuzzle({ gapCount, complexity, allowedTypes, lockedRotations, ... }) → { grid, gaps }
-    solver.ts          — solve(pieceCount, grid, gaps) backtracking solver
+    puzzleGenerator.ts — generatePuzzle({ gapCount, complexity, allowedTypes, lockedRotations, ... }) → { grid, gaps }; the live game (staggerStore) is its only caller
   core/
-    scoring.ts         — Legacy Journey/Practice scoring (scoreClear, scoreRound, levelTotal, levelStars); "efficiency" pillar is retired (hardcoded 0)
-    levelConfig.ts     — LEVEL_CONFIGS server-side difficulty table (legacy Journey/Practice only)
+    prng.ts            — makeRng()/randomSeed() seeded RNG; now used only by the puzzleGenerator tests (the live game passes the default Math.random)
+    themeConfig.ts     — THEME_CONFIG + GAP_COLOR_IDS; now referenced only by the puzzleGenerator colorCoded test
+```
 
+(`prng.ts` + `themeConfig.ts` survive only because the puzzleGenerator tests still exercise `generatePuzzle`'s legacy `adjacency`/`colorCoded`/`sequential`/`seed` option branches, which remain in the live generator. Everything else that used to live under `_shared/core` + `_shared/engine` — `scoring.ts`, `levelConfig.ts`, `themeResolution.ts`, `solver.ts`, `cartSlots.ts`, `cors.ts` — was removed with the legacy backend.)
+
+```
 src/
-  App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/journey/levelDetail/results/stagger/playing/practice/training/leaderboard)
+  App.tsx              — Auth-gates on Supabase session, then routes appView → screen (auth/home/stagger/training/leaderboard/soundDesign/claimName)
   store/
     staggerStore.ts        — Infinite Stagger's Zustand store: phase/mode/batchIndex/gaps/score/lives/streak; startRun / pickPiece / advanceBatch / timeoutBatch
     trainingStore.ts       — Training mode's Zustand store: current piece / round / streak / selection-speed clock; start / guess / nextPiece / exit
-    settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), map style, briefing opt-outs
-    navStore.ts            — appView routing state (auth/home/journey/levelDetail/playing/results/practice/stagger/training/leaderboard/soundDesign/claimName)
+    settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), soundEnabled, sfxVolume, hideDemo
+    navStore.ts            — appView routing state (auth/home/stagger/training/leaderboard/soundDesign/claimName)
     profileStore.ts        — Single source of identity truth: display name (from public.profiles) + email/avatar/authName (from auth metadata); claimDisplayName action; routeAfterAuth() post-auth router (claim gate vs home)
     soundLabStore.ts       — Sound Design lab persistence (localStorage key vt:soundlab:v1): active per-sound patch OVERRIDES (applied into sfx at boot — the game plays the tweaked palette) + labeled PRESETS + exportJson() for pasting tuned values back into a design conversation
     runHistoryStore.ts     — Recent Infinite Stagger run history (for the post-run graph)
-    gameStore.ts       (legacy) — Journey/Practice Zustand store; all game state + actions (startComponent / retryComponent / replayComponent for Journey; startLevel/startPractice for Practice); also owns the legacy DIFFICULTY_TABLE
-    progressStore.ts   (legacy) — localStorage store for per-component best scores and level progress (key: gapcity:progress:v1)
   lib/
     staggerCurve.ts        — Infinite Stagger's single difficulty/scoring ramp: STAGGER constants, gapCountForBatch(), selectDurationForBatch(), batchSpeedBonus(), etc.
     sfx.ts                 — Sound: semantic game-gesture API (pickCorrect/bloom/go/batchClear/…), all pure Web Audio synth (no audio files/assets); portable as-is to react-native-audio-api. Every sound is a PATCH (data: tone/noise layers) — DEFAULT_PATCHES is the shipped palette (bonusLift is lab-tuned by the designer), overridable live via setPatch (the Sound Design lab drives this). SFX toggle + volume in settingsStore; unlock() must fire from a tap (HomeScreen PLAY does). Music/ambient bed was CUT (synth zen hum didn't land) — returns later as a produced audio file (designer will supply via Logic Pro)
     auth.ts                — Supabase auth helpers: signInWithApple/Google, sign up/in with email, signInAsGuest (anonymous), signOut
+    api.ts                 — Supabase RPC wrappers: record_stagger_run, erase_stagger_records, get_stagger_leaderboard, set_display_name, getOwnProfile
     displayName.ts         — Display-name rules: validateDisplayName (regex ^[A-Za-z][A-Za-z0-9_]{2,15}$, per-rule messages) + sanitizeSuggestion prefill helper; mirrored verbatim by the set_display_name RPC (migration 0015)
-    components.ts      (legacy) — ComponentKey types, LEVEL_COMPONENTS, BADGE_COMPONENTS, COMPONENT_THEME, COMPONENT_LABEL, isPlayable helpers
-    journeyScoring.ts  (legacy) — componentScore(), levelStarsFromTotal(), difficultyPips(), sumBests() — Journey scoring math
   components/
-    StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (own inline board, not Grid.tsx), piece tray, pause overlay, game-over summary
+    StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (its own inline 12×12 board), piece tray, pause overlay, game-over summary
     TrainingScreen.tsx     — Training mode's screen: streak/avg-speed HUD, single held-bloom piece board, letter-name tray, exit button
     LeaderboardScreen.tsx  — Global rankings: Easy/Medium/Hard tabs (Home switch styling), you-hero card (rank + per-metric ranks), top-50 table with YOU tag, guest sign-up footer
     SoundDesignScreen.tsx  — The sound calibration lab (menu → "Sound Design", deliberately visible pre-launch, desktop-width workbench): every game sound as knob panels (per-layer pitch/length/loudness/attack/glide/lowpass, noise sweeps), ▶ replay + ⟳ loop toggle (hands-free auditioning) with gameplay context (streak/reveal-step), labeled presets, Copy-JSON export
-    HomeScreen.tsx         — Landing screen after sign-in: PLAY (→ Infinite Stagger) + Easy/Medium/Hard switch; Experimental Modes pane hidden behind SHOW_EXPERIMENTAL
+    HomeScreen.tsx         — Landing screen after sign-in: PLAY (→ Infinite Stagger) + Easy/Medium/Hard switch
     AuthScreen.tsx         — Email/password + Google OAuth + guest sign-in
     ClaimNameScreen.tsx    — Post-auth display-name gate (no skip); prefills a sanitized suggestion from the Google name / email prefix
     DisplayNameForm.tsx    — Shared name form (live per-rule validation, initials-avatar preview, taken/invalid server errors); used by ClaimNameScreen + the menu's edit overlay
-    PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by both StaggerScreen and legacy SelectingPhase)
-    Grid.tsx           (legacy) — 12×12 inline-grid, 28px cells; onCellClick / onCellHover props
-    ProgressBar.tsx    (legacy) — Animated countdown bar
-    GameShell.tsx      (legacy) — Top bar (component label/score/lives), phase router, idle screen; TrickleBar shown while submitting
-    CountdownPhase.tsx (legacy) — Pre-round "Round N" + 3-2-1 fade countdown, then beginViewing
-    GapShimmer.tsx     (legacy) — One-time glare sweep masked to the gap shapes; overlaid on the viewing grid (no game-state change)
-    ViewingPhase.tsx   (legacy) — Grid + GapShimmer overlay + Ready button (timer bar lives in GameShell)
-    SelectingPhase.tsx (legacy) — Piece menu + selection cart + Done button
-    ResolutionPhase/   (legacy) — Auto-placement animation; perfect/failure badge; Try Again / Back to Level CTA
-    LevelScreen.tsx    (legacy) — Journey level hub: main puzzle + 4 badge tiles, level progress (stars/total), badge lock state
-    JourneyScreen.tsx  (legacy) — Journey "Map" screen: loads get_journey, owns loading/error; renders the selected map style
-    JourneyMap/        (legacy) — Map renderers: index.tsx (transit map), MentalMapBrain.tsx, GitMap.tsx + layout.ts (hand-authored coords/paths)
+    PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by StaggerScreen and TrainingScreen)
 ```
 
 ### Grid dimensions
 
-Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382px wide** — this sizing is shared by the legacy `Grid.tsx` component and Infinite Stagger's own inline board in `StaggerScreen.tsx` (same `CELL`/`ROWS`/`COLS` constants, just not the same component). UI buttons that should match the board width go inside an `inline-flex flex-col items-stretch` wrapper (legacy) or use `w-full max-w-sm` (Infinite Stagger) so they auto-size to the grid.
+Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382px wide** — the `CELL`/`ROWS`/`COLS` constants live in Infinite Stagger's own inline board (`StaggerScreen.tsx`), reused by `TrainingScreen.tsx`. UI buttons that should match the board width use `w-full max-w-sm` so they auto-size to the grid.
 
 ### Difficulty tables
 
 **Infinite Stagger** (the shipped game) has no per-level DB table or server config — its whole ramp is the hand-authored `STAGGER_CURVE` + `SHAPE_SCHEDULE` in `src/lib/staggerCurve.ts` (see "Infinite Stagger" above for the current curve). It's pure client-side math, keyed by `batchIndex`, with nothing to keep in sync across services.
 
-**Legacy Journey/Practice** still use the older per-round `DIFFICULTY_TABLE` in `gameStore.ts` — keyed by round number, controls view duration, select duration, and number/type of gaps generated. Spans **15 rounds** (round 15+ uses the last entry). The view (memorize) timer **rises monotonically with `gapCount`** on a comfortable **~1.2–1.33s per gap** budget so every level stays solvable — the challenge is *how fast* you clear it, not *whether* you can. It runs **4000ms → 17000ms** across rounds 1–15, tapering toward ~1.06s/gap at the top tier where adjacent shapes chunk in memory. `selectDuration` also rises (10000 → 23000ms) and is always longer than the view window, so picking pieces is never the bottleneck. `gapCount` climbs from 3 to 16 so the larger board stays meaningfully empty deep into a run. Speed scoring is **ratio-based** (`scoring.ts` uses `timeRemaining / duration`), so these absolute durations self-normalize and don't change the score ceiling — leaving more time on the clock (hitting **Ready →** early) banks more speed bonus.
-
-**Three sources must stay in sync for legacy Journey/Practice:** the client fallback `DIFFICULTY_TABLE` (`gameStore.ts`), the server config `LEVEL_CONFIGS` (`supabase/functions/_shared/core/levelConfig.ts`), and the DB seed (`supabase/seed.sql`). When running against Supabase, the served durations come from the `levels` **DB table** — the seed uses `on conflict … do nothing`, so an existing DB must be re-seeded/migrated for new values to take effect. The three districts use the fictional slugs `the_hollows` / `the_stacks` / `the_grid` (renamed from the NYC slugs by migration `0009_gap_city_fictional_names.sql`); keep these in sync across `levelConfig.ts`, `seed.sql`, and the migrations.
+The old per-round legacy Journey/Practice difficulty machinery (`DIFFICULTY_TABLE`, `LEVEL_CONFIGS`, the `levels` DB table, and its `seed.sql` seed with the `the_hollows`/`the_stacks`/`the_grid` slugs) is gone or dormant — the client tables and server config were deleted with the legacy modes, and while the DB tables + seed still physically exist, no remaining code path reads them.
 
 ---
 
@@ -132,24 +124,16 @@ Grid is `inline-grid`, 12 cols × 28px cells + 2px gaps + 12px padding ≈ **382
 ```ts
 // ✅ correct
 import { useShallow } from 'zustand/shallow'
-const { foo, bar } = useGameStore(useShallow(s => ({ foo: s.foo, bar: s.bar })))
+const { foo, bar } = useStaggerStore(useShallow(s => ({ foo: s.foo, bar: s.bar })))
 
 // ✅ also fine (single value, no object)
-const foo = useGameStore(s => s.foo)
+const foo = useStaggerStore(s => s.foo)
 
 // ❌ will cause infinite loop in Zustand 5
-const { foo, bar } = useGameStore(s => ({ foo: s.foo, bar: s.bar }))
+const { foo, bar } = useStaggerStore(s => ({ foo: s.foo, bar: s.bar }))
 ```
 
 Zustand 5 uses `useSyncExternalStore` internally. Inline object selectors return a new reference every render → React infinite loop. `useShallow` memoizes by shallow equality.
-
-### Solver correctness
-
-`solver.ts` uses backtracking. The outer piece-type loop must **not** `break` early — it must try all piece types for each empty cell, otherwise the solver is order-dependent and misses valid solutions.
-
-### Efficiency scoring pillar is retired
-
-`roundEfficiency()` / the `efficiency` field in `supabase/functions/_shared/core/scoring.ts` are hardcoded to `0` and kept only so the return shape and the DB's `efficiency` column stay stable — they were retired when the `SINGLE` decoy piece type was removed (every gap clear now always uses exactly `minPieces`, so the old piece-count-vs-minimum ratio flatlined to a constant). Its points were folded into the Speed pillar. Don't resurrect a live efficiency ratio without first re-adding a decoy piece type — and if you do, guard `selectedPieces === 0` so the ratio doesn't become `minPieces / minPieces = 1.0`.
 
 ### Tests
 
@@ -163,7 +147,6 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
 - **Scoring philosophy (Infinite Stagger):** Streak is the only multiplier — `100 × currentStreak` per correct pick, plus a per-batch speed bonus (≤500) on clear. A miss breaks the streak and costs a life; a select-clock timeout costs a life and replays the same batch.
 - **Lives (Infinite Stagger):** 5 shared lives for the whole run, +1 per 5000 cumulative points; the run ends at 0.
-- **Legacy (Journey/Practice, hidden):** Journey scored per-component 0–100 (completion + time, unsolved = 0), 3 lives per component. Practice scored per-round speed+efficiency bonuses (efficiency now retired, see above), 3 lives pooled across 4 rounds.
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 
 ---
@@ -187,4 +170,4 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 - **Gameplay polish (12×12 board, retry flow, failure penalty, turtle):** `docs/superpowers/specs/2026-05-28-gameplay-polish-design.md` + `docs/superpowers/plans/2026-05-28-gameplay-polish.md`
 - **Infinite Stagger, original design:** `docs/superpowers/specs/2026-06-16-infinite-stagger-design.md`
 - **Three-mode MVP simplification (current shipped shape — modes, single ramp, streak-only scoring, legacy removal):** `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`
-- **Journey rework (level hub + badges), now legacy/hidden:** `docs/superpowers/specs/2026-06-08-journey-rework-design.md`
+- **Journey rework (level hub + badges), now removed:** `docs/superpowers/specs/2026-06-08-journey-rework-design.md`
