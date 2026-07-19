@@ -12,6 +12,7 @@ import { LeaderboardScreen } from './components/LeaderboardScreen'
 import { SoundDesignScreen } from './components/SoundDesignScreen'
 import { GlobalLoadingOverlay } from './components/GlobalLoadingOverlay'
 import { GlobalMenu } from './components/GlobalMenu'
+import { InstallPrompt } from './components/InstallPrompt'
 
 export default function App() {
   const appView = useNavStore(s => s.appView)
@@ -61,6 +62,9 @@ export default function App() {
       <GlobalLoadingOverlay />
       {view}
       {showMenu && <GlobalMenu />}
+      {/* Dismissible PWA install nudge — only on non-gameplay screens so it
+          never overlaps the in-run HUD (same gate as the global menu). */}
+      {showMenu && <InstallPrompt />}
     </>
   )
 }

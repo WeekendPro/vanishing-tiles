@@ -93,6 +93,7 @@ src/
     auth.ts                — Supabase auth helpers: signInWithApple/Google, sign up/in with email, signInAsGuest (anonymous), signOut
     api.ts                 — Supabase RPC wrappers: record_stagger_run, erase_stagger_records, get_stagger_leaderboard, set_display_name, getOwnProfile
     displayName.ts         — Display-name rules: validateDisplayName (regex ^[A-Za-z][A-Za-z0-9_]{2,15}$, per-rule messages) + sanitizeSuggestion prefill helper; mirrored verbatim by the set_display_name RPC (migration 0015)
+    pwa.ts                 — PWA install helpers (pure, unit-tested): isStandalone / isIOSSafari platform detection + isInstallDismissed/setInstallDismissed (localStorage key vt:pwa-install-dismissed:v1) + the BeforeInstallPromptEvent type. Backs InstallPrompt.tsx
   components/
     StaggerScreen.tsx      — Infinite Stagger's screen: HUD (score/lives/streak), reveal-bloom board (its own inline 12×12 board), piece tray, pause overlay, game-over summary
     TrainingScreen.tsx     — Training mode's screen: streak/avg-speed HUD, single held-bloom piece board, letter-name tray, exit button
@@ -103,7 +104,12 @@ src/
     ClaimNameScreen.tsx    — Post-auth display-name gate (no skip); prefills a sanitized suggestion from the Google name / email prefix
     DisplayNameForm.tsx    — Shared name form (live per-rule validation, initials-avatar preview, taken/invalid server errors); used by ClaimNameScreen + the menu's edit overlay
     PieceShape.tsx         — Renders a single piece at a given rotation + cell size (used by StaggerScreen and TrainingScreen)
+    InstallPrompt.tsx      — Dismissible PWA "install this game" banner (App.tsx renders it on non-gameplay screens only). Chrome/Android: captures beforeinstallprompt → native install; iOS Safari: manual "Share → Add to Home Screen" hint. Dismissal persists to localStorage; self-hides when already installed. Logic in lib/pwa.ts
 ```
+
+### PWA / installability
+
+The app is a full installable PWA. `vite-plugin-pwa` (Workbox, configured in `vite.config.ts` next to the Vitest `test` block) generates a service worker with `registerType: 'autoUpdate'` — clients auto-upgrade to the newest deploy, no manual cache clear. It precaches the built app shell (`navigateFallback: '/index.html'`) so the game opens offline, and runtime-caches Google Fonts. `manifest: false` — the hand-authored `public/manifest.webmanifest` (name "Vanishing Tiles", `display: standalone`, theme `#06060B`, 192/512/maskable icons) stays the single source of truth; the plugin only builds the SW. `index.html` carries the manifest link, iOS `apple-mobile-web-app-*` meta (status bar `black`), and OG/Twitter share tags (image = `public/social-preview.png`, referenced by absolute prod URL). `devOptions.enabled: true` lets the SW run under `vite dev`. Verify offline by building + `npm run preview`, then killing the server and reloading.
 
 ### Grid dimensions
 
