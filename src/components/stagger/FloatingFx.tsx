@@ -83,13 +83,14 @@ export function WrongPickFlash({ xMark }: { xMark: boolean }) {
   )
 }
 
-// Clear-payoff bonus receipt: the earned bonuses itemize in the board's UPPER-LEFT
-// — a colored label + white value per line (FLAWLESS cyan / IN ORDER lime / SPEED
-// amber) — each holding a beat then drifting up to evaporate (`vt-bonus-rise`),
-// staggered by its own delay. No travel toward the score; the score counts up on
-// its own underneath. Rendered inside the board's relative wrapper so it scales
-// with the board.
-export type LiftVariant = 'flawless' | 'inOrder' | 'speed'
+// Clear-payoff bonus receipt: the SPECIAL earned bonuses itemize in the board's
+// UPPER-LEFT — a colored label + white value per line (FLAWLESS cyan / IN ORDER
+// lime) — each holding a beat then drifting up to evaporate (`vt-bonus-rise`),
+// staggered by its own delay. The speed bonus is deliberately NOT itemized (it's
+// earned on nearly every clear — the draining timer bar already implies it). No
+// travel toward the score; the score counts up on its own underneath. Rendered
+// inside the board's relative wrapper so it scales with the board.
+export type LiftVariant = 'flawless' | 'inOrder'
 export interface BonusItem {
   id: number
   value: number
@@ -101,7 +102,6 @@ export interface BonusItem {
 const BONUS_TAG_CLASS: Record<LiftVariant, string> = {
   flawless: 'text-vt-cyan',
   inOrder: 'text-vt-lime',
-  speed: 'text-vt-amber',
 }
 
 export function BonusPayoff({ items }: { items: BonusItem[] }) {

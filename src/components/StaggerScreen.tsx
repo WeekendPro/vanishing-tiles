@@ -220,42 +220,48 @@ export function StaggerScreen() {
     if (res.batchCleared) {
       setCleared(true)
       sfx.batchClear()
-      // The earned clear-payoff bonuses, in receipt order: FLAWLESS (clean clear) →
-      // IN ORDER (clean + sequenced) → SPEED (leftover time). Only non-zero ones
-      // appear. SPEED is the one tied to the timer bar draining.
-      const earned = ([
-        { amount: res.flawlessBonus, tag: 'FLAWLESS', variant: 'flawless' as LiftVariant, drains: false },
-        { amount: res.inOrderBonus, tag: 'IN ORDER', variant: 'inOrder' as LiftVariant, drains: false },
-        { amount: res.speedBonus, tag: 'SPEED', variant: 'speed' as LiftVariant, drains: true },
+      // Only the SPECIAL bonuses are itemized: FLAWLESS (clean clear) and IN ORDER
+      // (clean + sequenced) — the ones that DON'T happen every clear. The speed
+      // bonus is deliberately not celebrated (it lands on nearly every clear); it
+      // still banks silently as the timer bar drains into the score below, keeping
+      // "faster = more points" implied rather than spelled out.
+      const receipt = ([
+        { amount: res.flawlessBonus, tag: 'FLAWLESS', variant: 'flawless' as LiftVariant },
+        { amount: res.inOrderBonus, tag: 'IN ORDER', variant: 'inOrder' as LiftVariant },
       ]).filter(b => b.amount > 0)
-      // Itemize them all at once in the board's upper-left; each line's CSS delay
-      // staggers its fade-in / hold / drift-up so they read one at a time.
-      setBonusItems(earned.map((b, j) => ({
+      // Freeze the lime bar (the leftover time), then at the first beat drain it
+      // into the score: the speed bonus pours in UNLABELED (its own reward stays
+      // the draining bar + climbing number, no receipt line).
+      timerBar.freezeLime()
+      window.setTimeout(() => {
+        timerBar.rushToEmpty()
+        if (res.speedBonus > 0) {
+          setScoreCountMs(LIFT_MS)
+          bankSpeedBonus(res.speedBonus)
+        }
+      }, BONUS_BEAT_MS)
+      // The special lines itemize one stagger after the drain, each fading in,
+      // holding, then drifting up to evaporate — banking its points + a lift sound
+      // as it appears. CSS delay matches the bank timing.
+      setBonusItems(receipt.map((b, j) => ({
         id: (bonusItemId.current += 1),
         value: b.amount, tag: b.tag, variant: b.variant,
-        delayMs: BONUS_BEAT_MS + j * BONUS_STAGGER_MS,
+        delayMs: BONUS_BEAT_MS + (j + 1) * BONUS_STAGGER_MS,
       })))
-      // Freeze the lime bar where it currently sits (the leftover time), holding it
-      // through the payoff — the SPEED line cashes it out by draining the bar.
-      timerBar.freezeLime()
-      const hasSpeed = earned.some(b => b.drains)
-      // As each line lands, bank its points and tick the score up (in step with the
-      // line appearing). The SPEED line also rushes the bar to empty — remaining
-      // time visibly turning into points.
-      earned.forEach((b, j) => {
+      receipt.forEach((b, j) => {
         window.setTimeout(() => {
-          if (b.drains) timerBar.rushToEmpty()
           sfx.bonusLift()
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(b.amount)
-        }, BONUS_BEAT_MS + j * BONUS_STAGGER_MS)
+        }, BONUS_BEAT_MS + (j + 1) * BONUS_STAGGER_MS)
       })
-      // No leftover-time bonus (a slow or lossy clear): still drain the held bar so
-      // it never lingers frozen into the next batch.
-      if (!hasSpeed) window.setTimeout(() => timerBar.rushToEmpty(), BONUS_BEAT_MS)
-      // Advance once the last line has fully risen and evaporated, clearing the
-      // receipt as the next batch's reveal takes over.
-      const payoffMs = BONUS_BEAT_MS + Math.max(0, earned.length - 1) * BONUS_STAGGER_MS + BONUS_RISE_MS
+      // Advance once the last special line evaporates (or, with no special lines,
+      // once the bar-drain payoff settles), clearing the receipt as the next
+      // batch's reveal takes over.
+      const receiptEnd = receipt.length > 0
+        ? BONUS_BEAT_MS + receipt.length * BONUS_STAGGER_MS + BONUS_RISE_MS
+        : 0
+      const payoffMs = Math.max(receiptEnd, BONUS_BEAT_MS + LIFT_MS + 240)
       window.setTimeout(() => {
         setScoreCountMs(600)
         setCleared(false)
