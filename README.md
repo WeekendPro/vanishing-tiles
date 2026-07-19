@@ -65,10 +65,6 @@ for a different kind of memory:
 | 🟡 **Medium** | Monochrome neon | In any order |
 | 🔴 **Hard** | Monochrome deep ink | **In the exact order shown** |
 
-> **Training** — a separate, consequence-free drill for learning the seven piece
-> shapes by name. No clock, no lives, no score: just a piece, a row of letters,
-> and your reaction time.
-
 ## Screens
 
 <div align="center">
