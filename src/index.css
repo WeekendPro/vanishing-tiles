@@ -243,9 +243,10 @@ html {
 /* HARD reveal — the lifted graphite surface with a soft bevel. Where MEDIUM
    floods bright magenta, HARD blooms a low-key graphite block that reads as a
    shape without lighting up the board: a modest cool FLASH announces the gap,
-   then it settles to the graphite tone — lit by a soft top-edge highlight +
-   bottom shadow (the bevel) so the shape is legible while staying the murkiest,
-   hardest board — then decays cleanly back to the grid void. Self-colored (no
+   then it settles to the graphite tone — lit by a raised emboss (top-left
+   highlight + bottom-right shadow) so the shape reads like a physical block
+   while staying the murkiest, hardest board — then decays cleanly back to the
+   grid void. Self-colored (no
    --bloom-color) — the low contrast is still the whole added difficulty, just
    dialed up enough to make out. One timeline per cell (animation-duration set
    inline to hold+decay), so the four cells wink out in the diagonal wave. */
@@ -264,16 +265,16 @@ html {
   }
   8% {
     background: #465066;
-    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    box-shadow: inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.26), inset -1px -1.5px 1.5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     transform: scale(1);
   }
-  /* Hold: the lifted graphite with its soft bevel (top highlight + bottom
-     shadow + hairline) — exactly the surface HARD's placed/tray pieces wear, so
-     the shape you memorize looks exactly like the piece you later place. The
-     bevel fades out with the cell during decay. */
+  /* Hold: the lifted graphite with its raised emboss (top-left highlight +
+     bottom-right shadow + hairline) — exactly the surface HARD's placed/tray
+     pieces wear, so the shape you memorize looks exactly like the piece you
+     later place. The emboss fades out with the cell during decay. */
   52% {
     background: #465066;
-    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+    box-shadow: inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.26), inset -1px -1.5px 1.5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
   /* Decay to the grid's own void tone (#0c0c14) at FULL opacity — like
      vtBloomDecay — so a spent gap leaves no trace (an opacity fade would reveal
@@ -287,22 +288,22 @@ html {
 }
 .vt-paint { animation: vtPaint 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
-/* The lifted graphite with its soft bevel as a STATIC swatch — no animation.
+/* The lifted graphite with its raised emboss as a STATIC swatch — no animation.
    Worn by HARD's recall-tray pieces and its placed board cells, so the whole
    HARD palette is this one graphite block (matching the reveal it decays from).
-   The bevel (top highlight + bottom shadow) + hairline give the shape enough
-   contour to read against the void — HARD stays the murkiest board, just no
+   The emboss (top-left highlight + bottom-right shadow) + hairline give the
+   shape enough contour to read against the void — HARD stays the murkiest, just no
    longer a strain — and keep the pieces legible where they must be USABLE: in
    the tray (on the #15151f sockets) and as placed confirmations. The reveal
    (.vt-paint) wears the same fill + bevel through its hold, so HARD's memorize
    and place phases match. */
 .vt-paint-surface {
   background: #465066;
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.26), inset -1px -1.5px 1.5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vt-paint { animation: none; background: #465066; box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+  .vt-paint { animation: none; background: #465066; box-shadow: inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.26), inset -1px -1.5px 1.5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
 }
 
 /* Recall-tray piece TAP feedback: on tap the button gives a quick ~2px lift and
