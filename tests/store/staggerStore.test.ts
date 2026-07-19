@@ -597,3 +597,139 @@ describe('hard mode: out-of-order hint flag', () => {
     expect(res.outOfOrder).toBe(false)
   })
 })
+
+describe('clean-clear bonuses (FLAWLESS / IN ORDER)', () => {
+  /** Seed a deterministic batch of distinct-shaped gaps with an explicit reveal
+   *  order. `revealPlan` indexes into `shapes`; distinct shapes keep ordering
+   *  unambiguous. Lands mid-`selecting` with lots of clock + lives. */
+  function seedBonusBatch(
+    mode: 'easy' | 'medium' | 'hard',
+    shapes: PieceType[],
+    revealPlan: number[],
+  ) {
+    useStaggerStore.getState().startRun(mode)
+    useStaggerStore.setState({
+      phase: 'selecting',
+      gaps: shapes.map((t, i) => ({ cells: [[i, 0]], pieceType: t, rotation: 0, filled: false })) as never,
+      revealPlan,
+      selectStartTime: Date.now(),
+      selectDuration: 10_000,
+    })
+  }
+
+  /** Pick every gap in reveal order; returns the clearing pick's result. */
+  function clearInOrder() {
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    let res = useStaggerStore.getState().pickPiece(gaps[revealPlan[0]].pieceType)
+    for (let k = 1; k < revealPlan.length; k++) {
+      res = useStaggerStore.getState().pickPiece(gaps[revealPlan[k]].pieceType)
+    }
+    return res
+  }
+
+  it('a flawless in-order clear on easy earns BOTH bonuses, scaled per gap', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    seedBonusBatch('easy', shapes, [0, 1, 2])
+    const res = clearInOrder()
+    expect(res.batchCleared).toBe(true)
+    expect(res.flawlessBonus).toBe(STAGGER.FLAWLESS_PER_GAP * shapes.length)
+    expect(res.inOrderBonus).toBe(STAGGER.IN_ORDER_PER_GAP * shapes.length)
+  })
+
+  it('medium behaves like easy (both bonuses on a flawless in-order clear)', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T', 'S']
+    seedBonusBatch('medium', shapes, [0, 1, 2, 3])
+    const res = clearInOrder()
+    expect(res.flawlessBonus).toBe(STAGGER.FLAWLESS_PER_GAP * shapes.length)
+    expect(res.inOrderBonus).toBe(STAGGER.IN_ORDER_PER_GAP * shapes.length)
+  })
+
+  it('hard earns FLAWLESS but never a separate IN ORDER bonus (order is mandatory)', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    seedBonusBatch('hard', shapes, [0, 1, 2])
+    const res = clearInOrder()
+    expect(res.batchCleared).toBe(true)
+    expect(res.flawlessBonus).toBe(STAGGER.FLAWLESS_PER_GAP * shapes.length)
+    expect(res.inOrderBonus).toBe(0)
+  })
+
+  it('a flawless but OUT-OF-ORDER easy clear earns FLAWLESS only', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    // Reveal order is 0,1,2 but we recall 2 (T) first — a legal easy pick that
+    // breaks the sequence without any miss.
+    seedBonusBatch('easy', shapes, [0, 1, 2])
+    const st = useStaggerStore.getState()
+    st.pickPiece('T') // gap 2, not the next-in-order gap 0 → in-order flag falls
+    st.pickPiece('O')
+    const res = st.pickPiece('I')
+    expect(res.batchCleared).toBe(true)
+    expect(res.flawlessBonus).toBe(STAGGER.FLAWLESS_PER_GAP * shapes.length)
+    expect(res.inOrderBonus).toBe(0)
+  })
+
+  it('a single miss forfeits BOTH bonuses, even with a tidy in-order finish after', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    seedBonusBatch('easy', shapes, [0, 1, 2])
+    const st = useStaggerStore.getState()
+    expect(st.pickPiece('S').ok).toBe(false) // wrong shape → a miss (S isn't on the board)
+    const res = clearInOrder()               // then recall everything perfectly in order
+    expect(res.batchCleared).toBe(true)
+    expect(res.flawlessBonus).toBe(0)
+    expect(res.inOrderBonus).toBe(0)
+  })
+
+  it('same-shape ties resolve in the player\'s favor for IN ORDER', () => {
+    // Two O gaps: array order [O, I, O] but reveal order [2, 1, 0] — so the FIRST
+    // O the player should recall is gaps[2], which a naive find() would miss.
+    const shapes: PieceType[] = ['O', 'I', 'O']
+    seedBonusBatch('easy', shapes, [2, 1, 0])
+    const res = clearInOrder() // O (→ gaps[2]), I (→ gaps[1]), O (→ gaps[0])
+    expect(res.batchCleared).toBe(true)
+    expect(res.inOrderBonus).toBe(STAGGER.IN_ORDER_PER_GAP * shapes.length)
+  })
+
+  it('banking all three bonuses lands them in the cumulative score', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    seedBonusBatch('easy', shapes, [0, 1, 2])
+    const res = clearInOrder()
+    const afterPicks = useStaggerStore.getState().score
+    const st = useStaggerStore.getState()
+    st.bankSpeedBonus(res.flawlessBonus)
+    st.bankSpeedBonus(res.inOrderBonus)
+    st.bankSpeedBonus(res.speedBonus)
+    expect(useStaggerStore.getState().score).toBe(
+      afterPicks + res.flawlessBonus + res.inOrderBonus + res.speedBonus,
+    )
+  })
+
+  it('a timeout replay resets eligibility — a clean replay still earns the bonuses', () => {
+    const shapes: PieceType[] = ['O', 'I', 'T']
+    seedBonusBatch('easy', shapes, [0, 1, 2])
+    const st = useStaggerStore.getState()
+    st.pickPiece('S') // a miss forfeits this attempt's bonuses
+    expect(useStaggerStore.getState().batchFlawless).toBe(false)
+    st.timeoutBatch()  // costs a life, replays the SAME batch fresh
+    expect(useStaggerStore.getState().batchFlawless).toBe(true)
+    expect(useStaggerStore.getState().batchInOrder).toBe(true)
+    // Replay it cleanly, in order → both bonuses return.
+    useStaggerStore.setState({ phase: 'selecting', selectStartTime: Date.now(), selectDuration: 10_000 })
+    const res = clearInOrder()
+    expect(res.flawlessBonus).toBe(STAGGER.FLAWLESS_PER_GAP * shapes.length)
+    expect(res.inOrderBonus).toBe(STAGGER.IN_ORDER_PER_GAP * shapes.length)
+  })
+
+  it('the guided demo earns no bonuses', () => {
+    const st = useStaggerStore.getState()
+    st.startRun('easy', { demo: true })
+    st.beginReveal()
+    st.beginSelecting()
+    const { gaps, revealPlan } = useStaggerStore.getState()
+    let res = useStaggerStore.getState().pickPiece(gaps[revealPlan[0]].pieceType)
+    for (let k = 1; k < revealPlan.length; k++) {
+      res = useStaggerStore.getState().pickPiece(gaps[revealPlan[k]].pieceType)
+    }
+    expect(res.batchCleared).toBe(true)
+    expect(res.flawlessBonus).toBe(0)
+    expect(res.inOrderBonus).toBe(0)
+  })
+})

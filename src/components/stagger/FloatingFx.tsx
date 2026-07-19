@@ -83,13 +83,28 @@ export function WrongPickFlash({ xMark }: { xMark: boolean }) {
   )
 }
 
-// Time → score "Lift": the leftover-time "+bonus" rises off the right end of
-// the timer bar and dissolves into the score readout as the bar drains and
-// the number climbs (fired from onPick on a cleared batch).
+// Clear-payoff "Lift": a labeled "+bonus" rises off the timer bar and dissolves
+// into the score readout as the number climbs. Fired one-per-earned-bonus from
+// onPick on a cleared batch — FLAWLESS (cyan) → IN ORDER (lime) → SPEED (amber).
+export type LiftVariant = 'flawless' | 'inOrder' | 'speed'
+export interface LiftFlyerData {
+  id: number
+  value: number
+  tag: string
+  variant: LiftVariant
+  x0: number; y0: number; x1: number; y1: number
+}
+
+const LIFT_VARIANT_CLASS: Record<LiftVariant, string> = {
+  flawless: 'text-vt-cyan text-glow-vt-cyan',
+  inOrder: 'text-vt-lime text-glow-vt-lime',
+  speed: 'text-vt-amber text-glow-vt-amber',
+}
+
 export function LiftFlyer({
   liftFlyer, onDone,
 }: {
-  liftFlyer: { value: number; x0: number; y0: number; x1: number; y1: number }
+  liftFlyer: LiftFlyerData
   onDone: () => void
 }) {
   return (
@@ -104,10 +119,11 @@ export function LiftFlyer({
       transition={{ duration: LIFT_MS / 1000, ease: [0.33, 1, 0.68, 1], times: [0, 0.18, 0.72, 1] }}
       onAnimationComplete={onDone}
       transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
-      className="fixed z-[60] pointer-events-none font-silk font-bold text-2xl whitespace-nowrap text-vt-lime text-glow-vt-lime tabular-nums"
+      className={`fixed z-[60] pointer-events-none flex flex-col items-center whitespace-nowrap ${LIFT_VARIANT_CLASS[liftFlyer.variant]}`}
       style={{ left: liftFlyer.x0, top: liftFlyer.y0, textShadow: FLOAT_TEXT_SHADOW }}
     >
-      +{liftFlyer.value}
+      <span className="font-grotesk font-bold text-[10px] tracking-[0.16em] uppercase leading-none mb-0.5">{liftFlyer.tag}</span>
+      <span className="font-silk font-bold text-2xl leading-none tabular-nums">+{liftFlyer.value}</span>
     </motion.div>
   )
 }

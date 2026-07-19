@@ -26,7 +26,15 @@ export interface PickResult {
   combo: number   // streak length AFTER this pick (0 on a miss)
   gained: number  // points this pick earned (base × streak; 0 on a miss)
   speedBonus: number  // leftover-time bonus to bank during the clear payoff (0 unless this pick cleared the batch)
+  flawlessBonus: number // clean-clear bonus: no life lost this batch (all modes); 0 unless this pick cleared the batch
+  inOrderBonus: number  // ordered-clear bonus: flawless AND in reveal order (Easy/Medium only); 0 unless this pick cleared the batch
   outOfOrder: boolean // hard-mode miss where the piece DOES match a remaining gap, just not the next one in reveal order (drives the "IN ORDER" hint flash)
+}
+
+/** A no-result pick (wrong phase / demo miss): no points, no bonuses, no flags. */
+const NULL_PICK: PickResult = {
+  ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0,
+  speedBonus: 0, flawlessBonus: 0, inOrderBonus: 0, outOfOrder: false,
 }
 
 interface StaggerState {
@@ -36,6 +44,11 @@ interface StaggerState {
   batchIndex: number          // 0-based; drives difficulty + timing
   gaps: StaggerGap[]          // current batch's gaps
   revealPlan: number[]        // reveal order: a shuffled sequence of indices into `gaps`, one gap per beat
+  // Per-batch-ATTEMPT clean-clear eligibility, reset when a fresh attempt's gaps
+  // go live (startRun / beginRunFromDemo / advanceBatch / timeoutBatch replay).
+  // A replayed reveal (replayReveal) is the SAME attempt and does NOT reset them.
+  batchFlawless: boolean      // no life lost yet this attempt → FLAWLESS still earnable (all modes)
+  batchInOrder: boolean       // every fill so far followed reveal order → IN ORDER still earnable (Easy/Medium)
   score: number               // cumulative across the whole run
   lives: number               // shared pool; run ends at 0
   selectStartTime: number     // Date.now() when selecting began (for speed scoring)
@@ -55,7 +68,7 @@ interface StaggerState {
   beginReveal: () => void     // countdown → reveal (generates the current batch); demo intro → reveal (scripted batch kept)
   beginSelecting: () => void  // reveal done → selecting (starts/resumes the clock)
   pickPiece: (type: PieceType) => PickResult
-  bankSpeedBonus: (amount: number) => void  // fold the deferred leftover-time bonus into the score (drives the time→score payoff)
+  bankSpeedBonus: (amount: number) => void  // fold a deferred clear-payoff bonus (speed / flawless / in-order) into the score, awarding any earned lives
   advanceBatch: () => void    // batch cleared → next batch's reveal
   timeoutBatch: () => void    // select clock expired → costs a life, replays the same phase
   replayReveal: () => boolean // spend points to replay the memorize sequence
@@ -111,6 +124,8 @@ const IDLE = {
   batchIndex: 0,
   gaps: [] as StaggerGap[],
   revealPlan: [] as number[],
+  batchFlawless: true,
+  batchInOrder: true,
   score: 0,
   lives: STAGGER.START_LIVES,
   selectStartTime: 0,
@@ -165,37 +180,45 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     const {
       phase, mode, gaps, revealPlan, lives, score, selectStartTime, selectDuration,
       totalPicks, correctPicks, shapesRecalled, currentCombo, bestCombo,
+      batchFlawless, batchInOrder,
     } = get()
-    if (phase !== 'selecting') return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder: false }
+    if (phase !== 'selecting') return NULL_PICK
+
+    // The earliest still-unfilled gap in reveal order — the one an in-order recall
+    // is "supposed" to fill next. Its shape matching the tap means this pick IS in
+    // order; that also lets same-shape ties resolve in the player's favor below.
+    const nextIdx = revealPlan.find(i => !gaps[i].filled)
+    const nextGap = nextIdx !== undefined ? gaps[nextIdx] : undefined
+    const picksNextInOrder = nextGap?.pieceType === type
 
     // A pick is correct iff some still-unfilled gap has the exact same shape.
     // Tetromino types are shape-unique, so piece-type equality IS the shape match.
     // In hard mode, recall must additionally match the REVEAL order: only the
-    // earliest still-unfilled gap in `revealPlan` order may be picked next.
+    // next-in-order gap may be picked. In Easy/Medium any matching gap fills, but
+    // we prefer the next-in-order gap on a shape tie so identical shapes never
+    // spuriously break the in-order flag.
     const target = mode === 'hard'
-      ? (() => {
-          const nextIdx = revealPlan.find(i => !gaps[i].filled)
-          return nextIdx !== undefined && gaps[nextIdx].pieceType === type ? gaps[nextIdx] : undefined
-        })()
-      : gaps.find(g => !g.filled && g.pieceType === type)
+      ? (picksNextInOrder ? nextGap : undefined)
+      : (picksNextInOrder ? nextGap : gaps.find(g => !g.filled && g.pieceType === type))
 
     if (!target) {
       // Demo miss: consequence-free — no life loss, no stat pollution; the
       // screen supplies its own gentle correction.
-      if (get().demo) return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder: false }
+      if (get().demo) return NULL_PICK
       // On hard, distinguish "right shape, wrong order" (the shape still sits in an
       // unfilled gap — only the order rule rejected it) from a flat-out wrong piece,
       // so the UI can hint at WHY the pick missed. Consequences are identical.
       const outOfOrder = mode === 'hard' && gaps.some(g => !g.filled && g.pieceType === type)
-      // A miss: counts toward accuracy and breaks the running combo, and costs a life.
+      // A miss: counts toward accuracy, breaks the running combo, costs a life, and
+      // forfeits the batch's clean-clear bonuses (FLAWLESS = "no life lost").
       const nextLives = lives - 1
-      const baseStats = { totalPicks: totalPicks + 1, currentCombo: 0 }
+      const baseStats = { totalPicks: totalPicks + 1, currentCombo: 0, batchFlawless: false }
       if (nextLives <= 0) {
         set({ lives: 0, phase: 'gameOver', ...baseStats })
-        return { ok: false, batchCleared: false, gameOver: true, combo: 0, gained: 0, speedBonus: 0, outOfOrder }
+        return { ...NULL_PICK, gameOver: true, outOfOrder }
       }
       set({ lives: nextLives, ...baseStats })
-      return { ok: false, batchCleared: false, gameOver: false, combo: 0, gained: 0, speedBonus: 0, outOfOrder }
+      return { ...NULL_PICK, outOfOrder }
     }
 
     // A correct recall: extend the streak. The per-pick reward scales LINEARLY
@@ -205,14 +228,25 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     const nextGaps = gaps.map(g => (g === target ? { ...g, filled: true } : g))
     const nextScore = score + gained
     const cleared = nextGaps.every(g => g.filled)
-    // On a clear the leftover-time bonus is NOT folded in here — it's returned and
-    // banked separately (via bankSpeedBonus) so the UI can pour it into the score
-    // as the timer bar drains: the "time → points" payoff.
-    const speedBonus = cleared && !get().demo
+    // In-order tracking (Easy/Medium): a fill that isn't the next-in-order gap
+    // forfeits IN ORDER for the batch. (Hard fills are always in order by rule.)
+    const nextInOrder = batchInOrder && picksNextInOrder
+    const isDemo = get().demo
+    // Clean-clear bonuses, banked separately (via bankSpeedBonus) alongside the
+    // leftover-time speed bonus so the UI can pour each into the score during the
+    // clear payoff. FLAWLESS: no life lost this attempt (all modes). IN ORDER:
+    // flawless AND every fill in reveal order (Easy/Medium only — Hard enforces
+    // order, so it earns no separate award). IN ORDER implies FLAWLESS → they stack.
+    const gapCount = nextGaps.length
+    const speedBonus = cleared && !isDemo
       ? batchSpeedBonus(Math.max(0, selectStartTime + selectDuration - Date.now()), selectDuration)
       : 0
+    const flawlessBonus = cleared && !isDemo && batchFlawless
+      ? STAGGER.FLAWLESS_PER_GAP * gapCount : 0
+    const inOrderBonus = cleared && !isDemo && batchFlawless && nextInOrder && mode !== 'hard'
+      ? STAGGER.IN_ORDER_PER_GAP * gapCount : 0
     // Earn-a-life: every LIFE_EVERY cumulative points awards a life. The deferred
-    // speed bonus awards its own lives when it's banked.
+    // bonuses award their own lives when they're banked.
     const livesGained =
       Math.floor(nextScore / STAGGER.LIFE_EVERY) - Math.floor(score / STAGGER.LIFE_EVERY)
     set({
@@ -224,8 +258,9 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       totalPicks: totalPicks + 1,
       currentCombo: nextCombo,
       bestCombo: Math.max(bestCombo, nextCombo),
+      batchInOrder: nextInOrder,
     })
-    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus, outOfOrder: false }
+    return { ok: true, gap: { ...target, filled: true }, batchCleared: cleared, gameOver: false, combo: nextCombo, gained, speedBonus, flawlessBonus, inOrderBonus, outOfOrder: false }
   },
 
   bankSpeedBonus: (amount) => {
@@ -241,7 +276,7 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
     // Difficulty progression (batchIndex) always advances; the next batch's
     // reveal begins immediately — no level transitions or celebrations.
     const next = get().batchIndex + 1
-    set({ phase: 'reveal', batchIndex: next, ...makeBatch(next) })
+    set({ phase: 'reveal', batchIndex: next, batchFlawless: true, batchInOrder: true, ...makeBatch(next) })
   },
 
   timeoutBatch: () => {
@@ -254,7 +289,9 @@ export const useStaggerStore = create<StaggerState>((set, get) => ({
       set({ lives: 0, phase: 'gameOver', currentCombo: 0 })
       return
     }
-    set({ lives, phase: 'reveal', gaps: get().gaps.map(g => ({ ...g, filled: false })), currentCombo: 0 })
+    // Fresh attempt at the same batch: clean-clear eligibility resets, so a tidy
+    // replay can still earn FLAWLESS/IN ORDER (the timeout already cost a life).
+    set({ lives, phase: 'reveal', gaps: get().gaps.map(g => ({ ...g, filled: false })), currentCombo: 0, batchFlawless: true, batchInOrder: true })
   },
 
   replayReveal: () => {

@@ -38,6 +38,13 @@ export const STAGGER = {
   SELECT_MIN_FACTOR: 0.7,          // …until it bottoms out at 70% (batch 60+)
   ACCURACY_PER_GAP: 100, // points banked per correctly recalled gap
   SPEED_MAX: 500,      // max per-batch speed bonus
+  // Per-batch "clean clear" rewards, banked at clear like the speed bonus. Flat
+  // per-gap (they do NOT compound with the streak), so they scale with batch size
+  // without ballooning the economy. FLAWLESS = cleared with no life lost (all
+  // modes); IN ORDER = flawless AND recalled in reveal order (Easy/Medium only,
+  // since Hard enforces order anyway). IN ORDER implies FLAWLESS, so they stack.
+  FLAWLESS_PER_GAP: 150,
+  IN_ORDER_PER_GAP: 250,
   START_LIVES: 5,      // shared lives for the whole run
   LIFE_EVERY: 5000,    // every N cumulative points earns one life back
   REPLAY_COST: 500,    // points spent to replay the memorize sequence mid-batch

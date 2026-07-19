@@ -10,14 +10,14 @@ import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
 import { NeonButton, ScaleToFit } from './ui'
 import { useCountUp } from '../hooks/useCountUp'
-import { CELL, CELL_PITCH, BOARD_PAD, LIFT_BEAT_MS, LIFT_MS, ORDER_HINT_MS } from './stagger/constants'
+import { CELL, CELL_PITCH, BOARD_PAD, LIFT_BEAT_MS, LIFT_MS, LIFT_STEP_MS, ORDER_HINT_MS } from './stagger/constants'
 import { StaggerBoard } from './stagger/StaggerBoard'
 import { StaggerCountdown } from './stagger/StaggerCountdown'
 import { PieceTray } from './stagger/PieceTray'
 import { HudBar } from './stagger/HudBar'
 import { GameOverSummary } from './stagger/GameOverSummary'
 import { DemoIntroOverlay, DemoEndOverlay, DemoFooterRow } from './stagger/DemoOverlays'
-import { StreakBursts, LifeBursts, WrongPickFlash, LiftFlyer } from './stagger/FloatingFx'
+import { StreakBursts, LifeBursts, WrongPickFlash, LiftFlyer, type LiftFlyerData, type LiftVariant } from './stagger/FloatingFx'
 import { PauseButton, CountdownPauseSkeleton, PauseStatsOverlay } from './stagger/PauseControls'
 import { useRunRecording } from './stagger/useRunRecording'
 import { useStreakChip } from './stagger/useStreakChip'
@@ -75,9 +75,11 @@ export function StaggerScreen() {
   // onPick's clear-payoff.
   const timerBar = useTimerBar()
 
-  // The leftover-time "+bonus" that lifts off the bar and dissolves into the score
-  // on a cleared batch (the "Lift" payoff). Null when no payoff is in flight.
-  const [liftFlyer, setLiftFlyer] = useState<{ value: number; x0: number; y0: number; x1: number; y1: number } | null>(null)
+  // The earned "+bonus" flyers that lift off the bar and dissolve into the score
+  // on a cleared batch (the "Lift" payoff): FLAWLESS / IN ORDER / SPEED, each an
+  // entry that self-removes on animation-complete. Empty when no payoff is in flight.
+  const [liftFlyers, setLiftFlyers] = useState<LiftFlyerData[]>([])
+  const liftFlyerId = useRef(0)
 
   // Score count-up duration: snappy (600ms) per pick, stretched to the drain
   // window (LIFT_MS) while the cleared-batch speed bonus pours in, so the number
@@ -106,7 +108,7 @@ export function StaggerScreen() {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
       setStreakBursts([])
       setStreakChip(null)
-      setLiftFlyer(null)
+      setLiftFlyers([])
       setScoreCountMs(600)
       setDemoWrong(null)
       setDemoDone(false)
@@ -130,17 +132,18 @@ export function StaggerScreen() {
   // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
   // bar up to the score readout. Skipped under reduced motion — the score still
   // counts up, just without the traveling flyer.
-  const spawnLiftFlyer = (value: number, barRect: DOMRect | null) => {
+  const spawnLiftFlyer = (value: number, tag: string, variant: LiftVariant, barRect: DOMRect | null) => {
     if (reduceMotion) return
     const sc = scoreRef.current?.getBoundingClientRect()
     if (!barRect || !sc) return
-    setLiftFlyer({
-      value,
+    const id = (liftFlyerId.current += 1)
+    setLiftFlyers(prev => [...prev, {
+      id, value, tag, variant,
       x0: barRect.right,
       y0: barRect.top + barRect.height / 2,
       x1: sc.left + sc.width / 2,
       y1: sc.top + sc.height / 2,
-    })
+    }])
   }
 
   // Any exit from the demo (the skip link, or the end beat's tap-to-start)
@@ -195,12 +198,14 @@ export function StaggerScreen() {
     // gameOver only ever rides a miss: give the final pick its miss buzz too
     // (the gameOver farewell itself fires from the phase effect above).
     if (res.gameOver) { sfx.pickWrong(); return }
-    // Any resolved pick ends a live "IN ORDER" hint; a right-shape-wrong-order
-    // miss (re)starts it — the phase label swaps to the hint for ORDER_HINT_MS
-    // as a central cue for WHY the pick missed, on top of the standard miss
-    // feedback below.
+    // Hard mode validates the rule the moment it's broken: ANY miss (a flat wrong
+    // shape OR a right-shape-wrong-order tap) flashes "IN ORDER" red in the central
+    // line for ORDER_HINT_MS, on top of the standard miss feedback below. A correct
+    // pick ends the hint. (Since a miss zeroes the streak, the flash never competes
+    // with the streak takeover.)
+    const hardMiss = mode === 'hard' && !res.ok
     window.clearTimeout(orderHintTimer.current)
-    if (res.outOfOrder) {
+    if (hardMiss) {
       setOrderHint(n => n + 1)
       orderHintTimer.current = window.setTimeout(() => setOrderHint(0), ORDER_HINT_MS)
     } else {
@@ -233,29 +238,40 @@ export function StaggerScreen() {
     if (res.batchCleared) {
       setCleared(true)
       sfx.batchClear()
-      const bonus = res.speedBonus
+      // The earned clear-payoff bonuses, in lift order: FLAWLESS (clean clear) →
+      // IN ORDER (clean + sequenced) → SPEED (leftover time). Only non-zero ones
+      // appear. SPEED is the one tied to the timer bar draining.
+      const earned = ([
+        { amount: res.flawlessBonus, tag: 'FLAWLESS', variant: 'flawless' as LiftVariant, drains: false },
+        { amount: res.inOrderBonus, tag: 'IN ORDER', variant: 'inOrder' as LiftVariant, drains: false },
+        { amount: res.speedBonus, tag: 'SPEED', variant: 'speed' as LiftVariant, drains: true },
+      ]).filter(b => b.amount > 0)
       // Freeze the lime bar where it currently sits (the leftover time), holding it
-      // for a short anticipation beat before the payoff.
+      // through the payoff — the SPEED lift cashes it out by draining the bar.
       timerBar.freezeLime()
-      // Release: the bar rushes to empty while the leftover time LIFTS off it as a
-      // single big "+bonus" that floats up and dissolves into the score, and the
-      // score counts up by exactly that bonus — all over the same LIFT_MS window,
-      // so remaining time is read as turning into points.
-      window.setTimeout(() => {
-        const barRect = timerBar.barRef.current?.getBoundingClientRect() ?? null
-        timerBar.rushToEmpty()
-        if (bonus > 0) {
+      const hasSpeed = earned.some(b => b.drains)
+      // Each earned bonus LIFTS off the bar in turn, staggered by LIFT_STEP_MS, and
+      // dissolves into the score as the number counts up. The SPEED lift also rushes
+      // the bar to empty — remaining time visibly turning into points.
+      earned.forEach((b, j) => {
+        window.setTimeout(() => {
+          const barRect = timerBar.barRef.current?.getBoundingClientRect() ?? null
+          if (b.drains) timerBar.rushToEmpty()
           sfx.bonusLift()
-          spawnLiftFlyer(bonus, barRect)
+          spawnLiftFlyer(b.amount, b.tag, b.variant, barRect)
           setScoreCountMs(LIFT_MS)
-          bankSpeedBonus(bonus)
-        }
-      }, LIFT_BEAT_MS)
+          bankSpeedBonus(b.amount)
+        }, LIFT_BEAT_MS + j * LIFT_STEP_MS)
+      })
+      // No leftover-time bonus (a slow or lossy clear): still drain the held bar so
+      // it never lingers frozen into the next batch.
+      if (!hasSpeed) window.setTimeout(() => timerBar.rushToEmpty(), LIFT_BEAT_MS)
+      const lastLaunch = LIFT_BEAT_MS + Math.max(0, earned.length - 1) * LIFT_STEP_MS
       window.setTimeout(() => {
         setScoreCountMs(600)
         setCleared(false)
         advanceBatch()
-      }, LIFT_BEAT_MS + LIFT_MS + 240)
+      }, lastLaunch + LIFT_MS + 240)
     }
   }
 
@@ -289,12 +305,17 @@ export function StaggerScreen() {
         : gaps.some(g => g.filled) ? 'NOW THE NEXT SHAPE' : 'TAP THE FIRST SHAPE YOU SAW')
       : null
 
-  // Out-of-order hint takes over the phase label mid-recall (never over CLEAR!).
+  // Out-of-order hint takes over the phase label mid-recall (only on a live miss,
+  // which zeroes the streak — so it never competes with the streak takeover).
   const orderHintActive = orderHint > 0 && phase === 'selecting' && !cleared
-  // Streak takeover of the central line: only mid-recall, and outranked by both
-  // the IN ORDER hint and the CLEAR! beat.
-  const streakTakeover = streakChip !== null && phase === 'selecting' && !cleared && !orderHintActive
+  // Streak takeover of the central line. The streak is the headline the player
+  // most needs — so it now ALSO owns the line through the clear payoff, in place
+  // of the old "CLEAR!" (a batch only clears on a correct pick, so the streak is
+  // always live there). The IN ORDER miss-flash still outranks it mid-recall.
+  const streakTakeover = streakChip !== null && phase === 'selecting' && !orderHintActive
   const phaseLabel = demoCoach ?? (
+    // "CLEAR!" survives only as the fallback when the streak is too short to have
+    // a chip (< 3) — in practice the streak takeover covers the clear beat.
     phase === 'reveal' ? 'MEMORIZE' :
     phase === 'selecting' ? (cleared ? 'CLEAR!' : orderHintActive ? 'IN ORDER' : 'RECALL') : '')
 
@@ -411,18 +432,9 @@ export function StaggerScreen() {
 
       </div>
 
-      {/* Tray — on HARD, an "IN ORDER" chip rides above it (matching the STREAK
-          chip's styling) as a reminder that recall must follow the reveal
-          sequence; no per-gap numbering — remembering the order IS the challenge. */}
+      {/* Tray. Hard mode's "IN ORDER" reminder now lives in the central line above
+          the grid (a red flash on any miss), not a chip beside the tray. */}
       <div className="mt-4 w-full flex flex-col items-center">
-        {/* On HARD the line is kept in the layout (invisible) through the
-            reveal too, so the tray and pause button hold one position across
-            the memorize ↔ recall swap. */}
-        {(phase === 'selecting' || phase === 'reveal' || phase === 'countdown') && mode === 'hard' && (
-          <div className={`w-full max-w-sm mb-1.5 text-right font-silk font-bold text-[11px] tracking-[0.1em] text-vt-magenta text-glow-vt-magenta${phase === 'reveal' || phase === 'countdown' ? ' invisible' : ''}`}>
-            IN ORDER
-          </div>
-        )}
         <div className="min-h-[88px] w-full flex justify-center">
           {/* The tray stays mounted through the reveal too — as the concealed
               empty-socket shell — so the layout never jumps when recall
@@ -465,9 +477,9 @@ export function StaggerScreen() {
         />
       )}
 
-      {liftFlyer && (
-        <LiftFlyer liftFlyer={liftFlyer} onDone={() => setLiftFlyer(null)} />
-      )}
+      {liftFlyers.map(f => (
+        <LiftFlyer key={f.id} liftFlyer={f} onDone={() => setLiftFlyers(prev => prev.filter(p => p.id !== f.id))} />
+      ))}
     </div>
   )
 }
