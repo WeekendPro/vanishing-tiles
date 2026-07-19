@@ -35,4 +35,9 @@ export const analytics = {
 
   /** A session is established — carries the method so we can see the split. */
   authCompleted: (method: AuthMethod) => track('auth', { method }),
+
+  /** A player shared their game-over card — `method` is the native share sheet
+   *  vs. the desktop download/copy fallback (the acquisition-loop signal). */
+  resultShared: (p: { mode: Difficulty; method: 'native' | 'download' }) =>
+    track('result_shared', { ...p }),
 }

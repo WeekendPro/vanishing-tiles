@@ -17,17 +17,18 @@ beforeEach(() => {
 })
 
 describe('StaggerScreen game over', () => {
-  it('offers Play again / Leaderboard / Home', async () => {
+  it('offers Play again / Home / Share / Ranks', async () => {
     render(<StaggerScreen />)
     expect(await screen.findByRole('button', { name: /play again/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /leaderboard/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /home/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /share/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /ranks/i })).toBeInTheDocument()
   })
 
-  it('Leaderboard tears the run down and navigates to the rankings', async () => {
+  it('Ranks tears the run down and navigates to the rankings', async () => {
     const user = userEvent.setup()
     render(<StaggerScreen />)
-    await user.click(await screen.findByRole('button', { name: /leaderboard/i }))
+    await user.click(await screen.findByRole('button', { name: /ranks/i }))
     expect(useNavStore.getState().appView).toBe('leaderboard')
     expect(useStaggerStore.getState().phase).toBe('idle')
   })

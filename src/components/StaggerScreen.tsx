@@ -4,6 +4,8 @@ import { type PieceType } from '@shared/types'
 import { useStaggerStore } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { useProfileStore } from '../store/profileStore'
+import { shareRun } from '../lib/shareCard'
 import { CLOCK_URGENT } from '../lib/staggerCurve'
 import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
@@ -44,6 +46,7 @@ export function StaggerScreen() {
   const goHome = useNavStore(s => s.goHome)
   const goLeaderboard = useNavStore(s => s.goLeaderboard)
   const goAuth = useNavStore(s => s.goAuth)
+  const { displayName, isGuest } = useProfileStore(useShallow(s => ({ displayName: s.displayName, isGuest: s.isGuest })))
   const { hideDemo, setHideDemo } = useSettingsStore(useShallow(s => ({ hideDemo: s.settings.hideDemo, setHideDemo: s.setHideDemo })))
 
   // Demo-only UI state: the gentle-correction piece (soft headshake + coach
@@ -426,6 +429,13 @@ export function StaggerScreen() {
             currentRunId={currentRunId}
             records={records}
             onPlayAgain={() => startRun(mode)}
+            onShare={async () => {
+              const method = await shareRun({
+                score, shapesRecalled, bestStreak, correctPicks, totalPicks, mode, displayName, isGuest,
+              })
+              analytics.resultShared({ mode, method })
+              return method
+            }}
             onLeaderboard={() => { exit(); analytics.leaderboardOpened(); goLeaderboard() }}
             onHome={() => { exit(); goHome() }}
           />
