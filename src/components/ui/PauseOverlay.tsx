@@ -91,9 +91,11 @@ function StackedSound() {
         className={`relative w-[46px] h-[26px] rounded-full transition-colors duration-200
           ${soundEnabled ? 'bg-vt-cyan shadow-vt-cyan' : 'bg-vt-grid'}`}
       >
+        {/* Knob positioned by explicit left (not translate) so it always seats
+            inside the pill: 3px inset off, 23px on (46 − 20 − 3). */}
         <span
-          className={`absolute top-[3px] h-5 w-5 rounded-full bg-vt-void transition-transform duration-200
-            ${soundEnabled ? 'translate-x-[23px]' : 'translate-x-[3px]'}`}
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-vt-void shadow-[0_1px_2px_rgba(0,0,0,0.5)] transition-[left] duration-200
+            ${soundEnabled ? 'left-[23px]' : 'left-[3px]'}`}
         />
       </button>
       <input

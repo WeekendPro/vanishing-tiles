@@ -168,10 +168,12 @@ export function LeaderboardScreen() {
       <div className="relative mx-auto w-full max-w-sm min-h-dvh flex flex-col px-6 pt-6 pb-8">
         <button
           onClick={goHome}
-          className="self-start flex items-center gap-1.5 text-neon-cyan font-display font-semibold text-sm mb-4
-            transition-transform active:translate-y-px"
+          aria-label="Back"
+          className="self-start -ml-1 mb-4 p-1 text-neon-cyan transition-transform active:translate-y-px"
         >
-          <span className="text-lg leading-none">‹</span> Back
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
         </button>
 
         <h1 className="text-center font-pixel font-bold text-base leading-none uppercase tracking-[0.15em] text-white text-glow-vt-cyan">
