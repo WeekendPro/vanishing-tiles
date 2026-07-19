@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flawless / In-Order — reward + messaging mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F; --grid:#1C1C28;
+    --filled:#2A2D3A; --edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:
+      radial-gradient(120% 80% at 50% -10%, #101021 0%, var(--void) 60%);
+    color:var(--text); font-family:"Space Grotesk",system-ui,sans-serif;
+    padding:32px 20px 80px; line-height:1.5;
+  }
+  h1{font-size:22px; font-weight:700; letter-spacing:.02em; margin:0 0 4px}
+  h2{font-size:13px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); margin:44px 0 16px; border-bottom:1px solid #1c1c28; padding-bottom:8px}
+  .sub{color:var(--dim); font-size:13px; max-width:760px; margin:0 0 8px}
+  .wrap{max-width:1080px; margin:0 auto}
+  .glow-lime{color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5)}
+  .glow-magenta{color:var(--magenta); text-shadow:0 0 10px rgba(255,45,155,.55)}
+  .glow-cyan{color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5)}
+  .glow-amber{color:var(--amber); text-shadow:0 0 10px rgba(255,194,61,.5)}
+  .glow-red{color:var(--red); text-shadow:0 0 12px rgba(255,59,71,.5)}
+
+  /* ── model table ── */
+  table{border-collapse:collapse; width:100%; max-width:820px; font-size:13px}
+  th,td{border:1px solid #1c1c28; padding:9px 12px; text-align:left}
+  th{color:var(--dim); font-weight:600; font-size:11px; letter-spacing:.12em; text-transform:uppercase}
+  td .yes{color:var(--lime)} td .no{color:var(--faint)}
+  .legend{display:flex; gap:22px; flex-wrap:wrap; margin:6px 0 20px}
+  .chip{display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--dim)}
+  .dot{width:10px;height:10px;border-radius:2px}
+
+  /* ── game frame ── */
+  .frames{display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start}
+  .frame{width:340px}
+  .cap{font-size:12px; color:var(--dim); margin:10px 2px 0; text-align:center}
+  .stage{
+    background:linear-gradient(180deg,#0b0b14,#070710);
+    border:1px solid #17172440; border-radius:20px; padding:18px 16px 22px;
+    position:relative; overflow:hidden;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.6);
+  }
+  /* HUD */
+  .hud{display:grid; grid-template-columns:1fr auto 1fr; align-items:flex-end; margin-bottom:10px}
+  .score{font-weight:700; font-size:28px; line-height:1; letter-spacing:.01em}
+  .meta{display:flex; flex-direction:column; align-items:center; gap:3px}
+  .meta .lbl{font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .meta .val{font-size:14px; font-weight:600}
+  .lives{justify-self:end; align-items:flex-end}
+  .hearts{display:flex; gap:3px}
+  .heart{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 6px rgba(255,59,71,.6)}
+  .heart.off{background:#241016;box-shadow:none}
+  /* timer bar */
+  .bar{height:7px;border-radius:99px;background:#000;overflow:hidden;margin:0 0 12px;box-shadow:inset 0 1px 2px #000}
+  .bar>i{display:block;height:100%;border-radius:99px}
+  .bar-lime>i{width:62%;background:var(--lime);box-shadow:0 0 10px rgba(182,255,60,.6)}
+  .bar-amber>i{width:48%;background:var(--amber);box-shadow:0 0 10px rgba(255,194,61,.6)}
+  /* central line */
+  .central{height:24px; display:flex; align-items:center; justify-content:center; margin:2px 0 10px; position:relative}
+  .central .phase{font-size:11px; letter-spacing:.22em; text-transform:uppercase}
+  .central .streak{display:inline-flex; align-items:center; gap:7px}
+  .central .streak .k{font-size:10px; letter-spacing:.2em; text-transform:uppercase; font-weight:600}
+  .central .streak .v{font-size:22px; font-weight:700; line-height:1}
+  /* board */
+  .board{
+    --cell:23px; --gap:2px;
+    display:grid; grid-template-columns:repeat(12,var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); padding:9px; border-radius:12px;
+    background:var(--void); border:1px solid #14141f; justify-content:center; margin:0 auto;
+    position:relative;
+  }
+  .board b{background:var(--grid); border-radius:3px}
+  .board b.f{background:var(--filled); box-shadow:inset 0 0 0 1px #ffffff08}
+  .board b.o{background:rgba(255,45,155,.9); box-shadow:0 0 8px rgba(255,45,155,.6)}
+  .board b.i{background:rgba(40,240,255,.85); box-shadow:0 0 8px rgba(40,240,255,.55)}
+  .board b.l{background:rgba(182,255,60,.85); box-shadow:0 0 8px rgba(182,255,60,.5)}
+  /* tray */
+  .tray{display:flex; gap:8px; justify-content:center; margin-top:16px}
+  .tp{width:52px;height:40px;border-radius:9px;background:var(--raised);border:1px solid #23233166;display:flex;align-items:center;justify-content:center}
+  .tp .m{width:8px;height:8px;background:var(--dim);border-radius:2px;box-shadow:10px 0 var(--dim),0 10px var(--dim),10px 10px var(--dim)}
+  /* old floating chip (to be removed) */
+  .oldchip{text-align:right;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--magenta);text-shadow:0 0 10px rgba(255,45,155,.55);margin:14px 4px -4px;position:relative}
+  .strike{position:relative}
+  .strike::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:2px;background:var(--red);box-shadow:0 0 8px var(--red);transform:rotate(-3deg)}
+  .kill{display:inline-block;margin-left:8px;font-size:10px;color:var(--red);letter-spacing:.08em;vertical-align:middle}
+
+  /* ── payoff flyers ── */
+  .payoff{position:absolute; left:0; right:0; top:150px; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none}
+  .flyer{
+    display:flex; align-items:center; gap:10px; padding:7px 14px; border-radius:99px;
+    font-weight:700; font-size:13px; letter-spacing:.06em;
+    background:rgba(10,10,18,.72); backdrop-filter:blur(2px);
+    opacity:0; transform:translateY(14px) scale(.9);
+  }
+  .flyer .tag{font-size:11px; letter-spacing:.16em; text-transform:uppercase}
+  .flyer .pts{font-variant-numeric:tabular-nums}
+  .flyer.flawless{border:1px solid rgba(40,240,255,.5); color:var(--cyan); box-shadow:0 0 22px rgba(40,240,255,.22)}
+  .flyer.order{border:1px solid rgba(182,255,60,.55); color:var(--lime); box-shadow:0 0 22px rgba(182,255,60,.25)}
+  .flyer.speed{border:1px solid rgba(255,194,61,.5); color:var(--amber); box-shadow:0 0 22px rgba(255,194,61,.22)}
+  @keyframes lift{
+    0%{opacity:0; transform:translateY(16px) scale(.86)}
+    18%{opacity:1; transform:translateY(0) scale(1.04)}
+    30%{transform:translateY(0) scale(1)}
+    72%{opacity:1; transform:translateY(-6px) scale(1)}
+    100%{opacity:0; transform:translateY(-40px) scale(.96)}
+  }
+  .run .flyer.flawless{animation:lift 1500ms ease-out .10s both}
+  .run .flyer.order{animation:lift 1500ms ease-out .55s both}
+  .run .flyer.speed{animation:lift 1500ms ease-out 1.00s both}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}55%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  .run .central .streak{animation:pop .34s cubic-bezier(.2,.8,.2,1) both}
+  .run .score{animation:tick 2.4s ease-out both}
+  @keyframes tick{0%{color:var(--cyan)}100%{color:var(--cyan)}}
+
+  @keyframes orderflash{0%,100%{color:var(--magenta);text-shadow:0 0 10px rgba(255,45,155,.55)}25%,75%{color:var(--red);text-shadow:0 0 14px rgba(255,59,71,.7)}}
+  .flashing{animation:orderflash 700ms linear 2}
+
+  .btn{margin-top:14px; background:#12121c; border:1px solid #26263a; color:var(--text);
+    font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    padding:8px 16px; border-radius:99px; cursor:pointer}
+  .btn:hover{border-color:var(--lime); color:var(--lime)}
+  .note{font-size:12px;color:var(--dim);max-width:820px;margin:12px 0 0}
+  .pill{display:inline-block;padding:1px 7px;border-radius:99px;border:1px solid #26263a;font-size:11px;color:var(--dim);margin:0 2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Flawless / In-Order — two-bonus model &amp; central-line messaging</h1>
+  <p class="sub">Illustrative mockup in the real Afterglow tokens. Point values are placeholders (per-gap rates TBD). Focus: <b>what fires when</b>, and <b>how it reads on screen</b>.</p>
+
+  <h2>1 · The model — two independent rewards</h2>
+  <div class="legend">
+    <span class="chip"><span class="dot" style="background:var(--cyan)"></span> FLAWLESS = cleared with <b>no life lost</b> (any order). All modes.</span>
+    <span class="chip"><span class="dot" style="background:var(--lime)"></span> IN ORDER = flawless <b>and</b> in reveal sequence. Easy/Medium only.</span>
+  </div>
+  <table>
+    <tr><th>What happened this batch</th><th>Easy / Medium</th><th>Hard</th></tr>
+    <tr><td>Cleared, no misses, in reveal order</td><td><span class="yes">FLAWLESS + IN ORDER</span></td><td><span class="yes">FLAWLESS</span> <span style="color:var(--faint)">(order is mandatory — no separate award)</span></td></tr>
+    <tr><td>Cleared, no misses, out of order</td><td><span class="yes">FLAWLESS</span></td><td class="no">n/a (out-of-order is a miss in Hard)</td></tr>
+    <tr><td>Cleared, but lost ≥1 life</td><td class="no">— neither —</td><td class="no">— neither —</td></tr>
+  </table>
+  <p class="note">Because IN ORDER requires flawless, an in-order Easy/Medium clear <b>stacks both</b> bonuses. One lost life forfeits both — no "six misses then a tidy finish" loophole.</p>
+
+  <h2>2 · The clear payoff — streak owns the center, bonuses lift into the score</h2>
+  <p class="sub">At clear, the center line shows <b>STREAK ×N</b> (your ask — the streak, not "CLEAR!"). The two badges + the speed bonus rise one-by-one into the score, extending the game's existing "time → points" lift. This is a flawless <b>in-order Medium</b> clear (both bonuses).</p>
+  <div class="frames">
+    <div class="frame">
+      <div class="stage" id="stage">
+        <div class="hud">
+          <div class="score glow-cyan" id="score">18,240</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">6 / 6</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar bar-lime"><i></i></div>
+        <div class="central">
+          <div class="streak glow-lime"><span class="k">Streak</span><span class="v">×14</span></div>
+        </div>
+        <div class="board" id="board1"></div>
+        <div class="payoff" id="payoff">
+          <div class="flyer flawless"><span class="tag">Flawless</span><span class="pts">+600</span></div>
+          <div class="flyer order"><span class="tag">In Order</span><span class="pts">+1,200</span></div>
+          <div class="flyer speed"><span class="tag">Speed</span><span class="pts">+420</span></div>
+        </div>
+        <div class="tray">
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+        </div>
+      </div>
+      <button class="btn" onclick="playPayoff()">▶ Play the payoff</button>
+    </div>
+
+    <div class="frame">
+      <div class="stage">
+        <div class="hud">
+          <div class="score glow-cyan">9,900</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">6 / 6</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar bar-lime"><i></i></div>
+        <div class="central">
+          <div class="streak glow-lime"><span class="k">Streak</span><span class="v">×8</span></div>
+        </div>
+        <div class="board" id="board2"></div>
+        <div class="payoff run" style="animation:none">
+          <div class="flyer flawless" style="opacity:1;transform:none;animation:none"><span class="tag">Flawless</span><span class="pts">+600</span></div>
+          <div class="flyer speed" style="opacity:1;transform:none;animation:none"><span class="tag">Speed</span><span class="pts">+280</span></div>
+        </div>
+        <div class="tray">
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+        </div>
+      </div>
+      <div class="cap">Flawless but <b>out of order</b> → FLAWLESS only (no In Order badge).</div>
+    </div>
+  </div>
+
+  <h2>3 · Hard mode — "IN ORDER" moves to the center, above the grid</h2>
+  <p class="sub">The floating right-aligned chip by the tray is <b>removed</b>. In Hard, the center line's calm recall label <i>is</i> "IN ORDER" (the persistent reminder). A wrong or out-of-order tap makes it flash red — validating the rule at the exact moment it's broken.</p>
+  <div class="frames">
+    <div class="frame">
+      <div class="stage">
+        <div class="hud">
+          <div class="score glow-cyan">4,300</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">2 / 5</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar bar-amber"><i></i></div>
+        <div class="central"><div class="phase glow-magenta">IN ORDER</div></div>
+        <div class="board" id="board3"></div>
+        <div class="tray">
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+        </div>
+      </div>
+      <div class="cap">Calm reminder — the recall label itself.</div>
+    </div>
+
+    <div class="frame">
+      <div class="stage">
+        <div class="hud">
+          <div class="score glow-cyan">4,300</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">2 / 5</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar bar-amber"><i></i></div>
+        <div class="central"><div class="phase flashing" id="flashlabel">IN ORDER</div></div>
+        <div class="board" id="board4"></div>
+        <div class="tray">
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+          <div class="tp"><span class="m"></span></div><div class="tp"><span class="m"></span></div>
+        </div>
+      </div>
+      <button class="btn" onclick="flashOrder()">▶ Replay the miss flash</button>
+      <div class="cap">Wrong / out-of-order tap → flashes red, validating the rule.</div>
+    </div>
+  </div>
+
+  <div class="oldchip strike">IN ORDER <span class="kill">← removed from beside the tray</span></div>
+
+</div>
+
+<script>
+  // paint representative boards: a few filled tetromino gaps + one still-open gap
+  function paint(id, spec){
+    const b=document.getElementById(id); if(!b) return;
+    const cells=Array.from({length:144},()=>document.createElement('b'));
+    (spec.filled||[]).forEach(i=>cells[i].classList.add('f'));
+    (spec.o||[]).forEach(i=>cells[i].classList.add('o'));
+    (spec.i||[]).forEach(i=>cells[i].classList.add('i'));
+    (spec.l||[]).forEach(i=>cells[i].classList.add('l'));
+    cells.forEach(c=>b.appendChild(c));
+  }
+  const R=(r,c)=>r*12+c;
+  paint('board1',{filled:[R(2,3),R(2,4),R(3,3),R(3,4), R(5,6),R(5,7),R(5,8),R(5,9), R(8,2),R(9,2),R(9,3),R(9,4), R(7,9),R(8,9),R(8,10),R(9,10)]});
+  paint('board2',{filled:[R(2,3),R(2,4),R(3,3),R(3,4), R(5,6),R(5,7),R(5,8),R(5,9), R(8,2),R(9,2),R(9,3),R(9,4)]});
+  paint('board3',{filled:[R(3,4),R(3,5),R(4,4),R(4,5)], o:[R(6,7),R(6,8),R(7,7),R(7,8)], i:[R(9,2),R(9,3),R(9,4),R(9,5)]});
+  paint('board4',{filled:[R(3,4),R(3,5),R(4,4),R(4,5)], o:[R(6,7),R(6,8),R(7,7),R(7,8)], i:[R(9,2),R(9,3),R(9,4),R(9,5)]});
+
+  function playPayoff(){
+    const p=document.getElementById('payoff');
+    const s=document.getElementById('stage');
+    p.classList.remove('run'); s.classList.remove('run'); void p.offsetWidth;
+    p.classList.add('run'); s.classList.add('run');
+    // count the score up
+    const el=document.getElementById('score'); const start=18240-2220, end=18240;
+    el.textContent=start.toLocaleString(); let t0=null;
+    function step(t){ if(!t0)t0=t; const k=Math.min(1,(t-t0)/2400);
+      el.textContent=Math.round(start+(end-start)*k).toLocaleString(); if(k<1)requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  function flashOrder(){
+    const el=document.getElementById('flashlabel');
+    el.classList.remove('flashing'); void el.offsetWidth; el.classList.add('flashing');
+  }
+  setTimeout(playPayoff, 500);
+</script>
+</body>
+</html>
