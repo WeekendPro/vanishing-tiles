@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'go' | 'danger' | 'ghost' | 'accent'
+type Variant = 'primary' | 'go' | 'danger' | 'ghost' | 'accent' | 'amber'
 type Size = 'sm' | 'md' | 'lg'
 
 // Buttons are border-only at rest — no static glow (it reads as "always on").
@@ -11,6 +11,8 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   danger: 'border-neon-red text-neon-red hover:bg-neon-red/10 hover:shadow-neon-red',
   accent: 'border-neon-magenta text-neon-magenta hover:bg-neon-magenta/10 hover:shadow-neon-magenta',
   ghost: 'border-arcade-edge text-gray-300 hover:border-neon-cyan hover:text-neon-cyan',
+  // "Start over" tone — warmer than the red Exit, distinct from the cyan primary.
+  amber: 'border-neon-yellow text-neon-yellow hover:bg-neon-yellow/10 hover:shadow-[0_0_8px_rgba(250,204,21,0.5)]',
 }
 
 const SIZE_CLASSES: Record<Size, string> = {

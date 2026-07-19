@@ -43,6 +43,7 @@ export function StaggerScreen() {
   })))
   const goHome = useNavStore(s => s.goHome)
   const goLeaderboard = useNavStore(s => s.goLeaderboard)
+  const goAuth = useNavStore(s => s.goAuth)
   const { hideDemo, setHideDemo } = useSettingsStore(useShallow(s => ({ hideDemo: s.settings.hideDemo, setHideDemo: s.setHideDemo })))
 
   // Demo-only UI state: the gentle-correction piece (soft headshake + coach
@@ -473,7 +474,9 @@ export function StaggerScreen() {
           lives={lives}
           currentStreak={currentStreak}
           onResume={resume}
+          onRestart={() => startRun(mode)}
           onExit={() => { exit(); goHome() }}
+          onSignUp={() => { exit(); goAuth() }}
         />
       )}
     </div>

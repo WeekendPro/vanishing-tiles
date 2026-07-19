@@ -155,6 +155,7 @@ export function TrainingScreen() {
     start: s.start, nextPiece: s.nextPiece, guess: s.guess, pause: s.pause, resume: s.resume, exit: s.exit,
   })))
   const goHome = useNavStore(s => s.goHome)
+  const goAuth = useNavStore(s => s.goAuth)
 
   // A correct pick's fade-out in flight: tray disabled, piece decaying.
   const [leaving, setLeaving] = useState(false)
@@ -320,7 +321,7 @@ export function TrainingScreen() {
       {/* Hard pause — covers the whole screen (the held piece stays hidden, so
           no free memorizing) with the session's full stat bar riding along. */}
       {paused && (
-        <PauseOverlay onResume={() => resume()} onExit={exitTraining}>
+        <PauseOverlay onResume={() => resume()} onExit={exitTraining} onSignUp={() => { exit(); goAuth() }}>
           <TrainingStats
             currentStreak={currentStreak}
             bestStreak={bestStreak}

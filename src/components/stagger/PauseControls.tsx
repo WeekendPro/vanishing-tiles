@@ -55,19 +55,23 @@ export function CountdownPauseSkeleton() {
 }
 
 // Hard pause — covers the whole screen so no memorizing happens while
-// frozen; resume picks the clock back up, exit bails to the landing page.
-// The run's live stats ride along: a pause doubles as a scoreboard check.
+// frozen; resume picks the clock back up, restart abandons this run for a fresh
+// one at the same difficulty, exit bails to the landing page. The run's live
+// stats + who's playing ride along: a pause doubles as an identity/scoreboard
+// check, and guests get a quiet sign-up nudge (onSignUp).
 export function PauseStatsOverlay({
-  score, lives, currentStreak, onResume, onExit,
+  score, lives, currentStreak, onResume, onRestart, onExit, onSignUp,
 }: {
   score: number
   lives: number
   currentStreak: number
   onResume: () => void
+  onRestart: () => void
   onExit: () => void
+  onSignUp: () => void
 }) {
   return (
-    <PauseOverlay onResume={onResume} onExit={onExit}>
+    <PauseOverlay onResume={onResume} onRestart={onRestart} onExit={onExit} onSignUp={onSignUp}>
       <div className="flex items-end gap-10 pointer-events-none">
         <div>
           <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
