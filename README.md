@@ -42,7 +42,7 @@ neon arcade skin.
 
 ## How it plays
 
-The whole game is one tight loop that repeats forever, getting harder each time:
+The whole game is one tight loop that repeats, getting harder each time:
 
 | 1 · Memorize | 2 · Vanish | 3 · Recall |
 | :---: | :---: | :---: |
