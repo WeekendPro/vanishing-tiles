@@ -482,7 +482,7 @@ export const sfx = {
    *  the patch was tuned by ear in the lab, tail included. */
   bonusLift(): void { playPatch(patches.bonusLift) },
 
-  /** An extra life earned (every 5000 pts) — a warm two-note rise (E5 → A5)
+  /** An extra life earned (every 10000 pts) — a warm two-note rise (E5 → A5)
    *  under the heart burst. */
   lifeGained(): void { playPatch(patches.lifeGained) },
 

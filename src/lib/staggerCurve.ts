@@ -46,7 +46,7 @@ export const STAGGER = {
   FLAWLESS_PER_GAP: 150,
   IN_ORDER_PER_GAP: 250,
   START_LIVES: 5,      // shared lives for the whole run
-  LIFE_EVERY: 5000,    // every N cumulative points earns one life back
+  LIFE_EVERY: 10000,   // every N cumulative points earns one life back
   REPLAY_COST: 500,    // points spent to replay the memorize sequence mid-batch
 } as const
 

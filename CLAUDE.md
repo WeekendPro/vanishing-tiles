@@ -36,7 +36,7 @@ The recall tray always shows pieces in their own piece colors, in every mode —
 
 **Difficulty ramp** (`src/lib/staggerCurve.ts`, `STAGGER_CURVE` + `SHAPE_SCHEDULE`) — a single infinite ramp, not per-level tables: gap count holds at 3 for levels 1–4, then climbs one gap every three levels up to a cap of 12 at level 29+ (terminal rung for the endless tail). The shape pool opens on O + I, then adds one shape at a time — L (L2), J (L3), T (L6), S (L7), Z (L10) — so all seven tetrominoes are in play by level 10. Gap rotation is locked to the tray's display rotation until orientation frees at level 9 (`ORIENTATION_FREE_FROM = 8`, 0-based). Exactly one of these levers (gap count / shape variety / orientation) moves per level. Reveal pacing (flash/hold/decay timing) is **constant** across the whole run — the ramp never speeds up the reveal itself. The select clock is `(6000 + gaps × 1400) × max(0.7, 1 − 0.005 × batchIndex)` ms — it grows with gap count but slowly tightens (floor 70% of nominal) as the run goes on, so late-run batches stay tense even after the gap count caps out.
 
-**Scoring** — streak is the only score multiplier: each correct pick is worth `100 × currentStreak` points, where `currentStreak` is the run of consecutive correct picks (broken by any miss). A miss both breaks the streak **and** costs a life. Clearing a batch banks a separate speed bonus (up to 500 points, ratio of select-clock time remaining) via `bankSpeedBonus`. The run starts with 5 lives (`STAGGER.START_LIVES`); one extra life is earned per 5000 cumulative points (`STAGGER.LIFE_EVERY`). Letting the select clock expire also costs a life and **replays the same batch** (same gaps, unfilled) rather than advancing. The run ends at 0 lives; otherwise it's endless.
+**Scoring** — streak is the only score multiplier: each correct pick is worth `100 × currentStreak` points, where `currentStreak` is the run of consecutive correct picks (broken by any miss). A miss both breaks the streak **and** costs a life. Clearing a batch banks a separate speed bonus (up to 500 points, ratio of select-clock time remaining) via `bankSpeedBonus`. The run starts with 5 lives (`STAGGER.START_LIVES`); one extra life is earned per 10000 cumulative points (`STAGGER.LIFE_EVERY`). Letting the select clock expire also costs a life and **replays the same batch** (same gaps, unfilled) rather than advancing. The run ends at 0 lives; otherwise it's endless.
 
 ### Training (learn the piece names)
 
@@ -152,7 +152,7 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 - **Grid size:** 12 rows × 12 columns (square)
 - **Placement UX:** Click-to-place (drag-and-drop is deferred)
 - **Scoring philosophy (Infinite Stagger):** Streak is the only multiplier — `100 × currentStreak` per correct pick, plus a per-batch speed bonus (≤500) on clear. A miss breaks the streak and costs a life; a select-clock timeout costs a life and replays the same batch.
-- **Lives (Infinite Stagger):** 5 shared lives for the whole run, +1 per 5000 cumulative points; the run ends at 0.
+- **Lives (Infinite Stagger):** 5 shared lives for the whole run, +1 per 10000 cumulative points; the run ends at 0.
 - **Button style:** Full-width, centered, matching grid width — consistent across all phases
 
 ---

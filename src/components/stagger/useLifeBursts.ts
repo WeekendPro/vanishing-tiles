@@ -4,7 +4,7 @@ import { sfx } from '../../lib/sfx'
 
 export type LifeBurst = { id: number; n: number }
 
-/** Earn-a-life: when the shared life pool grows mid-run (every 5000 pts), pop a
+/** Earn-a-life: when the shared life pool grows mid-run (every 10000 pts), pop a
  *  celebratory heart burst over the board. Returns the active bursts to render. */
 export function useLifeBursts(lives: number, phase: StaggerPhase): LifeBurst[] {
   const [lifeBursts, setLifeBursts] = useState<LifeBurst[]>([])
