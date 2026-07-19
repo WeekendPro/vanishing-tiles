@@ -3,6 +3,8 @@ import { useNavStore } from '../store/navStore'
 import { useSettingsStore, type Difficulty } from '../store/settingsStore'
 import { getStaggerLeaderboard, type StaggerLeaderboard, type LeaderboardMe } from '../lib/api'
 import { signOut } from '../lib/auth'
+import { shareRank } from '../lib/shareCard'
+import { analytics } from '../lib/analytics'
 import { ScanlineOverlay } from './ui'
 
 /**
@@ -48,29 +50,73 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function HeroCard({ me, total }: { me: LeaderboardMe; total: number }) {
+function HeroCard({ me, total, mode }: { me: LeaderboardMe; total: number; mode: Difficulty }) {
   // "top N%" rounds up so #1 of anything reads "top 1%", never "top 0%".
   const pct = me.rank ? Math.max(1, Math.ceil((me.rank / Math.max(total, 1)) * 100)) : null
+
+  const [sharing, setSharing] = useState(false)
+  const [shareNote, setShareNote] = useState<string | null>(null)
+  const onShare = async () => {
+    if (sharing || me.rank === null) return
+    setSharing(true)
+    try {
+      const method = await shareRank({
+        rank: me.rank, total, mode,
+        displayName: me.displayName,
+        highScore: me.highScore ?? 0,
+        bestStreak: me.bestStreak ?? 0,
+        bestAccuracy: me.bestAccuracy ?? 0,
+      })
+      analytics.rankShared({ mode, method })
+      if (method === 'download') {
+        setShareNote('Image saved · caption copied')
+        window.setTimeout(() => setShareNote(null), 2800)
+      }
+    } catch { /* nothing shared, nothing lost */ }
+    finally { setSharing(false) }
+  }
+
   return (
     <div className="mt-4 rounded-2xl bg-vt-panel p-4 shadow-[inset_0_0_0_1px_rgba(40,240,255,0.5),0_0_18px_rgba(40,240,255,0.16)]">
+      {/* Avatar tile (left) and Share tile (right) are the same shape — they
+          bookend the name block for deliberate symmetry: you, then share-you. */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full grid place-items-center flex-none font-bold text-sm text-white
-          bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
+        <div className="w-12 h-12 rounded-xl grid place-items-center flex-none font-pixel font-bold text-[15px] text-vt-cyan
+          bg-gradient-to-br from-[#20303a] to-[#141420] border border-vt-cyan/35 shadow-[0_0_14px_rgba(40,240,255,0.2)]">
           {initials(me.displayName)}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="font-pixel font-bold text-[15px] leading-tight truncate">{me.displayName}</div>
           <div className="font-display text-[9.5px] font-semibold uppercase tracking-[0.2em] text-vt-dim mt-1">
             Rank <b className="text-vt-cyan text-glow-vt-cyan font-bold">#{me.rank}</b> of {fmt(total)}
             {pct !== null && ` · top ${pct}%`}
           </div>
         </div>
+        <button
+          onClick={onShare}
+          disabled={sharing}
+          aria-label="Share your rank"
+          className="w-12 h-12 rounded-xl flex-none flex flex-col items-center justify-center gap-[3px]
+            text-neon-magenta border border-neon-magenta/50 bg-neon-magenta/[0.06] shadow-[0_0_14px_rgba(255,45,155,0.18)]
+            hover:bg-neon-magenta/10 hover:shadow-neon-magenta transition active:translate-y-px
+            disabled:opacity-50 disabled:pointer-events-none"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+            <path d="M12 14V4" /><path d="M8 8l4-4 4 4" /><path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6" />
+          </svg>
+          <span className="text-[6.5px] font-bold uppercase tracking-[0.08em] leading-none">Share</span>
+        </button>
       </div>
       <div className="flex gap-2 mt-3.5">
         <HeroTile label="Best score" value={fmt(me.highScore ?? 0)} rank={me.rank} tone="text-vt-amber text-glow-vt-amber" />
         <HeroTile label="Best streak" value={`×${me.bestStreak ?? 0}`} rank={me.streakRank} tone="text-vt-lime text-glow-vt-lime" />
         <HeroTile label="Accuracy" value={`${me.bestAccuracy ?? 0}%`} rank={me.accuracyRank} tone="text-vt-cyan text-glow-vt-cyan" />
       </div>
+      {shareNote && (
+        <div className="mt-2.5 text-center font-display text-[9px] font-semibold uppercase tracking-[0.12em] text-vt-lime text-glow-vt-lime">
+          {shareNote}
+        </div>
+      )}
     </div>
   )
 }
@@ -178,7 +224,7 @@ export function LeaderboardScreen() {
         {status === 'ready' && board && (
           <>
             {me && !me.isGuest && (me.rank !== null
-              ? <HeroCard me={me} total={board.total} />
+              ? <HeroCard me={me} total={board.total} mode={mode} />
               : (
                 <div className="mt-4 rounded-2xl bg-vt-panel p-4 text-center shadow-[inset_0_0_0_1px_rgba(255,45,155,0.35)]">
                   <p className="font-display text-[12px] text-vt-dim">

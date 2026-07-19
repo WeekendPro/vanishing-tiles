@@ -22,6 +22,17 @@ export interface ShareData {
   isGuest: boolean
 }
 
+/** The leaderboard-flavored share: the flex is the STANDING, not one run. */
+export interface RankShareData {
+  rank: number
+  total: number
+  mode: Difficulty
+  displayName: string
+  highScore: number
+  bestStreak: number
+  bestAccuracy: number
+}
+
 // ── Pure helpers ────────────────────────────────────────────────────────────
 
 /** Whole-percent accuracy, 0 when no picks were made. */
@@ -54,6 +65,22 @@ export function buildBragText(data: ShareData): string {
     `Vanishing Tiles · ${MODE_LABEL[data.mode]} 🧠`,
     `Score ${data.score.toLocaleString()} · Streak ×${data.bestStreak} · ${acc}%`,
     buildHookLine(data.shapesRecalled),
+    PLAY_URL_FULL,
+  ].join('\n')
+}
+
+/** "top N%" — rounds up so #1 of anything reads "top 1%", never "top 0%"
+ *  (mirrors the leaderboard hero card's own math). */
+export function topPercent(rank: number, total: number): number {
+  return Math.max(1, Math.ceil((rank / Math.max(total, 1)) * 100))
+}
+
+/** The copyable rank brag — the standing implies everyone you beat. */
+export function buildRankBragText(d: RankShareData): string {
+  return [
+    `Vanishing Tiles · ${MODE_LABEL[d.mode]} 🧠`,
+    `Ranked #${d.rank} of ${d.total.toLocaleString()} — top ${topPercent(d.rank, d.total)}%`,
+    `Best ${d.highScore.toLocaleString()} · Streak ×${d.bestStreak} · ${d.bestAccuracy}%`,
     PLAY_URL_FULL,
   ].join('\n')
 }
@@ -224,6 +251,125 @@ export async function renderShareCardBlob(data: ShareData): Promise<Blob> {
   })
 }
 
+/** Render the 9:16 rank card — the leaderboard flex (standing over one run).
+ *  Shares the header/footer chrome with the run card; the hero is the rank. */
+export async function renderRankCardBlob(d: RankShareData): Promise<Blob> {
+  await ensureFont()
+
+  const canvas = document.createElement('canvas')
+  canvas.width = CARD_W
+  canvas.height = CARD_H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('2D canvas context unavailable')
+
+  const modeColor = MODE_COLOR[d.mode]
+  const PAD = 90
+  const glow = (color: string, blur: number, draw: () => void) => {
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = blur; draw(); ctx.restore()
+  }
+
+  // Background: void with a faint cyan bloom up top (rank = system/cyan).
+  ctx.fillStyle = '#050509'
+  ctx.fillRect(0, 0, CARD_W, CARD_H)
+  const bg = ctx.createRadialGradient(CARD_W / 2, 150, 60, CARD_W / 2, 150, CARD_H * 0.9)
+  bg.addColorStop(0, '#101a1f')
+  bg.addColorStop(0.55, '#0a0a12')
+  bg.addColorStop(1, '#050509')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, CARD_W, CARD_H)
+
+  const tiles: [number, number, number, string][] = [
+    [CARD_W - 170, 470, 64, 'rgba(40,240,255,0.12)'],
+    [CARD_W - 260, 400, 40, 'rgba(255,45,155,0.12)'],
+    [140, 1620, 44, 'rgba(182,255,60,0.10)'],
+  ]
+  for (const [x, y, s, color] of tiles) { ctx.fillStyle = color; roundRect(ctx, x, y, s, s, 10); ctx.fill() }
+
+  // Header: wordmark + difficulty badge (same chrome as the run card).
+  ctx.textBaseline = 'alphabetic'
+  ctx.font = font(700, 36)
+  ctx.textAlign = 'left'
+  ctx.fillStyle = C.text
+  ctx.fillText('VANISHING', PAD, 150)
+  const vwidth = ctx.measureText('VANISHING ').width
+  glow(C.magenta, 24, () => { ctx.fillStyle = C.magenta; ctx.fillText('TILES', PAD + vwidth, 150) })
+  const badge = MODE_LABEL[d.mode].toUpperCase()
+  ctx.font = font(700, 28)
+  const bw = ctx.measureText(badge).width + 56
+  const bx = CARD_W - PAD - bw
+  ctx.strokeStyle = modeColor
+  ctx.lineWidth = 3
+  glow(modeColor, 18, () => { roundRect(ctx, bx, 116, bw, 52, 12); ctx.stroke() })
+  ctx.fillStyle = modeColor
+  ctx.textAlign = 'center'
+  ctx.fillText(badge, bx + bw / 2, 152)
+
+  // Hero: GLOBAL RANK label → giant #N → "of N players on Mode".
+  ctx.textAlign = 'left'
+  ctx.font = font(600, 34)
+  ctx.fillStyle = C.dim
+  ctx.fillText('GLOBAL RANK', PAD, 720)
+  const rankStr = `#${d.rank.toLocaleString()}`
+  let rankPx = 240
+  ctx.font = font(700, rankPx)
+  while (ctx.measureText(rankStr).width > CARD_W - PAD * 2 && rankPx > 110) {
+    rankPx -= 8; ctx.font = font(700, rankPx)
+  }
+  glow(C.cyan, 46, () => { ctx.fillStyle = C.cyan; ctx.fillText(rankStr, PAD - 6, 960) })
+  ctx.font = font(500, 42)
+  ctx.fillStyle = C.dim
+  ctx.fillText(`of ${d.total.toLocaleString()} players on ${MODE_LABEL[d.mode]}`, PAD, 1040)
+
+  // "TOP N%" — a lime pill, the headline flex.
+  const pctText = `TOP ${topPercent(d.rank, d.total)}%`
+  ctx.font = font(700, 44)
+  const pw = ctx.measureText(pctText).width + 72
+  ctx.strokeStyle = C.lime
+  ctx.lineWidth = 3
+  glow(C.lime, 20, () => { roundRect(ctx, PAD, 1110, pw, 88, 16); ctx.stroke() })
+  ctx.textAlign = 'center'
+  ctx.fillStyle = C.lime
+  ctx.fillText(pctText, PAD + pw / 2, 1168)
+
+  // Stat trio — best score / streak / accuracy — bordered band.
+  const bandY = 1330
+  const bandH = 200
+  const innerW = CARD_W - PAD * 2
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)'
+  ctx.lineWidth = 2
+  line(ctx, PAD, bandY, CARD_W - PAD, bandY)
+  line(ctx, PAD, bandY + bandH, CARD_W - PAD, bandY + bandH)
+  const cols: [string, string, string][] = [
+    [d.highScore.toLocaleString(), 'BEST SCORE', C.amber],
+    [`×${d.bestStreak}`, 'BEST STREAK', C.lime],
+    [`${d.bestAccuracy}%`, 'ACCURACY', C.cyan],
+  ]
+  cols.forEach(([val, label, color], i) => {
+    const cx = PAD + innerW * (i + 0.5) / 3
+    if (i > 0) line(ctx, PAD + innerW * i / 3, bandY + 34, PAD + innerW * i / 3, bandY + bandH - 34)
+    ctx.textAlign = 'center'
+    let vpx = 66
+    ctx.font = font(700, vpx)
+    while (ctx.measureText(val).width > innerW / 3 - 24 && vpx > 34) { vpx -= 4; ctx.font = font(700, vpx) }
+    glow(color, 20, () => { ctx.fillStyle = color; ctx.fillText(val, cx, bandY + 104) })
+    ctx.font = font(600, 25)
+    ctx.fillStyle = C.faint
+    ctx.fillText(label, cx, bandY + 158)
+  })
+
+  // Footer: who + where.
+  ctx.textAlign = 'left'
+  ctx.font = font(600, 38)
+  ctx.fillStyle = C.dim
+  ctx.fillText(`@${d.displayName}`, PAD, CARD_H - 130)
+  ctx.font = font(700, 34)
+  glow(C.lime, 16, () => { ctx.fillStyle = C.lime; ctx.fillText(PLAY_URL, PAD, CARD_H - 80) })
+
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(b => (b ? resolve(b) : reject(new Error('canvas.toBlob failed'))), 'image/png')
+  })
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
   ctx.moveTo(x + r, y)
@@ -257,13 +403,10 @@ function downloadBlob(blob: Blob, filename: string) {
  *  (PNG downloaded + brag text copied). */
 export type ShareResult = 'native' | 'download'
 
-/** Render the card and hand it off: the native share sheet on mobile (one
- *  gesture to every app), a PNG download + clipboard caption everywhere else. */
-export async function shareRun(data: ShareData): Promise<ShareResult> {
-  const blob = await renderShareCardBlob(data)
-  const text = buildBragText(data)
-  const file = new File([blob], 'vanishing-tiles.png', { type: 'image/png' })
-
+/** Hand a rendered card off: the native share sheet on mobile (one gesture to
+ *  every app), a PNG download + clipboard caption everywhere else. */
+async function shareBlob(blob: Blob, text: string, filename: string): Promise<ShareResult> {
+  const file = new File([blob], filename, { type: 'image/png' })
   const nav = navigator as Navigator & { canShare?: (d?: { files?: File[] }) => boolean }
   if (typeof nav.share === 'function' && nav.canShare?.({ files: [file] })) {
     try {
@@ -276,7 +419,17 @@ export async function shareRun(data: ShareData): Promise<ShareResult> {
     }
   }
 
-  downloadBlob(blob, 'vanishing-tiles.png')
+  downloadBlob(blob, filename)
   try { await navigator.clipboard?.writeText(text) } catch { /* clipboard blocked — the PNG still saved */ }
   return 'download'
+}
+
+/** Share a run's game-over card. */
+export async function shareRun(data: ShareData): Promise<ShareResult> {
+  return shareBlob(await renderShareCardBlob(data), buildBragText(data), 'vanishing-tiles.png')
+}
+
+/** Share a leaderboard rank card. */
+export async function shareRank(data: RankShareData): Promise<ShareResult> {
+  return shareBlob(await renderRankCardBlob(data), buildRankBragText(data), 'vanishing-tiles-rank.png')
 }

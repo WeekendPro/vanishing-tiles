@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  accuracyPct, shareHandle, buildHookLine, buildBragText, PLAY_URL, type ShareData,
+  accuracyPct, shareHandle, buildHookLine, buildBragText, topPercent, buildRankBragText,
+  PLAY_URL, type ShareData, type RankShareData,
 } from '../../src/lib/shareCard'
 
 describe('accuracyPct', () => {
@@ -62,5 +63,32 @@ describe('buildBragText', () => {
   it('reflects the run mode label', () => {
     expect(buildBragText({ ...base, mode: 'easy' })).toContain('· Easy')
     expect(buildBragText({ ...base, mode: 'medium' })).toContain('· Medium')
+  })
+})
+
+describe('topPercent', () => {
+  it('rounds up so #1 of anything is "top 1%", never 0%', () => {
+    expect(topPercent(1, 2431)).toBe(1)
+  })
+  it('reflects a middling standing', () => {
+    expect(topPercent(500, 1000)).toBe(50)
+    expect(topPercent(7, 2431)).toBe(1)
+  })
+  it('never divides by zero on an empty board (guards to a finite number)', () => {
+    expect(topPercent(1, 0)).toBe(100)
+  })
+})
+
+describe('buildRankBragText', () => {
+  const rank: RankShareData = {
+    rank: 7, total: 2431, mode: 'hard',
+    displayName: 'lunarfox', highScore: 12480, bestStreak: 14, bestAccuracy: 91,
+  }
+  it('leads with the standing and top-percent, with the play link', () => {
+    const t = buildRankBragText(rank)
+    expect(t).toContain('Vanishing Tiles · Hard')
+    expect(t).toContain('Ranked #7 of 2,431 — top 1%')
+    expect(t).toContain('Best 12,480 · Streak ×14 · 91%')
+    expect(t).toContain(PLAY_URL)
   })
 })

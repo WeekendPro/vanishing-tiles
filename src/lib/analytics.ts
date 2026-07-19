@@ -40,4 +40,8 @@ export const analytics = {
    *  vs. the desktop download/copy fallback (the acquisition-loop signal). */
   resultShared: (p: { mode: Difficulty; method: 'native' | 'download' }) =>
     track('result_shared', { ...p }),
+
+  /** A player shared their leaderboard rank card (the standing flex). */
+  rankShared: (p: { mode: Difficulty; method: 'native' | 'download' }) =>
+    track('rank_shared', { ...p }),
 }
