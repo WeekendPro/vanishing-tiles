@@ -240,13 +240,15 @@ html {
   .vt-bloom-decay { animation: none; background: #0c0c14; box-shadow: none; }
 }
 
-/* HARD reveal — the deep-ink "sludge" (matte near-black midnight). Where MEDIUM
-   floods bright magenta, HARD blooms a murky deep-ink surface that barely lifts
-   off the void: a modest cool FLASH announces the gap, then it settles to the
-   flat sludge tone, then decays cleanly back to the grid void. Self-colored (no
-   --bloom-color) — the low-contrast murk is the whole added difficulty, and the
-   surface is flat/matte (no gloss). One timeline per cell (animation-duration
-   set inline to hold+decay), so the four cells wink out in the diagonal wave. */
+/* HARD reveal — the lifted graphite surface with a soft bevel. Where MEDIUM
+   floods bright magenta, HARD blooms a low-key graphite block that reads as a
+   shape without lighting up the board: a modest cool FLASH announces the gap,
+   then it settles to the graphite tone — lit by a soft top-edge highlight +
+   bottom shadow (the bevel) so the shape is legible while staying the murkiest,
+   hardest board — then decays cleanly back to the grid void. Self-colored (no
+   --bloom-color) — the low contrast is still the whole added difficulty, just
+   dialed up enough to make out. One timeline per cell (animation-duration set
+   inline to hold+decay), so the four cells wink out in the diagonal wave. */
 @keyframes vtPaint {
   0% {
     background: #0c0c14;
@@ -261,22 +263,23 @@ html {
     transform: scale(1.13);
   }
   8% {
-    background: #1a1c26;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: #262b39;
+    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
     transform: scale(1);
   }
-  /* Hold: the flat deep-ink sludge, ringed with the same hairline edge HARD's
-     placed/tray pieces wear — so the murk you memorize looks exactly like the
-     piece you later place. The edge fades out with the cell during decay. */
+  /* Hold: the lifted graphite with its soft bevel (top highlight + bottom
+     shadow + hairline) — exactly the surface HARD's placed/tray pieces wear, so
+     the shape you memorize looks exactly like the piece you later place. The
+     bevel fades out with the cell during decay. */
   52% {
-    background: #1a1c26;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: #262b39;
+    box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
   }
   /* Decay to the grid's own void tone (#0c0c14) at FULL opacity — like
      vtBloomDecay — so a spent gap leaves no trace (an opacity fade would reveal
      the darker board bezel behind the cell, reading as a pure-black hole). */
-  70% { background: color-mix(in srgb, #1a1c26 55%, #0c0c14); }
-  85% { background: color-mix(in srgb, #1a1c26 22%, #0c0c14); }
+  70% { background: color-mix(in srgb, #262b39 55%, #0c0c14); }
+  85% { background: color-mix(in srgb, #262b39 22%, #0c0c14); }
   100% {
     background: #0c0c14;
     box-shadow: none;
@@ -284,21 +287,22 @@ html {
 }
 .vt-paint { animation: vtPaint 2080ms cubic-bezier(0.2, 0.75, 0.2, 1) forwards; }
 
-/* The flat deep-ink sludge as a STATIC swatch — no animation. Worn by HARD's
-   recall-tray pieces and its placed board cells, so the whole HARD palette is
-   the one deep-ink sludge (matching the reveal it decays from). The hairline
-   edge keeps the deep-ink pieces legible where they must be USABLE — in the
-   tray (on the #15151f sockets) and as placed confirmations — since the fill
-   sits too close to the socket/void tone to read a shape on its own. The
-   reveal (.vt-paint) wears the same hairline through its hold, so HARD's
-   memorize and place phases match. */
+/* The lifted graphite with its soft bevel as a STATIC swatch — no animation.
+   Worn by HARD's recall-tray pieces and its placed board cells, so the whole
+   HARD palette is this one graphite block (matching the reveal it decays from).
+   The bevel (top highlight + bottom shadow) + hairline give the shape enough
+   contour to read against the void — HARD stays the murkiest board, just no
+   longer a strain — and keep the pieces legible where they must be USABLE: in
+   the tray (on the #15151f sockets) and as placed confirmations. The reveal
+   (.vt-paint) wears the same fill + bevel through its hold, so HARD's memorize
+   and place phases match. */
 .vt-paint-surface {
-  background: #1a1c26;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  background: #262b39;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vt-paint { animation: none; background: #1a1c26; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+  .vt-paint { animation: none; background: #262b39; box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2), inset 0 -1.5px 1.5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
 }
 
 /* Recall-tray piece TAP feedback: on tap the button gives a quick ~2px lift and

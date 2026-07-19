@@ -43,10 +43,10 @@ export function StaggerBoard({
           // the mode's own surface lit by its OWN colored afterglow — never a
           // white ring/edge (that stray grey border read as "still selected" and
           // never appeared in the reveal). EASY = piece color, MEDIUM = pink, both
-          // with a soft same-color glow (the bloom's resting glow); HARD = the flat
-          // deep-ink sludge, self-lit with no glow, matching its murky reveal (its
-          // vt-paint-surface carries only the faint hairline HARD needs to stay
-          // legible in the tray and as a placed confirmation).
+          // with a soft same-color glow (the bloom's resting glow); HARD = the
+          // lifted graphite block, self-lit with no glow, matching its murky reveal
+          // (its vt-paint-surface carries the soft bevel + hairline HARD needs to
+          // stay legible in the tray and as a placed confirmation).
           const surface = mode === 'easy' ? getPieceColor(piece) : monoSurfaceClass(mode)
           const glow = mode === 'easy' ? PIECE_BLOOM_HEX[piece] : mode === 'medium' ? REVEAL_MAGENTA : null
           return (
@@ -65,8 +65,8 @@ export function StaggerBoard({
         // and keep decaying — keyed by their instance id — so they overlap.
         const bloom = bloomByCell.get(key)
         if (bloom) {
-          // HARD: the Severance graphite "impasto" bloom — self-colored murk
-          // (no --bloom-color) that flashes bright, settles to sludge, then
+          // HARD: the graphite bloom — self-colored (no --bloom-color) that
+          // flashes bright, settles to the beveled graphite block, then
           // decays. One timeline per cell (hold+decay as the animation-duration),
           // so later cells still fade out in the diagonal wave.
           if (mode === 'hard') {
