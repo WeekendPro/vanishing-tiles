@@ -5,7 +5,6 @@ import { useProfileStore } from '../../store/profileStore'
 import { sfx } from '../../lib/sfx'
 import { NeonButton } from './NeonButton'
 import { ScanlineOverlay } from './ScanlineOverlay'
-import { ChannelControl } from './ChannelControl'
 
 // Two-letter avatar initials from a display name (matches the menu's rule).
 function initials(name: string): string {
@@ -20,8 +19,8 @@ function initials(name: string): string {
 // guests. Deliberately light — no "signed in" label, no edit affordance; the
 // pause screen is for pausing, not account management.
 function PauseIdentity({ onSignUp }: { onSignUp?: () => void }) {
-  const { displayName, isGuest, avatarUrl } = useProfileStore(useShallow(s => ({
-    displayName: s.displayName, isGuest: s.isGuest, avatarUrl: s.avatarUrl,
+  const { displayName, isGuest } = useProfileStore(useShallow(s => ({
+    displayName: s.displayName, isGuest: s.isGuest,
   })))
 
   if (isGuest) {
@@ -53,17 +52,61 @@ function PauseIdentity({ onSignUp }: { onSignUp?: () => void }) {
     )
   }
 
+  // Always the standard initials avatar — uniform across players, never a
+  // pulled-in email/OAuth photo the player may not have chosen.
   return (
     <div className="flex flex-col items-center gap-2.5">
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={displayName ?? 'Player'} className="w-11 h-11 rounded-xl object-cover ring-1 ring-vt-cyan/35" />
-      ) : (
-        <div className="w-11 h-11 rounded-xl grid place-items-center font-bold text-[17px] text-vt-cyan
-          bg-gradient-to-br from-[#20303a] to-[#141420] border border-vt-cyan/35 shadow-[0_0_16px_rgba(40,240,255,0.2)]">
-          {initials(displayName ?? '')}
-        </div>
-      )}
+      <div className="w-11 h-11 rounded-xl grid place-items-center font-bold text-[17px] text-vt-cyan
+        bg-gradient-to-br from-[#20303a] to-[#141420] border border-vt-cyan/35 shadow-[0_0_16px_rgba(40,240,255,0.2)]">
+        {initials(displayName ?? '')}
+      </div>
       <div className="font-grotesk font-semibold text-[15px] text-vt-text">{displayName}</div>
+    </div>
+  )
+}
+
+// The pause screen's sound control, stacked: label → toggle switch → volume
+// slider. A prettier take than the shared row control — the switch is the
+// familiar pill, the slider dims out while sound is off.
+function StackedSound() {
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
+    soundEnabled: s.settings.soundEnabled,
+    setSoundEnabled: s.setSoundEnabled,
+    sfxVolume: s.settings.sfxVolume,
+    setSfxVolume: s.setSfxVolume,
+  })))
+
+  return (
+    <div className="flex flex-col items-center gap-3.5 w-full max-w-xs border-y border-white/10 py-5">
+      <div className="font-grotesk text-[11px] tracking-[0.2em] uppercase text-vt-dim">Sound</div>
+      <button
+        role="switch"
+        aria-checked={soundEnabled}
+        aria-label="Sound"
+        onClick={() => {
+          const next = !soundEnabled
+          setSoundEnabled(next)
+          if (next) { sfx.unlock(); sfx.uiTap() }
+        }}
+        className={`relative w-[46px] h-[26px] rounded-full transition-colors duration-200
+          ${soundEnabled ? 'bg-vt-cyan shadow-vt-cyan' : 'bg-vt-grid'}`}
+      >
+        <span
+          className={`absolute top-[3px] h-5 w-5 rounded-full bg-vt-void transition-transform duration-200
+            ${soundEnabled ? 'translate-x-[23px]' : 'translate-x-[3px]'}`}
+        />
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(sfxVolume * 100)}
+        disabled={!soundEnabled}
+        aria-label="Sound volume"
+        onChange={e => setSfxVolume(Number(e.target.value) / 100)}
+        onPointerUp={() => { sfx.unlock(); sfx.uiTap() }}
+        className="w-full max-w-[200px] accent-[#28F0FF] disabled:opacity-30"
+      />
     </div>
   )
 }
@@ -93,13 +136,6 @@ export function PauseOverlay({
   onSignUp?: () => void
   children?: ReactNode
 }) {
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
-    soundEnabled: s.settings.soundEnabled,
-    setSoundEnabled: s.setSoundEnabled,
-    sfxVolume: s.settings.sfxVolume,
-    setSfxVolume: s.setSfxVolume,
-  })))
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7
       bg-vt-void text-vt-text px-6">
@@ -111,20 +147,7 @@ export function PauseOverlay({
 
       <div className="font-silk text-lg text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.2em]">Paused</div>
       {children}
-      <div className="w-full max-w-xs border-y border-white/10">
-        <ChannelControl
-          label="Sound"
-          enabled={soundEnabled}
-          volume={sfxVolume}
-          onToggle={() => {
-            const next = !soundEnabled
-            setSoundEnabled(next)
-            if (next) { sfx.unlock(); sfx.uiTap() }
-          }}
-          onVolume={setSfxVolume}
-          onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
-        />
-      </div>
+      <StackedSound />
 
       <div className="flex flex-col gap-3 w-full max-w-[260px]">
         <NeonButton variant="primary" size="lg" fullWidth onClick={onResume}>Resume</NeonButton>

@@ -10,20 +10,22 @@ beforeEach(() => {
 })
 
 describe('PauseOverlay', () => {
-  it('shows Resume/Exit and the Sound control (toggle + volume)', () => {
+  it('shows Resume/Exit and the Sound control (toggle switch + volume)', () => {
     render(<PauseOverlay onResume={() => {}} onExit={() => {}} />)
     expect(screen.getByRole('button', { name: /Resume/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Exit to Home/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Sound: On/i })).toBeInTheDocument()
+    const sw = screen.getByRole('switch', { name: /Sound/i })
+    expect(sw).toBeInTheDocument()
+    expect(sw).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('slider', { name: /Sound volume/i })).toBeInTheDocument()
   })
 
   it('toggling sound from the pause screen persists the setting', async () => {
     const user = userEvent.setup()
     render(<PauseOverlay onResume={() => {}} onExit={() => {}} />)
-    await user.click(screen.getByRole('button', { name: /Sound: On/i }))
+    await user.click(screen.getByRole('switch', { name: /Sound/i }))
     expect(useSettingsStore.getState().settings.soundEnabled).toBe(false)
-    expect(screen.getByRole('button', { name: /Sound: Off/i })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: /Sound/i })).toHaveAttribute('aria-checked', 'false')
     // Volume slider disables while the channel is off.
     expect(screen.getByRole('slider', { name: /Sound volume/i })).toBeDisabled()
   })
