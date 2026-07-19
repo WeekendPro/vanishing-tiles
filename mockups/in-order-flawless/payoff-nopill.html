@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clear payoff — text-only, no pill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#06060B; --grid:#1C1C28; --filled:#2A2D3A;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --dim:#8A8AA0;
+    --shadow:0 2px 6px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.95);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:radial-gradient(120% 80% at 50% -10%, #101021 0%, var(--void) 60%);
+    color:var(--text); font-family:"Space Grotesk",system-ui,sans-serif; padding:30px 20px 90px}
+  h1{font-size:21px; font-weight:700; margin:0 0 4px}
+  .sub{color:var(--dim); font-size:13px; max-width:840px; margin:0 0 22px}
+  .glow-lime{color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5)}
+  .frames{display:flex; gap:30px; flex-wrap:wrap; align-items:flex-start}
+  .frame{width:300px}
+  .cap{font-size:12.5px; color:var(--dim); margin:12px 4px 0; text-align:center; line-height:1.5}
+  .cap b{color:var(--text)}
+  .stage{background:linear-gradient(180deg,#0b0b14,#070710); border:1px solid #17172440;
+    border-radius:20px; padding:14px 14px 18px; position:relative; overflow:hidden; box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+  .hud{display:grid; grid-template-columns:1fr auto 1fr; align-items:flex-end; margin-bottom:9px}
+  .score{font-weight:700; font-size:23px; line-height:1; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5)}
+  .meta{display:flex; flex-direction:column; align-items:center; gap:2px}
+  .meta .lbl{font-size:7.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .meta .val{font-size:13px; font-weight:600}
+  .lives{justify-self:end; align-items:flex-end}
+  .hearts{display:flex; gap:3px}
+  .heart{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px rgba(255,59,71,.6)}
+  .heart.off{background:#241016;box-shadow:none}
+  .bar{height:6px;border-radius:99px;background:#000;overflow:hidden;margin:0 0 10px;box-shadow:inset 0 1px 2px #000}
+  .bar>i{display:block;height:100%;width:60%;border-radius:99px;background:var(--lime);box-shadow:0 0 10px rgba(182,255,60,.6)}
+  .central{height:20px; display:flex; align-items:center; justify-content:center; margin:2px 0 9px}
+  .central .k{font-size:9px; letter-spacing:.2em; text-transform:uppercase; font-weight:600; margin-right:6px}
+  .central .v{font-size:19px; font-weight:700; line-height:1}
+  .boardwrap{position:relative}
+  .board{--cell:20px; --gap:2px; display:grid; grid-template-columns:repeat(12,var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); padding:8px; border-radius:11px; background:var(--void); border:1px solid #14141f; justify-content:center; margin:0 auto}
+  .board b{background:var(--grid); border-radius:3px}
+  .board b.f{background:var(--filled); box-shadow:inset 0 0 0 1px #ffffff08}
+
+  /* text-only itemized list, anchored upper-left — NO pill, NO backing */
+  .payoff{position:absolute; left:14px; top:12px; display:flex; flex-direction:column; gap:4px; pointer-events:none; z-index:5}
+  .item{display:flex; align-items:baseline; gap:7px; opacity:0; text-shadow:var(--shadow); white-space:nowrap}
+  .item .tag{font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase}
+  .item .pts{font-size:16px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+
+  /* ── Variant 1 · all white ── */
+  .v1 .item .tag{color:#fff} .v1 .item .pts{color:#fff}
+  /* ── Variant 2 · colored label, white value ── */
+  .v2 .item.flawless .tag{color:var(--cyan)} .v2 .item.order .tag{color:var(--lime)} .v2 .item.speed .tag{color:var(--amber)}
+  .v2 .item .pts{color:#fff}
+  /* ── Variant 3 · fully colored, with glow ── */
+  .v3 .item.flawless .tag,.v3 .item.flawless .pts{color:var(--cyan); text-shadow:0 0 9px rgba(40,240,255,.45), var(--shadow)}
+  .v3 .item.order .tag,.v3 .item.order .pts{color:var(--lime); text-shadow:0 0 9px rgba(182,255,60,.45), var(--shadow)}
+  .v3 .item.speed .tag,.v3 .item.speed .pts{color:var(--amber); text-shadow:0 0 9px rgba(255,194,61,.45), var(--shadow)}
+
+  @keyframes riseA{
+    0%{opacity:0; transform:translateY(6px)}
+    12%{opacity:1; transform:translateY(0)}
+    55%{opacity:1; transform:translateY(0)}
+    100%{opacity:0; transform:translateY(-42px)}
+  }
+  .run .item{animation:riseA 1900ms cubic-bezier(0.4,0,0.2,1) both}
+  .run .item.flawless{animation-delay:.05s}
+  .run .item.order{animation-delay:.45s}
+  .run .item.speed{animation-delay:.85s}
+
+  .btn{margin-top:14px; background:#12121c; border:1px solid #26263a; color:var(--text);
+    font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+    padding:7px 15px; border-radius:99px; cursor:pointer}
+  .btn:hover{border-color:var(--lime); color:var(--lime)}
+  .note{font-size:12.5px;color:var(--dim);max-width:840px;margin:22px 0 0;line-height:1.6}
+</style>
+</head>
+<body>
+  <h1>Clear payoff — text-only, no pill</h1>
+  <p class="sub">Same independent-drift motion + pacing you liked, but the pill/backing is gone. Legibility now comes only from a soft dark drop-shadow (the game's floating-text shadow), so the lines read over filled tiles without any box. Three treatments, quiet → louder.</p>
+
+  <div class="frames" id="frames"></div>
+
+  <p class="note">All: upper-left, no box, ~1.9s per line, staggered, drift up ~42px and evaporate. Colored labels (2 &amp; 3) keep each bonus identifiable at a glance; all-white (1) is the most restrained. Say which, and I'll wire it.</p>
+
+<script>
+  const VARIANTS=[
+    {cls:'v1', title:'1 · All white', desc:'Label + value both white. The most restrained — pure text, no color at all.'},
+    {cls:'v2', title:'2 · Colored label', desc:'Small colored label (cyan / lime / amber), white value. A touch of identity, still quiet.'},
+    {cls:'v3', title:'3 · Fully colored + glow', desc:'Whole line in the bonus color with a soft glow. Loudest of the three, but still no box.'},
+  ];
+  const R=(r,c)=>r*12+c;
+  const FILLED=new Set([R(2,7),R(2,8),R(3,7),R(3,8), R(5,3),R(5,4),R(5,5),R(5,6),
+    R(7,8),R(8,8),R(8,9),R(8,10), R(9,2),R(9,3),R(10,3),R(10,4), R(6,9),R(6,10),R(7,10),R(7,9)]);
+  function boardHTML(){let s='';for(let i=0;i<144;i++)s+='<b class="'+(FILLED.has(i)?'f':'')+'"></b>';return s}
+  const frames=document.getElementById('frames');
+  VARIANTS.forEach((v,idx)=>{
+    const f=document.createElement('div'); f.className='frame';
+    f.innerHTML=`
+      <div class="stage ${v.cls}" id="stage${idx}">
+        <div class="hud">
+          <div class="score">24,300</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">6 / 6</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar"><i></i></div>
+        <div class="central glow-lime"><span class="k">Streak</span><span class="v">×14</span></div>
+        <div class="boardwrap">
+          <div class="board">${boardHTML()}</div>
+          <div class="payoff">
+            <div class="item flawless"><span class="tag">Flawless</span><span class="pts">+900</span></div>
+            <div class="item order"><span class="tag">In Order</span><span class="pts">+1,500</span></div>
+            <div class="item speed"><span class="tag">Speed</span><span class="pts">+420</span></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="play(${idx})">▶ Play ${v.title.split(' · ')[1]}</button>
+      <div class="cap"><b>${v.title}.</b> ${v.desc}</div>`;
+    frames.appendChild(f);
+  });
+  function play(idx){
+    const stage=document.getElementById('stage'+idx);
+    stage.classList.remove('run'); void stage.offsetWidth; stage.classList.add('run');
+    const el=stage.querySelector('.score'); const end=24300, start=end-2820;
+    el.textContent=start.toLocaleString(); let t0=null;
+    (function step(t){ if(!t0)t0=t; const k=Math.min(1,(t-t0)/2200);
+      el.textContent=Math.round(start+(end-start)*k).toLocaleString(); if(k<1)requestAnimationFrame(step)})(0);
+  }
+  function playAll(){VARIANTS.forEach((_,i)=>play(i))}
+  setTimeout(playAll,500);
+  window.__loop=setInterval(playAll,3400);
+</script>
+</body>
+</html>

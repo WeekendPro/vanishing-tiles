@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { FLOAT_TEXT_SHADOW, LIFT_MS } from './constants'
+import { FLOAT_TEXT_SHADOW } from './constants'
 
 // ── Floating FX ───────────────────────────────────────────────────────────────
 // The floating animation overlays. They sit at different tree positions (the
@@ -83,47 +83,41 @@ export function WrongPickFlash({ xMark }: { xMark: boolean }) {
   )
 }
 
-// Clear-payoff "Lift": a labeled "+bonus" rises off the timer bar and dissolves
-// into the score readout as the number climbs. Fired one-per-earned-bonus from
-// onPick on a cleared batch — FLAWLESS (cyan) → IN ORDER (lime) → SPEED (amber).
+// Clear-payoff bonus receipt: the earned bonuses itemize in the board's UPPER-LEFT
+// — a colored label + white value per line (FLAWLESS cyan / IN ORDER lime / SPEED
+// amber) — each holding a beat then drifting up to evaporate (`vt-bonus-rise`),
+// staggered by its own delay. No travel toward the score; the score counts up on
+// its own underneath. Rendered inside the board's relative wrapper so it scales
+// with the board.
 export type LiftVariant = 'flawless' | 'inOrder' | 'speed'
-export interface LiftFlyerData {
+export interface BonusItem {
   id: number
   value: number
   tag: string
   variant: LiftVariant
-  x0: number; y0: number; x1: number; y1: number
+  delayMs: number
 }
 
-const LIFT_VARIANT_CLASS: Record<LiftVariant, string> = {
-  flawless: 'text-vt-cyan text-glow-vt-cyan',
-  inOrder: 'text-vt-lime text-glow-vt-lime',
-  speed: 'text-vt-amber text-glow-vt-amber',
+const BONUS_TAG_CLASS: Record<LiftVariant, string> = {
+  flawless: 'text-vt-cyan',
+  inOrder: 'text-vt-lime',
+  speed: 'text-vt-amber',
 }
 
-export function LiftFlyer({
-  liftFlyer, onDone,
-}: {
-  liftFlyer: LiftFlyerData
-  onDone: () => void
-}) {
+export function BonusPayoff({ items }: { items: BonusItem[] }) {
+  if (items.length === 0) return null
   return (
-    <motion.div
-      initial={{ x: 0, y: 0, opacity: 0, scale: 0.6 }}
-      animate={{
-        x: liftFlyer.x1 - liftFlyer.x0,
-        y: liftFlyer.y1 - liftFlyer.y0,
-        opacity: [0, 1, 1, 0],
-        scale: [0.6, 1.1, 1, 0.7],
-      }}
-      transition={{ duration: LIFT_MS / 1000, ease: [0.33, 1, 0.68, 1], times: [0, 0.18, 0.72, 1] }}
-      onAnimationComplete={onDone}
-      transformTemplate={(_, generated) => `translate(-50%, -50%) ${generated}`}
-      className={`fixed z-[60] pointer-events-none flex flex-col items-center whitespace-nowrap ${LIFT_VARIANT_CLASS[liftFlyer.variant]}`}
-      style={{ left: liftFlyer.x0, top: liftFlyer.y0, textShadow: FLOAT_TEXT_SHADOW }}
-    >
-      <span className="font-grotesk font-bold text-[10px] tracking-[0.16em] uppercase leading-none mb-0.5">{liftFlyer.tag}</span>
-      <span className="font-silk font-bold text-2xl leading-none tabular-nums">+{liftFlyer.value}</span>
-    </motion.div>
+    <div className="absolute left-3 top-3 z-20 flex flex-col gap-1 pointer-events-none">
+      {items.map(it => (
+        <div
+          key={it.id}
+          className="vt-bonus-rise flex items-baseline gap-1.5 whitespace-nowrap"
+          style={{ animationDelay: `${it.delayMs}ms`, textShadow: FLOAT_TEXT_SHADOW }}
+        >
+          <span className={`font-grotesk font-bold text-[11px] tracking-[0.13em] uppercase ${BONUS_TAG_CLASS[it.variant]}`}>{it.tag}</span>
+          <span className="font-silk font-bold text-lg leading-none tabular-nums text-white">+{it.value}</span>
+        </div>
+      ))}
+    </div>
   )
 }

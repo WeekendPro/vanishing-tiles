@@ -461,6 +461,25 @@ html {
   .vt-fade-away { animation: none; opacity: 0.85; }
 }
 
+/* Clear-payoff bonus line: fades in, holds still long enough to READ, then drifts
+   gently up and evaporates — itemized in the board's upper-left, never travelling
+   to the score. Duration must match BONUS_RISE_MS in stagger/constants.ts. */
+@keyframes vtBonusRise {
+  0%   { opacity: 0; transform: translateY(6px); }
+  12%  { opacity: 1; transform: translateY(0); }
+  55%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-42px); }
+}
+.vt-bonus-rise { animation: vtBonusRise 1900ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* Reduced motion: keep the read (fade in → hold → fade out), drop the drift. */
+@keyframes vtBonusRiseStill {
+  0% { opacity: 0; } 12% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vt-bonus-rise { animation: vtBonusRiseStill 1900ms linear both; }
+}
+
 /* Brand motif: a gap cell BLOOMS magenta, holds, then decays on the tail back to
    the raised surface — it vanishes. Lit cells form tetromino clusters that bloom
    out of phase (per-cell animation-delay), so the title shows the game before you

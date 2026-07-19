@@ -19,11 +19,15 @@ export const PIECE_FADE_MS = 460
 // turning into points.
 export const LIFT_BEAT_MS = 260
 export const LIFT_MS = 1300
-// When a clear earns more than the speed bonus (FLAWLESS / IN ORDER), the earned
-// flyers lift one after another, each launching this long after the previous so
-// they read as a sequence rather than a pile. Shorter than LIFT_MS, so a flyer is
-// still mid-flight when the next launches (an overlapping cascade, not a queue).
-export const LIFT_STEP_MS = 520
+
+// Clear-payoff bonus receipt: the earned bonuses (FLAWLESS / IN ORDER / SPEED)
+// itemize in the board's upper-left, each line holding a beat then drifting up to
+// evaporate (the `vt-bonus-rise` keyframe in index.css). BONUS_RISE_MS MUST match
+// that keyframe's duration. Lines appear staggered (BONUS_BEAT_MS before the first,
+// BONUS_STAGGER_MS between each) — legible, one at a time, no travel to the score.
+export const BONUS_RISE_MS = 1900
+export const BONUS_BEAT_MS = 60
+export const BONUS_STAGGER_MS = 400
 
 // Hard-mode out-of-order hint: on a right-shape-wrong-order miss the PHASE LABEL
 // (the central MEMORIZE/RECALL/CLEAR! line above the grid) swaps to "IN ORDER",

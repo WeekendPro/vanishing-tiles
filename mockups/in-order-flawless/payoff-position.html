@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Clear payoff — itemized upper-left, slow rise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --raised:#15151F; --grid:#1C1C28;
+    --filled:#2A2D3A; --edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --dim:#8A8AA0; --faint:#4A4A5C;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:radial-gradient(120% 80% at 50% -10%, #101021 0%, var(--void) 60%);
+    color:var(--text); font-family:"Space Grotesk",system-ui,sans-serif; padding:30px 20px 90px}
+  h1{font-size:21px; font-weight:700; margin:0 0 4px}
+  .sub{color:var(--dim); font-size:13px; max-width:820px; margin:0 0 22px}
+  .glow-lime{color:var(--lime); text-shadow:0 0 10px rgba(182,255,60,.5)}
+  .frames{display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start}
+  .frame{width:360px}
+  .cap{font-size:12.5px; color:var(--dim); margin:12px 4px 0; text-align:center; line-height:1.5}
+  .cap b{color:var(--text)}
+  .stage{background:linear-gradient(180deg,#0b0b14,#070710); border:1px solid #17172440;
+    border-radius:20px; padding:16px 16px 20px; position:relative; overflow:hidden;
+    box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+  /* HUD */
+  .hud{display:grid; grid-template-columns:1fr auto 1fr; align-items:flex-end; margin-bottom:10px}
+  .score{font-weight:700; font-size:27px; line-height:1; color:var(--cyan); text-shadow:0 0 10px rgba(40,240,255,.5); tabular-nums}
+  .meta{display:flex; flex-direction:column; align-items:center; gap:3px}
+  .meta .lbl{font-size:8px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .meta .val{font-size:14px; font-weight:600}
+  .lives{justify-self:end; align-items:flex-end}
+  .hearts{display:flex; gap:3px}
+  .heart{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 6px rgba(255,59,71,.6)}
+  .heart.off{background:#241016;box-shadow:none}
+  .bar{height:7px;border-radius:99px;background:#000;overflow:hidden;margin:0 0 12px;box-shadow:inset 0 1px 2px #000}
+  .bar>i{display:block;height:100%;width:60%;border-radius:99px;background:var(--lime);box-shadow:0 0 10px rgba(182,255,60,.6)}
+  .central{height:22px; display:flex; align-items:center; justify-content:center; margin:2px 0 10px}
+  .central .k{font-size:10px; letter-spacing:.2em; text-transform:uppercase; font-weight:600; margin-right:7px}
+  .central .v{font-size:21px; font-weight:700; line-height:1}
+  /* board */
+  .boardwrap{position:relative}
+  .board{--cell:24px; --gap:2px; display:grid; grid-template-columns:repeat(12,var(--cell)); grid-auto-rows:var(--cell);
+    gap:var(--gap); padding:9px; border-radius:12px; background:var(--void); border:1px solid #14141f; justify-content:center; margin:0 auto}
+  .board b{background:var(--grid); border-radius:3px}
+  .board b.f{background:var(--filled); box-shadow:inset 0 0 0 1px #ffffff08}
+
+  /* ── itemized bonus stack, anchored upper-left of the board ── */
+  .payoff{position:absolute; left:16px; top:16px; display:flex; flex-direction:column; gap:7px; pointer-events:none; z-index:5}
+  .item{
+    display:flex; align-items:baseline; gap:9px; padding:5px 11px; border-radius:9px;
+    background:rgba(6,6,12,.62); backdrop-filter:blur(3px);
+    box-shadow:0 1px 10px rgba(0,0,0,.55);
+    opacity:0;
+  }
+  .item .tag{font-size:11px; font-weight:700; letter-spacing:.13em; text-transform:uppercase}
+  .item .pts{font-size:18px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; color:var(--text)}
+  .item.flawless{border-left:2px solid var(--cyan)} .item.flawless .tag{color:var(--cyan); text-shadow:0 0 8px rgba(40,240,255,.4)}
+  .item.order{border-left:2px solid var(--lime)}    .item.order .tag{color:var(--lime); text-shadow:0 0 8px rgba(182,255,60,.4)}
+  .item.speed{border-left:2px solid var(--amber)}   .item.speed .tag{color:var(--amber); text-shadow:0 0 8px rgba(255,194,61,.4)}
+
+  /* Variant A — each item: fade in, hold legible, then drift up ~40px and evaporate. Staggered. */
+  @keyframes riseA{
+    0%{opacity:0; transform:translateY(6px)}
+    12%{opacity:1; transform:translateY(0)}
+    55%{opacity:1; transform:translateY(0)}        /* hold still & legible */
+    100%{opacity:0; transform:translateY(-42px)}    /* slow drift up, evaporate */
+  }
+  .runA .item{animation:riseA 1900ms cubic-bezier(0.4,0,0.2,1) both}
+  .runA .item.flawless{animation-delay:.05s}
+  .runA .item.order{animation-delay:.45s}
+  .runA .item.speed{animation-delay:.85s}
+
+  /* Variant B — items pop into a list one-by-one and HOLD; then the whole stack
+     lifts up together and evaporates. */
+  @keyframes appearB{0%{opacity:0; transform:translateY(8px) scale(.96)} 100%{opacity:1; transform:translateY(0) scale(1)}}
+  @keyframes liftGroupB{0%{opacity:1; transform:translateY(0)} 100%{opacity:0; transform:translateY(-46px)}}
+  .runB .payoff{animation:liftGroupB 1100ms cubic-bezier(0.4,0,0.2,1) 1500ms both}
+  .runB .item{animation:appearB 320ms cubic-bezier(0.2,0.8,0.2,1) both}
+  .runB .item.flawless{animation-delay:.05s}
+  .runB .item.order{animation-delay:.42s}
+  .runB .item.speed{animation-delay:.80s}
+
+  .btn{margin-top:14px; background:#12121c; border:1px solid #26263a; color:var(--text);
+    font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+    padding:8px 16px; border-radius:99px; cursor:pointer}
+  .btn:hover{border-color:var(--lime); color:var(--lime)}
+  .note{font-size:12.5px;color:var(--dim);max-width:820px;margin:22px 0 0;line-height:1.6}
+  .note b{color:var(--text)}
+</style>
+</head>
+<body>
+  <h1>Clear payoff — itemized, upper-left, slow rise</h1>
+  <p class="sub">Bonuses list in the board's upper-left, hold still long enough to read, then drift up gently and evaporate. No travel toward the score. Streak still owns the center. (6-gap Medium clear: FLAWLESS +900 · IN ORDER +1,500 · SPEED +420.)</p>
+
+  <div class="frames">
+    <!-- Variant A -->
+    <div class="frame">
+      <div class="stage" id="stageA">
+        <div class="hud">
+          <div class="score">24,300</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">6 / 6</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar"><i></i></div>
+        <div class="central glow-lime"><span class="k">Streak</span><span class="v">×14</span></div>
+        <div class="boardwrap">
+          <div class="board" id="boardA"></div>
+          <div class="payoff" id="payoffA">
+            <div class="item flawless"><span class="tag">Flawless</span><span class="pts">+900</span></div>
+            <div class="item order"><span class="tag">In Order</span><span class="pts">+1,500</span></div>
+            <div class="item speed"><span class="tag">Speed</span><span class="pts">+420</span></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="play('A')">▶ Play variant A</button>
+      <div class="cap"><b>A · Independent drift.</b> Each line fades in, holds, then floats up and evaporates on its own — staggered, so they read one at a time.</div>
+    </div>
+
+    <!-- Variant B -->
+    <div class="frame">
+      <div class="stage" id="stageB">
+        <div class="hud">
+          <div class="score">24,300</div>
+          <div class="meta"><div class="lbl">Items</div><div class="val">6 / 6</div></div>
+          <div class="meta lives"><div class="lbl">Lives</div><div class="hearts"><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart"></i><i class="heart off"></i></div></div>
+        </div>
+        <div class="bar"><i></i></div>
+        <div class="central glow-lime"><span class="k">Streak</span><span class="v">×14</span></div>
+        <div class="boardwrap">
+          <div class="board" id="boardB"></div>
+          <div class="payoff" id="payoffB">
+            <div class="item flawless"><span class="tag">Flawless</span><span class="pts">+900</span></div>
+            <div class="item order"><span class="tag">In Order</span><span class="pts">+1,500</span></div>
+            <div class="item speed"><span class="tag">Speed</span><span class="pts">+420</span></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="play('B')">▶ Play variant B</button>
+      <div class="cap"><b>B · Build then lift.</b> The list stacks up one line at a time and holds together, then the whole group rises and evaporates as a unit.</div>
+    </div>
+  </div>
+
+  <p class="note">Both: anchored top-left, legible dark backing so they read even over filled tiles, colored accent per bonus (cyan / lime / amber), ~1.5–1.9s each. The <b>score still counts up</b> underneath as each lands (not shown here). If neither the drift distance nor the hold feels right, those are easy dials — say faster/slower, taller/shorter drift, longer/shorter hold.</p>
+
+<script>
+  function paint(id){
+    const b=document.getElementById(id); if(!b) return; b.innerHTML='';
+    const R=(r,c)=>r*12+c;
+    const filled=new Set([R(2,7),R(2,8),R(3,7),R(3,8), R(5,3),R(5,4),R(5,5),R(5,6),
+      R(7,8),R(8,8),R(8,9),R(8,10), R(9,2),R(9,3),R(10,3),R(10,4), R(6,9),R(6,10),R(7,10),R(7,9), R(10,7),R(10,8),R(9,7),R(9,8)]);
+    for(let i=0;i<144;i++){const c=document.createElement('b'); if(filled.has(i))c.classList.add('f'); b.appendChild(c)}
+  }
+  paint('boardA'); paint('boardB');
+
+  function play(which){
+    const stage=document.getElementById('stage'+which);
+    stage.classList.remove('runA','runB'); void stage.offsetWidth;
+    stage.classList.add('run'+which);
+    // count the score up under the payoff
+    const el=stage.querySelector('.score'); const end=24300, start=end-2820;
+    el.textContent=start.toLocaleString(); let t0=null;
+    (function step(t){ if(!t0)t0=t; const k=Math.min(1,(t-t0)/2200);
+      el.textContent=Math.round(start+(end-start)*k).toLocaleString(); if(k<1)requestAnimationFrame(step)})(0);
+  }
+  setTimeout(()=>play('A'), 500);
+  setTimeout(()=>play('B'), 900);
+</script>
+</body>
+</html>

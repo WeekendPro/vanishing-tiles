@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/shallow'
 import { type PieceType } from '@shared/types'
 import { useStaggerStore } from '../store/staggerStore'
@@ -10,14 +9,14 @@ import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
 import { NeonButton, ScaleToFit } from './ui'
 import { useCountUp } from '../hooks/useCountUp'
-import { CELL, CELL_PITCH, BOARD_PAD, LIFT_BEAT_MS, LIFT_MS, LIFT_STEP_MS, ORDER_HINT_MS } from './stagger/constants'
+import { CELL, CELL_PITCH, BOARD_PAD, LIFT_MS, BONUS_RISE_MS, BONUS_BEAT_MS, BONUS_STAGGER_MS, ORDER_HINT_MS } from './stagger/constants'
 import { StaggerBoard } from './stagger/StaggerBoard'
 import { StaggerCountdown } from './stagger/StaggerCountdown'
 import { PieceTray } from './stagger/PieceTray'
 import { HudBar } from './stagger/HudBar'
 import { GameOverSummary } from './stagger/GameOverSummary'
 import { DemoIntroOverlay, DemoEndOverlay, DemoFooterRow } from './stagger/DemoOverlays'
-import { StreakBursts, LifeBursts, WrongPickFlash, LiftFlyer, type LiftFlyerData, type LiftVariant } from './stagger/FloatingFx'
+import { StreakBursts, LifeBursts, WrongPickFlash, BonusPayoff, type BonusItem, type LiftVariant } from './stagger/FloatingFx'
 import { PauseButton, CountdownPauseSkeleton, PauseStatsOverlay } from './stagger/PauseControls'
 import { useRunRecording } from './stagger/useRunRecording'
 import { useStreakChip } from './stagger/useStreakChip'
@@ -68,18 +67,17 @@ export function StaggerScreen() {
   const orderHintTimer = useRef<number | undefined>(undefined)
   const boardRef = useRef<HTMLDivElement>(null)
   const scoreRef = useRef<HTMLDivElement>(null)
-  const reduceMotion = useReducedMotion()
 
   // The §1 temperature-arc timer bar (barPct/barColor/barTransition + barRef),
   // driven through semantic gestures by the reveal driver, the recall clock, and
   // onPick's clear-payoff.
   const timerBar = useTimerBar()
 
-  // The earned "+bonus" flyers that lift off the bar and dissolve into the score
-  // on a cleared batch (the "Lift" payoff): FLAWLESS / IN ORDER / SPEED, each an
-  // entry that self-removes on animation-complete. Empty when no payoff is in flight.
-  const [liftFlyers, setLiftFlyers] = useState<LiftFlyerData[]>([])
-  const liftFlyerId = useRef(0)
+  // The earned "+bonus" lines itemized in the board's upper-left on a cleared batch
+  // (the payoff receipt): FLAWLESS / IN ORDER / SPEED, each drifting up to evaporate.
+  // Empty when no payoff is in flight; cleared as a set when the batch advances.
+  const [bonusItems, setBonusItems] = useState<BonusItem[]>([])
+  const bonusItemId = useRef(0)
 
   // Score count-up duration: snappy (600ms) per pick, stretched to the drain
   // window (LIFT_MS) while the cleared-batch speed bonus pours in, so the number
@@ -108,7 +106,7 @@ export function StaggerScreen() {
     if (phase === 'countdown' || phase === 'gameOver' || phase === 'idle') {
       setStreakBursts([])
       setStreakChip(null)
-      setLiftFlyers([])
+      setBonusItems([])
       setScoreCountMs(600)
       setDemoWrong(null)
       setDemoDone(false)
@@ -129,22 +127,6 @@ export function StaggerScreen() {
     timeoutBatch, setCleared, timerBar,
   })
 
-  // Fire the leftover-time "+bonus" flyer from the right end of the (frozen) timer
-  // bar up to the score readout. Skipped under reduced motion — the score still
-  // counts up, just without the traveling flyer.
-  const spawnLiftFlyer = (value: number, tag: string, variant: LiftVariant, barRect: DOMRect | null) => {
-    if (reduceMotion) return
-    const sc = scoreRef.current?.getBoundingClientRect()
-    if (!barRect || !sc) return
-    const id = (liftFlyerId.current += 1)
-    setLiftFlyers(prev => [...prev, {
-      id, value, tag, variant,
-      x0: barRect.right,
-      y0: barRect.top + barRect.height / 2,
-      x1: sc.left + sc.width / 2,
-      y1: sc.top + sc.height / 2,
-    }])
-  }
 
   // Any exit from the demo (the skip link, or the end beat's tap-to-start)
   // resets the demo's score/stats in the store and fires the real countdown.
@@ -238,7 +220,7 @@ export function StaggerScreen() {
     if (res.batchCleared) {
       setCleared(true)
       sfx.batchClear()
-      // The earned clear-payoff bonuses, in lift order: FLAWLESS (clean clear) →
+      // The earned clear-payoff bonuses, in receipt order: FLAWLESS (clean clear) →
       // IN ORDER (clean + sequenced) → SPEED (leftover time). Only non-zero ones
       // appear. SPEED is the one tied to the timer bar draining.
       const earned = ([
@@ -246,32 +228,40 @@ export function StaggerScreen() {
         { amount: res.inOrderBonus, tag: 'IN ORDER', variant: 'inOrder' as LiftVariant, drains: false },
         { amount: res.speedBonus, tag: 'SPEED', variant: 'speed' as LiftVariant, drains: true },
       ]).filter(b => b.amount > 0)
+      // Itemize them all at once in the board's upper-left; each line's CSS delay
+      // staggers its fade-in / hold / drift-up so they read one at a time.
+      setBonusItems(earned.map((b, j) => ({
+        id: (bonusItemId.current += 1),
+        value: b.amount, tag: b.tag, variant: b.variant,
+        delayMs: BONUS_BEAT_MS + j * BONUS_STAGGER_MS,
+      })))
       // Freeze the lime bar where it currently sits (the leftover time), holding it
-      // through the payoff — the SPEED lift cashes it out by draining the bar.
+      // through the payoff — the SPEED line cashes it out by draining the bar.
       timerBar.freezeLime()
       const hasSpeed = earned.some(b => b.drains)
-      // Each earned bonus LIFTS off the bar in turn, staggered by LIFT_STEP_MS, and
-      // dissolves into the score as the number counts up. The SPEED lift also rushes
-      // the bar to empty — remaining time visibly turning into points.
+      // As each line lands, bank its points and tick the score up (in step with the
+      // line appearing). The SPEED line also rushes the bar to empty — remaining
+      // time visibly turning into points.
       earned.forEach((b, j) => {
         window.setTimeout(() => {
-          const barRect = timerBar.barRef.current?.getBoundingClientRect() ?? null
           if (b.drains) timerBar.rushToEmpty()
           sfx.bonusLift()
-          spawnLiftFlyer(b.amount, b.tag, b.variant, barRect)
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(b.amount)
-        }, LIFT_BEAT_MS + j * LIFT_STEP_MS)
+        }, BONUS_BEAT_MS + j * BONUS_STAGGER_MS)
       })
       // No leftover-time bonus (a slow or lossy clear): still drain the held bar so
       // it never lingers frozen into the next batch.
-      if (!hasSpeed) window.setTimeout(() => timerBar.rushToEmpty(), LIFT_BEAT_MS)
-      const lastLaunch = LIFT_BEAT_MS + Math.max(0, earned.length - 1) * LIFT_STEP_MS
+      if (!hasSpeed) window.setTimeout(() => timerBar.rushToEmpty(), BONUS_BEAT_MS)
+      // Advance once the last line has fully risen and evaporated, clearing the
+      // receipt as the next batch's reveal takes over.
+      const payoffMs = BONUS_BEAT_MS + Math.max(0, earned.length - 1) * BONUS_STAGGER_MS + BONUS_RISE_MS
       window.setTimeout(() => {
         setScoreCountMs(600)
         setCleared(false)
+        setBonusItems([])
         advanceBatch()
-      }, lastLaunch + LIFT_MS + 240)
+      }, payoffMs)
     }
   }
 
@@ -388,6 +378,10 @@ export function StaggerScreen() {
           <StaggerBoard gaps={gaps} bloomByCell={bloomByCell} mode={mode} />
         </div>
 
+        {/* Clear-payoff receipt: earned bonuses itemize in the board's upper-left,
+            each line drifting up to evaporate. */}
+        <BonusPayoff items={bonusItems} />
+
         {/* Demo spotlight veil: during a guided pick the board goes quiet so the
             tray's lit target is the only bright thing on screen. */}
         {demoTarget && (
@@ -476,10 +470,6 @@ export function StaggerScreen() {
           onExit={() => { exit(); goHome() }}
         />
       )}
-
-      {liftFlyers.map(f => (
-        <LiftFlyer key={f.id} liftFlyer={f} onDone={() => setLiftFlyers(prev => prev.filter(p => p.id !== f.id))} />
-      ))}
     </div>
   )
 }
