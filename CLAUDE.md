@@ -165,9 +165,14 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 ## Docs
 
-- **Original design spec:** `docs/superpowers/specs/2026-05-26-puzzle-game-design.md`
-- **Original implementation plan:** `docs/superpowers/plans/2026-05-26-puzzle-game-poc.md`
-- **Gameplay polish (12×12 board, retry flow, failure penalty, turtle):** `docs/superpowers/specs/2026-05-28-gameplay-polish-design.md` + `docs/superpowers/plans/2026-05-28-gameplay-polish.md`
-- **Infinite Stagger, original design:** `docs/superpowers/specs/2026-06-16-infinite-stagger-design.md`
-- **Three-mode MVP simplification (current shipped shape — modes, single ramp, streak-only scoring, legacy removal):** `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`
-- **Journey rework (level hub + badges), now removed:** `docs/superpowers/specs/2026-06-08-journey-rework-design.md`
+Docs fall into two classes — don't confuse them:
+
+**Current-state / living references — kept accurate, describe the game as it is today:**
+- **`README.md`** — what the game is + how to run it (public-facing source of truth).
+- **`CLAUDE.md`** (this file) — architecture, conventions, agent rules.
+- **Brand + visual system:** `docs/design/phosphor-brand.md` (Vanishing Tiles brand bible — name, voice, CRT lexicon, naming rules) and `docs/design/phosphor-design-system.md` (the **Afterglow** palette / type / motion). The `phosphor-` filenames are an old codename kept for link stability — the content is current.
+
+**Historical archive — dated, frozen, NOT a description of current state:** everything under `docs/superpowers/specs/` and `docs/superpowers/plans/` (see `docs/superpowers/README.md`). These record the *why* behind a decision at a point in time; many describe features that were later changed or **removed** (Journey, Practice, multi-round levels, the Gap City transit map, per-station gating, etc.). **When an archived doc conflicts with the code, the code is right.** Read them for rationale, never for how things work now. Useful anchors:
+- Infinite Stagger, original design — `docs/superpowers/specs/2026-06-16-infinite-stagger-design.md`
+- Three-mode MVP simplification (the pivot to today's shape) — `docs/superpowers/plans/2026-07-15-three-mode-mvp-simplification.md`
+- Naming history (Gap City → Phosphor → Vanishing Shapes → Vanishing Tiles) — `docs/design/2026-06-19-vanishing-shapes-rename-decision.md`

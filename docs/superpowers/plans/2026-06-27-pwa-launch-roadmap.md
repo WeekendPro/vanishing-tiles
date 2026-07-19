@@ -1,5 +1,14 @@
 # Vanishing Tiles → PWA Launch Roadmap
 
+> **⚠️ STATUS BANNER (2026-07-18) — the checkboxes below are STALE; trust the code, not them.**
+> Actually shipped since this was written: the app is **deployed and live at a stable custom
+> domain** (`https://vanishingtiles.weekendpro.io`), the **web app manifest + icons +
+> `apple-touch-icon`** exist, and **Vercel Web Analytics** is wired (`src/lib/analytics.ts`).
+> Still genuinely outstanding: **service worker / offline** (no `vite-plugin-pwa` yet),
+> **Open Graph / social-share tags**, an **in-app install prompt**, and an **iOS Safari
+> pass**. A dedicated session is actively finishing these — it owns updating the checkboxes
+> below to reality as it lands each one.
+
 > **This is a living hub doc, not a one-shot execution plan.** It tracks decisions, status, and a
 > backlog of session-sized chunks. Each chunk is delegated to its own Claude Code session (spawned
 > as a chip via `spawn_task`). This thread holds the plan; it does not execute it. Update status
