@@ -18,7 +18,7 @@ export function ClaimNameScreen() {
   const suggestion = sanitizeSuggestion(authName) || sanitizeSuggestion(email?.split('@')[0])
 
   return (
-    <div className="relative min-h-dvh vt-vignette flex items-center justify-center px-6 overflow-hidden">
+    <div className="relative min-h-dvh flex items-center justify-center px-6 overflow-hidden">
       <div className="relative w-full max-w-sm rounded-[28px] bg-vt-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] px-7 py-9 flex flex-col items-center">
         <div className="text-center mb-7">
           <h1 className="font-silk text-base text-vt-text uppercase tracking-[0.15em]">

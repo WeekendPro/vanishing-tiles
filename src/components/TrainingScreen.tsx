@@ -222,7 +222,7 @@ export function TrainingScreen() {
   if (!active) return null
 
   return (
-    <div className="min-h-dvh flex flex-col vt-vignette text-vt-text select-none">
+    <div className="min-h-dvh flex flex-col text-vt-text select-none">
       {/* Fixed-size play surface scaled to fit the viewport; the pause overlay
           below renders OUTSIDE the transform (a transformed ancestor would become
           its containing block and shrink it with the stage). */}

@@ -163,9 +163,10 @@ export function LeaderboardScreen() {
     me !== null && !me.isGuest && me.rank === rank && me.displayName === name
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
+    <div className="relative min-h-dvh overflow-hidden text-white arcade-scanlines">
       <ScanlineOverlay />
-      <div className="relative mx-auto w-full max-w-sm min-h-dvh flex flex-col px-6 pt-6 pb-8">
+      <div className="relative mx-auto w-full max-w-sm min-h-dvh flex flex-col px-6
+        pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
         <button
           onClick={goHome}
           aria-label="Back"
@@ -184,7 +185,7 @@ export function LeaderboardScreen() {
         </p>
 
         {/* Mode tabs stay pinned while the list scrolls beneath them. */}
-        <div className="sticky top-0 z-10 -mx-6 px-6 pt-4 pb-2 bg-arcade-bg/90 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 -mx-6 px-6 pt-4 pb-2 bg-vt-void/80 backdrop-blur-sm">
           <div className="flex rounded-md border-2 border-arcade-edge bg-arcade-panel overflow-hidden">
             {TABS.map(t => {
               const active = t.value === mode

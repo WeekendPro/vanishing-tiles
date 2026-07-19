@@ -69,13 +69,14 @@ export function HomeScreen() {
   const activeHint = MODES.find(m => m.value === difficulty)?.hint
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-arcade-glow text-white arcade-scanlines">
+    <div className="relative min-h-dvh overflow-hidden text-white arcade-scanlines">
       <ScanlineOverlay />
 
       <div className="flex min-h-dvh">
         {/* ── Home pane ── */}
         <section
-          className="w-full min-h-dvh flex flex-col items-center px-6 pt-10 pb-10"
+          className="w-full min-h-dvh flex flex-col items-center px-6
+            pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]"
         >
           {/* Wordmark grows to fill the gap, pushing PLAY into the thumb arc. */}
           <div className="flex-1 w-full max-w-sm flex flex-col justify-center">

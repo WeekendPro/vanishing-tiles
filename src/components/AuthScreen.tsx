@@ -57,7 +57,7 @@ export function AuthScreen() {
     'disabled:opacity-50'
 
   return (
-    <div className="relative min-h-dvh vt-vignette flex items-center justify-center px-6 overflow-hidden">
+    <div className="relative min-h-dvh flex items-center justify-center px-6 overflow-hidden">
       <div className="relative w-full max-w-sm rounded-[28px] bg-vt-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] px-7 py-9 flex flex-col items-center">
 
         {/* Brand motif: gap shapes bloom, then vanish — the name in motion. */}

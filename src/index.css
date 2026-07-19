@@ -12,6 +12,33 @@
    scrollbars, which reserve nothing.) */
 html {
   scrollbar-gutter: stable;
+  /* The void base painted behind everything — matches the manifest/theme-color
+     (#06060B) so the PWA launch screen, the iOS status-bar area, and any
+     rubber-band overscroll all read as the same color as the app itself, with
+     no white flash before React mounts. */
+  background-color: #06060b;
+}
+
+/* ── App background (single source of truth) ──────────────────────────────
+   One consistent, gentle gradient shared by every screen. Rendered ONCE as a
+   fixed full-viewport layer in App.tsx (position: fixed; inset: 0), so under
+   `viewport-fit=cover` it covers the ENTIRE physical screen — behind the notch
+   and below the home indicator — identically on every page. Screens paint no
+   base background of their own; they're transparent and float over this.
+
+   The look folds together the two treatments the app used to mix: a soft cool
+   glow washing down from the top (the old `bg-arcade-glow`) plus a barely-there
+   edge vignette so lit UI still floats (the old `vt-vignette`) — kept subtle,
+   over the #06060B void. */
+.vt-app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 72% at 50% 0%, rgba(24, 34, 54, 0.55) 0%, rgba(10, 12, 22, 0) 56%),
+    radial-gradient(125% 100% at 50% 42%, transparent 58%, rgba(0, 0, 0, 0.55) 125%),
+    #06060b;
 }
 
 /* ── Arcade aesthetic primitives ──────────────────────────────────────────
@@ -66,16 +93,10 @@ html {
 }
 
 /* ── Landing / Home aesthetic ─────────────────────────────────────────────
-   Soft neon glow washing down from the top of the page, plus the frosted
-   "edge-lit" button panels used on HomeScreen (a left neon accent bar over a
-   barely-there translucent fill). The magenta variant tints the Experimental
-   Modes pane. */
-.bg-arcade-glow {
-  background: radial-gradient(120% 80% at 50% 0%, #0a1620 0%, #030712 55%);
-}
-.bg-arcade-glow-magenta {
-  background: radial-gradient(120% 80% at 50% 0%, #1a0f1c 0%, #030712 55%);
-}
+   The frosted "edge-lit" button panels used on HomeScreen (a left neon accent
+   bar over a barely-there translucent fill). (The page-level `bg-arcade-glow`
+   gradients that used to live here were folded into the single `.vt-app-bg`
+   background above.) */
 .frost-green {
   background: rgba(57, 217, 138, 0.1);
   /* Border-only at rest (no static outer glow); the hover state lights it up. */
@@ -128,10 +149,8 @@ html {
   --vt-mechanical: cubic-bezier(0.7, 0, 0.3, 1);
 }
 
-/* Screen ground: void + corner vignette so lit UI floats. */
-.vt-vignette {
-  background: radial-gradient(120% 90% at 50% 40%, transparent 55%, #000 130%), #06060b;
-}
+/* (The per-screen `.vt-vignette` ground was folded into the single `.vt-app-bg`
+   background above — every screen now shares that one gradient.) */
 
 /* Two-layer glow boxes (tight core + soft halo) per accent. */
 .vt-glow-cyan { box-shadow: 0 0 6px #28f0ff, 0 0 22px rgba(40, 240, 255, 0.45); }

@@ -166,7 +166,8 @@ export function GlobalMenu() {
         onClick={open ? close : openMenu}
         aria-label="Menu"
         aria-expanded={open}
-        className="fixed top-3 right-3 z-50 grid place-items-center w-10 h-10 rounded-xl
+        className="fixed top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] z-50
+          grid place-items-center w-10 h-10 rounded-xl
           border border-arcade-edge bg-arcade-panel/60 text-gray-200 hover:border-neon-cyan hover:text-neon-cyan
           transition-colors"
       >

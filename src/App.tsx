@@ -53,6 +53,10 @@ export default function App() {
 
   return (
     <>
+      {/* The single, consistent app background — a fixed full-viewport layer
+          (see .vt-app-bg) that covers the entire screen including the safe
+          areas, so every screen shares one gentle gradient with no seams. */}
+      <div className="vt-app-bg" aria-hidden="true" />
       {/* Virtual page views: this is a single-URL SPA, so feed the active view
           as the route/path. The @vercel/analytics/react component disables URL
           auto-tracking when given `route` and fires a fresh page view on each

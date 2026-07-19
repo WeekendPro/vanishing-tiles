@@ -277,7 +277,7 @@ export function StaggerScreen() {
 
   if (phase === 'idle') {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center vt-vignette select-none">
+      <div className="min-h-dvh flex flex-col items-center justify-center select-none">
         <NeonButton variant="primary" onClick={() => startRun(mode)}>Start Staggered Vanishing Tiles</NeonButton>
       </div>
     )
@@ -352,7 +352,7 @@ export function StaggerScreen() {
     'text-vt-amber text-glow-vt-amber'
 
   return (
-    <div className="min-h-dvh flex flex-col vt-vignette text-vt-text select-none">
+    <div className="min-h-dvh flex flex-col text-vt-text select-none">
       {/* The play surface is authored at a fixed ~384px width; ScaleToFit shrinks
           it uniformly to fit smaller viewports (phones) and stays 1:1 on desktop.
           The game-over overlay is portaled to <body> and the pause / lift-flyer

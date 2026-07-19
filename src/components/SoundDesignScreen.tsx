@@ -382,7 +382,8 @@ export function SoundDesignScreen() {
     // Unlike the game screens, the lab is a WORKBENCH — it gets desktop
     // width (slider precision scales with pixel length), with generous side
     // margins on very large monitors. Still collapses cleanly on a phone.
-    <div className="min-h-screen vt-vignette text-vt-text px-4 md:px-12 pt-12 pb-16">
+    <div className="min-h-dvh text-vt-text px-4 md:px-12
+      pt-[max(3rem,env(safe-area-inset-top))] pb-[max(4rem,env(safe-area-inset-bottom))]">
       <ScanlineOverlay />
       <div className="mx-auto w-full max-w-5xl flex flex-col gap-3">
         <div className="flex items-center justify-between">
