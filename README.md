@@ -63,7 +63,7 @@ for a different kind of memory:
 | :--- | :--- | :--- |
 | 🟢 **Easy** | Full color | In any order |
 | 🟡 **Medium** | Monochrome neon | In any order |
-| 🔴 **Hard** | Monochrome neon | **In the exact order shown** |
+| 🔴 **Hard** | Monochrome deep ink | **In the exact order shown** |
 
 > **Training** — a separate, consequence-free drill for learning the seven piece
 > shapes by name. No clock, no lives, no score: just a piece, a row of letters,
