@@ -1,9 +1,38 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { NeonButton, ScanlineOverlay } from '../ui'
 import { RunHistoryGraph } from '../RunHistoryGraph'
 import { type RunRecord } from '../../store/runHistoryStore'
 import { type ShareResult } from '../../lib/shareCard'
+
+// One secondary door in the game-over three-across row: an icon stacked over a
+// small label, in the app's button chrome. Ghost (cyan-on-hover) for the
+// navigation doors; "share" tone wears the memory/brag magenta as the standout.
+function IconAction({
+  label, onClick, tone = 'ghost', disabled = false, children,
+}: {
+  label: string
+  onClick: () => void
+  tone?: 'ghost' | 'share'
+  disabled?: boolean
+  children: ReactNode
+}) {
+  const toneClass = tone === 'share'
+    ? 'border-neon-magenta text-neon-magenta hover:bg-neon-magenta/10 hover:shadow-neon-magenta'
+    : 'border-arcade-edge text-gray-300 hover:border-neon-cyan hover:text-neon-cyan'
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border-2 bg-arcade-panel py-2.5 px-1
+        font-pixel text-[8.5px] uppercase tracking-[0.08em] transition active:translate-y-px
+        disabled:opacity-50 disabled:pointer-events-none ${toneClass}`}
+    >
+      {children}
+      <span>{label}</span>
+    </button>
+  )
+}
 
 // ── Game over ─────────────────────────────────────────────────────────────────
 // Portaled to <body> so it escapes ScaleToFit's transform (a transformed
@@ -82,11 +111,23 @@ export function GameOverSummary({
       <div className="flex flex-col gap-3 w-full max-w-[300px] pointer-events-auto">
         <NeonButton variant="primary" size="lg" fullWidth onClick={onPlayAgain}>Play again</NeonButton>
         <div className="flex gap-2.5">
-          <NeonButton variant="ghost" size="sm" fullWidth onClick={onHome}>Home</NeonButton>
-          <NeonButton variant="accent" size="sm" fullWidth onClick={handleShare} disabled={shareState === 'sharing'}>
-            {shareState === 'sharing' ? '…' : 'Share'}
-          </NeonButton>
-          <NeonButton variant="ghost" size="sm" fullWidth onClick={onLeaderboard}>Ranks</NeonButton>
+          <IconAction label="Home" onClick={onHome}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden="true">
+              <path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" />
+            </svg>
+          </IconAction>
+          <IconAction label="Share" tone="share" onClick={handleShare} disabled={shareState === 'sharing'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden="true">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+              <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+            </svg>
+          </IconAction>
+          <IconAction label="Ranks" onClick={onLeaderboard}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]" aria-hidden="true">
+              <path d="M8 21h8M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+              <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
+            </svg>
+          </IconAction>
         </div>
         {/* Desktop fallback confirmation — the native share sheet is its own
             feedback, so this only speaks when the card was saved + copied. */}
