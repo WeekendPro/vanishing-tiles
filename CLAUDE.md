@@ -82,7 +82,7 @@ src/
   store/
     staggerStore.ts        — Infinite Stagger's Zustand store: phase/mode/batchIndex/gaps/score/lives/streak; startRun / pickPiece / advanceBatch / timeoutBatch
     trainingStore.ts       — Training mode's Zustand store: current piece / round / streak / selection-speed clock; start / guess / nextPiece / exit
-    settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), soundEnabled, sfxVolume, hideDemo
+    settingsStore.ts       — localStorage user settings (key: gapcity:settings:v1): Difficulty ('easy'|'medium'|'hard'), soundEnabled, sfxVolume, hapticsEnabled, hideDemo
     navStore.ts            — appView routing state (auth/home/stagger/training/leaderboard/soundDesign/claimName)
     profileStore.ts        — Single source of identity truth: display name (from public.profiles) + email/avatar/authName (from auth metadata); claimDisplayName action; routeAfterAuth() post-auth router (claim gate vs home)
     soundLabStore.ts       — Sound Design lab persistence (localStorage key vt:soundlab:v1): active per-sound patch OVERRIDES (applied into sfx at boot — the game plays the tweaked palette) + labeled PRESETS + exportJson() for pasting tuned values back into a design conversation
@@ -90,6 +90,7 @@ src/
   lib/
     staggerCurve.ts        — Infinite Stagger's single difficulty/scoring ramp: STAGGER constants, gapCountForBatch(), selectDurationForBatch(), batchSpeedBonus(), etc.
     sfx.ts                 — Sound: semantic game-gesture API (pickCorrect/bloom/go/batchClear/…), all pure Web Audio synth (no audio files/assets); portable as-is to react-native-audio-api. Every sound is a PATCH (data: tone/noise layers) — DEFAULT_PATCHES is the shipped palette (bonusLift is lab-tuned by the designer), overridable live via setPatch (the Sound Design lab drives this). SFX toggle + volume in settingsStore; unlock() must fire from a tap (HomeScreen PLAY does). Music/ambient bed was CUT (synth zen hum didn't land) — returns later as a produced audio file (designer will supply via Logic Pro)
+    haptics.ts             — Haptics: the TACTILE TWIN of sfx — the SAME semantic gestures (pickCorrect/bloom/batchClear/…), fired alongside each sfx call at the same call sites, backed by the one web primitive `navigator.vibrate`. Every gesture is a HAPTIC_PATTERNS entry (ms buzz, or a [buzz,pause,…] array); pickCorrect scales with streak + urgentTick with heat, mirroring the coin/tick pitch climbs. PLATFORM REACH: Android/Chromium (installed PWA included) buzzes; **iOS has no Vibration API — every call is a silent no-op on iPhone/iPad, PWA or not** (Apple has never shipped it). `isSupported()` reports this, and the menu's Haptics toggle is hidden where false. Pure + app-agnostic like sfx → the RN port swaps the vibrate sink for expo-haptics/the Taptic Engine and iPhone finally buzzes. Toggle (hapticsEnabled) in settingsStore
     auth.ts                — Supabase auth helpers: signInWithApple/Google, sign up/in with email, signInAsGuest (anonymous), signOut
     api.ts                 — Supabase RPC wrappers: record_stagger_run, erase_stagger_records, get_stagger_leaderboard, set_display_name, getOwnProfile
     displayName.ts         — Display-name rules: validateDisplayName (regex ^[A-Za-z][A-Za-z0-9_]{2,15}$, per-rule messages) + sanitizeSuggestion prefill helper; mirrored verbatim by the set_display_name RPC (migration 0015)
@@ -161,7 +162,7 @@ All tests must pass before committing. Run `npm run test`. Do not skip or modify
 
 - Drag-and-drop piece placement
 - React Native port → Apple App Store
-- Haptic feedback (RN port; sound effects SHIPPED for web — synth palette in `src/lib/sfx.ts`, design map in `docs/superpowers/specs/2026-07-16-sound-design.md`)
+- Rich iOS haptics (RN port → Taptic Engine). Web haptics SHIPPED for Android/Chromium — semantic `navigator.vibrate` layer in `src/lib/haptics.ts`, fired alongside the sfx palette; a silent no-op on iOS (no web Vibration API). Sound effects also SHIPPED for web — synth palette in `src/lib/sfx.ts`, design map in `docs/superpowers/specs/2026-07-16-sound-design.md`
 - Music bed: a produced audio file (designer-supplied, Logic Pro; gapless-looped via Web Audio decodeAudioData) — the synth zen bed was tried and cut 2026-07-17
 - Leaderboard / high score persistence
 - Accessibility (ARIA, keyboard nav)

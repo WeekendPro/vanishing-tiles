@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { type StaggerPhase } from '../../store/staggerStore'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 
 export type LifeBurst = { id: number; n: number }
 
@@ -14,6 +15,7 @@ export function useLifeBursts(lives: number, phase: StaggerPhase): LifeBurst[] {
     const delta = lives - prevLives.current
     if (phase === 'selecting' && delta > 0) {
       sfx.lifeGained()
+      haptics.lifeGained()
       const id = (lifeBurstId.current += 1)
       setLifeBursts(prev => [...prev, { id, n: delta }])
       window.setTimeout(() => setLifeBursts(prev => prev.filter(b => b.id !== id)), 1500)

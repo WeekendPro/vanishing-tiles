@@ -6,6 +6,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { useProfileStore } from '../store/profileStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
+import { haptics } from '../lib/haptics'
 import { analytics } from '../lib/analytics'
 import { eraseStaggerRecords, deleteOwnAccount } from '../lib/api'
 import { isAdminEnv } from '../lib/config'
@@ -78,12 +79,20 @@ export function GlobalMenu() {
     reset: s.reset,
   })))
   const startTraining = useTrainingStore(s => s.start)
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
-    soundEnabled: s.settings.soundEnabled,
-    setSoundEnabled: s.setSoundEnabled,
-    sfxVolume: s.settings.sfxVolume,
-    setSfxVolume: s.setSfxVolume,
-  })))
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, hapticsEnabled, setHapticsEnabled } =
+    useSettingsStore(useShallow(s => ({
+      soundEnabled: s.settings.soundEnabled,
+      setSoundEnabled: s.setSoundEnabled,
+      sfxVolume: s.settings.sfxVolume,
+      setSfxVolume: s.setSfxVolume,
+      hapticsEnabled: s.settings.hapticsEnabled,
+      setHapticsEnabled: s.setHapticsEnabled,
+    })))
+
+  // The Haptics toggle is shown only where the device can actually vibrate
+  // (Android/Chromium). iOS has no Vibration API even in an installed PWA, so a
+  // toggle there would be a control that can never do anything — hide it.
+  const hapticsSupported = haptics.isSupported()
 
   // Identity comes from profileStore — public.profiles is the same source
   // the leaderboard reads, so the menu and the board can never disagree.
@@ -303,11 +312,49 @@ export function GlobalMenu() {
                   const next = !soundEnabled
                   setSoundEnabled(next)
                   if (next) { sfx.unlock(); sfx.uiTap() }
+                  haptics.uiTap()
                 }}
                 onVolume={setSfxVolume}
                 onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
               />
             </div>
+
+            {/* Haptics: the tactile twin of Sound, same row rhythm but toggle
+                only (vibration has no volume). Rendered only where the device
+                can vibrate — iOS has no Vibration API, so the toggle would be
+                inert there. Flipping it ON gives an immediate buzz as
+                confirmation (and the sound tick, so it lands even muted-haptics
+                → sound-on). */}
+            {hapticsSupported && (
+              <div className="py-4 border-b border-white/[0.07]">
+                <div className="w-full py-1">
+                  <div className="flex items-center gap-3">
+                    <span className="font-pixel uppercase tracking-[0.08em] text-base text-gray-200">Haptics</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={hapticsEnabled}
+                      aria-label={`Haptics ${hapticsEnabled ? 'on' : 'off'}`}
+                      onClick={() => {
+                        const next = !hapticsEnabled
+                        setHapticsEnabled(next)
+                        sfx.uiTap()
+                        if (next) haptics.uiTap()
+                      }}
+                      className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${
+                        hapticsEnabled ? 'bg-neon-cyan/80' : 'bg-white/15'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                          hapticsEnabled ? 'translate-x-5' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* The calibration lab: every game sound as knobs + replay + saved
                 presets. Admin-only — a developer instrument, never on the

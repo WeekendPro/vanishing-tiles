@@ -3,6 +3,7 @@ import { type Difficulty } from '../../store/settingsStore'
 import { type StaggerGap, type StaggerPhase } from '../../store/staggerStore'
 import { STAGGER } from '../../lib/staggerCurve'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 import { PIECE_BLOOM_HEX, REVEAL_MAGENTA } from './palette'
 import { type Bloom, bloomForGap } from './bloom'
 import { type TimerBar } from './useTimerBar'
@@ -101,6 +102,7 @@ export function useRevealDriver({
         // Each bloom climbs one pentatonic step — the reveal sequence plays as
         // a rising melody, so pitch order doubles as a memory hook for order.
         sfx.bloom(idx)
+        haptics.bloom()
       }
       // Clear this gap's bloom once it has fully decayed.
       at(lifetime, () => {

@@ -2,6 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { useStaggerStore, type StaggerPhase } from '../../store/staggerStore'
 import { CLOCK_URGENT, urgentHeat, urgentTickIntervalMs } from '../../lib/staggerCurve'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 import { type TimerBar } from './useTimerBar'
 
 interface SelectClockArgs {
@@ -42,6 +43,7 @@ export function useSelectClock({
       // batch reaches here, and running out of time costs a life.
       if (!useStaggerStore.getState().gaps.every(g => g.filled)) {
         sfx.timeout()
+        haptics.timeout()
         timeoutBatch()
       }
     }, remaining)
@@ -85,6 +87,7 @@ export function useSelectClock({
       }
       const heat = urgentHeat(rem / selectDuration)
       sfx.urgentTick(heat)
+      haptics.urgentTick(heat)
       timer = window.setTimeout(schedule, urgentTickIntervalMs(heat))
     }
     schedule()

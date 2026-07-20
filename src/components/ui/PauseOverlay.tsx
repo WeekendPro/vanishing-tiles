@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/shallow'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useProfileStore } from '../../store/profileStore'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 import { NeonButton } from './NeonButton'
 import { ScanlineOverlay } from './ScanlineOverlay'
 import { ChannelControl } from './ChannelControl'
@@ -105,6 +106,7 @@ export function PauseOverlay({
               const next = !soundEnabled
               setSoundEnabled(next)
               if (next) { sfx.unlock(); sfx.uiTap() }
+              haptics.uiTap()
             }}
             onVolume={setSfxVolume}
             onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}

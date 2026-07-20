@@ -3,6 +3,7 @@ import { useStaggerStore } from '../store/staggerStore'
 import { useSettingsStore, type Difficulty } from '../store/settingsStore'
 import { useShallow } from 'zustand/shallow'
 import { sfx } from '../lib/sfx'
+import { haptics } from '../lib/haptics'
 import { Wordmark, ScanlineOverlay, VanishingMotif } from './ui'
 
 /**
@@ -55,6 +56,7 @@ export function HomeScreen() {
     // timers — so the context must already be running by then.
     sfx.unlock()
     sfx.uiTap()
+    haptics.uiTap()
     // First-run demo: PLAY leads with the guided two-piece round until the
     // player opts out ("Don't show this again" — global across difficulties).
     startStagger(difficulty, { demo: !useSettingsStore.getState().settings.hideDemo })
@@ -64,6 +66,7 @@ export function HomeScreen() {
   const selectMode = (value: Difficulty) => {
     sfx.unlock()
     sfx.uiTap()
+    haptics.uiTap()
     setDifficulty(value)
   }
   const activeHint = MODES.find(m => m.value === difficulty)?.hint

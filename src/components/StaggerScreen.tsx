@@ -9,6 +9,7 @@ import { shareRun } from '../lib/shareCard'
 import { CLOCK_URGENT } from '../lib/staggerCurve'
 import { analytics } from '../lib/analytics'
 import { sfx } from '../lib/sfx'
+import { haptics } from '../lib/haptics'
 import { NeonButton, ScaleToFit } from './ui'
 import { useCountUp } from '../hooks/useCountUp'
 import { CELL, CELL_PITCH, BOARD_PAD, LIFT_MS, BONUS_RISE_MS, BONUS_BEAT_MS, BONUS_STAGGER_MS, ORDER_HINT_MS } from './stagger/constants'
@@ -157,6 +158,7 @@ export function StaggerScreen() {
       }
       setDemoWrong(null)
       sfx.pickCorrect(res.combo)
+      haptics.pickCorrect(res.combo)
       if (res.gap) {
         // Exactly the real game's feedback — the "+points" the piece earned
         // bubbles up off the filled gap. No demo-only praise flourish.
@@ -177,13 +179,14 @@ export function StaggerScreen() {
         // that to start the real countdown.
         setCleared(true)
         sfx.batchClear()
+        haptics.batchClear()
         window.setTimeout(() => setDemoDone(true), 1100)
       }
       return
     }
     // gameOver only ever rides a miss: give the final pick its miss buzz too
     // (the gameOver farewell itself fires from the phase effect above).
-    if (res.gameOver) { sfx.pickWrong(); return }
+    if (res.gameOver) { sfx.pickWrong(); haptics.pickWrong(); return }
     // Hard mode validates the rule the moment it's broken: ANY miss (a flat wrong
     // shape OR a right-shape-wrong-order tap) flashes "IN ORDER" red in the central
     // line for ORDER_HINT_MS, on top of the standard miss feedback below. A correct
@@ -199,6 +202,7 @@ export function StaggerScreen() {
     }
     if (!res.ok) {
       sfx.pickWrong()
+      haptics.pickWrong()
       setXMark(true)
       boardRef.current?.animate(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -211,6 +215,7 @@ export function StaggerScreen() {
     // Correct recall. Float the "+points" earned (base × streak) over the filled
     // gap; the running ×N multiplier lives in the chip by the score.
     sfx.pickCorrect(res.combo)
+    haptics.pickCorrect(res.combo)
     if (res.gap) {
       const cells = res.gap.cells
       const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
@@ -224,6 +229,7 @@ export function StaggerScreen() {
     if (res.batchCleared) {
       setCleared(true)
       sfx.batchClear()
+      haptics.batchClear()
       // Every earned bonus is itemized as a labeled riser: SPEED (leftover clock
       // time — nearly every clear), ACCURACY (cleared with no misses), SEQUENCE
       // (also recalled in reveal order — Easy/Medium). Speed rides the timer-bar
@@ -240,6 +246,7 @@ export function StaggerScreen() {
         timerBar.rushToEmpty()
         if (res.speedBonus > 0) {
           sfx.bonusLift()
+          haptics.bonusLift()
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(res.speedBonus)
         }
@@ -263,6 +270,7 @@ export function StaggerScreen() {
       specials.forEach((b, j) => {
         window.setTimeout(() => {
           sfx.bonusLift()
+          haptics.bonusLift()
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(b.amount)
         }, BONUS_BEAT_MS + (j + 1) * BONUS_STAGGER_MS)

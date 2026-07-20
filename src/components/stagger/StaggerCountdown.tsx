@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 
 // ── Countdown ───────────────────────────────────────────────────────────────
 // Each number burns bright the instant it appears, holds at full strength for
@@ -21,10 +22,12 @@ export function StaggerCountdown({
       // The fourth beat: 3 · 2 · 1 · GO — the decisive note the countdown
       // resolves into, right as the reveal takes over.
       sfx.go()
+      haptics.go()
       const t = window.setTimeout(onDone, 350)
       return () => clearTimeout(t)
     }
     sfx.count()
+    haptics.count()
     const t = window.setTimeout(() => setCount(c => c - 1), BEAT_MS)
     return () => clearTimeout(t)
   }, [count, onDone])

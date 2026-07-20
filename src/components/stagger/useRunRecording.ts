@@ -6,6 +6,7 @@ import { type StaggerPhase } from '../../store/staggerStore'
 import { submitStaggerRun } from '../../lib/api'
 import { analytics } from '../../lib/analytics'
 import { sfx } from '../../lib/sfx'
+import { haptics } from '../../lib/haptics'
 
 interface RunRecordingArgs {
   phase: StaggerPhase
@@ -37,6 +38,7 @@ export function useRunRecording({
       // The run's farewell (rides the same once-per-game-over guard as the
       // recording, so StrictMode never plays it twice).
       sfx.gameOver()
+      haptics.gameOver()
       const accuracy = totalPicks ? Math.round((correctPicks / totalPicks) * 100) : 0
       const run = recordRun({ mode, score, recalled: shapesRecalled, combo: bestStreak, accuracy })
       setCurrentRunId(run.id)

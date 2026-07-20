@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { sfx } from '../lib/sfx'
+import { haptics } from '../lib/haptics'
 
 export const SETTINGS_STORAGE_KEY = 'gapcity:settings:v1'
 
@@ -35,12 +36,17 @@ export interface UserSettings {
   soundEnabled: boolean
   /** Sound-effects volume, 0–1. */
   sfxVolume: number
+  /** Haptic-feedback toggle — the tactile twin of the sound effects
+   *  (`src/lib/haptics.ts`), fired on the same game gestures. No effect on
+   *  devices without the Vibration API (all of iOS today), so it's surfaced in
+   *  the menu only where `haptics.isSupported()`. Defaults on. */
+  hapticsEnabled: boolean
   /** First-run demo opt-out ("Don't show this again") — global across all difficulties. */
   hideDemo: boolean
 }
 
 function emptySettings(): UserSettings {
-  return { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hideDemo: false }
+  return { difficulty: 'easy', soundEnabled: true, sfxVolume: 1, hapticsEnabled: true, hideDemo: false }
 }
 
 function load(): UserSettings {
@@ -65,6 +71,7 @@ interface SettingsStore {
   setDifficulty: (difficulty: Difficulty) => void
   setSoundEnabled: (on: boolean) => void
   setSfxVolume: (v: number) => void
+  setHapticsEnabled: (on: boolean) => void
   setHideDemo: (hidden: boolean) => void
 }
 
@@ -104,12 +111,22 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
       return { settings: next }
     })
   },
+
+  setHapticsEnabled: (on) => {
+    haptics.setEnabled(on)
+    set((state) => {
+      const next: UserSettings = { ...state.settings, hapticsEnabled: on }
+      save(next)
+      return { settings: next }
+    })
+  },
 }))
 
-// Sync the engine's channel state with the persisted settings at boot (the
-// store is the source of truth; sfx just mirrors it).
+// Sync the engines' channel state with the persisted settings at boot (the
+// store is the source of truth; sfx/haptics just mirror it).
 {
   const s = useSettingsStore.getState().settings
   sfx.setEnabled(s.soundEnabled)
   sfx.setSfxVolume(s.sfxVolume)
+  haptics.setEnabled(s.hapticsEnabled)
 }

@@ -5,6 +5,7 @@ import { ROWS, COLS, type PieceType } from '@shared/types'
 import { useTrainingStore, TRAINING_TYPES, type TrainingPiece } from '../store/trainingStore'
 import { useNavStore } from '../store/navStore'
 import { sfx } from '../lib/sfx'
+import { haptics } from '../lib/haptics'
 import { PauseOverlay, ScaleToFit } from './ui'
 
 const CELL = 28
@@ -179,6 +180,7 @@ export function TrainingScreen() {
     if (!res.ok) {
       // The game's miss feedback: red border flash + board shake + miss buzz.
       sfx.pickWrong()
+      haptics.pickWrong()
       setXMark(true)
       boardRef.current?.animate?.(
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
@@ -193,6 +195,7 @@ export function TrainingScreen() {
     // fades back to the void, then bring on the next one. Same streak-climbing
     // blip as the game, so training teaches the audio grammar too.
     sfx.pickCorrect(res.streak)
+    haptics.pickCorrect(res.streak)
     const cells = piece.cells
     const avgR = cells.reduce((a, [r]) => a + r, 0) / cells.length
     const avgC = cells.reduce((a, [, c]) => a + c, 0) / cells.length
