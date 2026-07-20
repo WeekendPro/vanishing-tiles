@@ -229,8 +229,8 @@ export function StaggerScreen() {
       // (also recalled in reveal order — Easy/Medium). Speed rides the timer-bar
       // drain on the first beat; the specials stagger in one beat apart after it.
       const specials = ([
-        { amount: res.flawlessBonus, tag: 'ACCURACY BONUS', variant: 'flawless' as LiftVariant },
-        { amount: res.inOrderBonus, tag: 'SEQUENCE BONUS', variant: 'inOrder' as LiftVariant },
+        { amount: res.flawlessBonus, tag: 'ACCURACY', variant: 'flawless' as LiftVariant },
+        { amount: res.inOrderBonus, tag: 'SEQUENCE', variant: 'inOrder' as LiftVariant },
       ]).filter(b => b.amount > 0)
       // Freeze the lime bar (the leftover time), then at the first beat drain it
       // into the score — that drain IS the speed bonus, so its "SPEED BONUS +N"
@@ -246,7 +246,7 @@ export function StaggerScreen() {
       }, BONUS_BEAT_MS)
       // Display list: SPEED on the drain beat, then each special one stagger later.
       const speedItems = res.speedBonus > 0
-        ? [{ amount: res.speedBonus, tag: 'SPEED BONUS', variant: 'speed' as LiftVariant, delayMs: BONUS_BEAT_MS }]
+        ? [{ amount: res.speedBonus, tag: 'SPEED', variant: 'speed' as LiftVariant, delayMs: BONUS_BEAT_MS }]
         : []
       const specialItems = specials.map((b, j) => ({
         amount: b.amount, tag: b.tag, variant: b.variant,
