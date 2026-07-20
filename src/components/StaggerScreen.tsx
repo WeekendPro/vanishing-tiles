@@ -480,6 +480,8 @@ export function StaggerScreen() {
 
       {paused && (
         <PauseStatsOverlay
+          mode={mode}
+          batchIndex={batchIndex}
           score={score}
           lives={lives}
           currentStreak={currentStreak}

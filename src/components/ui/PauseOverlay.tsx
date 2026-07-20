@@ -5,6 +5,7 @@ import { useProfileStore } from '../../store/profileStore'
 import { sfx } from '../../lib/sfx'
 import { NeonButton } from './NeonButton'
 import { ScanlineOverlay } from './ScanlineOverlay'
+import { ChannelControl } from './ChannelControl'
 
 // Two-letter avatar initials from a display name (matches the menu's rule).
 function initials(name: string): string {
@@ -14,153 +15,113 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-// Who's playing, up top: an initials avatar + display name for signed-in
-// players; a generic person icon + a quiet "get on the leaderboard" nudge for
-// guests. Deliberately light — no "signed in" label, no edit affordance; the
-// pause screen is for pausing, not account management.
-function PauseIdentity({ onSignUp }: { onSignUp?: () => void }) {
-  const { displayName, isGuest } = useProfileStore(useShallow(s => ({
-    displayName: s.displayName, isGuest: s.isGuest,
-  })))
-
-  if (isGuest) {
-    return (
-      <div className="flex flex-col items-center gap-2.5">
-        <div
-          role="img"
-          aria-label="Guest avatar"
-          className="w-11 h-11 rounded-xl grid place-items-center bg-vt-raised border border-vt-edge text-vt-faint"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-6 h-6" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-          </svg>
-        </div>
-        <div className="font-grotesk text-sm text-vt-dim">Guest</div>
-        {onSignUp && (
-          <div className="text-center font-grotesk text-[11px] leading-relaxed text-vt-dim">
-            Playing without an account.<br />
-            <button
-              onClick={onSignUp}
-              className="mt-0.5 font-semibold text-vt-lime text-glow-vt-lime border-b border-dashed border-vt-lime/50 pb-px"
-            >
-              Sign up to get on the leaderboard →
-            </button>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // Always the standard initials avatar — uniform across players, never a
-  // pulled-in email/OAuth photo the player may not have chosen.
-  return (
-    <div className="flex flex-col items-center gap-2.5">
-      <div className="w-11 h-11 rounded-xl grid place-items-center font-bold text-[17px] text-vt-cyan
-        bg-gradient-to-br from-[#20303a] to-[#141420] border border-vt-cyan/35 shadow-[0_0_16px_rgba(40,240,255,0.2)]">
-        {initials(displayName ?? '')}
-      </div>
-      <div className="font-grotesk font-semibold text-[15px] text-vt-text">{displayName}</div>
-    </div>
-  )
-}
-
-// The pause screen's sound control, stacked: label → toggle switch → volume
-// slider. A prettier take than the shared row control — the switch is the
-// familiar pill, the slider dims out while sound is off.
-function StackedSound() {
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
-    soundEnabled: s.settings.soundEnabled,
-    setSoundEnabled: s.setSoundEnabled,
-    sfxVolume: s.settings.sfxVolume,
-    setSfxVolume: s.setSfxVolume,
-  })))
-
-  return (
-    <div className="flex flex-col items-center gap-3.5 w-full max-w-xs border-y border-white/10 py-5">
-      <div className="font-grotesk text-[11px] tracking-[0.2em] uppercase text-vt-dim">Sound</div>
-      <button
-        role="switch"
-        aria-checked={soundEnabled}
-        aria-label="Sound"
-        onClick={() => {
-          const next = !soundEnabled
-          setSoundEnabled(next)
-          if (next) { sfx.unlock(); sfx.uiTap() }
-        }}
-        className={`relative w-[46px] h-[26px] rounded-full transition-colors duration-200
-          ${soundEnabled ? 'bg-vt-cyan shadow-vt-cyan' : 'bg-vt-grid'}`}
-      >
-        {/* Knob positioned by explicit left (not translate) so it always seats
-            inside the pill: 3px inset off, 23px on (46 − 20 − 3). */}
-        <span
-          className={`absolute top-[3px] h-5 w-5 rounded-full bg-vt-void shadow-[0_1px_2px_rgba(0,0,0,0.5)] transition-[left] duration-200
-            ${soundEnabled ? 'left-[23px]' : 'left-[3px]'}`}
-        />
-      </button>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={Math.round(sfxVolume * 100)}
-        disabled={!soundEnabled}
-        aria-label="Sound volume"
-        onChange={e => setSfxVolume(Number(e.target.value) / 100)}
-        onPointerUp={() => { sfx.unlock(); sfx.uiTap() }}
-        className="w-full max-w-[200px] accent-[#28F0FF] disabled:opacity-30"
-      />
-    </div>
-  )
-}
-
 /**
  * The hard-pause screen shared by Infinite Stagger and Training: covers
- * everything (no memorizing while frozen), shows who's playing + the run's live
- * stats so a pause doubles as an identity/scoreboard check, a Sound row (a pause
- * is exactly when you discover the volume is wrong mid-run), then the action
- * buttons.
+ * everything (no memorizing while frozen). One full-width column:
+ *  - header: who's playing (avatar + name + `subline`) on the left, PAUSED on
+ *    the right — same initials-avatar language as the menu and leaderboard;
+ *  - a guest sign-up invite (P4), when `onSignUp` is supplied and you're a guest;
+ *  - the mode's stat readout (`children`) as full-width metadata cards;
+ *  - a full-width Sound control;
+ *  - the actions: Resume (full-width hero); when `onRestart` is supplied
+ *    (Stagger) it and Exit share the row beneath — small paired buttons can't be
+ *    fat-fingered in place of Resume. Without it (Training) it's Resume + Exit.
  *
- * Buttons follow the game-over hierarchy: Resume is the full-width hero; when
- * `onRestart` is supplied (Stagger — "this run's cooked, start fresh") it and
- * Exit share a half-width row beneath, so the small paired buttons can't be
- * fat-fingered in place of Resume. Without `onRestart` (Training) it's just
- * Resume + Exit.
- *
- * `children` is the mode's stat readout — each mode surfaces its own metadata
- * (Stagger: score / lives / streak; Training: streak / best / miss / avg speed).
+ * Every block spans the same `max-w-xs` column, so the cards, sound, and buttons
+ * line up edge to edge.
  */
 export function PauseOverlay({
-  onResume, onExit, onRestart, onSignUp, children,
+  subline, onResume, onExit, onRestart, onSignUp, children,
 }: {
+  subline?: string
   onResume: () => void
   onExit: () => void
   onRestart?: () => void
   onSignUp?: () => void
   children?: ReactNode
 }) {
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSettingsStore(useShallow(s => ({
+    soundEnabled: s.settings.soundEnabled,
+    setSoundEnabled: s.setSoundEnabled,
+    sfxVolume: s.settings.sfxVolume,
+    setSfxVolume: s.setSfxVolume,
+  })))
+  const { displayName, isGuest, avatarUrl } = useProfileStore(useShallow(s => ({
+    displayName: s.displayName, isGuest: s.isGuest, avatarUrl: s.avatarUrl,
+  })))
+  const name = isGuest ? 'Guest' : (displayName ?? 'Player')
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7
-      bg-vt-void text-vt-text px-6">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vt-void text-vt-text px-6">
       <ScanlineOverlay />
+      <div className="relative w-full max-w-xs flex flex-col gap-6">
 
-      <PauseIdentity onSignUp={onSignUp} />
-
-      <div className="w-full max-w-xs h-px bg-white/10" />
-
-      <div className="font-silk text-lg text-vt-cyan text-glow-vt-cyan uppercase tracking-[0.2em]">Paused</div>
-      {children}
-      <StackedSound />
-
-      <div className="flex flex-col gap-3 w-full max-w-[260px]">
-        <NeonButton variant="primary" size="lg" fullWidth onClick={onResume}>Resume</NeonButton>
-        {onRestart ? (
-          <div className="flex gap-3">
-            <NeonButton variant="amber" fullWidth onClick={onRestart}>Restart</NeonButton>
-            <NeonButton variant="danger" fullWidth onClick={onExit}>Exit</NeonButton>
+        {/* Header — avatar + name upper-left, PAUSED upper-right. */}
+        <div className="flex items-center gap-3">
+          {avatarUrl && !isGuest ? (
+            <img src={avatarUrl} alt={name} className="w-11 h-11 rounded-full object-cover ring-1 ring-white/15" />
+          ) : (
+            <div className="w-11 h-11 rounded-full grid place-items-center font-bold text-sm text-white
+              bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
+              {isGuest ? (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6" role="img" aria-label="Guest avatar">
+                  <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z" />
+                </svg>
+              ) : initials(displayName ?? '')}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="font-pixel text-sm font-semibold leading-tight truncate">{name}</div>
+            {subline && (
+              <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-dim mt-0.5 truncate">{subline}</div>
+            )}
           </div>
-        ) : (
-          <NeonButton variant="danger" fullWidth onClick={onExit}>Exit to Home</NeonButton>
+          <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase font-semibold text-vt-cyan text-glow-vt-cyan">
+            Paused
+          </div>
+        </div>
+
+        {/* Guest invite (P4) — save this run by making an account. */}
+        {isGuest && onSignUp && (
+          <button
+            onClick={onSignUp}
+            className="w-full rounded-2xl px-4 py-2.5 text-left flex items-center justify-between
+              bg-vt-magenta/10 ring-1 ring-vt-magenta/40 transition hover:bg-vt-magenta/15"
+          >
+            <span className="text-xs text-vt-text">Sign up to save this run &amp; rank</span>
+            <span className="text-vt-magenta text-glow-vt-magenta text-lg leading-none">→</span>
+          </button>
         )}
+
+        {/* Metadata cards — the mode's stat readout, full width. */}
+        {children}
+
+        {/* Sound — full width, matching the cards above and buttons below. */}
+        <ChannelControl
+          label="Sound"
+          enabled={soundEnabled}
+          volume={sfxVolume}
+          onToggle={() => {
+            const next = !soundEnabled
+            setSoundEnabled(next)
+            if (next) { sfx.unlock(); sfx.uiTap() }
+          }}
+          onVolume={setSfxVolume}
+          onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+        />
+
+        {/* Actions (P3) — Resume full-width; Restart + Exit share the row beneath. */}
+        <div className="flex flex-col gap-3">
+          <NeonButton variant="primary" size="lg" fullWidth onClick={onResume}>Resume</NeonButton>
+          {onRestart ? (
+            <div className="flex gap-3">
+              <NeonButton variant="amber" fullWidth onClick={onRestart}>Restart</NeonButton>
+              <NeonButton variant="danger" fullWidth onClick={onExit}>Exit</NeonButton>
+            </div>
+          ) : (
+            <NeonButton variant="danger" fullWidth onClick={onExit}>Exit to Home</NeonButton>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -321,7 +321,7 @@ export function TrainingScreen() {
       {/* Hard pause — covers the whole screen (the held piece stays hidden, so
           no free memorizing) with the session's full stat bar riding along. */}
       {paused && (
-        <PauseOverlay onResume={() => resume()} onExit={exitTraining} onSignUp={() => { exit(); goAuth() }}>
+        <PauseOverlay subline="Training" onResume={() => resume()} onExit={exitTraining} onSignUp={() => { exit(); goAuth() }}>
           <TrainingStats
             currentStreak={currentStreak}
             bestStreak={bestStreak}

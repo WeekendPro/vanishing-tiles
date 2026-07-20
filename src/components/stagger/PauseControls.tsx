@@ -61,8 +61,10 @@ export function CountdownPauseSkeleton() {
 // stats + who's playing ride along: a pause doubles as an identity/scoreboard
 // check, and guests get a quiet sign-up nudge (onSignUp).
 export function PauseStatsOverlay({
-  score, lives, currentStreak, onResume, onRestart, onExit, onSignUp,
+  mode, batchIndex, score, lives, currentStreak, onResume, onRestart, onExit, onSignUp,
 }: {
+  mode: string
+  batchIndex: number
   score: number
   lives: number
   currentStreak: number
@@ -71,8 +73,15 @@ export function PauseStatsOverlay({
   onExit: () => void
   onSignUp: () => void
 }) {
+  const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1)
   return (
-    <PauseOverlay onResume={onResume} onRestart={onRestart} onExit={onExit} onSignUp={onSignUp}>
+    <PauseOverlay
+      subline={`${modeLabel} · batch ${batchIndex + 1}`}
+      onResume={onResume}
+      onRestart={onRestart}
+      onExit={onExit}
+      onSignUp={onSignUp}
+    >
       {/* The metadata section: Score / Lives / Streak as three full-width tiles
           (echoing the leaderboard hero), spanning the same max-w-xs column as
           the identity header, sound row, and buttons. */}
