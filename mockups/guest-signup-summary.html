@@ -1,0 +1,347 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vanishing Tiles — Guest sign-up summary concepts</title>
+<style>
+  :root{
+    --void:#06060B; --panel:#0E0E16; --panel-raised:#15151F;
+    --grid-line:#1C1C28; --filled:#2A2D3A; --filled-edge:#3A3E4F;
+    --magenta:#FF2D9B; --cyan:#28F0FF; --amber:#FFC23D; --red:#FF3B47; --lime:#B6FF3C;
+    --text:#EAEAF2; --text-dim:#8A8AA0; --text-faint:#4A4A5C;
+    --attack:cubic-bezier(.1,.9,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% 20%, transparent 50%, #000 130%),
+      var(--void);
+    color:var(--text);
+    font-family:'Space Grotesk','Inter',system-ui,sans-serif;
+    padding:44px 24px 90px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  a{color:inherit}
+
+  .pagehead{text-align:center;max-width:760px;margin-bottom:26px}
+  .pagehead .eyebrow{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 10px #ff2d9b66;font-weight:600}
+  .pagehead h1{font-size:22px;letter-spacing:.02em;margin-top:12px;font-weight:700}
+  .pagehead p{font-size:13px;color:var(--text-dim);margin-top:12px;line-height:1.65}
+  .pagehead .ctx{font-size:11.5px;color:var(--text-faint);margin-top:14px;line-height:1.6}
+
+  .deck{
+    display:flex;flex-wrap:wrap;gap:34px 30px;justify-content:center;align-items:flex-start;
+    width:100%;max-width:1360px;
+  }
+  .col{display:flex;flex-direction:column;align-items:center;gap:0;width:400px;max-width:94vw}
+
+  .caphead{text-align:center;margin-bottom:16px;min-height:96px;display:flex;flex-direction:column;gap:7px;justify-content:flex-start}
+  .caphead .clabel{
+    display:inline-block;align-self:center;font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+    padding:4px 11px;border-radius:999px;
+  }
+  .caphead h2{font-size:16px;font-weight:700;letter-spacing:.01em}
+  .caphead .csub{font-size:11.5px;color:var(--text-dim);line-height:1.55;max-width:330px;margin:0 auto}
+  .cA .clabel{color:var(--cyan);background:#28f0ff14;box-shadow:inset 0 0 0 1px #28f0ff44}
+  .cB .clabel{color:var(--magenta);background:#ff2d9b14;box-shadow:inset 0 0 0 1px #ff2d9b44}
+  .cC .clabel{color:var(--text-dim);background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff1a}
+
+  .phone{
+    width:400px; max-width:94vw;
+    background:var(--panel); border-radius:36px;
+    border:1px solid #1a1a26;
+    box-shadow:0 50px 110px #000b, inset 0 1px 0 #ffffff0d, inset 0 -1px 0 #0008;
+    padding:30px 22px 26px; position:relative; overflow:hidden;
+  }
+  .phone::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:36px;
+    background:repeating-linear-gradient(0deg,#fff0 0 2px,#0000000f 2px 4px);
+    opacity:.5; mix-blend-mode:overlay;
+  }
+
+  /* ── shared game-over chrome (unchanged from the live summary) ── */
+  .go-head{text-align:center;position:relative;z-index:1}
+  .go-title{font-size:16px;letter-spacing:.15em;text-transform:uppercase;color:var(--text);font-weight:700}
+  .go-sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px var(--magenta);margin-top:5px}
+  .go-fslabel{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);margin-top:18px}
+  .go-score{font-size:42px;font-weight:700;color:var(--amber);text-shadow:0 0 18px #ffc23d88;letter-spacing:.02em;font-variant-numeric:tabular-nums;line-height:1.05}
+
+  .trio{display:flex;border-top:1px solid #ffffff1a;border-bottom:1px solid #ffffff1a;margin:20px 0 6px;position:relative;z-index:1}
+  .trio .cell{flex:1;text-align:center;padding:13px 4px}
+  .trio .cell + .cell{border-left:1px solid #ffffff1a}
+  .trio .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+  .trio .k{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-top:6px}
+  .v.m{color:var(--magenta);text-shadow:0 0 8px #ff2d9b88}
+  .v.l{color:var(--lime);text-shadow:0 0 8px #b6ff3c88}
+  .v.c{color:var(--cyan);text-shadow:0 0 8px #28f0ff88}
+
+  /* the slot where the run-history chart used to live */
+  .slot{position:relative;z-index:1;margin:22px 0 4px}
+
+  .actions{display:flex;flex-direction:column;gap:12px;margin-top:22px;align-items:center;position:relative;z-index:1}
+  .primary{
+    width:100%;max-width:300px;height:48px;border-radius:12px;cursor:pointer;font-family:inherit;
+    font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;border:2px solid var(--cyan);
+    background:#15151F;color:var(--cyan);box-shadow:0 0 6px #28f0ff55,0 0 22px #28f0ff22, inset 0 1px 0 #ffffff12;
+    transition:transform .1s var(--attack);
+  }
+  .primary:active{transform:translateY(2px)}
+  .doorrow{display:flex;gap:10px;width:100%;max-width:300px}
+  .door{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:9px;
+    border:2px solid var(--grid-line);background:var(--panel-raised);padding:10px 4px;cursor:pointer;
+    color:var(--text-dim);font-family:inherit;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .door svg{width:18px;height:18px}
+  .door.share{border-color:#ff2d9b55;color:var(--magenta)}
+
+  /* ── CTA building blocks ── */
+  .cta-card{
+    border-radius:16px;padding:16px 15px 15px;
+    background:linear-gradient(180deg,#ff2d9b0d,#ff2d9b03);
+    box-shadow:inset 0 0 0 1px #ff2d9b3a, 0 0 22px #ff2d9b12;
+  }
+  .cta-eyebrow{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--magenta);text-shadow:0 0 8px #ff2d9b66;font-weight:700;text-align:center}
+  .cta-head{font-size:15.5px;font-weight:700;text-align:center;margin-top:8px;line-height:1.3;text-wrap:balance}
+  .cta-head .rank{color:var(--cyan);text-shadow:0 0 10px #28f0ff77}
+  .cta-body{font-size:11px;color:var(--text-dim);text-align:center;margin-top:7px;line-height:1.55;max-width:250px;margin-left:auto;margin-right:auto}
+
+  .field{position:relative;margin-top:14px}
+  .field input{
+    width:100%;height:46px;padding:0 46px 0 14px;border-radius:11px;
+    background:#0a0a12;color:var(--text);font-family:inherit;font-size:13px;
+    border:1px solid #ffffff1a;box-shadow:inset 0 1px 2px #000;
+  }
+  .field input::placeholder{color:var(--text-faint)}
+  .field input:focus{outline:none;border-color:var(--cyan);box-shadow:inset 0 1px 2px #000,0 0 0 1px #28f0ff55,0 0 14px #28f0ff33}
+  .field .go{
+    position:absolute;right:6px;top:6px;width:34px;height:34px;border-radius:8px;border:none;cursor:pointer;
+    background:var(--cyan);color:var(--void);font-size:17px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 14px #28f0ff66;
+  }
+  .flabel{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);margin:0 0 -6px 3px}
+
+  .gbtn{
+    width:100%;height:46px;margin-top:10px;border-radius:11px;cursor:pointer;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;letter-spacing:.02em;
+    border:2px solid #ffffff1f;background:var(--panel-raised);color:var(--text);box-shadow:inset 0 1px 0 #ffffff10;
+  }
+  .gbtn.solo{margin-top:0}
+
+  .or{display:flex;align-items:center;gap:10px;margin:12px 0;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint)}
+  .or span{height:1px;flex:1;background:#ffffff14}
+
+  .fineprint{font-size:10px;color:var(--text-faint);text-align:center;margin-top:11px;line-height:1.5}
+  .fineprint a{color:var(--text-dim);border-bottom:1px solid #ffffff22}
+  .linkline{background:none;border:none;font-family:inherit;color:var(--cyan);font-size:11px;cursor:pointer;border-bottom:1px solid #28f0ff44;padding:0}
+
+  /* Concept C collapsed nudge */
+  .nudge{
+    display:flex;align-items:center;gap:10px;width:100%;
+    border:1px dashed #ff2d9b55;background:#ff2d9b08;border-radius:12px;padding:12px 13px;cursor:pointer;
+    text-align:left;font-family:inherit;
+  }
+  .nudge .ico{width:30px;height:30px;border-radius:8px;background:#ff2d9b1a;display:flex;align-items:center;justify-content:center;flex:none;color:var(--magenta)}
+  .nudge .txt{flex:1;font-size:11.5px;color:var(--text-dim);line-height:1.4}
+  .nudge .txt b{color:var(--text);font-weight:600}
+  .nudge .chev{color:var(--magenta);font-size:18px;flex:none}
+  .expand{overflow:hidden;max-height:0;transition:max-height .4s var(--attack);}
+  .expand.open{max-height:340px}
+
+  .designer-note{
+    width:400px;max-width:94vw;margin-top:18px;font-size:11px;line-height:1.6;color:var(--text-dim);
+    border-left:2px solid #ffffff18;padding:2px 0 2px 14px;
+  }
+  .designer-note b{color:var(--text);font-weight:600}
+  .designer-note .tag{color:var(--lime);font-weight:600}
+  .designer-note .warn{color:var(--amber);font-weight:600}
+
+  .legend{max-width:760px;text-align:center;margin:6px auto 30px;font-size:11.5px;color:var(--text-faint);line-height:1.7}
+  .legend b{color:var(--text-dim)}
+</style>
+
+<div class="pagehead">
+  <div class="eyebrow">Vanishing Tiles · Design review</div>
+  <h1>Guest sign-up on the game-over summary</h1>
+  <p>A guest finishes a run and lands here. For guests, the run-history chart (“your best run ever”) is
+  irrelevant — nothing is being saved — so that slot becomes a gentle, one-purpose call to action: <b style="color:var(--text-dim)">join the leaderboard</b>.
+  The score, stats, and action row are untouched. Three treatments below, from most reserved to most assertive.</p>
+  <p class="ctx">Signed-in players are unaffected — they still see the chart. This variant renders only when <code style="color:var(--cyan)">isGuest === true</code>.</p>
+</div>
+
+<div class="legend">
+  Same run in all three: <b>Hard</b> mode · <b>4,820</b> pts · 38 recalled · ×12 streak · 91% accuracy.
+  Try the inputs — B toggles email, C expands on tap.
+</div>
+
+<div class="deck">
+
+  <!-- ══ CONCEPT A ══ -->
+  <div class="col cA">
+    <div class="caphead">
+      <span class="clabel">Concept A</span>
+      <h2>Quiet claim</h2>
+      <div class="csub">One line of copy, one field, Google tucked underneath. The least-intrusive way to still show a real input.</div>
+    </div>
+    <div class="phone">
+      <div class="go-head">
+        <div class="go-title">Game Over</div>
+        <div class="go-sub">Memory Fades</div>
+        <div class="go-fslabel">Final score</div>
+        <div class="go-score">4820</div>
+      </div>
+      <div class="trio">
+        <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+        <div class="cell"><div class="v l">×12</div><div class="k">Best streak</div></div>
+        <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+      </div>
+
+      <div class="slot">
+        <div class="cta-card">
+          <div class="cta-eyebrow">Playing as guest</div>
+          <div class="cta-head">Save this score to the leaderboard</div>
+          <div class="field">
+            <input type="email" placeholder="you@email.com" aria-label="Email" />
+            <button class="go" aria-label="Continue">→</button>
+          </div>
+          <div class="fineprint" style="margin-top:12px">
+            or <button class="linkline">continue with Google</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary">Play again</button>
+        <div class="doorrow">
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+          <div class="door share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</div>
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Ranks</div>
+        </div>
+      </div>
+    </div>
+    <div class="designer-note">
+      <b>Read:</b> reads as a footnote to the score, not a wall. Email field is the hero; Google is a quiet fallback link.
+      <span class="tag">Lowest overcrowding risk of the three.</span> No leaderboard lookup needed at game-over.
+    </div>
+  </div>
+
+  <!-- ══ CONCEPT B ══ -->
+  <div class="col cB">
+    <div class="caphead">
+      <span class="clabel">Concept B</span>
+      <h2>Rank hook</h2>
+      <div class="csub">Leads with what they just earned — a real rank — and pushes Google as the one-tap path. Highest conversion, more assertive.</div>
+    </div>
+    <div class="phone">
+      <div class="go-head">
+        <div class="go-title">Game Over</div>
+        <div class="go-sub">Memory Fades</div>
+        <div class="go-fslabel">Final score</div>
+        <div class="go-score">4820</div>
+      </div>
+      <div class="trio">
+        <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+        <div class="cell"><div class="v l">×12</div><div class="k">Best streak</div></div>
+        <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+      </div>
+
+      <div class="slot">
+        <div class="cta-card">
+          <div class="cta-eyebrow">You're not ranked yet</div>
+          <div class="cta-head">That run would place <span class="rank">#14</span> on Hard</div>
+          <div class="cta-body">Guests play unranked. Grab an account to claim the spot and keep every run.</div>
+          <button class="gbtn" style="margin-top:14px">
+            <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+            Continue with Google
+          </button>
+          <div class="or"><span></span>or<span></span></div>
+          <div class="flabel">Email</div>
+          <div class="field" style="margin-top:8px">
+            <input type="email" placeholder="you@email.com" aria-label="Email" />
+            <button class="go" aria-label="Continue">→</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary">Play again</button>
+        <div class="doorrow">
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+          <div class="door share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</div>
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Ranks</div>
+        </div>
+      </div>
+    </div>
+    <div class="designer-note">
+      <b>Read:</b> the <b>#14</b> hook is the strongest motivator — concrete, earned, theirs. Google-first respects the “email is friction” instinct.
+      <span class="warn">Cost:</span> the rank needs a leaderboard lookup when the run ends (one extra RPC), and it's the tallest card — watch small screens.
+    </div>
+  </div>
+
+  <!-- ══ CONCEPT C ══ -->
+  <div class="col cC">
+    <div class="caphead">
+      <span class="clabel">Concept C</span>
+      <h2>Tap to expand</h2>
+      <div class="csub">Ships almost nothing by default — a slim dashed bar echoing the leaderboard nudge. Taps open the full form. Zero overcrowding.</div>
+    </div>
+    <div class="phone">
+      <div class="go-head">
+        <div class="go-title">Game Over</div>
+        <div class="go-sub">Memory Fades</div>
+        <div class="go-fslabel">Final score</div>
+        <div class="go-score">4820</div>
+      </div>
+      <div class="trio">
+        <div class="cell"><div class="v m">38</div><div class="k">Items recalled</div></div>
+        <div class="cell"><div class="v l">×12</div><div class="k">Best streak</div></div>
+        <div class="cell"><div class="v c">91%</div><div class="k">Accuracy</div></div>
+      </div>
+
+      <div class="slot">
+        <button class="nudge" id="nudgeC">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z"/></svg></span>
+          <span class="txt"><b>Playing as guest.</b> Sign up to save this score to the leaderboard.</span>
+          <span class="chev" id="chevC">›</span>
+        </button>
+        <div class="expand" id="expandC">
+          <div style="padding-top:12px">
+            <button class="gbtn solo">
+              <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+              Continue with Google
+            </button>
+            <div class="or"><span></span>or<span></span></div>
+            <div class="field">
+              <input type="email" placeholder="you@email.com" aria-label="Email" />
+              <button class="go" aria-label="Continue">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary">Play again</button>
+        <div class="doorrow">
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</div>
+          <div class="door share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</div>
+          <div class="door"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Ranks</div>
+        </div>
+      </div>
+    </div>
+    <div class="designer-note">
+      <b>Read:</b> the summary stays as clean as a signed-in player's. The bar is unmissable but ignorable.
+      <span class="warn">Cost:</span> one extra tap before the field — softest ask, so likely the softest conversion.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Concept C — expand on tap
+  var nudge = document.getElementById('nudgeC');
+  var expand = document.getElementById('expandC');
+  var chev = document.getElementById('chevC');
+  nudge.addEventListener('click', function () {
+    var open = expand.classList.toggle('open');
+    chev.textContent = open ? '⌄' : '›';
+  });
+</script>
