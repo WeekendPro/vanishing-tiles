@@ -20,7 +20,7 @@ export const PIECE_FADE_MS = 460
 export const LIFT_BEAT_MS = 260
 export const LIFT_MS = 1300
 
-// Clear-payoff bonus receipt: the earned bonuses (FLAWLESS / IN ORDER / SPEED)
+// Clear-payoff bonus receipt: the earned bonuses (SPEED / ACCURACY / SEQUENCE)
 // itemize in the board's upper-left, each line holding a beat then drifting up to
 // evaporate (the `vt-bonus-rise` keyframe in index.css). BONUS_RISE_MS MUST match
 // that keyframe's duration. Lines appear staggered (BONUS_BEAT_MS before the first,

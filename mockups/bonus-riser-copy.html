@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bonus riser copy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cyan:#28F0FF; --lime:#B6FF3C; --amber:#FFC23D; --magenta:#FF2D9B;
+    --void:#06060B; --panel:#0E0E16; --grid:#1C1C28; --dim:#8A8AA0; --faint:#4A4A5C; --text:#EAEAF2;
+  }
+  *{box-sizing:border-box;}
+  body{ font-family:'Space Grotesk',system-ui,sans-serif; background:#0a0a10; color:var(--text); margin:0; padding:28px; }
+  h1{ font-size:22px; font-weight:700; margin:0 0 4px; }
+  .sub{ color:var(--dim); font-size:13px; margin:0 0 22px; max-width:640px; line-height:1.5; }
+  .tag{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); font-weight:600; }
+
+  .legend{ display:flex; gap:22px; flex-wrap:wrap; margin-bottom:24px; }
+  .legend div{ font-size:12px; color:var(--dim); }
+  .legend b{ font-weight:700; }
+  .cyan{color:var(--cyan);} .lime{color:var(--lime);} .amber{color:var(--amber);}
+
+  .row{ display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+  .scheme{ width:300px; }
+  .board{
+    position:relative; height:320px; border-radius:16px; overflow:hidden;
+    background:
+      radial-gradient(120% 60% at 50% -10%, rgba(40,240,255,0.05), transparent 60%),
+      var(--void);
+    box-shadow:0 0 0 1px var(--grid), 0 24px 50px rgba(0,0,0,.5);
+  }
+  /* faint board grid to mimic the void board */
+  .board::before{
+    content:''; position:absolute; inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+    background-size:28px 28px; background-position:12px 12px;
+  }
+  /* the risers, upper-left, exactly like BonusPayoff */
+  .risers{ position:absolute; left:12px; top:12px; display:flex; flex-direction:column; gap:4px; }
+  .riser{ display:flex; align-items:baseline; gap:6px; white-space:nowrap; text-shadow:0 1px 6px rgba(0,0,0,.7); }
+  .riser .label{ font-weight:700; font-size:11px; letter-spacing:.13em; text-transform:uppercase; }
+  .riser .val{ font-weight:700; font-size:18px; line-height:1; font-variant-numeric:tabular-nums; color:#fff; }
+  .caption{ font-size:12px; color:var(--dim); margin-top:10px; line-height:1.5; }
+  .caption b{ color:var(--text); }
+  .rec{ display:inline-block; margin-top:6px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:var(--lime); }
+</style>
+</head>
+<body>
+  <div class="tag">Vanishing Tiles · mid-game bonus risers</div>
+  <h1>Bonus riser copy</h1>
+  <p class="sub">
+    These float up in the board's upper-left at the end of each cleared batch. What each rewards:
+  </p>
+  <div class="legend">
+    <div><b class="cyan">●</b> cleared with <b>no misses</b> — every mode</div>
+    <div><b class="lime">●</b> also recalled in the <b>revealed order</b> — Easy/Medium</div>
+    <div><b class="amber">●</b> leftover <b>clock time</b> → points — nearly every clear (new)</div>
+  </div>
+
+  <div class="row">
+
+    <!-- Scheme A — your proposal -->
+    <div class="scheme">
+      <div class="tag" style="margin-bottom:8px;">A · your proposal</div>
+      <div class="board">
+        <div class="risers">
+          <div class="riser"><span class="label cyan">Accuracy Bonus</span><span class="val">+250</span></div>
+          <div class="riser"><span class="label lime">Precision Bonus</span><span class="val">+400</span></div>
+          <div class="riser"><span class="label amber">Speed Bonus</span><span class="val">+180</span></div>
+        </div>
+      </div>
+      <p class="caption"><b>Accuracy</b> + <b>Precision</b> read as near-synonyms — the same fuzziness you're trying to remove. "Precision" doesn't say <i>order</i>.</p>
+    </div>
+
+    <!-- Scheme B — recommended -->
+    <div class="scheme">
+      <div class="tag" style="margin-bottom:8px;">B · recommended</div>
+      <div class="board">
+        <div class="risers">
+          <div class="riser"><span class="label cyan">Accuracy Bonus</span><span class="val">+250</span></div>
+          <div class="riser"><span class="label lime">Order Bonus</span><span class="val">+400</span></div>
+          <div class="riser"><span class="label amber">Speed Bonus</span><span class="val">+180</span></div>
+        </div>
+      </div>
+      <p class="caption"><b>Order</b> names the mechanic literally and echoes Hard mode's "IN ORDER" rule. Three distinct ideas: right / in-order / fast.<span class="rec">★ recommended</span></p>
+    </div>
+
+    <!-- Scheme C — "Sequence" variant -->
+    <div class="scheme">
+      <div class="tag" style="margin-bottom:8px;">C · "Sequence"</div>
+      <div class="board">
+        <div class="risers">
+          <div class="riser"><span class="label cyan">Accuracy Bonus</span><span class="val">+250</span></div>
+          <div class="riser"><span class="label lime">Sequence Bonus</span><span class="val">+400</span></div>
+          <div class="riser"><span class="label amber">Speed Bonus</span><span class="val">+180</span></div>
+        </div>
+      </div>
+      <p class="caption"><b>Sequence</b> is also unambiguous (a touch more technical than "Order"). Same clean 3-way split.</p>
+    </div>
+
+    <!-- Scheme D — no "Bonus" suffix (tighter) -->
+    <div class="scheme">
+      <div class="tag" style="margin-bottom:8px;">D · tighter (drop "Bonus")</div>
+      <div class="board">
+        <div class="risers">
+          <div class="riser"><span class="label cyan">Accuracy</span><span class="val">+250</span></div>
+          <div class="riser"><span class="label lime">Order</span><span class="val">+400</span></div>
+          <div class="riser"><span class="label amber">Speed</span><span class="val">+180</span></div>
+        </div>
+      </div>
+      <p class="caption">Context already says "bonus." Dropping the word keeps the labels short and quick to read mid-run.</p>
+    </div>
+
+  </div>
+</body>
+</html>

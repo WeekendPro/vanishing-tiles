@@ -78,7 +78,7 @@ export function StaggerScreen() {
   const timerBar = useTimerBar()
 
   // The earned "+bonus" lines itemized in the board's upper-left on a cleared batch
-  // (the payoff receipt): FLAWLESS / IN ORDER / SPEED, each drifting up to evaporate.
+  // (the payoff receipt): SPEED / ACCURACY / SEQUENCE, each drifting up to evaporate.
   // Empty when no payoff is in flight; cleared as a set when the batch advances.
   const [bonusItems, setBonusItems] = useState<BonusItem[]>([])
   const bonusItemId = useRef(0)
@@ -224,47 +224,54 @@ export function StaggerScreen() {
     if (res.batchCleared) {
       setCleared(true)
       sfx.batchClear()
-      // Only the SPECIAL bonuses are itemized: FLAWLESS (clean clear) and IN ORDER
-      // (clean + sequenced) — the ones that DON'T happen every clear. The speed
-      // bonus is deliberately not celebrated (it lands on nearly every clear); it
-      // still banks silently as the timer bar drains into the score below, keeping
-      // "faster = more points" implied rather than spelled out.
-      const receipt = ([
-        { amount: res.flawlessBonus, tag: 'FLAWLESS', variant: 'flawless' as LiftVariant },
-        { amount: res.inOrderBonus, tag: 'IN ORDER', variant: 'inOrder' as LiftVariant },
+      // Every earned bonus is itemized as a labeled riser: SPEED (leftover clock
+      // time — nearly every clear), ACCURACY (cleared with no misses), SEQUENCE
+      // (also recalled in reveal order — Easy/Medium). Speed rides the timer-bar
+      // drain on the first beat; the specials stagger in one beat apart after it.
+      const specials = ([
+        { amount: res.flawlessBonus, tag: 'ACCURACY BONUS', variant: 'flawless' as LiftVariant },
+        { amount: res.inOrderBonus, tag: 'SEQUENCE BONUS', variant: 'inOrder' as LiftVariant },
       ]).filter(b => b.amount > 0)
       // Freeze the lime bar (the leftover time), then at the first beat drain it
-      // into the score: the speed bonus pours in UNLABELED (its own reward stays
-      // the draining bar + climbing number, no receipt line).
+      // into the score — that drain IS the speed bonus, so its "SPEED BONUS +N"
+      // line lands on the same beat, banked here (not in the specials loop below).
       timerBar.freezeLime()
       window.setTimeout(() => {
         timerBar.rushToEmpty()
         if (res.speedBonus > 0) {
+          sfx.bonusLift()
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(res.speedBonus)
         }
       }, BONUS_BEAT_MS)
-      // The special lines itemize one stagger after the drain, each fading in,
-      // holding, then drifting up to evaporate — banking its points + a lift sound
-      // as it appears. CSS delay matches the bank timing.
-      setBonusItems(receipt.map((b, j) => ({
-        id: (bonusItemId.current += 1),
-        value: b.amount, tag: b.tag, variant: b.variant,
+      // Display list: SPEED on the drain beat, then each special one stagger later.
+      const speedItems = res.speedBonus > 0
+        ? [{ amount: res.speedBonus, tag: 'SPEED BONUS', variant: 'speed' as LiftVariant, delayMs: BONUS_BEAT_MS }]
+        : []
+      const specialItems = specials.map((b, j) => ({
+        amount: b.amount, tag: b.tag, variant: b.variant,
         delayMs: BONUS_BEAT_MS + (j + 1) * BONUS_STAGGER_MS,
+      }))
+      const displayItems = [...speedItems, ...specialItems]
+      // Each line fades in, holds, then drifts up to evaporate. CSS delay matches
+      // the bank timing.
+      setBonusItems(displayItems.map(b => ({
+        id: (bonusItemId.current += 1),
+        value: b.amount, tag: b.tag, variant: b.variant, delayMs: b.delayMs,
       })))
-      receipt.forEach((b, j) => {
+      // Bank the specials as each line lands (speed already banked on the drain beat).
+      specials.forEach((b, j) => {
         window.setTimeout(() => {
           sfx.bonusLift()
           setScoreCountMs(LIFT_MS)
           bankSpeedBonus(b.amount)
         }, BONUS_BEAT_MS + (j + 1) * BONUS_STAGGER_MS)
       })
-      // Advance once the last special line evaporates (or, with no special lines,
+      // Advance once the last visible line evaporates (or, with no lines at all,
       // once the bar-drain payoff settles), clearing the receipt as the next
       // batch's reveal takes over.
-      const receiptEnd = receipt.length > 0
-        ? BONUS_BEAT_MS + receipt.length * BONUS_STAGGER_MS + BONUS_RISE_MS
-        : 0
+      const lastDelay = displayItems.reduce((mx, b) => Math.max(mx, b.delayMs), 0)
+      const receiptEnd = displayItems.length > 0 ? lastDelay + BONUS_RISE_MS : 0
       const payoffMs = Math.max(receiptEnd, BONUS_BEAT_MS + LIFT_MS + 240)
       window.setTimeout(() => {
         setScoreCountMs(600)
