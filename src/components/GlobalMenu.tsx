@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useTrainingStore } from '../store/trainingStore'
@@ -59,42 +59,20 @@ function Action({ label, onClick, tone = 'default' }:
   )
 }
 
-/** The menu's list glyphs — monochrome line icons that anchor each row and take
- *  the row's hover color via `currentColor`. */
-const ICONS = {
-  leaderboard: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0V4Z" />
-      <path d="M18 5h2a2 2 0 0 1 0 4h-1.2M6 5H4a2 2 0 0 0 0 4h1.2" />
-    </svg>
-  ),
-  training: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><circle cx="12" cy="12" r="0.4" fill="currentColor" />
-    </svg>
-  ),
-  sound: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 5 6 9H2v6h4l5 4V5ZM16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12" />
-    </svg>
-  ),
-}
-
-/** A navigation row: glyph + title + smaller/lighter subtitle, split from its
- *  neighbours by a hairline rule (no box). Hover lifts the whole row to cyan. */
-function NavRow({ icon, title, subtitle, onClick }:
-  { icon: ReactNode; title: string; subtitle: string; onClick: () => void }) {
+/** A navigation row: title + smaller/lighter subtitle, split from its
+ *  neighbours by a hairline rule (no box). Flush-left so titles line up with
+ *  the avatar's edge, the dividers, and the bottom actions. Hover lifts the
+ *  whole row to cyan. */
+function NavRow({ title, subtitle, onClick }:
+  { title: string; subtitle: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3.5 py-4 border-t border-white/[0.07] text-left
-        text-gray-200 hover:text-neon-cyan transition-colors group"
+      className="w-full py-4 border-t border-white/[0.07] text-left
+        text-gray-200 hover:text-neon-cyan transition-colors"
     >
-      <span className="w-5 h-5 shrink-0 text-vt-dim group-hover:text-neon-cyan transition-colors">{icon}</span>
-      <span className="min-w-0">
-        <span className="block font-pixel uppercase tracking-[0.06em] text-[15px]">{title}</span>
-        <span className="block text-xs text-gray-400 mt-0.5 leading-snug">{subtitle}</span>
-      </span>
+      <span className="block font-pixel uppercase tracking-[0.06em] text-[15px]">{title}</span>
+      <span className="block text-xs text-gray-400 mt-0.5 leading-snug">{subtitle}</span>
     </button>
   )
 }
@@ -304,7 +282,6 @@ export function GlobalMenu() {
             {/* Global rankings — visible to guests too (the board is public;
                 only RANKING needs a named account). */}
             <NavRow
-              icon={ICONS.leaderboard}
               title="Leaderboard"
               subtitle="See where you rank against players worldwide"
               onClick={openLeaderboard}
@@ -313,34 +290,30 @@ export function GlobalMenu() {
             {/* The consequence-free naming drill — this menu entry is its only
                 way in since it left the Home mode switch. */}
             <NavRow
-              icon={ICONS.training}
               title="Training"
               subtitle="Learn the tile shapes and build your memory for longer sequences"
               onClick={openTraining}
             />
 
-            {/* Sound: same row rhythm (glyph + hairline), but the "subtitle"
-                slot is the volume slider itself — label + toggle up top, slider
-                full-width beneath. Re-enabling (or releasing the slider) plays
-                the tiny UI tick as instant confirmation — those taps also
-                satisfy the browser's audio-unlock gesture. (Music left with the
-                synth bed; its channel returns with the produced audio bed.) */}
-            <div className="flex items-start gap-3.5 py-4 border-t border-b border-white/[0.07]">
-              <span className="w-5 h-5 shrink-0 mt-1 text-vt-dim">{ICONS.sound}</span>
-              <div className="flex-1 min-w-0">
-                <ChannelControl
-                  label="Sound"
-                  enabled={soundEnabled}
-                  volume={sfxVolume}
-                  onToggle={() => {
-                    const next = !soundEnabled
-                    setSoundEnabled(next)
-                    if (next) { sfx.unlock(); sfx.uiTap() }
-                  }}
-                  onVolume={setSfxVolume}
-                  onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
-                />
-              </div>
+            {/* Sound: same row rhythm (hairline + flush-left), but the
+                "subtitle" slot is the volume slider itself — label + toggle up
+                top, slider full-width beneath. Re-enabling (or releasing the
+                slider) plays the tiny UI tick as instant confirmation — those
+                taps also satisfy the browser's audio-unlock gesture. (Music left
+                with the synth bed; its channel returns with the produced bed.) */}
+            <div className="py-4 border-t border-b border-white/[0.07]">
+              <ChannelControl
+                label="Sound"
+                enabled={soundEnabled}
+                volume={sfxVolume}
+                onToggle={() => {
+                  const next = !soundEnabled
+                  setSoundEnabled(next)
+                  if (next) { sfx.unlock(); sfx.uiTap() }
+                }}
+                onVolume={setSfxVolume}
+                onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+              />
             </div>
 
             {/* The calibration lab: every game sound as knobs + replay + saved
