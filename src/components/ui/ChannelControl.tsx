@@ -1,6 +1,7 @@
-/** One audio channel's control: the channel label + an on/off switch share the
- *  top row, and a full-width volume slider sits beneath it (dimmed/disabled
- *  while the channel is off). Shared by the global menu's Sound row and the
+/** One audio channel's control: the channel label sits flush-left with its
+ *  on/off switch right beside it, and a full-width volume slider drops in
+ *  beneath only while the channel is on (off hides the slider entirely rather
+ *  than showing it disabled). Shared by the global menu's Sound row and the
  *  Sound Design lab — it always fills the width it's given. */
 export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
   label: string
@@ -13,7 +14,7 @@ export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onV
 }) {
   return (
     <div className="w-full py-1">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
         <span className="font-pixel uppercase tracking-[0.08em] text-base text-gray-200">{label}</span>
         <button
           type="button"
@@ -32,20 +33,21 @@ export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onV
           />
         </button>
       </div>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={Math.round(volume * 100)}
-        disabled={!enabled}
-        aria-label={`${label} volume`}
-        onChange={e => onVolume(Number(e.target.value) / 100)}
-        onPointerUp={onVolumeCommit}
-        // `vt-range` gives the slider a round white thumb matching the toggle's
-        // knob; --vt-range-fill drives the cyan-filled portion of the track.
-        style={{ ['--vt-range-fill' as string]: `${Math.round(volume * 100)}%` }}
-        className="vt-range w-full mt-3"
-      />
+      {enabled && (
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(volume * 100)}
+          aria-label={`${label} volume`}
+          onChange={e => onVolume(Number(e.target.value) / 100)}
+          onPointerUp={onVolumeCommit}
+          // `vt-range` gives the slider a round white thumb matching the toggle's
+          // knob; --vt-range-fill drives the cyan-filled portion of the track.
+          style={{ ['--vt-range-fill' as string]: `${Math.round(volume * 100)}%` }}
+          className="vt-range w-full mt-3"
+        />
+      )}
     </div>
   )
 }
