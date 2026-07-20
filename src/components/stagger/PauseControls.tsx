@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { LivesCounter, PauseOverlay } from '../ui'
 import { STAGGER } from '../../lib/staggerCurve'
 
@@ -72,27 +73,34 @@ export function PauseStatsOverlay({
 }) {
   return (
     <PauseOverlay onResume={onResume} onRestart={onRestart} onExit={onExit} onSignUp={onSignUp}>
-      <div className="flex items-end gap-10 pointer-events-none">
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Score</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-cyan text-glow-vt-cyan leading-none tabular-nums">
-            {score}
-          </div>
-        </div>
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Lives</div>
-          {/* Hearts sit in the same 18px line box as the neighboring text-lg
-              values — a bare div's default line-height would pad below the
-              hearts and push this column out of line. */}
-          <div className="mt-1 flex h-[18px] items-center"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
-        </div>
-        <div>
-          <div className="font-grotesk text-[9px] tracking-[0.2em] uppercase text-vt-dim">Streak</div>
-          <div className="mt-1 font-silk font-bold text-lg text-vt-lime text-glow-vt-lime leading-none tabular-nums">
-            {currentStreak}
-          </div>
-        </div>
+      {/* The metadata section: Score / Lives / Streak as three full-width tiles
+          (echoing the leaderboard hero), spanning the same max-w-xs column as
+          the identity header, sound row, and buttons. */}
+      <div className="grid grid-cols-3 gap-2.5 w-full max-w-xs pointer-events-none">
+        <StatTile label="Score">
+          <span className="font-silk font-bold text-xl text-vt-cyan text-glow-vt-cyan tabular-nums">
+            {score.toLocaleString('en-US')}
+          </span>
+        </StatTile>
+        <StatTile label="Lives">
+          {/* Hearts share the same 20px line box as the neighbouring text-xl values. */}
+          <div className="flex h-[20px] items-center justify-center"><LivesCounter lives={lives} cap={STAGGER.START_LIVES} /></div>
+        </StatTile>
+        <StatTile label="Streak">
+          <span className="font-silk font-bold text-xl text-vt-lime text-glow-vt-lime tabular-nums">×{currentStreak}</span>
+        </StatTile>
       </div>
     </PauseOverlay>
+  )
+}
+
+// One stat tile in the pause scoreboard — label over value, matching the
+// leaderboard hero's tiles (inset hairline, centered).
+function StatTile({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+      <div className="font-grotesk text-[8px] tracking-[0.18em] uppercase text-vt-faint font-semibold">{label}</div>
+      <div className="mt-1">{children}</div>
+    </div>
   )
 }

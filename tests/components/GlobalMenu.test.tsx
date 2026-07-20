@@ -59,8 +59,10 @@ describe('GlobalMenu', () => {
     await user.click(screen.getByRole('button', { name: /menu/i }))
     expect(screen.getByRole('button', { name: /Logout/i })).toBeInTheDocument()
     // Training launches from the menu; it sits directly after Leaderboard.
-    const leaderboard = screen.getByRole('button', { name: 'Leaderboard' })
-    const training = screen.getByRole('button', { name: 'Training' })
+    // (Each nav row's accessible name now includes its subtitle, so anchor on
+    // the leading title.)
+    const leaderboard = screen.getByRole('button', { name: /^Leaderboard/i })
+    const training = screen.getByRole('button', { name: /^Training/i })
     expect(leaderboard.compareDocumentPosition(training) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Settings returns when there's something behind it; Reset Journey is gone.
     expect(screen.queryByRole('button', { name: /Settings/i })).not.toBeInTheDocument()
@@ -77,12 +79,12 @@ describe('GlobalMenu', () => {
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    await user.click(screen.getByRole('button', { name: 'Training' }))
+    await user.click(screen.getByRole('button', { name: /^Training/i }))
     expect(useNavStore.getState().appView).toBe('training')
     expect(useTrainingStore.getState().active).toBe(true)
     expect(useTrainingStore.getState().piece).not.toBeNull()
     // Menu overlay is gone — only the reopen toggle remains.
-    expect(screen.queryByRole('button', { name: 'Training' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Training/i })).not.toBeInTheDocument()
   })
 
   it('a guest gets the generic person icon, not "GU" initials', async () => {
@@ -95,13 +97,15 @@ describe('GlobalMenu', () => {
     expect(screen.queryByText('GU')).not.toBeInTheDocument()
   })
 
-  it('a guest gets "Sign up" instead of "Logout" — same teardown, back to the auth screen', async () => {
+  it('a guest gets the "Create an account" invite instead of "Logout" — same teardown, back to the auth screen', async () => {
     mockGuest()
     useNavStore.setState({ appView: 'home' })
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    const signUp = await screen.findByRole('button', { name: /Sign up/i })
+    // The guest sign-up ramp is the invite banner under the avatar (it replaced
+    // the old bottom "Sign up" text link); same teardown, only the framing differs.
+    const signUp = await screen.findByRole('button', { name: /Create an account/i })
     expect(screen.queryByRole('button', { name: /Logout/i })).not.toBeInTheDocument()
     await user.click(signUp)
     expect(auth.signOut).toHaveBeenCalledTimes(1)
@@ -125,7 +129,9 @@ describe('GlobalMenu', () => {
     const user = userEvent.setup()
     render(<GlobalMenu />)
     await user.click(screen.getByRole('button', { name: /menu/i }))
-    expect(await screen.findByRole('button', { name: /Leaderboard/i })).toBeInTheDocument()
+    // Anchor on the leading title: the guest CTA banner's name also contains
+    // "leaderboard" ("…climb the leaderboard"), so a bare /Leaderboard/ matches two.
+    expect(await screen.findByRole('button', { name: /^Leaderboard/i })).toBeInTheDocument()
   })
 
   it('Logout calls signOut and resets navigation', async () => {

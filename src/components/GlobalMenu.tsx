@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { signOut } from '../lib/auth'
 import { useNavStore } from '../store/navStore'
 import { useTrainingStore } from '../store/trainingStore'
@@ -40,7 +40,7 @@ function Avatar({ name, avatarUrl, isGuest }: { name: string; avatarUrl: string 
     )
   }
   return (
-    <div className="w-12 h-12 rounded-full grid place-items-center font-black text-lg text-white
+    <div className="w-12 h-12 rounded-full grid place-items-center font-bold text-base text-white
       bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
       {initials(name)}
     </div>
@@ -55,6 +55,46 @@ function Action({ label, onClick, tone = 'default' }:
   return (
     <button onClick={onClick} className={`flex items-center gap-2.5 text-left font-pixel uppercase tracking-[0.08em] text-base py-3 ${color}`}>
       {label}
+    </button>
+  )
+}
+
+/** The menu's list glyphs — monochrome line icons that anchor each row and take
+ *  the row's hover color via `currentColor`. */
+const ICONS = {
+  leaderboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0V4Z" />
+      <path d="M18 5h2a2 2 0 0 1 0 4h-1.2M6 5H4a2 2 0 0 0 0 4h1.2" />
+    </svg>
+  ),
+  training: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><circle cx="12" cy="12" r="0.4" fill="currentColor" />
+    </svg>
+  ),
+  sound: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 5 6 9H2v6h4l5 4V5ZM16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12" />
+    </svg>
+  ),
+}
+
+/** A navigation row: glyph + title + smaller/lighter subtitle, split from its
+ *  neighbours by a hairline rule (no box). Hover lifts the whole row to cyan. */
+function NavRow({ icon, title, subtitle, onClick }:
+  { icon: ReactNode; title: string; subtitle: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3.5 py-4 border-t border-white/[0.07] text-left
+        text-gray-200 hover:text-neon-cyan transition-colors group"
+    >
+      <span className="w-5 h-5 shrink-0 text-vt-dim group-hover:text-neon-cyan transition-colors">{icon}</span>
+      <span className="min-w-0">
+        <span className="block font-pixel uppercase tracking-[0.06em] text-[15px]">{title}</span>
+        <span className="block text-xs text-gray-400 mt-0.5 leading-snug">{subtitle}</span>
+      </span>
     </button>
   )
 }
@@ -191,11 +231,11 @@ export function GlobalMenu() {
               nothing to edit, so theirs stays inert. */}
           {loaded && (
             isGuest ? (
-              <div className="flex items-center gap-3 mb-8">
+              <div className="flex items-center gap-3 mb-4">
                 <Avatar name={name} avatarUrl={avatarUrl} isGuest />
                 <div className="min-w-0">
-                  <div className="font-pixel text-sm leading-tight truncate">{name}</div>
-                  <div className="text-xs text-gray-400 truncate">Guest session</div>
+                  <div className="font-pixel text-sm leading-tight truncate">Playing as Guest</div>
+                  <div className="text-xs text-gray-400 truncate">Not ranked · scores aren’t saved</div>
                 </div>
               </div>
             ) : (
@@ -224,6 +264,26 @@ export function GlobalMenu() {
             )
           )}
 
+          {/* Guest invite — a real call to action under the avatar: turn the
+              anonymous session into a named account (same sign-up teardown as
+              the old bottom "Sign up" link, which this replaces). Kept free of
+              the word "free" — the game is, and saying so implies it might not
+              be. */}
+          {loaded && isGuest && (
+            <button
+              onClick={handleSignOut}
+              className="mb-8 w-full rounded-2xl px-4 py-3 text-left flex items-center justify-between
+                bg-gradient-to-r from-neon-cyan/15 to-neon-magenta/15 ring-1 ring-neon-cyan/40
+                transition hover:ring-neon-cyan/70"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-white">Create an account</span>
+                <span className="block text-xs text-gray-400">Save your runs &amp; climb the leaderboard</span>
+              </span>
+              <span className="text-neon-cyan text-lg leading-none shrink-0 ml-3">→</span>
+            </button>
+          )}
+
           {editOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/70">
               <div className="relative w-full max-w-sm rounded-[28px] bg-vt-panel border border-white/5 shadow-[0_40px_90px_rgba(0,0,0,0.6)] px-7 py-8">
@@ -240,35 +300,54 @@ export function GlobalMenu() {
             </div>
           )}
 
-          {/* Global rankings — visible to guests too (the board is public;
-              only RANKING needs a named account). */}
-          <Action label="Leaderboard" onClick={openLeaderboard} />
+          <div className="flex flex-col">
+            {/* Global rankings — visible to guests too (the board is public;
+                only RANKING needs a named account). */}
+            <NavRow
+              icon={ICONS.leaderboard}
+              title="Leaderboard"
+              subtitle="See where you rank against players worldwide"
+              onClick={openLeaderboard}
+            />
 
-          {/* The consequence-free naming drill — this menu entry is its only
-              way in since it left the Home mode switch. */}
-          <Action label="Training" onClick={openTraining} />
+            {/* The consequence-free naming drill — this menu entry is its only
+                way in since it left the Home mode switch. */}
+            <NavRow
+              icon={ICONS.training}
+              title="Training"
+              subtitle="Learn the tile shapes and build your memory for longer sequences"
+              onClick={openTraining}
+            />
 
-          {/* Sound: toggle + volume. Re-enabling (or releasing the slider)
-              plays the tiny UI tick as instant confirmation — those taps also
-              satisfy the browser's audio-unlock gesture. (Music left with the
-              synth bed; its channel returns with the produced audio bed.) */}
-          <ChannelControl
-            label="Sound"
-            enabled={soundEnabled}
-            volume={sfxVolume}
-            onToggle={() => {
-              const next = !soundEnabled
-              setSoundEnabled(next)
-              if (next) { sfx.unlock(); sfx.uiTap() }
-            }}
-            onVolume={setSfxVolume}
-            onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
-          />
+            {/* Sound: same row rhythm (glyph + hairline), but the "subtitle"
+                slot is the volume slider itself — label + toggle up top, slider
+                full-width beneath. Re-enabling (or releasing the slider) plays
+                the tiny UI tick as instant confirmation — those taps also
+                satisfy the browser's audio-unlock gesture. (Music left with the
+                synth bed; its channel returns with the produced audio bed.) */}
+            <div className="flex items-start gap-3.5 py-4 border-t border-b border-white/[0.07]">
+              <span className="w-5 h-5 shrink-0 mt-1 text-vt-dim">{ICONS.sound}</span>
+              <div className="flex-1 min-w-0">
+                <ChannelControl
+                  label="Sound"
+                  enabled={soundEnabled}
+                  volume={sfxVolume}
+                  onToggle={() => {
+                    const next = !soundEnabled
+                    setSoundEnabled(next)
+                    if (next) { sfx.unlock(); sfx.uiTap() }
+                  }}
+                  onVolume={setSfxVolume}
+                  onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+                />
+              </div>
+            </div>
 
-          {/* The calibration lab: every game sound as knobs + replay + saved
-              presets. Admin-only — a developer instrument, never on the
-              deployed build (isAdminEnv). */}
-          {admin && <Action label="Sound Design" onClick={openSoundDesign} />}
+            {/* The calibration lab: every game sound as knobs + replay + saved
+                presets. Admin-only — a developer instrument, never on the
+                deployed build (isAdminEnv). */}
+            {admin && <Action label="Sound Design" onClick={openSoundDesign} />}
+          </div>
 
           {/* A full Settings screen is deliberately absent — the lone sound
               toggle above rides inline until there's more to expose.
@@ -278,15 +357,12 @@ export function GlobalMenu() {
               it's a real user-facing control, shown to everyone including
               guests (guests have an anon account + game history too).
 
-              Guests never logged in, so "Logout" is the wrong ask — their exit
-              ramp is SIGN UP: terminate the anonymous session and land on
-              AuthScreen, where they can create the account (or sign in). Same
-              teardown either way; only the framing differs. */}
+              Guests never logged in, so "Logout" is the wrong ask — and their
+              SIGN UP ramp already lives in the invite banner up top, so the
+              bottom row is just Erase My Data for them. Members get Logout. */}
           <div className="mt-auto flex flex-col">
             <Action label="Erase My Data" tone="danger" onClick={openEraseData} />
-            {isGuest
-              ? <Action label="Sign up" onClick={handleSignOut} />
-              : <Action label="Logout" tone="danger" onClick={handleSignOut} />}
+            {!isGuest && <Action label="Logout" tone="danger" onClick={handleSignOut} />}
           </div>
 
           {dataOpen && (

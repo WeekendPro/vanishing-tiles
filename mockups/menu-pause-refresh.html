@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Menu &amp; Pause — layout refresh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          neon: { cyan: '#22d3ee', magenta: '#ff2d95' },
+          vt: {
+            void: '#06060B', panel: '#0E0E16', raised: '#15151F', grid: '#1C1C28',
+            filled: '#2A2D3A', edge: '#3A3E4F',
+            magenta: '#FF2D9B', cyan: '#28F0FF', amber: '#FFC23D', red: '#FF3B47', lime: '#B6FF3C',
+            text: '#EAEAF2', dim: '#8A8AA0', faint: '#4A4A5C',
+          },
+        },
+        fontFamily: { grotesk: ['"Space Grotesk"', 'system-ui', 'sans-serif'] },
+      },
+    },
+  }
+</script>
+<style>
+  body { font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .glow-cyan  { text-shadow: 0 0 10px rgba(40,240,255,0.5); }
+  .glow-amber { text-shadow: 0 0 10px rgba(255,194,61,0.5); }
+  .glow-lime  { text-shadow: 0 0 10px rgba(182,255,60,0.5); }
+  .glow-red   { text-shadow: 0 0 12px rgba(255,59,71,0.4); }
+  .glow-mag   { text-shadow: 0 0 10px rgba(255,45,155,0.55); }
+
+  /* Phone frame — a slab of vt-void with the soft top glow + faint scanlines. */
+  .phone {
+    width: 384px; min-height: 720px;
+    background:
+      radial-gradient(120% 60% at 50% -10%, rgba(40,240,255,0.06), transparent 60%),
+      #06060B;
+    position: relative; overflow: hidden;
+    border-radius: 2.2rem; box-shadow: 0 0 0 1px #1C1C28, 0 30px 70px rgba(0,0,0,0.6);
+  }
+  .phone::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+  }
+  .avatar { background: linear-gradient(135deg, #22d3ee, #ff2d95); box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+
+  /* Sound slider styled like the app (cyan accent). */
+  input[type=range]{ accent-color:#28F0FF; }
+  input[type=range]:disabled{ opacity:.3; }
+
+  .eyebrow { letter-spacing:.2em; }
+  .cap { font-size: 11px; color:#8A8AA0; }
+  .note { font-size: 12px; color:#8A8AA0; line-height:1.5; }
+  .tag { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#4A4A5C; font-weight:600; }
+</style>
+</head>
+<body class="bg-[#0a0a10] text-vt-text px-8 py-10">
+
+  <header class="max-w-6xl mx-auto mb-10">
+    <div class="tag mb-2">Vanishing Tiles · design exploration</div>
+    <h1 class="text-3xl font-bold tracking-tight">Menu &amp; Pause — layout refresh</h1>
+    <p class="note mt-2 max-w-2xl">
+      Swings at two surfaces. <b class="text-vt-text">Menu</b>: drop the heavy bordered cards — keep the
+      title + smaller/lighter subtitle, grouped without a box. <b class="text-vt-text">Pause</b>: bring back the
+      profile/avatar at the top, rework the stat row, and restore three actions —
+      <b class="text-vt-text">Resume · Restart · Exit</b>. Each section shows the logged-in and guest identity states.
+    </p>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════════ MENU -->
+  <section class="max-w-6xl mx-auto mb-16">
+    <h2 class="text-xl font-bold mb-1">1 · Hamburger menu</h2>
+    <p class="note mb-6 max-w-2xl">Three list treatments (no box), plus the guest identity + call-to-action.</p>
+
+    <div class="flex gap-8 flex-wrap items-start">
+
+      <!-- ─────────────── M1 · Editorial hairlines ─────────────── -->
+      <div>
+        <div class="tag mb-2">M1 · Editorial hairlines</div>
+        <div class="phone px-7 pt-16 pb-8 flex flex-col">
+          <!-- profile header : logged in -->
+          <div class="flex items-center gap-3 mb-8">
+            <div class="avatar w-12 h-12 rounded-full grid place-items-center font-bold text-base">LA</div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-[15px] font-semibold leading-tight">
+                <span>lou_alejo</span>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-vt-dim"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>
+              </div>
+              <div class="text-xs text-vt-dim">lou.m.alejo@gmail.com</div>
+            </div>
+          </div>
+
+          <!-- items: title + subtitle, separated by hairlines, no boxes -->
+          <div class="flex flex-col">
+            <div class="py-4 border-t border-white/[0.07]">
+              <div class="font-semibold uppercase tracking-[0.06em] text-[15px] text-vt-cyan glow-cyan">Leaderboard</div>
+              <div class="text-xs text-vt-dim mt-0.5">See where you rank against players worldwide</div>
+            </div>
+            <div class="py-4 border-t border-white/[0.07]">
+              <div class="font-semibold uppercase tracking-[0.06em] text-[15px]">Training</div>
+              <div class="text-xs text-vt-dim mt-0.5">Learn the tile shapes and sharpen your recall</div>
+            </div>
+            <!-- sound : subtitle slot = the slider -->
+            <div class="py-4 border-t border-b border-white/[0.07]">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold uppercase tracking-[0.06em] text-[15px]">Sound</span>
+                <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+              </div>
+              <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+            </div>
+          </div>
+
+          <div class="mt-auto pt-6 flex flex-col gap-1">
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-red py-2">Erase my data</button>
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-dim py-2">Log out</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Cleanest. Hairline rules imply grouping without a box; hover lifts the title to cyan (shown on Leaderboard).</p>
+      </div>
+
+      <!-- ─────────────── M2 · Accent rail ─────────────── -->
+      <div>
+        <div class="tag mb-2">M2 · Accent rail</div>
+        <div class="phone px-7 pt-16 pb-8 flex flex-col">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="avatar w-12 h-12 rounded-full grid place-items-center font-bold text-base">LA</div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-[15px] font-semibold leading-tight">
+                <span>lou_alejo</span>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-vt-dim"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>
+              </div>
+              <div class="text-xs text-vt-dim">lou.m.alejo@gmail.com</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <div class="flex gap-3.5 py-3.5">
+              <span class="w-[3px] rounded-full bg-vt-cyan shadow-[0_0_8px_#28F0FF]"></span>
+              <div>
+                <div class="font-semibold uppercase tracking-[0.06em] text-[15px] text-vt-cyan glow-cyan">Leaderboard</div>
+                <div class="text-xs text-vt-dim mt-0.5">See where you rank against players worldwide</div>
+              </div>
+            </div>
+            <div class="flex gap-3.5 py-3.5">
+              <span class="w-[3px] rounded-full bg-white/10"></span>
+              <div>
+                <div class="font-semibold uppercase tracking-[0.06em] text-[15px]">Training</div>
+                <div class="text-xs text-vt-dim mt-0.5">Learn the tile shapes and sharpen your recall</div>
+              </div>
+            </div>
+            <div class="flex gap-3.5 py-3.5">
+              <span class="w-[3px] rounded-full bg-white/10"></span>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold uppercase tracking-[0.06em] text-[15px]">Sound</span>
+                  <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+                </div>
+                <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-6 flex flex-col gap-1">
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-red py-2">Erase my data</button>
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-dim py-2">Log out</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">A slim neon rail marks the active/hover row. Structure without a full border — more "arcade" than M1.</p>
+      </div>
+
+      <!-- ─────────────── M3 · Icon rows ─────────────── -->
+      <div>
+        <div class="tag mb-2">M3 · Icon rows</div>
+        <div class="phone px-7 pt-16 pb-8 flex flex-col">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="avatar w-12 h-12 rounded-full grid place-items-center font-bold text-base">LA</div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 text-[15px] font-semibold leading-tight">
+                <span>lou_alejo</span>
+                <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-vt-dim"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>
+              </div>
+              <div class="text-xs text-vt-dim">lou.m.alejo@gmail.com</div>
+            </div>
+          </div>
+
+          <div class="flex flex-col">
+            <div class="flex items-center gap-3.5 py-4 border-t border-white/[0.07]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-vt-cyan shrink-0"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0V4Z"/><path d="M18 5h2a2 2 0 0 1 0 4h-1.2M6 5H4a2 2 0 0 0 0 4h1.2"/></svg>
+              <div>
+                <div class="font-semibold uppercase tracking-[0.06em] text-[15px] text-vt-cyan glow-cyan">Leaderboard</div>
+                <div class="text-xs text-vt-dim mt-0.5">See where you rank worldwide</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3.5 py-4 border-t border-white/[0.07]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-vt-dim shrink-0"><path d="M6.5 6.5 17.5 17.5M4 8l2-2 2 2-2 2ZM16 16l2-2 2 2-2 2ZM5 11l-1 1 2 2 1-1M13 3l-1 1 2 2 1-1"/></svg>
+              <div>
+                <div class="font-semibold uppercase tracking-[0.06em] text-[15px]">Training</div>
+                <div class="text-xs text-vt-dim mt-0.5">Learn the tile shapes &amp; recall</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3.5 py-4 border-t border-b border-white/[0.07]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-vt-dim shrink-0"><path d="M11 5 6 9H2v6h4l5 4V5ZM16 9a3 3 0 0 1 0 6M19 6a7 7 0 0 1 0 12"/></svg>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold uppercase tracking-[0.06em] text-[15px]">Sound</span>
+                  <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+                </div>
+                <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-6 flex flex-col gap-1">
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-red py-2">Erase my data</button>
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-dim py-2">Log out</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Monochrome glyphs anchor each row and speed scanning. Subtitles shorten to fit beside the icon.</p>
+      </div>
+
+      <!-- ─────────────── M4 · Guest identity + CTA ─────────────── -->
+      <div>
+        <div class="tag mb-2">M4 · Guest state (uses M1 list)</div>
+        <div class="phone px-7 pt-16 pb-8 flex flex-col">
+          <!-- guest header : silhouette + invite -->
+          <div class="flex items-center gap-3 mb-4">
+            <div class="avatar w-12 h-12 rounded-full grid place-items-center text-white">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z"/></svg>
+            </div>
+            <div class="min-w-0">
+              <div class="text-[15px] font-semibold leading-tight">Playing as Guest</div>
+              <div class="text-xs text-vt-dim">Not ranked · scores aren't saved</div>
+            </div>
+          </div>
+          <!-- the invite -->
+          <button class="mb-8 w-full rounded-2xl px-4 py-3 text-left
+              bg-gradient-to-r from-vt-cyan/15 to-vt-magenta/15
+              ring-1 ring-vt-cyan/40 flex items-center justify-between">
+            <span>
+              <span class="block text-sm font-semibold text-vt-text">Create a free account</span>
+              <span class="block text-xs text-vt-dim">Save your runs &amp; climb the leaderboard</span>
+            </span>
+            <span class="text-vt-cyan text-lg glow-cyan">→</span>
+          </button>
+
+          <div class="flex flex-col">
+            <div class="py-4 border-t border-white/[0.07]">
+              <div class="font-semibold uppercase tracking-[0.06em] text-[15px]">Leaderboard</div>
+              <div class="text-xs text-vt-dim mt-0.5">See where you rank against players worldwide</div>
+            </div>
+            <div class="py-4 border-t border-white/[0.07]">
+              <div class="font-semibold uppercase tracking-[0.06em] text-[15px]">Training</div>
+              <div class="text-xs text-vt-dim mt-0.5">Learn the tile shapes and sharpen your recall</div>
+            </div>
+            <div class="py-4 border-t border-b border-white/[0.07]">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold uppercase tracking-[0.06em] text-[15px]">Sound</span>
+                <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+              </div>
+              <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+            </div>
+          </div>
+
+          <div class="mt-auto pt-6">
+            <button class="text-left font-semibold uppercase tracking-[0.06em] text-sm text-vt-red py-2">Erase my data</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Guest = silhouette + a real invite banner (the CTA replaces the plain "Sign up" text link). "Log out" becomes the account CTA.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ PAUSE -->
+  <section class="max-w-6xl mx-auto mb-16">
+    <h2 class="text-xl font-bold mb-1">2 · Pause screen</h2>
+    <p class="note mb-6 max-w-2xl">Profile back at the top, reworked stats, and three actions — Resume · Restart · Exit.</p>
+
+    <div class="flex gap-8 flex-wrap items-start">
+
+      <!-- ─────────────── P1 · Avatar + stat tiles ─────────────── -->
+      <div>
+        <div class="tag mb-2">P1 · Avatar + stat tiles</div>
+        <div class="phone px-7 pt-8 pb-8 flex flex-col items-center">
+          <!-- profile row : whose run this is -->
+          <div class="w-full flex items-center gap-3 mb-10">
+            <div class="avatar w-11 h-11 rounded-full grid place-items-center font-bold text-sm">LA</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold leading-tight">lou_alejo</div>
+              <div class="text-[10px] eyebrow uppercase text-vt-dim">Easy · batch 7</div>
+            </div>
+            <div class="text-[11px] eyebrow uppercase text-vt-cyan glow-cyan font-semibold">Paused</div>
+          </div>
+
+          <!-- stat tiles (leaderboard-hero style) -->
+          <div class="w-full grid grid-cols-3 gap-2.5 mb-10">
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Score</div>
+              <div class="text-xl font-bold text-vt-cyan glow-cyan tabular-nums mt-1">2,150</div>
+            </div>
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Lives</div>
+              <div class="text-lg tabular-nums mt-1 tracking-tight"><span class="text-vt-red">♥♥♥</span><span class="text-vt-grid">♥♥</span></div>
+            </div>
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Streak</div>
+              <div class="text-xl font-bold text-vt-lime glow-lime tabular-nums mt-1">×12</div>
+            </div>
+          </div>
+
+          <!-- sound -->
+          <div class="w-52 mb-10">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold uppercase tracking-[0.06em] text-base">Sound</span>
+              <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+            </div>
+            <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+          </div>
+
+          <!-- three actions -->
+          <div class="mt-auto w-52 flex flex-col gap-3">
+            <button class="w-full rounded-xl border border-vt-cyan/70 bg-vt-cyan/10 text-vt-cyan glow-cyan py-3 font-semibold uppercase tracking-[0.1em] text-sm">Resume</button>
+            <button class="w-full rounded-xl border border-vt-amber/50 bg-vt-amber/5 text-vt-amber py-3 font-semibold uppercase tracking-[0.1em] text-sm">Restart</button>
+            <button class="w-full rounded-xl border border-vt-red/50 bg-vt-red/5 text-vt-red py-3 font-semibold uppercase tracking-[0.1em] text-sm">Exit</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Stats become three matching tiles (echoes the leaderboard hero). Profile confirms whose run it is; mode·batch as the sub-line.</p>
+      </div>
+
+      <!-- ─────────────── P2 · Hero score ─────────────── -->
+      <div>
+        <div class="tag mb-2">P2 · Hero score</div>
+        <div class="phone px-7 pt-8 pb-8 flex flex-col items-center">
+          <div class="w-full flex items-center gap-3 mb-12">
+            <div class="avatar w-11 h-11 rounded-full grid place-items-center font-bold text-sm">LA</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold leading-tight">lou_alejo</div>
+              <div class="text-[10px] eyebrow uppercase text-vt-dim">Easy · batch 7</div>
+            </div>
+            <div class="text-[11px] eyebrow uppercase text-vt-cyan glow-cyan font-semibold">Paused</div>
+          </div>
+
+          <!-- hero score, secondary line beneath -->
+          <div class="text-center mb-3">
+            <div class="text-[9px] eyebrow uppercase text-vt-dim">Score</div>
+            <div class="text-6xl font-bold text-vt-cyan glow-cyan tabular-nums leading-none mt-1">2,150</div>
+          </div>
+          <div class="flex items-center gap-6 mb-12">
+            <div class="text-center">
+              <div class="text-[9px] eyebrow uppercase text-vt-dim">Lives</div>
+              <div class="text-base mt-0.5 tracking-tight"><span class="text-vt-red">♥♥♥</span><span class="text-vt-grid">♥♥</span></div>
+            </div>
+            <div class="w-px h-8 bg-white/10"></div>
+            <div class="text-center">
+              <div class="text-[9px] eyebrow uppercase text-vt-dim">Streak</div>
+              <div class="text-base font-bold text-vt-lime glow-lime mt-0.5">×12</div>
+            </div>
+          </div>
+
+          <div class="w-52 mb-10">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold uppercase tracking-[0.06em] text-base">Sound</span>
+              <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+            </div>
+            <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+          </div>
+
+          <div class="mt-auto w-52 flex flex-col gap-3">
+            <button class="w-full rounded-xl border border-vt-cyan/70 bg-vt-cyan/10 text-vt-cyan glow-cyan py-3 font-semibold uppercase tracking-[0.1em] text-sm">Resume</button>
+            <button class="w-full rounded-xl border border-vt-amber/50 bg-vt-amber/5 text-vt-amber py-3 font-semibold uppercase tracking-[0.1em] text-sm">Restart</button>
+            <button class="w-full rounded-xl border border-vt-red/50 bg-vt-red/5 text-vt-red py-3 font-semibold uppercase tracking-[0.1em] text-sm">Exit</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Score is the headline; lives + streak are a quiet second line. Most dramatic — the pause reads as a scoreboard.</p>
+      </div>
+
+      <!-- ─────────────── P3 · Compact pill row ─────────────── -->
+      <div>
+        <div class="tag mb-2">P3 · Compact centered</div>
+        <div class="phone px-7 pt-8 pb-8 flex flex-col items-center">
+          <!-- centered avatar chip -->
+          <div class="flex flex-col items-center mt-6 mb-8">
+            <div class="avatar w-16 h-16 rounded-full grid place-items-center font-bold text-xl mb-3">LA</div>
+            <div class="text-base font-semibold leading-tight">lou_alejo</div>
+            <div class="text-[11px] eyebrow uppercase text-vt-cyan glow-cyan font-semibold mt-1">Paused · Easy · batch 7</div>
+          </div>
+
+          <!-- single pill row of stats -->
+          <div class="flex items-stretch rounded-2xl bg-vt-void shadow-[inset_0_0_0_1px_#1C1C28] overflow-hidden mb-10">
+            <div class="px-4 py-3 text-center">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Score</div>
+              <div class="text-lg font-bold text-vt-cyan glow-cyan tabular-nums">2,150</div>
+            </div>
+            <div class="w-px bg-white/10"></div>
+            <div class="px-4 py-3 text-center">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Lives</div>
+              <div class="text-sm mt-1 tracking-tight"><span class="text-vt-red">♥♥♥</span><span class="text-vt-grid">♥♥</span></div>
+            </div>
+            <div class="w-px bg-white/10"></div>
+            <div class="px-4 py-3 text-center">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Streak</div>
+              <div class="text-lg font-bold text-vt-lime glow-lime">×12</div>
+            </div>
+          </div>
+
+          <div class="w-52 mb-8">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold uppercase tracking-[0.06em] text-base">Sound</span>
+              <span class="relative w-11 h-6 rounded-full bg-vt-cyan/80"><span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white translate-x-5"></span></span>
+            </div>
+            <input type="range" min="0" max="100" value="80" class="w-full mt-3" />
+          </div>
+
+          <div class="mt-auto w-full flex flex-col gap-3">
+            <button class="w-full rounded-xl border border-vt-cyan/70 bg-vt-cyan/10 text-vt-cyan glow-cyan py-3 font-semibold uppercase tracking-[0.1em] text-sm">Resume</button>
+            <div class="flex gap-3">
+              <button class="flex-1 rounded-xl border border-vt-amber/50 bg-vt-amber/5 text-vt-amber py-3 font-semibold uppercase tracking-[0.1em] text-sm">Restart</button>
+              <button class="flex-1 rounded-xl border border-vt-red/50 bg-vt-red/5 text-vt-red py-3 font-semibold uppercase tracking-[0.1em] text-sm">Exit</button>
+            </div>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Everything centered on the axis; stats as one segmented pill. Resume gets full width, Restart/Exit share a row (secondary).</p>
+      </div>
+
+      <!-- ─────────────── P4 · Guest pause ─────────────── -->
+      <div>
+        <div class="tag mb-2">P4 · Guest pause (P1 layout)</div>
+        <div class="phone px-7 pt-8 pb-8 flex flex-col items-center">
+          <div class="w-full flex items-center gap-3 mb-8">
+            <div class="avatar w-11 h-11 rounded-full grid place-items-center text-white">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold leading-tight">Guest run</div>
+              <div class="text-[10px] eyebrow uppercase text-vt-dim">Easy · batch 7</div>
+            </div>
+            <div class="text-[11px] eyebrow uppercase text-vt-cyan glow-cyan font-semibold">Paused</div>
+          </div>
+
+          <div class="w-full grid grid-cols-3 gap-2.5 mb-6">
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Score</div>
+              <div class="text-xl font-bold text-vt-cyan glow-cyan tabular-nums mt-1">2,150</div>
+            </div>
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Lives</div>
+              <div class="text-lg tabular-nums mt-1 tracking-tight"><span class="text-vt-red">♥♥♥</span><span class="text-vt-grid">♥♥</span></div>
+            </div>
+            <div class="rounded-xl bg-vt-void px-2 py-3 text-center shadow-[inset_0_0_0_1px_#1C1C28]">
+              <div class="text-[8px] eyebrow uppercase text-vt-faint font-semibold">Streak</div>
+              <div class="text-xl font-bold text-vt-lime glow-lime tabular-nums mt-1">×12</div>
+            </div>
+          </div>
+
+          <!-- guest nudge : this run won't be saved -->
+          <button class="w-full rounded-xl px-4 py-2.5 mb-8 text-left bg-vt-magenta/10 ring-1 ring-vt-magenta/40 flex items-center justify-between">
+            <span class="text-xs text-vt-text">Sign up to save this run &amp; rank</span>
+            <span class="text-vt-magenta glow-mag">→</span>
+          </button>
+
+          <div class="mt-auto w-52 flex flex-col gap-3">
+            <button class="w-full rounded-xl border border-vt-cyan/70 bg-vt-cyan/10 text-vt-cyan glow-cyan py-3 font-semibold uppercase tracking-[0.1em] text-sm">Resume</button>
+            <button class="w-full rounded-xl border border-vt-amber/50 bg-vt-amber/5 text-vt-amber py-3 font-semibold uppercase tracking-[0.1em] text-sm">Restart</button>
+            <button class="w-full rounded-xl border border-vt-red/50 bg-vt-red/5 text-vt-red py-3 font-semibold uppercase tracking-[0.1em] text-sm">Exit</button>
+          </div>
+        </div>
+        <p class="cap mt-2 w-[384px]">Guest keeps the silhouette + a smaller "save this run" nudge in place of the sound row (sound still reachable in the menu).</p>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="max-w-6xl mx-auto note border-t border-white/10 pt-6">
+    Pick one menu treatment (M1/M2/M3) + the guest header (M4), and one pause layout (P1/P2/P3) + guest handling (P4).
+    Restart will re-run <code class="text-vt-text">startRun(mode)</code>; the profile row reads from the same source as the menu &amp; leaderboard.
+  </footer>
+
+</body>
+</html>
