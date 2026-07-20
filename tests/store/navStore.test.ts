@@ -44,4 +44,19 @@ describe('navStore', () => {
     useNavStore.getState().reset()
     expect(useNavStore.getState().appView).toBe('auth')
   })
+
+  it('goAuth carries an optional email prefill and clears it when omitted', () => {
+    useNavStore.getState().goAuth('player@example.com')
+    expect(useNavStore.getState().appView).toBe('auth')
+    expect(useNavStore.getState().authPrefillEmail).toBe('player@example.com')
+    // A plain goAuth (e.g. sign-out) must not resurrect a stale prefill.
+    useNavStore.getState().goAuth()
+    expect(useNavStore.getState().authPrefillEmail).toBeNull()
+  })
+
+  it('reset clears any pending email prefill', () => {
+    useNavStore.getState().goAuth('player@example.com')
+    useNavStore.getState().reset()
+    expect(useNavStore.getState().authPrefillEmail).toBeNull()
+  })
 })

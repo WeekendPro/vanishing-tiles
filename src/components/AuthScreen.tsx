@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signInAsGuest, signInWithEmail, signInWithGoogle, signUpWithEmail } from '../lib/auth'
+import { useNavStore } from '../store/navStore'
 import { routeAfterAuth } from '../store/profileStore'
 import { track } from '../store/asyncStatus'
 import { analytics, type AuthMethod } from '../lib/analytics'
@@ -22,7 +23,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function AuthScreen() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [email, setEmail] = useState('')
+  // Seed from a prefill (a guest arriving from the game-over sign-up CTA already
+  // typed their address) so they land on the password step, not a blank form.
+  const [email, setEmail] = useState(() => useNavStore.getState().authPrefillEmail ?? '')
   const [password, setPassword] = useState('')
 
   const run = async (fn: () => Promise<{ error: { message: string } | null }>, navigate: boolean, method: AuthMethod) => {

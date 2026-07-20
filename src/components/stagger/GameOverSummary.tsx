@@ -5,6 +5,72 @@ import { RunHistoryGraph } from '../RunHistoryGraph'
 import { type RunRecord } from '../../store/runHistoryStore'
 import { type ShareResult } from '../../lib/shareCard'
 
+// ── Guest sign-up call to action ──────────────────────────────────────────────
+// A guest has no saved history, so the run-history chart is meaningless to them —
+// nothing is being banked. That slot becomes a gentle nudge instead: this score
+// only counts on the leaderboard with an account. Deliberately succinct — one
+// line of copy, one email field, Google as a quiet fallback — so the summary
+// never feels like a wall (Concept A from the design review).
+function GuestSignupCta({
+  onEmail, onGoogle,
+}: {
+  onEmail: (email: string) => void
+  onGoogle: () => void
+}) {
+  const [email, setEmail] = useState('')
+  const submit = () => onEmail(email.trim())
+  return (
+    <div className="rounded-2xl p-4 bg-gradient-to-b from-vt-magenta/[0.08] to-vt-magenta/[0.01]
+      shadow-[inset_0_0_0_1px_rgba(255,45,155,0.28),0_0_22px_rgba(255,45,155,0.08)]">
+      <div className="text-center font-grotesk text-[8.5px] font-bold tracking-[0.2em] uppercase text-vt-magenta text-glow-vt-magenta">
+        Playing as guest
+      </div>
+      <div className="text-center font-silk text-[15px] font-bold text-vt-text mt-2 leading-snug text-balance">
+        Save this score to the leaderboard
+      </div>
+
+      <form
+        className="relative mt-3.5"
+        onSubmit={e => { e.preventDefault(); submit() }}
+      >
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          aria-label="Email"
+          placeholder="you@email.com"
+          autoComplete="email"
+          className="w-full h-[46px] pl-3.5 pr-[46px] rounded-[11px] bg-[#0a0a12] text-vt-text
+            font-grotesk text-[13px] border border-white/10 placeholder-vt-faint
+            shadow-[inset_0_1px_2px_#000] focus:outline-none focus:border-vt-cyan
+            focus:shadow-[inset_0_1px_2px_#000,0_0_0_1px_rgba(40,240,255,0.33),0_0_14px_rgba(40,240,255,0.2)]"
+        />
+        <button
+          type="submit"
+          aria-label="Sign up with email"
+          className="absolute right-1.5 top-1.5 w-[34px] h-[34px] rounded-lg border-none cursor-pointer
+            bg-vt-cyan text-vt-void grid place-items-center shadow-[0_0_14px_rgba(40,240,255,0.4)]
+            active:translate-y-px"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </button>
+      </form>
+
+      <div className="mt-3 text-center font-grotesk text-[10px] text-vt-faint">
+        or{' '}
+        <button
+          onClick={onGoogle}
+          className="text-vt-cyan border-b border-vt-cyan/40 hover:text-vt-text transition-colors"
+        >
+          continue with Google
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // One secondary door in the game-over three-across row: an icon stacked over a
 // small label, in the app's button chrome. Ghost (cyan-on-hover) for the
 // navigation doors; "share" tone wears the memory/brag magenta as the standout.
@@ -39,8 +105,8 @@ function IconAction({
 // ancestor would become this fixed overlay's containing block and shrink it to
 // the scaled stage instead of covering the viewport).
 export function GameOverSummary({
-  score, shapesRecalled, bestStreak, totalPicks, correctPicks, currentRunId, records,
-  onPlayAgain, onShare, onLeaderboard, onHome,
+  score, shapesRecalled, bestStreak, totalPicks, correctPicks, currentRunId, records, isGuest,
+  onPlayAgain, onShare, onLeaderboard, onHome, onSignUpEmail, onSignUpGoogle,
 }: {
   score: number
   shapesRecalled: number
@@ -49,10 +115,13 @@ export function GameOverSummary({
   correctPicks: number
   currentRunId: string | null
   records: RunRecord[]
+  isGuest: boolean
   onPlayAgain: () => void
   onShare: () => Promise<ShareResult>
   onLeaderboard: () => void
   onHome: () => void
+  onSignUpEmail: (email: string) => void
+  onSignUpGoogle: () => void
 }) {
   // Share button state: 'sharing' while the card renders, then a brief
   // confirmation on the desktop fallback (the native sheet gives its own).
@@ -96,7 +165,14 @@ export function GameOverSummary({
         </div>
       </div>
 
-      {currentRunId && (
+      {/* Guests see the sign-up nudge in place of the run-history chart — with no
+          saved history there's no "best run" to plot, and this is the moment the
+          leaderboard means the most. Signed-in players still get their chart. */}
+      {isGuest ? (
+        <div className="w-full max-w-[300px] mb-6 pointer-events-auto">
+          <GuestSignupCta onEmail={onSignUpEmail} onGoogle={onSignUpGoogle} />
+        </div>
+      ) : currentRunId && (
         <div className="w-full max-w-[300px] mb-6 pointer-events-auto">
           <RunHistoryGraph records={records} currentId={currentRunId} />
         </div>

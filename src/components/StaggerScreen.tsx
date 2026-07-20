@@ -5,6 +5,7 @@ import { useStaggerStore } from '../store/staggerStore'
 import { useNavStore } from '../store/navStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useProfileStore } from '../store/profileStore'
+import { signInWithGoogle, signOut } from '../lib/auth'
 import { shareRun } from '../lib/shareCard'
 import { CLOCK_URGENT } from '../lib/staggerCurve'
 import { analytics } from '../lib/analytics'
@@ -435,6 +436,7 @@ export function StaggerScreen() {
             correctPicks={correctPicks}
             currentRunId={currentRunId}
             records={records}
+            isGuest={isGuest}
             onPlayAgain={() => startRun(mode)}
             onShare={async () => {
               const method = await shareRun({
@@ -445,6 +447,13 @@ export function StaggerScreen() {
             }}
             onLeaderboard={() => { exit(); analytics.leaderboardOpened(); goLeaderboard() }}
             onHome={() => { exit(); goHome() }}
+            // Guest → real account. Both paths hand off to the existing sign-up
+            // flow (the account model itself — email vs handle, verification —
+            // is a separate, deliberate follow-up). Email carries the typed
+            // address into AuthScreen so they land on the password step; the
+            // anonymous session is dropped, matching the leaderboard nudge.
+            onSignUpEmail={(email) => { exit(); goAuth(email || undefined); void signOut() }}
+            onSignUpGoogle={() => { analytics.authCompleted('google'); void signInWithGoogle() }}
           />
         )}
 

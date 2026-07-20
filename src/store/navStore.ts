@@ -6,7 +6,11 @@ export type AppView =
 
 interface NavState {
   appView: AppView
-  goAuth: () => void
+  /** Email to seed the AuthScreen form with — set when a guest starts sign-up
+   *  from somewhere that already knows their address (the game-over CTA), so
+   *  they don't retype it. Null unless goAuth was handed one. */
+  authPrefillEmail: string | null
+  goAuth: (prefillEmail?: string) => void
   goHome: () => void
   goStagger: () => void
   goTraining: () => void
@@ -18,11 +22,12 @@ interface NavState {
 
 const INITIAL = {
   appView: 'auth' as AppView,
+  authPrefillEmail: null as string | null,
 }
 
 export const useNavStore = create<NavState>((set) => ({
   ...INITIAL,
-  goAuth: () => set({ appView: 'auth' }),
+  goAuth: (prefillEmail) => set({ appView: 'auth', authPrefillEmail: prefillEmail ?? null }),
   goHome: () => set({ appView: 'home' }),
   goStagger: () => set({ appView: 'stagger' }),
   goTraining: () => set({ appView: 'training' }),
