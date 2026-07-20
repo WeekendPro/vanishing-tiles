@@ -1,6 +1,7 @@
-/** One audio channel's row: a toggle (styled like the menu's Actions) plus a
- *  volume slider that dims/disables while the channel is off. Shared by the
- *  global menu, the Sound Design lab, and the pause overlay. */
+/** One audio channel's control: the channel label + an on/off switch share the
+ *  top row, and a full-width volume slider sits beneath it (dimmed/disabled
+ *  while the channel is off). Shared by the global menu's Sound row and the
+ *  Sound Design lab — it always fills the width it's given. */
 export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onVolumeCommit }: {
   label: string
   enabled: boolean
@@ -11,13 +12,26 @@ export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onV
   onVolumeCommit?: () => void
 }) {
   return (
-    <div className="flex items-center gap-4 py-3">
-      <button
-        onClick={onToggle}
-        className="w-44 shrink-0 text-left font-pixel uppercase tracking-[0.08em] text-base text-gray-200 hover:text-neon-cyan"
-      >
-        {label}: {enabled ? 'On' : 'Off'}
-      </button>
+    <div className="w-full py-1">
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-pixel uppercase tracking-[0.08em] text-base text-gray-200">{label}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-label={`${label} ${enabled ? 'on' : 'off'}`}
+          onClick={onToggle}
+          className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${
+            enabled ? 'bg-neon-cyan/80' : 'bg-white/15'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+              enabled ? 'translate-x-5' : ''
+            }`}
+          />
+        </button>
+      </div>
       <input
         type="range"
         min={0}
@@ -27,7 +41,7 @@ export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onV
         aria-label={`${label} volume`}
         onChange={e => onVolume(Number(e.target.value) / 100)}
         onPointerUp={onVolumeCommit}
-        className="flex-1 min-w-0 accent-cyan-400 disabled:opacity-30"
+        className="w-full mt-3 accent-cyan-400 disabled:opacity-30"
       />
     </div>
   )
