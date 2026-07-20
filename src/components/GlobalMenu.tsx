@@ -19,30 +19,23 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function Avatar({ name, avatarUrl, isGuest }: { name: string; avatarUrl: string | null; isGuest: boolean }) {
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className="w-12 h-12 rounded-full object-cover ring-1 ring-white/15" />
-  }
-  if (isGuest) {
-    // Guests get a generic person icon — "GU" initials read as a weird
-    // pseudo-name, and the familiar silhouette says "anonymous" at a glance.
-    return (
-      <div
-        role="img"
-        aria-label="Guest avatar"
-        className="w-12 h-12 rounded-full grid place-items-center text-white
-          bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15"
-      >
+// Always the initials avatar — the same treatment as the pause screen and the
+// leaderboard hero card (a chosen OAuth/email photo is deliberately never
+// pulled in). Guests get the generic silhouette instead: "GU" initials read as
+// a weird pseudo-name, and the familiar person icon says "anonymous" at a glance.
+function Avatar({ name, isGuest }: { name: string; isGuest: boolean }) {
+  return (
+    <div
+      role="img"
+      aria-label={isGuest ? 'Guest avatar' : name}
+      className="w-12 h-12 rounded-full grid place-items-center font-bold text-base text-white
+        bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15"
+    >
+      {isGuest ? (
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7" aria-hidden="true">
           <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z" />
         </svg>
-      </div>
-    )
-  }
-  return (
-    <div className="w-12 h-12 rounded-full grid place-items-center font-bold text-base text-white
-      bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
-      {initials(name)}
+      ) : initials(name)}
     </div>
   )
 }
@@ -94,10 +87,10 @@ export function GlobalMenu() {
 
   // Identity comes from profileStore — public.profiles is the same source
   // the leaderboard reads, so the menu and the board can never disagree.
-  const { loaded, displayName, isGuest, email, avatarUrl, loadProfile, clearProfile } =
+  const { loaded, displayName, isGuest, email, loadProfile, clearProfile } =
     useProfileStore(useShallow(s => ({
       loaded: s.loaded, displayName: s.displayName, isGuest: s.isGuest,
-      email: s.email, avatarUrl: s.avatarUrl,
+      email: s.email,
       loadProfile: s.loadProfile, clearProfile: s.clear,
     })))
 
@@ -210,7 +203,7 @@ export function GlobalMenu() {
           {loaded && (
             isGuest ? (
               <div className="flex items-center gap-3 mb-4">
-                <Avatar name={name} avatarUrl={avatarUrl} isGuest />
+                <Avatar name={name} isGuest />
                 <div className="min-w-0">
                   <div className="font-pixel text-sm leading-tight truncate">Playing as Guest</div>
                   <div className="text-xs text-gray-400 truncate">Not ranked · scores aren’t saved</div>
@@ -222,7 +215,7 @@ export function GlobalMenu() {
                 onClick={() => setEditOpen(true)}
                 className="flex items-center gap-3 mb-8 text-left group"
               >
-                <Avatar name={name} avatarUrl={avatarUrl} isGuest={false} />
+                <Avatar name={name} isGuest={false} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 font-pixel text-sm leading-tight group-hover:text-neon-cyan transition-colors">
                     <span className="truncate">{name}</span>

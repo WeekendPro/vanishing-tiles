@@ -581,3 +581,57 @@ html {
 @keyframes vtOrderFlashStill {
   0%, 100% { color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.75); }
 }
+
+/* ── Channel volume slider (ChannelControl) ──────────────────────────────────
+   A round white thumb that matches the channel toggle's knob, riding a track
+   that's cyan up to the current value and dim past it. The fill point comes
+   from --vt-range-fill (set inline from the value). Cross-browser: WebKit needs
+   a gradient on the runnable track; Firefox uses ::-moz-range-progress. */
+.vt-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;               /* room for the 20px thumb */
+  background: transparent;
+  cursor: pointer;
+}
+.vt-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right,
+    #28f0ff 0 var(--vt-range-fill, 100%),
+    #2a2a38 var(--vt-range-fill, 100%) 100%);
+}
+.vt-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -8px;           /* centre the 20px thumb on the 4px track */
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.vt-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #2a2a38;
+}
+.vt-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #28f0ff;
+}
+.vt-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.vt-range:disabled {
+  opacity: 0.3;
+}
+.vt-range:disabled::-webkit-slider-runnable-track {
+  background: #2a2a38;
+}

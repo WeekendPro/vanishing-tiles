@@ -46,72 +46,74 @@ export function PauseOverlay({
     sfxVolume: s.settings.sfxVolume,
     setSfxVolume: s.setSfxVolume,
   })))
-  const { displayName, isGuest, avatarUrl } = useProfileStore(useShallow(s => ({
-    displayName: s.displayName, isGuest: s.isGuest, avatarUrl: s.avatarUrl,
+  const { displayName, isGuest } = useProfileStore(useShallow(s => ({
+    displayName: s.displayName, isGuest: s.isGuest,
   })))
   const name = isGuest ? 'Guest' : (displayName ?? 'Player')
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-vt-void text-vt-text px-6">
+    <div className="fixed inset-0 z-50 flex flex-col items-center bg-vt-void text-vt-text px-6
+      pt-[max(3rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <ScanlineOverlay />
-      <div className="relative w-full max-w-xs flex flex-col gap-6">
+      <div className="relative w-full max-w-xs flex-1 flex flex-col">
 
-        {/* Header — avatar + name upper-left, PAUSED upper-right. */}
-        <div className="flex items-center gap-3">
-          {avatarUrl && !isGuest ? (
-            <img src={avatarUrl} alt={name} className="w-11 h-11 rounded-full object-cover ring-1 ring-white/15" />
-          ) : (
+        {/* Content pinned to the top. */}
+        <div className="flex flex-col gap-6">
+          {/* Header — initials avatar + name upper-left, PAUSED upper-right. */}
+          <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full grid place-items-center font-bold text-sm text-white
-              bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15">
+              bg-gradient-to-br from-neon-cyan to-neon-magenta ring-1 ring-white/15"
+              role="img" aria-label={isGuest ? 'Guest avatar' : name}>
               {isGuest ? (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6" role="img" aria-label="Guest avatar">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6" aria-hidden="true">
                   <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.04 0-7.25 2.4-7.25 5.35V21h14.5v-1.4c0-2.95-3.21-5.35-7.25-5.35Z" />
                 </svg>
               ) : initials(displayName ?? '')}
             </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-pixel text-sm font-semibold leading-tight truncate">{name}</div>
+              {subline && (
+                <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-dim mt-0.5 truncate">{subline}</div>
+              )}
+            </div>
+            <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase font-semibold text-vt-cyan text-glow-vt-cyan">
+              Paused
+            </div>
+          </div>
+
+          {/* Guest invite (P4) — save this run by making an account. */}
+          {isGuest && onSignUp && (
+            <button
+              onClick={onSignUp}
+              className="w-full rounded-2xl px-4 py-2.5 text-left flex items-center justify-between
+                bg-vt-magenta/10 ring-1 ring-vt-magenta/40 transition hover:bg-vt-magenta/15"
+            >
+              <span className="text-xs text-vt-text">Sign up to save this run &amp; rank</span>
+              <span className="text-vt-magenta text-glow-vt-magenta text-lg leading-none">→</span>
+            </button>
           )}
-          <div className="min-w-0 flex-1">
-            <div className="font-pixel text-sm font-semibold leading-tight truncate">{name}</div>
-            {subline && (
-              <div className="font-grotesk text-[10px] tracking-[0.18em] uppercase text-vt-dim mt-0.5 truncate">{subline}</div>
-            )}
-          </div>
-          <div className="font-grotesk text-[11px] tracking-[0.18em] uppercase font-semibold text-vt-cyan text-glow-vt-cyan">
-            Paused
-          </div>
+
+          {/* Metadata cards — the mode's stat readout, full width. */}
+          {children}
+
+          {/* Sound — full width, matching the cards above and buttons below. */}
+          <ChannelControl
+            label="Sound"
+            enabled={soundEnabled}
+            volume={sfxVolume}
+            onToggle={() => {
+              const next = !soundEnabled
+              setSoundEnabled(next)
+              if (next) { sfx.unlock(); sfx.uiTap() }
+            }}
+            onVolume={setSfxVolume}
+            onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
+          />
         </div>
 
-        {/* Guest invite (P4) — save this run by making an account. */}
-        {isGuest && onSignUp && (
-          <button
-            onClick={onSignUp}
-            className="w-full rounded-2xl px-4 py-2.5 text-left flex items-center justify-between
-              bg-vt-magenta/10 ring-1 ring-vt-magenta/40 transition hover:bg-vt-magenta/15"
-          >
-            <span className="text-xs text-vt-text">Sign up to save this run &amp; rank</span>
-            <span className="text-vt-magenta text-glow-vt-magenta text-lg leading-none">→</span>
-          </button>
-        )}
-
-        {/* Metadata cards — the mode's stat readout, full width. */}
-        {children}
-
-        {/* Sound — full width, matching the cards above and buttons below. */}
-        <ChannelControl
-          label="Sound"
-          enabled={soundEnabled}
-          volume={sfxVolume}
-          onToggle={() => {
-            const next = !soundEnabled
-            setSoundEnabled(next)
-            if (next) { sfx.unlock(); sfx.uiTap() }
-          }}
-          onVolume={setSfxVolume}
-          onVolumeCommit={() => { sfx.unlock(); sfx.uiTap() }}
-        />
-
-        {/* Actions (P3) — Resume full-width; Restart + Exit share the row beneath. */}
-        <div className="flex flex-col gap-3">
+        {/* Actions (P3) — pinned to the bottom. Resume full-width; Restart +
+            Exit share the row beneath. */}
+        <div className="mt-auto pt-8 flex flex-col gap-3">
           <NeonButton variant="primary" size="lg" fullWidth onClick={onResume}>Resume</NeonButton>
           {onRestart ? (
             <div className="flex gap-3">

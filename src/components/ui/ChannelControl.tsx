@@ -41,7 +41,10 @@ export function ChannelControl({ label, enabled, volume, onToggle, onVolume, onV
         aria-label={`${label} volume`}
         onChange={e => onVolume(Number(e.target.value) / 100)}
         onPointerUp={onVolumeCommit}
-        className="w-full mt-3 accent-cyan-400 disabled:opacity-30"
+        // `vt-range` gives the slider a round white thumb matching the toggle's
+        // knob; --vt-range-fill drives the cyan-filled portion of the track.
+        style={{ ['--vt-range-fill' as string]: `${Math.round(volume * 100)}%` }}
+        className="vt-range w-full mt-3"
       />
     </div>
   )
